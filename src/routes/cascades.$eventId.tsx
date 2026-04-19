@@ -310,6 +310,16 @@ function CascadeDetailPage() {
   };
   const failedCount = counts.failed;
   const inFlight = event.status === "running" || event.status === "pending";
+  const touchedCount = counts.succeeded + counts.pr_opened;
+  const canRollback =
+    !inFlight &&
+    touchedCount > 0 &&
+    (event.status === "completed" || event.status === "partial");
+
+  const scopeMeta = (event.scope_filter ?? {}) as {
+    rollback_of?: string;
+    retry_of?: string;
+  };
 
   return (
     <div className="space-y-6">
@@ -340,10 +350,28 @@ function CascadeDetailPage() {
               {event.completed_at && (
                 <span>· finished {formatDistanceToNow(event.completed_at)}</span>
               )}
+              {scopeMeta.rollback_of && (
+                <Link
+                  to="/cascades/$eventId"
+                  params={{ eventId: scopeMeta.rollback_of }}
+                  className="inline-flex items-center gap-1 rounded border border-warning/40 px-1.5 py-0.5 font-mono text-[10px] uppercase text-warning hover:bg-warning/10"
+                >
+                  <History className="h-3 w-3" /> rollback of {scopeMeta.rollback_of.slice(0, 8)}
+                </Link>
+              )}
+              {scopeMeta.retry_of && (
+                <Link
+                  to="/cascades/$eventId"
+                  params={{ eventId: scopeMeta.retry_of }}
+                  className="inline-flex items-center gap-1 rounded border border-info/40 px-1.5 py-0.5 font-mono text-[10px] uppercase text-info hover:bg-info/10"
+                >
+                  <RotateCcw className="h-3 w-3" /> retry of {scopeMeta.retry_of.slice(0, 8)}
+                </Link>
+              )}
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={() => router.invalidate()}>
             <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Refresh
           </Button>
@@ -353,8 +381,60 @@ function CascadeDetailPage() {
               Retry {failedCount} failed
             </Button>
           )}
+          {canRollback && (
+            <AlertDialog open={rollbackOpen} onOpenChange={setRollbackOpen}>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-warning/40 text-warning hover:bg-warning/10 hover:text-warning"
+                  disabled={rolling}
+                >
+                  <History className={cn("mr-1.5 h-3.5 w-3.5", rolling && "animate-spin")} />
+                  Roll back ({touchedCount})
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Roll back this cascade?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This creates a <strong>reverse cascade event</strong> against{" "}
+                    {touchedCount} clone{touchedCount === 1 ? "" : "s"} that were
+                    updated by this run. Pick a delivery mode — PR is recommended
+                    so the rollback diff is reviewable before landing.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="flex-col gap-2 sm:flex-row">
+                  <AlertDialogCancel disabled={rolling}>Cancel</AlertDialogCancel>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={rolling}
+                    onClick={() => void rollbackEvent("notify")}
+                  >
+                    <Bell className="mr-1.5 h-3.5 w-3.5" /> Notify only
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={rolling}
+                    onClick={() => void rollbackEvent("auto_merge")}
+                  >
+                    <Send className="mr-1.5 h-3.5 w-3.5" /> Auto-merge
+                  </Button>
+                  <AlertDialogAction
+                    disabled={rolling}
+                    onClick={() => void rollbackEvent("pr")}
+                  >
+                    <GitMerge className="mr-1.5 h-3.5 w-3.5" /> Open PRs
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
       </header>
+
 
       {event.summary && (
         <Card className="border-border/80">
