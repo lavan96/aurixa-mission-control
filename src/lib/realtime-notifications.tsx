@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { getMutedSnapshot, isMuted } from "@/lib/notification-preferences";
 import type { Database } from "@/integrations/supabase/types";
 
 type CascadeEvent = Database["public"]["Tables"]["cascade_events"]["Row"];
@@ -65,17 +66,24 @@ export function RealtimeNotifications() {
           const open = () =>
             navigate({ to: "/cascades/$eventId", params: { eventId: ev.id } });
 
+          // Honor user mute preferences for toasts.
+          const snap = getMutedSnapshot();
+          if (snap.mute_toasts) return;
+
           if (ev.status === "completed") {
+            if (isMuted(snap, "cascade_completed", "success")) return;
             toast.success(`Cascade completed (${ev.mode})`, {
               description: ev.summary ?? "All targeted clones synced.",
               action: { label: "View", onClick: open },
             });
           } else if (ev.status === "failed") {
+            if (isMuted(snap, "cascade_failed", "error")) return;
             toast.error(`Cascade failed (${ev.mode})`, {
               description: ev.summary ?? "Cascade run did not succeed.",
               action: { label: "View", onClick: open },
             });
           } else {
+            if (isMuted(snap, "cascade_partial", "warning")) return;
             toast.warning(`Cascade partial (${ev.mode})`, {
               description: ev.summary ?? "Some clones failed to sync.",
               action: { label: "View", onClick: open },
@@ -102,6 +110,11 @@ export function RealtimeNotifications() {
             fresh.push(s);
           }
           if (fresh.length === 0) return;
+
+          // Honor mute preferences for high-drift toasts.
+          const snap = getMutedSnapshot();
+          if (snap.mute_toasts) return;
+          if (isMuted(snap, "drift_high", "warning")) return;
 
           const goto = () => navigate({ to: "/fleet-manager" });
           const first = fresh[0];

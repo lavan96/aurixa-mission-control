@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { RealtimeNotifications } from "@/lib/realtime-notifications";
 import { BrowserPushNotifications } from "@/lib/browser-notifications";
+import { NotificationPreferencesSync } from "@/components/notification-preferences-sync";
 
 function NotFoundComponent() {
   return (
@@ -70,6 +71,7 @@ function RootComponent() {
   return (
     <AuthProvider>
       <TooltipProvider delayDuration={150}>
+        <NotificationPreferencesSync />
         <RealtimeNotifications />
         <BrowserPushNotifications />
         <Outlet />

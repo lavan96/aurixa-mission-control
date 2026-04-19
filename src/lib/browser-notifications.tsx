@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { getMutedSnapshot, isMuted } from "@/lib/notification-preferences";
 import type { Database } from "@/integrations/supabase/types";
 
 type Notification = Database["public"]["Tables"]["notifications"]["Row"];
@@ -93,6 +94,10 @@ export function BrowserPushNotifications() {
           const optedIn = localStorage.getItem(PERMISSION_KEY) === "1";
           if (!optedIn) return;
           if (Notification.permission !== "granted") return;
+          // Honor user mute preferences for browser push.
+          const snap = getMutedSnapshot();
+          if (snap.mute_browser_push) return;
+          if (isMuted(snap, n.kind, n.severity)) return;
           // Suppress when the tab is focused — toasts handle it; OS notifs
           // would be redundant and noisy.
           if (typeof document !== "undefined" && document.visibilityState === "visible") return;

@@ -55,6 +55,8 @@ import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "@/lib/format";
 import { toast } from "sonner";
 import { useBrowserPushSettings } from "@/lib/browser-notifications";
+import { NotificationListSkeleton } from "@/components/list-skeletons";
+import { EmptyState } from "@/components/empty-state";
 
 type Notification = Database["public"]["Tables"]["notifications"]["Row"];
 type Clone = Pick<Database["public"]["Tables"]["clones"]["Row"], "id" | "name">;
@@ -491,11 +493,18 @@ function NotificationsPage() {
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <div className="p-12 text-center text-sm text-muted-foreground">Loading…</div>
+            <NotificationListSkeleton count={8} />
           ) : items.length === 0 ? (
-            <div className="p-12 text-center text-sm text-muted-foreground">
-              <Inbox className="mx-auto mb-2 h-6 w-6 opacity-50" />
-              No notifications match these filters.
+            <div className="p-4">
+              <EmptyState
+                icon={<Inbox />}
+                title="No notifications"
+                description={
+                  hasFilters
+                    ? "Nothing matches these filters. Try clearing them to see your full inbox."
+                    : "You're all caught up. New cascade outcomes and drift findings will land here."
+                }
+              />
             </div>
           ) : (
             <ul className="divide-y divide-border/60">

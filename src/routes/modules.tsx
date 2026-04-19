@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useServerFn } from "@tanstack/react-start";
 import { detectModules } from "@/server/ai-detect-modules.functions";
+import { ModuleGridSkeleton } from "@/components/list-skeletons";
+import { EmptyState } from "@/components/empty-state";
 
 export const Route = createFileRoute("/modules")({
   component: () => (
@@ -23,7 +25,7 @@ export const Route = createFileRoute("/modules")({
 });
 
 function ModulesPage() {
-  const { data: modules, refresh } = useModules();
+  const { data: modules, loading, refresh } = useModules();
   const { data: prime } = usePrimeConfig();
   const [scanning, setScanning] = useState(false);
   const detectFn = useServerFn(detectModules);
@@ -71,17 +73,20 @@ function ModulesPage() {
         </Button>
       </header>
 
-      {modules.length === 0 ? (
-        <div className="grid-bg flex flex-col items-center justify-center rounded-lg border border-dashed bg-card/30 p-16 text-center">
-          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/30">
-            <Boxes className="h-6 w-6 text-primary" />
-          </div>
-          <h3 className="font-mono text-lg font-semibold">Catalog is empty</h3>
-          <p className="mt-2 max-w-md text-sm text-muted-foreground">
-            Run AI detection to scan your prime repo and propose module boundaries by folders,
-            routes, and import graphs.
-          </p>
-        </div>
+      {loading ? (
+        <ModuleGridSkeleton count={4} />
+      ) : modules.length === 0 ? (
+        <EmptyState
+          icon={<Boxes />}
+          title="Catalog is empty"
+          description="Run AI detection to scan your prime repo and propose module boundaries by folders, routes, and import graphs."
+          action={
+            <Button onClick={runDetection} disabled={scanning}>
+              <Sparkles className="mr-2 h-4 w-4" />
+              {scanning ? "Scanning prime…" : "Run AI detection"}
+            </Button>
+          }
+        />
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
           {modules.map((m) => (

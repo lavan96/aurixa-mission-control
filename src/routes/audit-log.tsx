@@ -16,9 +16,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ScrollText, Filter, RefreshCw, X, ChevronRight } from "lucide-react";
+import { ScrollText, Filter, RefreshCw, X, ChevronRight, Inbox } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "@/lib/format";
+import { AuditLogSkeleton } from "@/components/list-skeletons";
+import { EmptyState } from "@/components/empty-state";
 
 type AuditLog = Database["public"]["Tables"]["audit_log"]["Row"];
 
@@ -198,10 +200,18 @@ function AuditLogPage() {
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <div className="p-8 text-center text-sm text-muted-foreground">Loading…</div>
+            <AuditLogSkeleton count={6} />
           ) : visible.length === 0 ? (
-            <div className="p-8 text-center text-sm text-muted-foreground">
-              No audit entries match these filters.
+            <div className="p-4">
+              <EmptyState
+                icon={<Inbox />}
+                title="No audit entries"
+                description={
+                  hasFilters
+                    ? "Nothing matches these filters. Try clearing them to see the full timeline."
+                    : "Cascades, drift scans, and module detections will appear here as they happen."
+                }
+              />
             </div>
           ) : (
             <ol className="relative">
