@@ -252,6 +252,8 @@ function CloneDetail() {
           )}
         </CardContent>
       </Card>
+
+      <CloneActivityHistory cloneId={cloneId} />
     </div>
   );
 }
