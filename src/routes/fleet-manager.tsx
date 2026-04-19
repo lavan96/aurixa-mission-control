@@ -90,7 +90,7 @@ function FleetManager() {
   // Prune stale selection ids from the URL once the drift list resolves.
   useEffect(() => {
     if (search.selected.length === 0) return;
-    const filtered = search.selected.filter((id) => driftIds.includes(id));
+    const filtered = (search.selected as string[]).filter((id) => driftIds.includes(id));
     if (filtered.length !== search.selected.length) {
       void navigate({
         search: (prev: SearchState) => ({ ...prev, selected: filtered }),
