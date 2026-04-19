@@ -323,6 +323,63 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          body: string | null
+          cascade_event_id: string | null
+          clone_id: string | null
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["notification_kind"]
+          metadata: Json
+          read_at: string | null
+          severity: Database["public"]["Enums"]["notification_severity"]
+          title: string
+          url: string | null
+        }
+        Insert: {
+          body?: string | null
+          cascade_event_id?: string | null
+          clone_id?: string | null
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["notification_kind"]
+          metadata?: Json
+          read_at?: string | null
+          severity?: Database["public"]["Enums"]["notification_severity"]
+          title: string
+          url?: string | null
+        }
+        Update: {
+          body?: string | null
+          cascade_event_id?: string | null
+          clone_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["notification_kind"]
+          metadata?: Json
+          read_at?: string | null
+          severity?: Database["public"]["Enums"]["notification_severity"]
+          title?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_cascade_event_id_fkey"
+            columns: ["cascade_event_id"]
+            isOneToOne: false
+            referencedRelation: "cascade_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prime_config: {
         Row: {
           created_at: string
@@ -439,6 +496,18 @@ export type Database = {
         | "skipped"
       cascade_trigger: "manual" | "commit" | "scheduled"
       module_status: "proposed" | "approved" | "archived"
+      notification_kind:
+        | "cascade_completed"
+        | "cascade_failed"
+        | "cascade_partial"
+        | "cascade_started"
+        | "drift_high"
+        | "drift_medium"
+        | "clone_created"
+        | "clone_deleted"
+        | "module_installed"
+        | "module_removed"
+      notification_severity: "info" | "success" | "warning" | "error"
       provisioning_method: "fork" | "template" | "clone"
       sync_status: "in_sync" | "behind" | "cascading" | "failed" | "unknown"
     }
@@ -587,6 +656,19 @@ export const Constants = {
       ],
       cascade_trigger: ["manual", "commit", "scheduled"],
       module_status: ["proposed", "approved", "archived"],
+      notification_kind: [
+        "cascade_completed",
+        "cascade_failed",
+        "cascade_partial",
+        "cascade_started",
+        "drift_high",
+        "drift_medium",
+        "clone_created",
+        "clone_deleted",
+        "module_installed",
+        "module_removed",
+      ],
+      notification_severity: ["info", "success", "warning", "error"],
       provisioning_method: ["fork", "template", "clone"],
       sync_status: ["in_sync", "behind", "cascading", "failed", "unknown"],
     },
