@@ -62,7 +62,62 @@ function FleetManager() {
     }
   };
 
-  const totalSuggestions = clones.reduce(
+  const applySuggestion = async (
+    cloneId: string,
+    cloneName: string,
+    suggestionIndex: number,
+    action: DriftSuggestion["recommended_action"],
+  ) => {
+    const key = `${cloneId}:${suggestionIndex}`;
+    const mode: CascadeMode | null =
+      action === "cascade_pr"
+        ? "pr"
+        : action === "cascade_auto_merge"
+          ? "auto_merge"
+          : action === "notify"
+            ? "notify"
+            : null;
+    if (!mode) {
+      toast.info("This suggestion is review-only — no cascade to apply.");
+      return;
+    }
+
+    setApplyingKey(key);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: ev, error } = await supabase
+        .from("cascade_events")
+        .insert({
+          trigger: "manual",
+          mode,
+          status: "pending",
+          scope_filter: { scope: "selected", clone_ids: [cloneId], source: "drift_suggestion" },
+          initiated_by: user?.id,
+        })
+        .select()
+        .single();
+      if (error || !ev) throw new Error(error?.message ?? "Failed to create cascade");
+
+      const { error: insErr } = await supabase
+        .from("cascade_results")
+        .insert({ cascade_event_id: ev.id, clone_id: cloneId, status: "queued" });
+      if (insErr) throw new Error(insErr.message);
+
+      toast.info(`Applying ${mode.replace("_", " ")} to ${cloneName}…`);
+      const res = await cascadeFn({ data: { cascadeEventId: ev.id } });
+      if (!res.ok) {
+        toast.error(res.error);
+      } else {
+        toast.success(`Cascade ${res.status} for ${cloneName}`);
+        navigate({ to: "/cascades/$eventId", params: { eventId: ev.id } });
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Apply failed");
+    } finally {
+      setApplyingKey(null);
+      refresh();
+    }
+  };
     (n, c) => n + ((c.drift_suggestions as DriftSuggestion[] | null)?.length ?? 0),
     0,
   );
