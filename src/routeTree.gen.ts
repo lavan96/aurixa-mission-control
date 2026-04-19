@@ -9,38 +9,208 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ModulesRouteImport } from './routes/modules'
+import { Route as FleetManagerRouteImport } from './routes/fleet-manager'
+import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as CloudflareRouteImport } from './routes/cloudflare'
+import { Route as CascadesRouteImport } from './routes/cascades'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ClonesNewRouteImport } from './routes/clones.new'
+import { Route as ClonesCloneIdRouteImport } from './routes/clones.$cloneId'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ModulesRoute = ModulesRouteImport.update({
+  id: '/modules',
+  path: '/modules',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FleetManagerRoute = FleetManagerRouteImport.update({
+  id: '/fleet-manager',
+  path: '/fleet-manager',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CloudflareRoute = CloudflareRouteImport.update({
+  id: '/cloudflare',
+  path: '/cloudflare',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CascadesRoute = CascadesRouteImport.update({
+  id: '/cascades',
+  path: '/cascades',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClonesNewRoute = ClonesNewRouteImport.update({
+  id: '/clones/new',
+  path: '/clones/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClonesCloneIdRoute = ClonesCloneIdRouteImport.update({
+  id: '/clones/$cloneId',
+  path: '/clones/$cloneId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/cascades': typeof CascadesRoute
+  '/cloudflare': typeof CloudflareRoute
+  '/dashboard': typeof DashboardRoute
+  '/fleet-manager': typeof FleetManagerRoute
+  '/modules': typeof ModulesRoute
+  '/settings': typeof SettingsRoute
+  '/clones/$cloneId': typeof ClonesCloneIdRoute
+  '/clones/new': typeof ClonesNewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/cascades': typeof CascadesRoute
+  '/cloudflare': typeof CloudflareRoute
+  '/dashboard': typeof DashboardRoute
+  '/fleet-manager': typeof FleetManagerRoute
+  '/modules': typeof ModulesRoute
+  '/settings': typeof SettingsRoute
+  '/clones/$cloneId': typeof ClonesCloneIdRoute
+  '/clones/new': typeof ClonesNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/cascades': typeof CascadesRoute
+  '/cloudflare': typeof CloudflareRoute
+  '/dashboard': typeof DashboardRoute
+  '/fleet-manager': typeof FleetManagerRoute
+  '/modules': typeof ModulesRoute
+  '/settings': typeof SettingsRoute
+  '/clones/$cloneId': typeof ClonesCloneIdRoute
+  '/clones/new': typeof ClonesNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/cascades'
+    | '/cloudflare'
+    | '/dashboard'
+    | '/fleet-manager'
+    | '/modules'
+    | '/settings'
+    | '/clones/$cloneId'
+    | '/clones/new'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/cascades'
+    | '/cloudflare'
+    | '/dashboard'
+    | '/fleet-manager'
+    | '/modules'
+    | '/settings'
+    | '/clones/$cloneId'
+    | '/clones/new'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/cascades'
+    | '/cloudflare'
+    | '/dashboard'
+    | '/fleet-manager'
+    | '/modules'
+    | '/settings'
+    | '/clones/$cloneId'
+    | '/clones/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthRoute: typeof AuthRoute
+  CascadesRoute: typeof CascadesRoute
+  CloudflareRoute: typeof CloudflareRoute
+  DashboardRoute: typeof DashboardRoute
+  FleetManagerRoute: typeof FleetManagerRoute
+  ModulesRoute: typeof ModulesRoute
+  SettingsRoute: typeof SettingsRoute
+  ClonesCloneIdRoute: typeof ClonesCloneIdRoute
+  ClonesNewRoute: typeof ClonesNewRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/modules': {
+      id: '/modules'
+      path: '/modules'
+      fullPath: '/modules'
+      preLoaderRoute: typeof ModulesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fleet-manager': {
+      id: '/fleet-manager'
+      path: '/fleet-manager'
+      fullPath: '/fleet-manager'
+      preLoaderRoute: typeof FleetManagerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cloudflare': {
+      id: '/cloudflare'
+      path: '/cloudflare'
+      fullPath: '/cloudflare'
+      preLoaderRoute: typeof CloudflareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cascades': {
+      id: '/cascades'
+      path: '/cascades'
+      fullPath: '/cascades'
+      preLoaderRoute: typeof CascadesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +218,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/clones/new': {
+      id: '/clones/new'
+      path: '/clones/new'
+      fullPath: '/clones/new'
+      preLoaderRoute: typeof ClonesNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clones/$cloneId': {
+      id: '/clones/$cloneId'
+      path: '/clones/$cloneId'
+      fullPath: '/clones/$cloneId'
+      preLoaderRoute: typeof ClonesCloneIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthRoute: AuthRoute,
+  CascadesRoute: CascadesRoute,
+  CloudflareRoute: CloudflareRoute,
+  DashboardRoute: DashboardRoute,
+  FleetManagerRoute: FleetManagerRoute,
+  ModulesRoute: ModulesRoute,
+  SettingsRoute: SettingsRoute,
+  ClonesCloneIdRoute: ClonesCloneIdRoute,
+  ClonesNewRoute: ClonesNewRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,0 +1,345 @@
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import { ProtectedRoute } from "@/components/protected-route";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import { useModules } from "@/lib/queries";
+import { supabase } from "@/integrations/supabase/client";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { GitFork, Copy, Layers, Info, Shield, Check } from "lucide-react";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+
+export const Route = createFileRoute("/clones/new")({
+  component: () => (
+    <ProtectedRoute>
+      <NewClone />
+    </ProtectedRoute>
+  ),
+  head: () => ({ meta: [{ title: "Provision clone — Mission Control" }] }),
+});
+
+type Method = "fork" | "template" | "clone";
+
+const METHODS: {
+  value: Method;
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  pros: string[];
+  cons: string[];
+  recommended?: string;
+}[] = [
+  {
+    value: "fork",
+    title: "Fork",
+    icon: GitFork,
+    pros: ["Keeps Git history link to prime", "Easiest upstream tracking", "Native to GitHub"],
+    cons: ["Same network as prime — visibility leaks possible", "Org transfer is awkward"],
+  },
+  {
+    value: "template",
+    title: "Template Repo",
+    icon: Copy,
+    recommended: "Recommended for client-isolated deployments",
+    pros: [
+      "Fully independent repo — no fork relationship",
+      "Clean for client handover",
+      "Best privacy isolation",
+    ],
+    cons: ["No automatic upstream link — cascade engine handles sync"],
+  },
+  {
+    value: "clone",
+    title: "Independent Clone",
+    icon: Layers,
+    pros: ["Total decoupling — own org, own ACL", "Strip history if needed"],
+    cons: ["Heaviest setup", "All sync handled by cascade engine"],
+  },
+];
+
+function NewClone() {
+  const nav = useNavigate();
+  const { data: modules } = useModules();
+  const [name, setName] = useState("");
+  const [tags, setTags] = useState("");
+  const [method, setMethod] = useState<Method>("template");
+  const [ownerMode, setOwnerMode] = useState<"org" | "transfer">("org");
+  const [transferEmail, setTransferEmail] = useState("");
+  const [cloudflare, setCloudflare] = useState(false);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [notes, setNotes] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const togglePick = (id: string) => {
+    const n = new Set(picked);
+    n.has(id) ? n.delete(id) : n.add(id);
+    setPicked(n);
+  };
+
+  const submit = async () => {
+    if (!name.trim()) {
+      toast.error("Name is required");
+      return;
+    }
+    setBusy(true);
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data, error } = await supabase
+      .from("clones")
+      .insert({
+        name,
+        slug: `${slug}-${Math.random().toString(36).slice(2, 6)}`,
+        tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
+        provisioning_method: method,
+        github_owner: ownerMode === "transfer" ? transferEmail : "your-org",
+        github_repo: slug,
+        cloudflare_enabled: cloudflare,
+        sync_status: "in_sync",
+        owner_user_id: user?.id,
+        notes,
+      })
+      .select()
+      .single();
+    if (error) {
+      toast.error(error.message);
+      setBusy(false);
+      return;
+    }
+    if (picked.size > 0 && data) {
+      const rows = Array.from(picked).map((module_id) => ({
+        clone_id: data.id,
+        module_id,
+        installed_by: user?.id,
+      }));
+      await supabase.from("clone_modules").insert(rows);
+    }
+    await supabase.from("audit_log").insert({
+      action: "clone.created",
+      entity_type: "clone",
+      entity_id: data!.id,
+      actor_user_id: user?.id,
+      metadata: { method, cloudflare, modules: Array.from(picked) },
+    });
+    toast.success("Clone registered");
+    setBusy(false);
+    nav({ to: "/clones/$cloneId", params: { cloneId: data!.id } });
+  };
+
+  return (
+    <div className="mx-auto max-w-4xl space-y-6">
+      <header>
+        <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
+          provisioning
+        </p>
+        <h1 className="mt-1 text-3xl font-semibold tracking-tight">New clone</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Spin up a child instance of the prime codebase.
+        </p>
+      </header>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">1 · Identity</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label>Name</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="acme-prod" />
+          </div>
+          <div className="space-y-2">
+            <Label>Tags (comma-separated)</Label>
+            <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="client, eu-west, prod" />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">2 · Provisioning method</CardTitle>
+          <CardDescription>How should the new repo come into existence?</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-3">
+          {METHODS.map((m) => {
+            const Icon = m.icon;
+            const active = method === m.value;
+            return (
+              <button
+                key={m.value}
+                type="button"
+                onClick={() => setMethod(m.value)}
+                className={cn(
+                  "relative rounded-lg border p-4 text-left transition-all",
+                  active
+                    ? "border-primary bg-primary/5 shadow-[0_0_0_1px_var(--color-primary)]"
+                    : "border-border bg-card hover:border-primary/40",
+                )}
+              >
+                {m.recommended && (
+                  <Badge className="absolute -right-2 -top-2 bg-accent text-accent-foreground">
+                    Recommended
+                  </Badge>
+                )}
+                <div className="flex items-center justify-between">
+                  <Icon className={cn("h-5 w-5", active ? "text-primary" : "text-muted-foreground")} />
+                  {active && <Check className="h-4 w-4 text-primary" />}
+                </div>
+                <div className="mt-3 font-mono font-semibold">{m.title}</div>
+                {m.recommended && (
+                  <div className="mt-1 text-[11px] text-accent">{m.recommended}</div>
+                )}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="mt-3 inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground">
+                      <Info className="h-3 w-3" /> pros & cons
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <div className="space-y-2 text-xs">
+                      <div>
+                        <div className="font-mono uppercase text-success">pros</div>
+                        <ul className="mt-1 list-disc pl-4">
+                          {m.pros.map((p) => <li key={p}>{p}</li>)}
+                        </ul>
+                      </div>
+                      <div>
+                        <div className="font-mono uppercase text-warning">cons</div>
+                        <ul className="mt-1 list-disc pl-4">
+                          {m.cons.map((p) => <li key={p}>{p}</li>)}
+                        </ul>
+                      </div>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </button>
+            );
+          })}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">3 · Ownership</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setOwnerMode("org")}
+              className={cn(
+                "flex-1 rounded-md border p-3 text-left text-sm",
+                ownerMode === "org" ? "border-primary bg-primary/5" : "border-border",
+              )}
+            >
+              <div className="font-mono text-xs uppercase text-muted-foreground">default</div>
+              <div className="font-medium">Your org owns it</div>
+              <div className="text-xs text-muted-foreground">Transferable later</div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setOwnerMode("transfer")}
+              className={cn(
+                "flex-1 rounded-md border p-3 text-left text-sm",
+                ownerMode === "transfer" ? "border-primary bg-primary/5" : "border-border",
+              )}
+            >
+              <div className="font-mono text-xs uppercase text-muted-foreground">handover</div>
+              <div className="font-medium">Transfer to client</div>
+              <div className="text-xs text-muted-foreground">Provide their GitHub login/email</div>
+            </button>
+          </div>
+          {ownerMode === "transfer" && (
+            <Input
+              value={transferEmail}
+              onChange={(e) => setTransferEmail(e.target.value)}
+              placeholder="client-org-or-username"
+            />
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">4 · Modules to inject</CardTitle>
+          <CardDescription>
+            Pick which modules from the prime catalog ship in this clone. Others are excluded.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {modules.length === 0 ? (
+            <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+              No modules detected yet. Run AI module detection from the{" "}
+              <span className="font-mono text-foreground">Modules</span> page.
+            </div>
+          ) : (
+            <div className="grid gap-2 md:grid-cols-2">
+              {modules.map((m) => {
+                const active = picked.has(m.id);
+                return (
+                  <label
+                    key={m.id}
+                    className={cn(
+                      "flex cursor-pointer items-start gap-3 rounded-md border p-3 transition-colors",
+                      active ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
+                    )}
+                  >
+                    <Checkbox checked={active} onCheckedChange={() => togglePick(m.id)} className="mt-0.5" />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm font-semibold">{m.name}</span>
+                        <Badge variant="outline" className="text-[10px]">{m.status}</Badge>
+                      </div>
+                      {m.description && (
+                        <div className="mt-1 text-xs text-muted-foreground">{m.description}</div>
+                      )}
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Shield className="h-4 w-4 text-info" /> 5 · Cloudflare wrapper (optional)
+          </CardTitle>
+          <CardDescription>
+            Wrap the front-end with Cloudflare for WAF, rate limiting, and DDoS protection. You'll
+            be prompted for an API token on first use.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <label className="flex cursor-pointer items-center gap-3">
+            <Checkbox checked={cloudflare} onCheckedChange={(v) => setCloudflare(!!v)} />
+            <span className="text-sm">Enable Cloudflare wrapper for this clone</span>
+          </label>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Notes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-end gap-2">
+        <Button variant="ghost" onClick={() => nav({ to: "/dashboard" })}>
+          Cancel
+        </Button>
+        <Button disabled={busy} onClick={submit}>
+          {busy ? "Provisioning…" : "Provision clone"}
+        </Button>
+      </div>
+    </div>
+  );
+}
