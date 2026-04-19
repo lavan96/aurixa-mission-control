@@ -111,6 +111,11 @@ export function RealtimeNotifications() {
           }
           if (fresh.length === 0) return;
 
+          // Honor mute preferences for high-drift toasts.
+          const snap = getMutedSnapshot();
+          if (snap.mute_toasts) return;
+          if (isMuted(snap, "drift_high", "warning")) return;
+
           const goto = () => navigate({ to: "/fleet-manager" });
           const first = fresh[0];
           toast.warning(
