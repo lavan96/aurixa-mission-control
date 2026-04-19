@@ -1,14 +1,18 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/protected-route";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   ArrowLeft,
-  Waves,
   ExternalLink,
   RefreshCw,
   GitMerge,
@@ -20,6 +24,7 @@ import {
   XCircle,
   SkipForward,
   GitPullRequest,
+  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "@/lib/format";
