@@ -203,12 +203,14 @@ export const runCascade = createServerFn({ method: "POST" })
           ? ("partial" as const)
           : ("completed" as const);
 
+    const summary = `${succeeded} merged · ${opened} PRs · ${failed} failed · ${skipped} skipped (of ${totalQueued})`;
+
     await supabase
       .from("cascade_events")
       .update({
         status: finalStatus,
         completed_at: new Date().toISOString(),
-        summary: `${succeeded} merged · ${opened} PRs · ${failed} failed · ${skipped} skipped (of ${totalQueued})`,
+        summary,
       })
       .eq("id", event.id);
 
@@ -218,6 +220,52 @@ export const runCascade = createServerFn({ method: "POST" })
       entity_id: event.id,
       metadata: { mode: event.mode, succeeded, opened, failed, skipped },
     });
+
+    // Persistent notifications for the bell + per-clone history.
+    const kind =
+      finalStatus === "completed"
+        ? "cascade_completed"
+        : finalStatus === "failed"
+          ? "cascade_failed"
+          : "cascade_partial";
+    const severity =
+      finalStatus === "completed"
+        ? "success"
+        : finalStatus === "failed"
+          ? "error"
+          : "warning";
+
+    // Global feed entry
+    await supabase.from("notifications").insert({
+      kind,
+      severity,
+      title: `Cascade ${finalStatus} (${event.mode})`,
+      body: summary,
+      cascade_event_id: event.id,
+      url: `/cascades/${event.id}`,
+      metadata: { mode: event.mode, succeeded, opened, failed, skipped },
+    });
+
+    // Per-clone notification rows for full historical tracking
+    const cloneNotifs = (queued ?? [])
+      .map((r: any) => {
+        const clone = r.clones;
+        if (!clone) return null;
+        return {
+          kind,
+          severity,
+          title: `${clone.name} · ${event.mode.replace("_", " ")}`,
+          body: summary,
+          clone_id: clone.id,
+          cascade_event_id: event.id,
+          url: `/cascades/${event.id}`,
+          metadata: { mode: event.mode },
+        };
+      })
+      .filter(Boolean) as any[];
+    if (cloneNotifs.length > 0) {
+      await supabase.from("notifications").insert(cloneNotifs);
+    }
 
     return {
       ok: true as const,

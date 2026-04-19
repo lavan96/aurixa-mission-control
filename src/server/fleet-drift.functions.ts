@@ -154,6 +154,12 @@ export async function runFleetDriftScan(
       .map((m: any) => m.modules?.name)
       .filter(Boolean);
 
+    const previousSuggestions =
+      (c.drift_suggestions as DriftSuggestion[] | null) ?? [];
+    const previousHighTitles = new Set(
+      previousSuggestions.filter((s) => s.severity === "high").map((s) => s.title),
+    );
+
     let suggestions: DriftSuggestion[] = [];
     if (newCommitsBehind > 0) {
       suggestions = await analyzeClone(
@@ -178,6 +184,27 @@ export async function runFleetDriftScan(
       })
       .eq("id", c.id);
     updated++;
+
+    // Emit notifications for genuinely new high-severity suggestions
+    const newHigh = suggestions.filter(
+      (s) => s.severity === "high" && !previousHighTitles.has(s.title),
+    );
+    if (newHigh.length > 0) {
+      await supabase.from("notifications").insert(
+        newHigh.map((s) => ({
+          kind: "drift_high",
+          severity: "warning",
+          title: `High drift on ${c.name}`,
+          body: s.title,
+          clone_id: c.id,
+          url: "/fleet-manager",
+          metadata: {
+            rationale: s.rationale,
+            recommended_action: s.recommended_action,
+          },
+        })),
+      );
+    }
   }
 
   await supabase.from("audit_log").insert({
