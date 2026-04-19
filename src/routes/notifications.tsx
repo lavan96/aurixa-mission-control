@@ -1,4 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
+import { z } from "zod";
 import { ProtectedRoute } from "@/components/protected-route";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,7 +22,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Bell,
+  BellOff,
+  BellRing,
   Filter,
   RefreshCw,
   X,
@@ -38,6 +53,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "@/lib/format";
+import { toast } from "sonner";
+import { useBrowserPushSettings } from "@/lib/browser-notifications";
 
 type Notification = Database["public"]["Tables"]["notifications"]["Row"];
 type Clone = Pick<Database["public"]["Tables"]["clones"]["Row"], "id" | "name">;
@@ -45,6 +62,22 @@ type Kind = Database["public"]["Enums"]["notification_kind"];
 type Severity = Database["public"]["Enums"]["notification_severity"];
 
 const PAGE_SIZE = 25;
+
+const KIND_VALUES = [
+  "cascade_started",
+  "cascade_completed",
+  "cascade_partial",
+  "cascade_failed",
+  "drift_high",
+  "drift_medium",
+  "clone_created",
+  "clone_deleted",
+  "module_installed",
+  "module_removed",
+] as const;
+
+const SEVERITY_VALUES = ["info", "success", "warning", "error"] as const;
+const READ_VALUES = ["all", "unread", "read"] as const;
 
 const KIND_OPTIONS: { value: Kind | "all"; label: string }[] = [
   { value: "all", label: "All kinds" },
@@ -68,13 +101,22 @@ const SEVERITY_OPTIONS: { value: Severity | "all"; label: string }[] = [
   { value: "error", label: "Error" },
 ];
 
-const READ_OPTIONS = [
+const READ_OPTIONS: { value: (typeof READ_VALUES)[number]; label: string }[] = [
   { value: "all", label: "Read & unread" },
   { value: "unread", label: "Unread only" },
   { value: "read", label: "Read only" },
 ];
 
+const searchSchema = z.object({
+  kind: fallback(z.enum(["all", ...KIND_VALUES]), "all").default("all"),
+  severity: fallback(z.enum(["all", ...SEVERITY_VALUES]), "all").default("all"),
+  clone: fallback(z.string(), "all").default("all"),
+  read: fallback(z.enum(READ_VALUES), "all").default("all"),
+  page: fallback(z.number().int().min(0).max(10_000), 0).default(0),
+});
+
 export const Route = createFileRoute("/notifications")({
+  validateSearch: zodValidator(searchSchema),
   component: () => (
     <ProtectedRoute>
       <NotificationsPage />
@@ -120,48 +162,74 @@ function tone(severity: Severity) {
   }
 }
 
+/** Apply the active filters to a Supabase query builder. */
+function applyFilters<T extends ReturnType<typeof supabase.from<"notifications">>>(
+  q: ReturnType<T["select"]>,
+  args: { kind: string; severity: string; clone: string; read: string },
+) {
+  let r = q;
+  if (args.kind !== "all") r = r.eq("kind", args.kind as Kind);
+  if (args.severity !== "all") r = r.eq("severity", args.severity as Severity);
+  if (args.clone !== "all") r = r.eq("clone_id", args.clone);
+  if (args.read === "unread") r = r.is("read_at", null);
+  if (args.read === "read") r = r.not("read_at", "is", null);
+  return r;
+}
+
 function NotificationsPage() {
+  const search = Route.useSearch();
+  const navigate = useNavigate({ from: "/notifications" });
+  const push = useBrowserPushSettings();
+
   const [items, setItems] = useState<Notification[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [clones, setClones] = useState<Clone[]>([]);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const [kind, setKind] = useState<string>("all");
-  const [severity, setSeverity] = useState<string>("all");
-  const [cloneId, setCloneId] = useState<string>("all");
-  const [readState, setReadState] = useState<string>("all");
-  const [page, setPage] = useState(0);
+  const setSearch = useCallback(
+    (patch: Partial<typeof search>) => {
+      navigate({
+        search: (prev) => ({ ...prev, ...patch }),
+        replace: true,
+      });
+    },
+    [navigate],
+  );
+
+  // When filter inputs change, drop back to page 0 automatically.
+  const updateFilter = useCallback(
+    (patch: Partial<typeof search>) => {
+      navigate({
+        search: (prev) => ({ ...prev, ...patch, page: 0 }),
+        replace: true,
+      });
+    },
+    [navigate],
+  );
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    const from = page * PAGE_SIZE;
+    const from = search.page * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
-    let q = supabase
+    const base = supabase
       .from("notifications")
       .select("*", { count: "exact" })
       .order("created_at", { ascending: false })
       .range(from, to);
-    if (kind !== "all") q = q.eq("kind", kind as Kind);
-    if (severity !== "all") q = q.eq("severity", severity as Severity);
-    if (cloneId !== "all") q = q.eq("clone_id", cloneId);
-    if (readState === "unread") q = q.is("read_at", null);
-    if (readState === "read") q = q.not("read_at", "is", null);
+    const q = applyFilters(base, search);
     const { data, count } = await q;
     setItems(data ?? []);
     setTotal(count ?? 0);
     setLoading(false);
-  }, [kind, severity, cloneId, readState, page]);
-
-  // Reset to page 0 whenever filters change
-  useEffect(() => {
-    setPage(0);
-  }, [kind, severity, cloneId, readState]);
+  }, [search]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
-  // Load clones for the filter dropdown (one-shot)
+  // Load clones for the filter dropdown
   useEffect(() => {
     void supabase
       .from("clones")
@@ -170,7 +238,7 @@ function NotificationsPage() {
       .then(({ data }) => setClones(data ?? []));
   }, []);
 
-  // Live updates: refresh current page on insert/update
+  // Live updates
   useEffect(() => {
     const channel = supabase
       .channel("notif:page")
@@ -190,15 +258,16 @@ function NotificationsPage() {
   const unreadOnPage = useMemo(() => items.filter((n) => !n.read_at), [items]);
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const hasFilters =
-    kind !== "all" || severity !== "all" || cloneId !== "all" || readState !== "all";
+    search.kind !== "all" ||
+    search.severity !== "all" ||
+    search.clone !== "all" ||
+    search.read !== "all";
 
   const markAllOnPageRead = async () => {
     const ids = unreadOnPage.map((n) => n.id);
     if (ids.length === 0) return;
     const now = new Date().toISOString();
-    setItems((prev) =>
-      prev.map((n) => (ids.includes(n.id) ? { ...n, read_at: now } : n)),
-    );
+    setItems((prev) => prev.map((n) => (ids.includes(n.id) ? { ...n, read_at: now } : n)));
     await supabase.from("notifications").update({ read_at: now }).in("id", ids);
   };
 
@@ -209,12 +278,45 @@ function NotificationsPage() {
     await supabase.from("notifications").update({ read_at: now }).eq("id", id);
   };
 
-  const clearFilters = () => {
-    setKind("all");
-    setSeverity("all");
-    setCloneId("all");
-    setReadState("all");
+  const markAllMatching = async () => {
+    setBulkBusy(true);
+    try {
+      const now = new Date().toISOString();
+      // Build a query with the same filters PLUS unread, then update.
+      let q = supabase.from("notifications").update({ read_at: now }).is("read_at", null);
+      if (search.kind !== "all") q = q.eq("kind", search.kind as Kind);
+      if (search.severity !== "all") q = q.eq("severity", search.severity as Severity);
+      if (search.clone !== "all") q = q.eq("clone_id", search.clone);
+      // `read === "read"` would zero out the work, so just guard:
+      if (search.read === "read") {
+        toast.info("No unread entries match these filters.");
+        return;
+      }
+      const { error, count } = await q.select("id", { count: "exact", head: true });
+      if (error) throw error;
+      toast.success(`Marked ${count ?? 0} notifications as read`);
+      await refresh();
+    } catch (err) {
+      toast.error("Failed to mark all as read", {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setBulkBusy(false);
+      setConfirmOpen(false);
+    }
   };
+
+  const clearFilters = () =>
+    navigate({
+      search: () => ({
+        kind: "all",
+        severity: "all",
+        clone: "all",
+        read: "all",
+        page: 0,
+      }),
+      replace: true,
+    });
 
   return (
     <div className="space-y-6">
@@ -233,7 +335,8 @@ function NotificationsPage() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <PushControl push={push} />
           <Button
             variant="outline"
             size="sm"
@@ -243,6 +346,38 @@ function NotificationsPage() {
             <CheckCheck className="mr-1.5 h-3.5 w-3.5" />
             Mark page read
           </Button>
+          <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+            <AlertDialogTrigger asChild>
+              <Button variant="default" size="sm" disabled={search.read === "read"}>
+                <CheckCheck className="mr-1.5 h-3.5 w-3.5" />
+                Mark all matching
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Mark all matching as read?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Every unread notification matching the current filters will be
+                  marked as read across all pages.
+                  {hasFilters ? (
+                    <span className="mt-2 block font-mono text-[11px] text-muted-foreground">
+                      filters: {filterSummary(search)}
+                    </span>
+                  ) : (
+                    <span className="mt-2 block font-mono text-[11px] text-warning">
+                      no filters — this will affect every unread notification.
+                    </span>
+                  )}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={bulkBusy}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={markAllMatching} disabled={bulkBusy}>
+                  {bulkBusy ? "Working…" : "Mark all as read"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
             <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", loading && "animate-spin")} />
             Refresh
@@ -257,7 +392,10 @@ function NotificationsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-4">
-          <Select value={kind} onValueChange={setKind}>
+          <Select
+            value={search.kind}
+            onValueChange={(v) => updateFilter({ kind: v as typeof search.kind })}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -269,7 +407,10 @@ function NotificationsPage() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={severity} onValueChange={setSeverity}>
+          <Select
+            value={search.severity}
+            onValueChange={(v) => updateFilter({ severity: v as typeof search.severity })}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -281,7 +422,7 @@ function NotificationsPage() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={cloneId} onValueChange={setCloneId}>
+          <Select value={search.clone} onValueChange={(v) => updateFilter({ clone: v })}>
             <SelectTrigger>
               <SelectValue placeholder="All clones" />
             </SelectTrigger>
@@ -295,7 +436,10 @@ function NotificationsPage() {
             </SelectContent>
           </Select>
           <div className="flex items-center gap-2">
-            <Select value={readState} onValueChange={setReadState}>
+            <Select
+              value={search.read}
+              onValueChange={(v) => updateFilter({ read: v as typeof search.read })}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -328,7 +472,7 @@ function NotificationsPage() {
             {total.toLocaleString()} {total === 1 ? "entry" : "entries"}
             {total > 0 && (
               <span className="ml-2 text-muted-foreground/70">
-                · page {page + 1} of {totalPages}
+                · page {search.page + 1} of {totalPages}
               </span>
             )}
           </CardDescription>
@@ -337,8 +481,8 @@ function NotificationsPage() {
               variant="outline"
               size="icon"
               className="h-7 w-7"
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page === 0 || loading}
+              onClick={() => setSearch({ page: Math.max(0, search.page - 1) })}
+              disabled={search.page === 0 || loading}
             >
               <ChevronLeft className="h-3.5 w-3.5" />
             </Button>
@@ -346,8 +490,8 @@ function NotificationsPage() {
               variant="outline"
               size="icon"
               className="h-7 w-7"
-              onClick={() => setPage((p) => p + 1)}
-              disabled={page + 1 >= totalPages || loading}
+              onClick={() => setSearch({ page: search.page + 1 })}
+              disabled={search.page + 1 >= totalPages || loading}
             >
               <ChevronRight className="h-3.5 w-3.5" />
             </Button>
@@ -425,4 +569,47 @@ function NotificationsPage() {
       </Card>
     </div>
   );
+}
+
+function PushControl({ push }: { push: ReturnType<typeof useBrowserPushSettings> }) {
+  if (!push.supported) {
+    return (
+      <Badge variant="outline" className="gap-1 text-[10px] uppercase">
+        <BellOff className="h-3 w-3" /> Push unsupported
+      </Badge>
+    );
+  }
+  if (push.permission === "denied") {
+    return (
+      <Badge variant="outline" className="gap-1 border-destructive/40 text-destructive text-[10px] uppercase">
+        <BellOff className="h-3 w-3" /> Push blocked
+      </Badge>
+    );
+  }
+  if (push.enabled && push.permission === "granted") {
+    return (
+      <Button variant="outline" size="sm" onClick={push.disable}>
+        <BellRing className="mr-1.5 h-3.5 w-3.5 text-success" /> Push on
+      </Button>
+    );
+  }
+  return (
+    <Button variant="outline" size="sm" onClick={() => void push.request()}>
+      <Bell className="mr-1.5 h-3.5 w-3.5" /> Enable browser push
+    </Button>
+  );
+}
+
+function filterSummary(s: {
+  kind: string;
+  severity: string;
+  clone: string;
+  read: string;
+}): string {
+  const parts: string[] = [];
+  if (s.kind !== "all") parts.push(`kind=${s.kind}`);
+  if (s.severity !== "all") parts.push(`severity=${s.severity}`);
+  if (s.clone !== "all") parts.push("clone=specific");
+  if (s.read !== "all") parts.push(`read=${s.read}`);
+  return parts.length === 0 ? "(none)" : parts.join(" · ");
 }
