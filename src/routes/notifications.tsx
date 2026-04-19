@@ -162,20 +162,6 @@ function tone(severity: Severity) {
   }
 }
 
-/** Apply the active filters to a Supabase query builder. */
-function applyFilters<T extends ReturnType<typeof supabase.from<"notifications">>>(
-  q: ReturnType<T["select"]>,
-  args: { kind: string; severity: string; clone: string; read: string },
-) {
-  let r = q;
-  if (args.kind !== "all") r = r.eq("kind", args.kind as Kind);
-  if (args.severity !== "all") r = r.eq("severity", args.severity as Severity);
-  if (args.clone !== "all") r = r.eq("clone_id", args.clone);
-  if (args.read === "unread") r = r.is("read_at", null);
-  if (args.read === "read") r = r.not("read_at", "is", null);
-  return r;
-}
-
 function NotificationsPage() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/notifications" });
@@ -188,10 +174,12 @@ function NotificationsPage() {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
+  type SearchState = typeof search;
+
   const setSearch = useCallback(
-    (patch: Partial<typeof search>) => {
-      navigate({
-        search: (prev) => ({ ...prev, ...patch }),
+    (patch: Partial<SearchState>) => {
+      void navigate({
+        search: (prev: SearchState) => ({ ...prev, ...patch }),
         replace: true,
       });
     },
@@ -200,9 +188,9 @@ function NotificationsPage() {
 
   // When filter inputs change, drop back to page 0 automatically.
   const updateFilter = useCallback(
-    (patch: Partial<typeof search>) => {
-      navigate({
-        search: (prev) => ({ ...prev, ...patch, page: 0 }),
+    (patch: Partial<SearchState>) => {
+      void navigate({
+        search: (prev: SearchState) => ({ ...prev, ...patch, page: 0 }),
         replace: true,
       });
     },
@@ -213,12 +201,16 @@ function NotificationsPage() {
     setLoading(true);
     const from = search.page * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
-    const base = supabase
+    let q = supabase
       .from("notifications")
       .select("*", { count: "exact" })
       .order("created_at", { ascending: false })
       .range(from, to);
-    const q = applyFilters(base, search);
+    if (search.kind !== "all") q = q.eq("kind", search.kind);
+    if (search.severity !== "all") q = q.eq("severity", search.severity);
+    if (search.clone !== "all") q = q.eq("clone_id", search.clone);
+    if (search.read === "unread") q = q.is("read_at", null);
+    if (search.read === "read") q = q.not("read_at", "is", null);
     const { data, count } = await q;
     setItems(data ?? []);
     setTotal(count ?? 0);
