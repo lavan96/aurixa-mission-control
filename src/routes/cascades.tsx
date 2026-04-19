@@ -14,6 +14,8 @@ import { formatDistanceToNow } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useServerFn } from "@tanstack/react-start";
 import { runCascade } from "@/server/cascade-engine.functions";
+import { CardRowSkeleton } from "@/components/list-skeletons";
+import { EmptyState } from "@/components/empty-state";
 
 const MODE_VALUES = ["pr", "auto_merge", "notify"] as const;
 const SCOPE_VALUES = ["all", "selected"] as const;
@@ -36,7 +38,7 @@ export const Route = createFileRoute("/cascades")({
 type Mode = (typeof MODE_VALUES)[number];
 
 function CascadesPage() {
-  const { data: events, refresh } = useCascadeEvents();
+  const { data: events, loading: eventsLoading, refresh } = useCascadeEvents();
   const { data: clones } = useClones();
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/cascades" });
@@ -167,10 +169,18 @@ function CascadesPage() {
         <h2 className="mb-3 font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
           history
         </h2>
-        {events.length === 0 ? (
-          <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
-            No cascades yet
+        {eventsLoading ? (
+          <div className="space-y-2">
+            <CardRowSkeleton />
+            <CardRowSkeleton />
+            <CardRowSkeleton />
           </div>
+        ) : events.length === 0 ? (
+          <EmptyState
+            icon={<Waves />}
+            title="No cascades yet"
+            description="Fire your first cascade above to push prime updates downstream. Every run lands in this history."
+          />
         ) : (
           <div className="space-y-2">
             {events.map((e) => (
