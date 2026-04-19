@@ -19,6 +19,8 @@ import { Route as CascadesRouteImport } from './routes/cascades'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuditLogRouteImport } from './routes/audit-log'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SettingsIndexRouteImport } from './routes/settings.index'
+import { Route as SettingsNotificationsRouteImport } from './routes/settings.notifications'
 import { Route as HooksFleetDriftRouteImport } from './routes/hooks.fleet-drift'
 import { Route as ClonesNewRouteImport } from './routes/clones.new'
 import { Route as ClonesCloneIdRouteImport } from './routes/clones.$cloneId'
@@ -74,6 +76,16 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsIndexRoute = SettingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsNotificationsRoute = SettingsNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const HooksFleetDriftRoute = HooksFleetDriftRouteImport.update({
   id: '/hooks/fleet-drift',
   path: '/hooks/fleet-drift',
@@ -105,11 +117,13 @@ export interface FileRoutesByFullPath {
   '/fleet-manager': typeof FleetManagerRoute
   '/modules': typeof ModulesRoute
   '/notifications': typeof NotificationsRoute
-  '/settings': typeof SettingsRoute
+  '/settings': typeof SettingsRouteWithChildren
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
+  '/settings/notifications': typeof SettingsNotificationsRoute
+  '/settings/': typeof SettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -121,11 +135,12 @@ export interface FileRoutesByTo {
   '/fleet-manager': typeof FleetManagerRoute
   '/modules': typeof ModulesRoute
   '/notifications': typeof NotificationsRoute
-  '/settings': typeof SettingsRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
+  '/settings/notifications': typeof SettingsNotificationsRoute
+  '/settings': typeof SettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -138,11 +153,13 @@ export interface FileRoutesById {
   '/fleet-manager': typeof FleetManagerRoute
   '/modules': typeof ModulesRoute
   '/notifications': typeof NotificationsRoute
-  '/settings': typeof SettingsRoute
+  '/settings': typeof SettingsRouteWithChildren
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
+  '/settings/notifications': typeof SettingsNotificationsRoute
+  '/settings/': typeof SettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -161,6 +178,8 @@ export interface FileRouteTypes {
     | '/clones/$cloneId'
     | '/clones/new'
     | '/hooks/fleet-drift'
+    | '/settings/notifications'
+    | '/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -172,11 +191,12 @@ export interface FileRouteTypes {
     | '/fleet-manager'
     | '/modules'
     | '/notifications'
-    | '/settings'
     | '/cascades/$eventId'
     | '/clones/$cloneId'
     | '/clones/new'
     | '/hooks/fleet-drift'
+    | '/settings/notifications'
+    | '/settings'
   id:
     | '__root__'
     | '/'
@@ -193,6 +213,8 @@ export interface FileRouteTypes {
     | '/clones/$cloneId'
     | '/clones/new'
     | '/hooks/fleet-drift'
+    | '/settings/notifications'
+    | '/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -205,7 +227,7 @@ export interface RootRouteChildren {
   FleetManagerRoute: typeof FleetManagerRoute
   ModulesRoute: typeof ModulesRoute
   NotificationsRoute: typeof NotificationsRoute
-  SettingsRoute: typeof SettingsRoute
+  SettingsRoute: typeof SettingsRouteWithChildren
   ClonesCloneIdRoute: typeof ClonesCloneIdRoute
   ClonesNewRoute: typeof ClonesNewRoute
   HooksFleetDriftRoute: typeof HooksFleetDriftRoute
@@ -283,6 +305,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/': {
+      id: '/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof SettingsIndexRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/notifications': {
+      id: '/settings/notifications'
+      path: '/notifications'
+      fullPath: '/settings/notifications'
+      preLoaderRoute: typeof SettingsNotificationsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/hooks/fleet-drift': {
       id: '/hooks/fleet-drift'
       path: '/hooks/fleet-drift'
@@ -326,6 +362,20 @@ const CascadesRouteWithChildren = CascadesRoute._addFileChildren(
   CascadesRouteChildren,
 )
 
+interface SettingsRouteChildren {
+  SettingsNotificationsRoute: typeof SettingsNotificationsRoute
+  SettingsIndexRoute: typeof SettingsIndexRoute
+}
+
+const SettingsRouteChildren: SettingsRouteChildren = {
+  SettingsNotificationsRoute: SettingsNotificationsRoute,
+  SettingsIndexRoute: SettingsIndexRoute,
+}
+
+const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
+  SettingsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuditLogRoute: AuditLogRoute,
@@ -336,7 +386,7 @@ const rootRouteChildren: RootRouteChildren = {
   FleetManagerRoute: FleetManagerRoute,
   ModulesRoute: ModulesRoute,
   NotificationsRoute: NotificationsRoute,
-  SettingsRoute: SettingsRoute,
+  SettingsRoute: SettingsRouteWithChildren,
   ClonesCloneIdRoute: ClonesCloneIdRoute,
   ClonesNewRoute: ClonesNewRoute,
   HooksFleetDriftRoute: HooksFleetDriftRoute,

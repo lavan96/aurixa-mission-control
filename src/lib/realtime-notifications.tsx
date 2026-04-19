@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { getMutedSnapshot, isMuted } from "@/lib/notification-preferences";
 import type { Database } from "@/integrations/supabase/types";
 
 type CascadeEvent = Database["public"]["Tables"]["cascade_events"]["Row"];
