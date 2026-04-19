@@ -66,14 +66,55 @@ function FleetManager() {
     () => clones.filter((c) => c.sync_status === "behind" || c.sync_status === "failed"),
     [clones],
   );
+  const search = Route.useSearch();
+  const navigate = useNavigate({ from: "/fleet-manager" });
+  type SearchState = typeof search;
+
   const [scanning, setScanning] = useState(false);
   const [applyingKey, setApplyingKey] = useState<string | null>(null);
   const [bulkApplying, setBulkApplying] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [bulkMode, setBulkMode] = useState<CascadeMode>("pr");
   const scanFn = useServerFn(triggerFleetDriftScan);
   const cascadeFn = useServerFn(runCascade);
-  const navigate = useNavigate();
+
+  const driftIds = useMemo(() => drift.map((c) => c.id), [drift]);
+
+  const selected = useMemo(
+    () => new Set(search.selected.filter((id) => driftIds.includes(id))),
+    [search.selected, driftIds],
+  );
+  const bulkMode = search.mode;
+
+  // Prune stale selection ids from the URL once the drift list resolves.
+  useEffect(() => {
+    if (search.selected.length === 0) return;
+    const filtered = search.selected.filter((id) => driftIds.includes(id));
+    if (filtered.length !== search.selected.length) {
+      void navigate({
+        search: (prev: SearchState) => ({ ...prev, selected: filtered }),
+        replace: true,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [driftIds.join("|")]);
+
+  const setSelected = useCallback(
+    (next: Set<string>) => {
+      void navigate({
+        search: (prev: SearchState) => ({ ...prev, selected: Array.from(next) }),
+        replace: true,
+      });
+    },
+    [navigate],
+  );
+
+  const setBulkMode = useCallback(
+    (m: CascadeMode) =>
+      void navigate({
+        search: (prev: SearchState) => ({ ...prev, mode: m }),
+        replace: true,
+      }),
+    [navigate],
+  );
 
   const lastScan = clones
     .map((c) => c.last_drift_check_at)
@@ -81,17 +122,14 @@ function FleetManager() {
     .sort()
     .at(-1) as string | undefined;
 
-  const driftIds = useMemo(() => drift.map((c) => c.id), [drift]);
   const allSelected = driftIds.length > 0 && driftIds.every((id) => selected.has(id));
   const someSelected = selected.size > 0 && !allSelected;
 
   const toggleOne = (id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelected(next);
   };
 
   const toggleAll = () => {
