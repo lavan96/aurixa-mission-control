@@ -1,16 +1,21 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/protected-route";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bot, Activity, AlertTriangle, Sparkles, GitCommit, RefreshCw } from "lucide-react";
+import { Bot, Activity, AlertTriangle, Sparkles, GitCommit, RefreshCw, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useClones } from "@/lib/queries";
 import { useServerFn } from "@tanstack/react-start";
 import { triggerFleetDriftScan } from "@/server/fleet-drift.functions";
+import { runCascade } from "@/server/cascade-engine.functions";
 import { useState } from "react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type CascadeMode = Database["public"]["Enums"]["cascade_mode"];
 
 export const Route = createFileRoute("/fleet-manager")({
   component: () => (
@@ -32,7 +37,10 @@ function FleetManager() {
   const { data: clones, refresh } = useClones();
   const drift = clones.filter((c) => c.sync_status === "behind" || c.sync_status === "failed");
   const [scanning, setScanning] = useState(false);
+  const [applyingKey, setApplyingKey] = useState<string | null>(null);
   const scanFn = useServerFn(triggerFleetDriftScan);
+  const cascadeFn = useServerFn(runCascade);
+  const navigate = useNavigate();
 
   const lastScan = clones
     .map((c) => c.last_drift_check_at)
