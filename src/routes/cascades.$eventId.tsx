@@ -366,8 +366,40 @@ function ResultsGroup({
   );
 }
 
-function ResultRow({ result }: { result: ResultWithClone }) {
+function ResultRow({
+  result,
+  eventInFlight,
+  onChange,
+}: {
+  result: ResultWithClone;
+  eventInFlight: boolean;
+  onChange: () => void;
+}) {
   const clone = result.clone;
+  const [skipping, setSkipping] = useState(false);
+  const canSkip = result.status === "queued";
+
+  const skip = async () => {
+    if (!canSkip) return;
+    setSkipping(true);
+    const { error } = await supabase
+      .from("cascade_results")
+      .update({
+        status: "skipped",
+        diff_summary: "Skipped by operator",
+        completed_at: new Date().toISOString(),
+      })
+      .eq("id", result.id);
+    if (error) {
+      toast.error(error.message);
+      setSkipping(false);
+      return;
+    }
+    toast.success(`Skipped ${clone?.name ?? "clone"}`);
+    setSkipping(false);
+    onChange();
+  };
+
   return (
     <div className="flex flex-col gap-3 rounded-md border border-border/80 bg-surface p-3 md:flex-row md:items-center">
       <div className="flex flex-1 items-center gap-3 min-w-0">
@@ -415,6 +447,23 @@ function ResultRow({ result }: { result: ResultWithClone }) {
           >
             View PR <ExternalLink className="h-3 w-3" />
           </a>
+        )}
+        {canSkip && (
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={skipping || eventInFlight}
+            onClick={skip}
+            className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+            title={
+              eventInFlight
+                ? "Cascade in flight — wait for it to settle before skipping"
+                : "Drop this clone from the run"
+            }
+          >
+            <SkipForward className="mr-1 h-3 w-3" />
+            {skipping ? "Skipping…" : "Skip"}
+          </Button>
         )}
       </div>
     </div>
