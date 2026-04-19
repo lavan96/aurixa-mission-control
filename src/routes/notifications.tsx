@@ -284,9 +284,9 @@ function NotificationsPage() {
         toast.info("No unread entries match these filters.");
         return;
       }
-      const { error, count } = await q.select("*", { count: "exact" });
+      const { data, error } = await q.select("id");
       if (error) throw error;
-      toast.success(`Marked ${count ?? 0} notifications as read`);
+      toast.success(`Marked ${data?.length ?? 0} notifications as read`);
       await refresh();
     } catch (err) {
       toast.error("Failed to mark all as read", {
