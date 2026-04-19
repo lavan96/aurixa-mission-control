@@ -169,6 +169,114 @@ function CascadeDetailPage() {
     refresh();
   };
 
+  // Helper: create a brand-new cascade event scoped to a set of clones,
+  // queue cascade_results, and execute. Used by per-result retry-with-mode
+  // and the whole-event rollback action.
+  const spawnSubCascade = useCallback(
+    async (opts: {
+      mode: CascadeEvent["mode"];
+      cloneIds: string[];
+      summary?: string;
+      scopeMeta?: Record<string, unknown>;
+      navigateAfter?: boolean;
+    }) => {
+      if (opts.cloneIds.length === 0) {
+        toast.info("No clones to act on");
+        return null;
+      }
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: ev, error } = await supabase
+        .from("cascade_events")
+        .insert({
+          trigger: "manual",
+          mode: opts.mode,
+          status: "pending",
+          scope_filter: {
+            scope: "selected",
+            clone_ids: opts.cloneIds,
+            ...(opts.scopeMeta ?? {}),
+          },
+          summary: opts.summary,
+          initiated_by: user?.id,
+        })
+        .select()
+        .single();
+      if (error || !ev) {
+        toast.error(error?.message || "Failed to start cascade");
+        return null;
+      }
+      const { error: rerr } = await supabase.from("cascade_results").insert(
+        opts.cloneIds.map((id) => ({
+          cascade_event_id: ev.id,
+          clone_id: id,
+          status: "queued" as const,
+        })),
+      );
+      if (rerr) {
+        toast.error(rerr.message);
+        return null;
+      }
+      try {
+        const res = await runCascadeFn({ data: { cascadeEventId: ev.id } });
+        if (!res.ok) toast.error(res.error);
+        else
+          toast.success(
+            `Cascade ${res.status}: ${res.counts.succeeded} merged · ${res.counts.opened} PRs · ${res.counts.failed} failed`,
+          );
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Cascade failed");
+      }
+      if (opts.navigateAfter) {
+        void navigate({ to: "/cascades/$eventId", params: { eventId: ev.id } });
+      }
+      return ev.id;
+    },
+    [navigate, runCascadeFn],
+  );
+
+  const retryWithMode = useCallback(
+    async (cloneId: string, mode: CascadeEvent["mode"]) => {
+      await spawnSubCascade({
+        mode,
+        cloneIds: [cloneId],
+        summary: `Retry of cascade ${eventId.slice(0, 8)} for one clone in ${mode.replace("_", " ")} mode`,
+        scopeMeta: { retry_of: eventId },
+        navigateAfter: true,
+      });
+    },
+    [spawnSubCascade, eventId],
+  );
+
+  // Rollback: reverse-apply prime by re-running cascade against clones that
+  // were touched by this event. We default to PR mode so the rollback is
+  // reviewable before landing.
+  const rollbackEvent = useCallback(
+    async (mode: CascadeEvent["mode"]) => {
+      if (!event) return;
+      setRolling(true);
+      try {
+        const touched = results
+          .filter((r) => r.status === "succeeded" || r.status === "pr_opened")
+          .map((r) => r.clone_id);
+        if (touched.length === 0) {
+          toast.info("Nothing to roll back — no clones were updated.");
+          return;
+        }
+        await spawnSubCascade({
+          mode,
+          cloneIds: touched,
+          summary: `Rollback of cascade ${eventId.slice(0, 8)} (${touched.length} clones, ${mode.replace("_", " ")})`,
+          scopeMeta: { rollback_of: eventId, source_mode: event.mode },
+          navigateAfter: true,
+        });
+      } finally {
+        setRolling(false);
+        setRollbackOpen(false);
+      }
+    },
+    [event, results, spawnSubCascade, eventId],
+  );
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center text-muted-foreground">
