@@ -205,11 +205,13 @@ export type Database = {
           created_at: string
           default_branch: string
           deploy_url: string | null
+          drift_suggestions: Json
           github_owner: string
           github_repo: string
           github_url: string | null
           id: string
           last_cascade_at: string | null
+          last_drift_check_at: string | null
           last_synced_sha: string | null
           lovable_project_id: string | null
           lovable_project_url: string | null
@@ -229,11 +231,13 @@ export type Database = {
           created_at?: string
           default_branch?: string
           deploy_url?: string | null
+          drift_suggestions?: Json
           github_owner: string
           github_repo: string
           github_url?: string | null
           id?: string
           last_cascade_at?: string | null
+          last_drift_check_at?: string | null
           last_synced_sha?: string | null
           lovable_project_id?: string | null
           lovable_project_url?: string | null
@@ -253,11 +257,13 @@ export type Database = {
           created_at?: string
           default_branch?: string
           deploy_url?: string | null
+          drift_suggestions?: Json
           github_owner?: string
           github_repo?: string
           github_url?: string | null
           id?: string
           last_cascade_at?: string | null
+          last_drift_check_at?: string | null
           last_synced_sha?: string | null
           lovable_project_id?: string | null
           lovable_project_url?: string | null
