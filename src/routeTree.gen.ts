@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ClonesNewRouteImport } from './routes/clones.new'
+import { Route as ClonesCloneIdRouteImport } from './routes/clones.$cloneId'
 
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
@@ -28,35 +30,59 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClonesNewRoute = ClonesNewRouteImport.update({
+  id: '/clones/new',
+  path: '/clones/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClonesCloneIdRoute = ClonesCloneIdRouteImport.update({
+  id: '/clones/$cloneId',
+  path: '/clones/$cloneId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
+  '/clones/$cloneId': typeof ClonesCloneIdRoute
+  '/clones/new': typeof ClonesNewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
+  '/clones/$cloneId': typeof ClonesCloneIdRoute
+  '/clones/new': typeof ClonesNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
+  '/clones/$cloneId': typeof ClonesCloneIdRoute
+  '/clones/new': typeof ClonesNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/dashboard'
+  fullPaths: '/' | '/auth' | '/dashboard' | '/clones/$cloneId' | '/clones/new'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/dashboard'
-  id: '__root__' | '/' | '/auth' | '/dashboard'
+  to: '/' | '/auth' | '/dashboard' | '/clones/$cloneId' | '/clones/new'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/clones/$cloneId'
+    | '/clones/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   DashboardRoute: typeof DashboardRoute
+  ClonesCloneIdRoute: typeof ClonesCloneIdRoute
+  ClonesNewRoute: typeof ClonesNewRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +108,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/clones/new': {
+      id: '/clones/new'
+      path: '/clones/new'
+      fullPath: '/clones/new'
+      preLoaderRoute: typeof ClonesNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clones/$cloneId': {
+      id: '/clones/$cloneId'
+      path: '/clones/$cloneId'
+      fullPath: '/clones/$cloneId'
+      preLoaderRoute: typeof ClonesCloneIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,6 +129,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   DashboardRoute: DashboardRoute,
+  ClonesCloneIdRoute: ClonesCloneIdRoute,
+  ClonesNewRoute: ClonesNewRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
