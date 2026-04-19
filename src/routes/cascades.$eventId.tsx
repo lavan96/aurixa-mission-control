@@ -245,7 +245,7 @@ function CascadeDetailPage() {
         <CardHeader>
           <CardTitle className="text-base">Per-clone results</CardTitle>
           <CardDescription>
-            Live updates via Realtime — no refresh needed.
+            Live updates via Realtime — no refresh needed. Sections collapse for noise control.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -254,11 +254,115 @@ function CascadeDetailPage() {
               No clones queued for this cascade.
             </div>
           ) : (
-            results.map((r) => <ResultRow key={r.id} result={r} />)
+            <GroupedResults results={results} eventInFlight={inFlight} onChange={refresh} />
           )}
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+const GROUP_ORDER: { status: CascadeResult["status"]; label: string; tone: string }[] = [
+  { status: "failed", label: "Failed", tone: "text-destructive" },
+  { status: "queued", label: "Queued", tone: "text-muted-foreground" },
+  { status: "pushing", label: "In flight", tone: "text-info" },
+  { status: "pr_opened", label: "PRs opened", tone: "text-accent" },
+  { status: "succeeded", label: "Succeeded", tone: "text-success" },
+  { status: "skipped", label: "Skipped", tone: "text-muted-foreground" },
+];
+
+function GroupedResults({
+  results,
+  eventInFlight,
+  onChange,
+}: {
+  results: ResultWithClone[];
+  eventInFlight: boolean;
+  onChange: () => void;
+}) {
+  const groups = useMemo(() => {
+    const map = new Map<CascadeResult["status"], ResultWithClone[]>();
+    for (const r of results) {
+      if (!map.has(r.status)) map.set(r.status, []);
+      map.get(r.status)!.push(r);
+    }
+    return GROUP_ORDER.filter((g) => map.has(g.status)).map((g) => ({
+      ...g,
+      items: map.get(g.status)!,
+    }));
+  }, [results]);
+
+  return (
+    <div className="space-y-2">
+      {groups.map((g) => (
+        <ResultsGroup
+          key={g.status}
+          status={g.status}
+          label={g.label}
+          tone={g.tone}
+          items={g.items}
+          defaultOpen={
+            g.status === "failed" || g.status === "queued" || g.status === "pushing"
+          }
+          eventInFlight={eventInFlight}
+          onChange={onChange}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ResultsGroup({
+  status,
+  label,
+  tone,
+  items,
+  defaultOpen,
+  eventInFlight,
+  onChange,
+}: {
+  status: CascadeResult["status"];
+  label: string;
+  tone: string;
+  items: ResultWithClone[];
+  defaultOpen: boolean;
+  eventInFlight: boolean;
+  onChange: () => void;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="flex w-full items-center gap-3 rounded-md border border-border/80 bg-card px-3 py-2 text-left transition-colors hover:bg-muted/40"
+        >
+          <ResultStatusIcon status={status} />
+          <span className={cn("font-mono text-xs uppercase tracking-wider", tone)}>
+            {label}
+          </span>
+          <Badge variant="outline" className="border-border/60 font-mono text-[10px]">
+            {items.length}
+          </Badge>
+          <ChevronDown
+            className={cn(
+              "ml-auto h-4 w-4 text-muted-foreground transition-transform",
+              open && "rotate-180",
+            )}
+          />
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="space-y-2 pt-2">
+        {items.map((r) => (
+          <ResultRow
+            key={r.id}
+            result={r}
+            eventInFlight={eventInFlight}
+            onChange={onChange}
+          />
+        ))}
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 
