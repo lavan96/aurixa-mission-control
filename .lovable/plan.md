@@ -99,3 +99,61 @@ Three capabilities, all in v1:
 - Multi-tenant / public sign-up
 - Manual conflict resolution UI (clones can't conflict — prime always wins)
 - Payment/billing for clones
+
+---
+
+# Post-V1 Roadmap (phased enhancements)
+
+You've already shipped the core fleet/cascade/module/drift/notifications stack with simulated GitHub. Below is a pragmatic, dependency-ordered plan grouped into five phases. Each phase delivers standalone value, and later phases unlock real-world execution.
+
+## Phase 1 — Tighten the loop you already have (1–2 sessions)
+Polish flows that exist before adding more surface area.
+
+- **URL-synced filters everywhere** — extend the TanStack `validateSearch` pattern from `/notifications` to `/audit-log`, `/fleet-manager`, and `/cascades` so every view is shareable and refresh-safe.
+- **Notification preferences** — per-kind/severity mute table (`notification_preferences`) honored by the bell, toasts, browser notifications, and (later) Web Push fan-out.
+- **Cascade detail enhancements** — live diff preview (`files_changed` already tracked), per-result retry-with-different-mode, and a "rollback" stub that creates a reverse cascade event.
+- **Bulk mark-all-read across all pages** on `/notifications` matching current filters (with confirm dialog).
+- **Empty-state polish & loading skeletons** — every list page gets a proper zero-state and shimmer skeleton.
+
+## Phase 2 — Real GitHub wiring (1 large session)
+The single biggest unlock. Replace simulation with Octokit.
+
+- **GitHub App secrets**: `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_APP_INSTALLATION_ID`.
+- **Server functions**: `provisionClone` (fork/template/clone), `pushModuleInjection`, `pushModuleRemoval`, `openCascadePR`, `mergeCascadePR`, `fetchCommitsBehind`.
+- **Webhook receiver** at `/api/github/webhook` (push events on prime → auto-create cascade event in user's default mode).
+- **Real drift detection** — replace the simulated `fleet-drift` job with `compare commits` API to compute actual `commits_behind` and changed file lists per clone.
+- **PR status polling** — background job updates `cascade_results.status` from `pr_opened` → `succeeded` when the PR merges.
+- **Rate-limit aware queue** — respect GitHub's 5000/hr with backoff and a visible quota meter.
+
+## Phase 3 — Closed-tab Web Push (deferred from earlier)
+Ship the pipeline you already started.
+
+- VAPID secrets + service worker registration + push fan-out server function (the migration is already in place).
+- Wire it into the existing `notifications` insert trigger so every kind that respects the user's preferences (Phase 1) fires push.
+- Per-device subscription management page under `/settings`.
+
+## Phase 4 — Operator productivity (1–2 sessions)
+Make daily use faster.
+
+- **Command palette** (⌘K) — jump to any clone/module/cascade, fire common actions (new clone, run drift scan, fire cascade), keyboard-driven mode switcher.
+- **Saved cascade templates** — name + reuse common scope/mode combos ("Stage all tagged `client-*` clones, PR mode").
+- **Scheduled cascades** — cron-style `cascade_schedules` table executed by a recurring server function (e.g., "every Sunday 2am, auto-merge to staging clones").
+- **Inline diff viewer** on cascade results using `react-diff-viewer-continued`, fed by the GitHub `compare` API.
+- **Tag manager** — bulk add/remove tags on selected clones; tag-based scope picker on the cascade form.
+
+## Phase 5 — Intelligence & safety (2 sessions)
+Lean on the AI Gateway harder, add guardrails.
+
+- **AI cascade summaries** — before firing, Gemini summarizes the prime diff and predicts which clones it actually affects based on installed modules.
+- **AI conflict triage** — when a cascade fails, AI inspects the failure and proposes a fix-up commit or escalates with a written reason.
+- **Pre-cascade dry run** — simulates against each clone's `modules.json` and shows a green/yellow/red impact matrix.
+- **Approval gates** — for high-blast-radius cascades (>N clones or auto-merge mode), require a second-operator approval recorded in `audit_log`.
+- **Cloudflare on-demand actions** (the Phase 8 item from the original plan) — WAF rules, rate limiting, bot protection, surfaced per-clone after API token capture.
+- **Per-clone health card** — uptime ping, last successful deploy, AI-summarized recent activity.
+
+## Recommended execution order
+1. **Phase 1** (low-risk polish, immediately better UX)
+2. **Phase 2** (replaces the biggest piece of simulation — everything downstream becomes real)
+3. **Phase 3** (now push notifications represent real events)
+4. **Phase 4** (productivity multipliers once the system is real)
+5. **Phase 5** (intelligence + safety once you trust the engine)
