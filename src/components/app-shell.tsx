@@ -14,6 +14,7 @@ import {
   ScrollText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { NotificationsBell } from "@/components/notifications-bell";
 
 const NAV = [
   { to: "/dashboard", label: "Fleet", icon: LayoutDashboard },
@@ -87,9 +88,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <main className="flex-1 min-w-0">
+        {/* Mobile top bar */}
         <header className="md:hidden sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border/60 bg-background/80 px-4 backdrop-blur">
           <Radio className="h-5 w-5 text-primary" />
           <span className="font-mono text-sm font-semibold tracking-wide">MISSION CONTROL</span>
+          <div className="ml-auto">
+            <NotificationsBell />
+          </div>
+        </header>
+        {/* Desktop top bar */}
+        <header className="hidden md:flex sticky top-0 z-30 h-12 items-center justify-end gap-2 border-b border-border/60 bg-background/80 px-6 backdrop-blur">
+          <NotificationsBell />
         </header>
         <div className="p-6 md:p-8">{children}</div>
       </main>
