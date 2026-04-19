@@ -1,14 +1,18 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/protected-route";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   ArrowLeft,
-  Waves,
   ExternalLink,
   RefreshCw,
   GitMerge,
@@ -20,6 +24,7 @@ import {
   XCircle,
   SkipForward,
   GitPullRequest,
+  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "@/lib/format";
@@ -240,7 +245,7 @@ function CascadeDetailPage() {
         <CardHeader>
           <CardTitle className="text-base">Per-clone results</CardTitle>
           <CardDescription>
-            Live updates via Realtime — no refresh needed.
+            Live updates via Realtime — no refresh needed. Sections collapse for noise control.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -249,7 +254,7 @@ function CascadeDetailPage() {
               No clones queued for this cascade.
             </div>
           ) : (
-            results.map((r) => <ResultRow key={r.id} result={r} />)
+            <GroupedResults results={results} eventInFlight={inFlight} onChange={refresh} />
           )}
         </CardContent>
       </Card>
@@ -257,8 +262,144 @@ function CascadeDetailPage() {
   );
 }
 
-function ResultRow({ result }: { result: ResultWithClone }) {
+const GROUP_ORDER: { status: CascadeResult["status"]; label: string; tone: string }[] = [
+  { status: "failed", label: "Failed", tone: "text-destructive" },
+  { status: "queued", label: "Queued", tone: "text-muted-foreground" },
+  { status: "pushing", label: "In flight", tone: "text-info" },
+  { status: "pr_opened", label: "PRs opened", tone: "text-accent" },
+  { status: "succeeded", label: "Succeeded", tone: "text-success" },
+  { status: "skipped", label: "Skipped", tone: "text-muted-foreground" },
+];
+
+function GroupedResults({
+  results,
+  eventInFlight,
+  onChange,
+}: {
+  results: ResultWithClone[];
+  eventInFlight: boolean;
+  onChange: () => void;
+}) {
+  const groups = useMemo(() => {
+    const map = new Map<CascadeResult["status"], ResultWithClone[]>();
+    for (const r of results) {
+      if (!map.has(r.status)) map.set(r.status, []);
+      map.get(r.status)!.push(r);
+    }
+    return GROUP_ORDER.filter((g) => map.has(g.status)).map((g) => ({
+      ...g,
+      items: map.get(g.status)!,
+    }));
+  }, [results]);
+
+  return (
+    <div className="space-y-2">
+      {groups.map((g) => (
+        <ResultsGroup
+          key={g.status}
+          status={g.status}
+          label={g.label}
+          tone={g.tone}
+          items={g.items}
+          defaultOpen={
+            g.status === "failed" || g.status === "queued" || g.status === "pushing"
+          }
+          eventInFlight={eventInFlight}
+          onChange={onChange}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ResultsGroup({
+  status,
+  label,
+  tone,
+  items,
+  defaultOpen,
+  eventInFlight,
+  onChange,
+}: {
+  status: CascadeResult["status"];
+  label: string;
+  tone: string;
+  items: ResultWithClone[];
+  defaultOpen: boolean;
+  eventInFlight: boolean;
+  onChange: () => void;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="flex w-full items-center gap-3 rounded-md border border-border/80 bg-card px-3 py-2 text-left transition-colors hover:bg-muted/40"
+        >
+          <ResultStatusIcon status={status} />
+          <span className={cn("font-mono text-xs uppercase tracking-wider", tone)}>
+            {label}
+          </span>
+          <Badge variant="outline" className="border-border/60 font-mono text-[10px]">
+            {items.length}
+          </Badge>
+          <ChevronDown
+            className={cn(
+              "ml-auto h-4 w-4 text-muted-foreground transition-transform",
+              open && "rotate-180",
+            )}
+          />
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="space-y-2 pt-2">
+        {items.map((r) => (
+          <ResultRow
+            key={r.id}
+            result={r}
+            eventInFlight={eventInFlight}
+            onChange={onChange}
+          />
+        ))}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+function ResultRow({
+  result,
+  eventInFlight,
+  onChange,
+}: {
+  result: ResultWithClone;
+  eventInFlight: boolean;
+  onChange: () => void;
+}) {
   const clone = result.clone;
+  const [skipping, setSkipping] = useState(false);
+  const canSkip = result.status === "queued";
+
+  const skip = async () => {
+    if (!canSkip) return;
+    setSkipping(true);
+    const { error } = await supabase
+      .from("cascade_results")
+      .update({
+        status: "skipped",
+        diff_summary: "Skipped by operator",
+        completed_at: new Date().toISOString(),
+      })
+      .eq("id", result.id);
+    if (error) {
+      toast.error(error.message);
+      setSkipping(false);
+      return;
+    }
+    toast.success(`Skipped ${clone?.name ?? "clone"}`);
+    setSkipping(false);
+    onChange();
+  };
+
   return (
     <div className="flex flex-col gap-3 rounded-md border border-border/80 bg-surface p-3 md:flex-row md:items-center">
       <div className="flex flex-1 items-center gap-3 min-w-0">
@@ -306,6 +447,23 @@ function ResultRow({ result }: { result: ResultWithClone }) {
           >
             View PR <ExternalLink className="h-3 w-3" />
           </a>
+        )}
+        {canSkip && (
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={skipping || eventInFlight}
+            onClick={skip}
+            className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+            title={
+              eventInFlight
+                ? "Cascade in flight — wait for it to settle before skipping"
+                : "Drop this clone from the run"
+            }
+          >
+            <SkipForward className="mr-1 h-3 w-3" />
+            {skipping ? "Skipping…" : "Skip"}
+          </Button>
         )}
       </div>
     </div>

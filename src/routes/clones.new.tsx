@@ -125,6 +125,15 @@ function NewClone() {
       actor_user_id: user?.id,
       metadata: { method, cloudflare, modules: Array.from(picked) },
     });
+    await supabase.from("notifications").insert({
+      kind: "clone_created",
+      severity: "success",
+      title: `Clone created: ${name}`,
+      body: `Provisioned via ${method}${picked.size > 0 ? ` with ${picked.size} module${picked.size === 1 ? "" : "s"}` : ""}`,
+      clone_id: data!.id,
+      url: `/clones/${data!.id}`,
+      metadata: { method, cloudflare },
+    });
     toast.success("Clone registered");
     setBusy(false);
     nav({ to: "/clones/$cloneId", params: { cloneId: data!.id } });
