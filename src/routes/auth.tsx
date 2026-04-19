@@ -48,7 +48,7 @@ function AuthPage() {
           <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-md bg-primary/15 ring-1 ring-primary/40">
             <Radio className="h-6 w-6 text-primary" />
           </div>
-          <CardTitle className="font-mono tracking-wide">MISSION CONTROL</CardTitle>
+          <CardTitle className="font-mono tracking-wide">AURIXA SYSTEMS · MISSION CONTROL</CardTitle>
           <CardDescription>Operator access required</CardDescription>
         </CardHeader>
         <CardContent>

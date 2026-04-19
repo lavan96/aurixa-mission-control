@@ -70,7 +70,7 @@ function Dashboard() {
           <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
             fleet overview
           </p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight">Mission Control</h1>
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight">Aurixa Systems Mission Control</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {prime ? (
               <>
