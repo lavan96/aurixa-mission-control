@@ -1,11 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
+import { z } from "zod";
 import { ProtectedRoute } from "@/components/protected-route";
 import { useCascadeEvents, useClones } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Waves, GitMerge, Send, Bell, ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "@/lib/format";
@@ -13,7 +15,16 @@ import { cn } from "@/lib/utils";
 import { useServerFn } from "@tanstack/react-start";
 import { runCascade } from "@/server/cascade-engine.functions";
 
+const MODE_VALUES = ["pr", "auto_merge", "notify"] as const;
+const SCOPE_VALUES = ["all", "selected"] as const;
+
+const searchSchema = z.object({
+  mode: fallback(z.enum(MODE_VALUES), "pr").default("pr"),
+  scope: fallback(z.enum(SCOPE_VALUES), "all").default("all"),
+});
+
 export const Route = createFileRoute("/cascades")({
+  validateSearch: zodValidator(searchSchema),
   component: () => (
     <ProtectedRoute>
       <CascadesPage />
@@ -22,13 +33,34 @@ export const Route = createFileRoute("/cascades")({
   head: () => ({ meta: [{ title: "Cascades — Mission Control" }] }),
 });
 
-type Mode = "pr" | "auto_merge" | "notify";
+type Mode = (typeof MODE_VALUES)[number];
 
 function CascadesPage() {
   const { data: events, refresh } = useCascadeEvents();
   const { data: clones } = useClones();
-  const [mode, setMode] = useState<Mode>("pr");
-  const [scope, setScope] = useState<"all" | "selected">("all");
+  const search = Route.useSearch();
+  const navigate = useNavigate({ from: "/cascades" });
+  const mode = search.mode;
+  const scope = search.scope;
+
+  type SearchState = typeof search;
+  const setMode = useCallback(
+    (m: Mode) =>
+      void navigate({
+        search: (prev: SearchState) => ({ ...prev, mode: m }),
+        replace: true,
+      }),
+    [navigate],
+  );
+  const setScope = useCallback(
+    (s: (typeof SCOPE_VALUES)[number]) =>
+      void navigate({
+        search: (prev: SearchState) => ({ ...prev, scope: s }),
+        replace: true,
+      }),
+    [navigate],
+  );
+
   const [busy, setBusy] = useState(false);
   const runCascadeFn = useServerFn(runCascade);
 

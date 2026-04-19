@@ -1,4 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
+import { z } from "zod";
 import { ProtectedRoute } from "@/components/protected-route";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bot, Activity, AlertTriangle, Sparkles, GitCommit, RefreshCw, Zap, X } from "lucide-react";
@@ -16,7 +18,7 @@ import { useClones, type Clone } from "@/lib/queries";
 import { useServerFn } from "@tanstack/react-start";
 import { triggerFleetDriftScan } from "@/server/fleet-drift.functions";
 import { runCascade } from "@/server/cascade-engine.functions";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -25,7 +27,15 @@ import type { Database } from "@/integrations/supabase/types";
 
 type CascadeMode = Database["public"]["Enums"]["cascade_mode"];
 
+const CASCADE_MODE_VALUES = ["pr", "auto_merge", "notify"] as const;
+
+const searchSchema = z.object({
+  mode: fallback(z.enum(CASCADE_MODE_VALUES), "pr").default("pr"),
+  selected: fallback(z.string().array(), []).default([]),
+});
+
 export const Route = createFileRoute("/fleet-manager")({
+  validateSearch: zodValidator(searchSchema),
   component: () => (
     <ProtectedRoute>
       <FleetManager />
