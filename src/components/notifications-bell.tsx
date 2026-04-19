@@ -256,6 +256,15 @@ export function NotificationsBell() {
             </ul>
           )}
         </ScrollArea>
+        <div className="border-t border-border px-3 py-2">
+          <Link
+            to="/notifications"
+            onClick={() => setOpen(false)}
+            className="flex items-center justify-center font-mono text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
+          >
+            View all notifications
+          </Link>
+        </div>
       </PopoverContent>
     </Popover>
   );
