@@ -19,7 +19,7 @@ export const Route = createFileRoute("/modules")({
       <ModulesPage />
     </ProtectedRoute>
   ),
-  head: () => ({ meta: [{ title: "Modules — Mission Control" }] }),
+  head: () => ({ meta: [{ title: "Modules — Aurixa Systems Mission Control" }] }),
 });
 
 function ModulesPage() {

@@ -21,7 +21,7 @@ export const Route = createFileRoute("/clones/new")({
       <NewClone />
     </ProtectedRoute>
   ),
-  head: () => ({ meta: [{ title: "Provision clone — Mission Control" }] }),
+  head: () => ({ meta: [{ title: "Provision clone — Aurixa Systems Mission Control" }] }),
 });
 
 type Method = "fork" | "template" | "clone";

@@ -58,7 +58,7 @@ export const Route = createFileRoute("/audit-log")({
       <AuditLogPage />
     </ProtectedRoute>
   ),
-  head: () => ({ meta: [{ title: "Audit Log — Mission Control" }] }),
+  head: () => ({ meta: [{ title: "Audit Log — Aurixa Systems Mission Control" }] }),
 });
 
 function AuditLogPage() {

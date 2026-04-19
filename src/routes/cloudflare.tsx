@@ -13,7 +13,7 @@ export const Route = createFileRoute("/cloudflare")({
       <CloudflarePage />
     </ProtectedRoute>
   ),
-  head: () => ({ meta: [{ title: "Cloudflare — Mission Control" }] }),
+  head: () => ({ meta: [{ title: "Cloudflare — Aurixa Systems Mission Control" }] }),
 });
 
 const CAPS = [

@@ -27,7 +27,7 @@ export const Route = createFileRoute("/dashboard")({
       <Dashboard />
     </ProtectedRoute>
   ),
-  head: () => ({ meta: [{ title: "Fleet — Mission Control" }] }),
+  head: () => ({ meta: [{ title: "Fleet — Aurixa Systems Mission Control" }] }),
 });
 
 function Dashboard() {
