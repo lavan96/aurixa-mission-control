@@ -232,6 +232,24 @@ function FleetManager() {
                                 → {s.recommended_action.replace("_", " ")}
                               </div>
                             </div>
+                            <Button
+                              size="sm"
+                              variant={s.recommended_action === "review" ? "ghost" : "outline"}
+                              disabled={
+                                applyingKey === `${c.id}:${i}` ||
+                                s.recommended_action === "review"
+                              }
+                              onClick={() =>
+                                applySuggestion(c.id, c.name, i, s.recommended_action)
+                              }
+                              className="shrink-0"
+                            >
+                              <Zap className={cn(
+                                "mr-1 h-3 w-3",
+                                applyingKey === `${c.id}:${i}` && "animate-pulse",
+                              )} />
+                              {applyingKey === `${c.id}:${i}` ? "Applying…" : "Apply"}
+                            </Button>
                           </li>
                         ))}
                       </ul>
