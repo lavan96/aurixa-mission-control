@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { getMutedSnapshot, isMuted } from "@/lib/notification-preferences";
 import type { Database } from "@/integrations/supabase/types";
 
 type Notification = Database["public"]["Tables"]["notifications"]["Row"];
