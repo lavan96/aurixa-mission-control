@@ -16,7 +16,7 @@ export const Route = createFileRoute("/settings")({
       <SettingsPage />
     </ProtectedRoute>
   ),
-  head: () => ({ meta: [{ title: "Settings — Mission Control" }] }),
+  head: () => ({ meta: [{ title: "Settings — Aurixa Systems Mission Control" }] }),
 });
 
 function SettingsPage() {

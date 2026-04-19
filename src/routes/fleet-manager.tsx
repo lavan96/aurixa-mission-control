@@ -41,7 +41,7 @@ export const Route = createFileRoute("/fleet-manager")({
       <FleetManager />
     </ProtectedRoute>
   ),
-  head: () => ({ meta: [{ title: "AI Manager — Mission Control" }] }),
+  head: () => ({ meta: [{ title: "AI Manager — Aurixa Systems Mission Control" }] }),
 });
 
 type DriftSuggestion = {

@@ -43,7 +43,7 @@ export const Route = createFileRoute("/cascades/$eventId")({
       <CascadeDetailPage />
     </ProtectedRoute>
   ),
-  head: () => ({ meta: [{ title: "Cascade — Mission Control" }] }),
+  head: () => ({ meta: [{ title: "Cascade — Aurixa Systems Mission Control" }] }),
 });
 
 function CascadeDetailPage() {

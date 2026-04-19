@@ -41,8 +41,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="absolute -right-0.5 -top-0.5 h-2 w-2 animate-pulse rounded-full bg-accent" />
           </div>
           <div className="flex flex-col leading-tight">
-            <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Mission</span>
-            <span className="font-mono text-sm font-semibold tracking-wide text-foreground">CONTROL</span>
+            <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Aurixa Systems</span>
+            <span className="font-mono text-sm font-semibold tracking-wide text-foreground">MISSION CONTROL</span>
           </div>
         </Link>
 
@@ -91,7 +91,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* Mobile top bar */}
         <header className="md:hidden sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border/60 bg-background/80 px-4 backdrop-blur">
           <Radio className="h-5 w-5 text-primary" />
-          <span className="font-mono text-sm font-semibold tracking-wide">MISSION CONTROL</span>
+          <div className="flex flex-col leading-none">
+            <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">Aurixa Systems</span>
+            <span className="font-mono text-sm font-semibold tracking-wide">MISSION CONTROL</span>
+          </div>
           <div className="ml-auto">
             <NotificationsBell />
           </div>

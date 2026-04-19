@@ -122,7 +122,7 @@ export const Route = createFileRoute("/notifications")({
       <NotificationsPage />
     </ProtectedRoute>
   ),
-  head: () => ({ meta: [{ title: "Notifications — Mission Control" }] }),
+  head: () => ({ meta: [{ title: "Notifications — Aurixa Systems Mission Control" }] }),
 });
 
 function iconFor(kind: Kind) {

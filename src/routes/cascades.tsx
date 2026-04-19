@@ -30,7 +30,7 @@ export const Route = createFileRoute("/cascades")({
       <CascadesPage />
     </ProtectedRoute>
   ),
-  head: () => ({ meta: [{ title: "Cascades — Mission Control" }] }),
+  head: () => ({ meta: [{ title: "Cascades — Aurixa Systems Mission Control" }] }),
 });
 
 type Mode = (typeof MODE_VALUES)[number];

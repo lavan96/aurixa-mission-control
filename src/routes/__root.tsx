@@ -34,8 +34,8 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Mission Control — Fleet Dashboard" },
-      { name: "description", content: "Operate a fleet of cloned codebases with cascade-driven updates." },
+      { title: "Aurixa Systems Mission Control — Fleet Dashboard" },
+      { name: "description", content: "Aurixa Systems Mission Control — operate a fleet of cloned codebases with cascade-driven updates." },
     ],
     links: [{ rel: "stylesheet", href: appCss }],
   }),
