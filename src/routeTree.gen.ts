@@ -16,10 +16,12 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CloudflareRouteImport } from './routes/cloudflare'
 import { Route as CascadesRouteImport } from './routes/cascades'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuditLogRouteImport } from './routes/audit-log'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as HooksFleetDriftRouteImport } from './routes/hooks.fleet-drift'
 import { Route as ClonesNewRouteImport } from './routes/clones.new'
 import { Route as ClonesCloneIdRouteImport } from './routes/clones.$cloneId'
+import { Route as CascadesEventIdRouteImport } from './routes/cascades.$eventId'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
@@ -56,6 +58,11 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuditLogRoute = AuditLogRouteImport.update({
+  id: '/audit-log',
+  path: '/audit-log',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -76,29 +83,38 @@ const ClonesCloneIdRoute = ClonesCloneIdRouteImport.update({
   path: '/clones/$cloneId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CascadesEventIdRoute = CascadesEventIdRouteImport.update({
+  id: '/$eventId',
+  path: '/$eventId',
+  getParentRoute: () => CascadesRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/audit-log': typeof AuditLogRoute
   '/auth': typeof AuthRoute
-  '/cascades': typeof CascadesRoute
+  '/cascades': typeof CascadesRouteWithChildren
   '/cloudflare': typeof CloudflareRoute
   '/dashboard': typeof DashboardRoute
   '/fleet-manager': typeof FleetManagerRoute
   '/modules': typeof ModulesRoute
   '/settings': typeof SettingsRoute
+  '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/audit-log': typeof AuditLogRoute
   '/auth': typeof AuthRoute
-  '/cascades': typeof CascadesRoute
+  '/cascades': typeof CascadesRouteWithChildren
   '/cloudflare': typeof CloudflareRoute
   '/dashboard': typeof DashboardRoute
   '/fleet-manager': typeof FleetManagerRoute
   '/modules': typeof ModulesRoute
   '/settings': typeof SettingsRoute
+  '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
@@ -106,13 +122,15 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/audit-log': typeof AuditLogRoute
   '/auth': typeof AuthRoute
-  '/cascades': typeof CascadesRoute
+  '/cascades': typeof CascadesRouteWithChildren
   '/cloudflare': typeof CloudflareRoute
   '/dashboard': typeof DashboardRoute
   '/fleet-manager': typeof FleetManagerRoute
   '/modules': typeof ModulesRoute
   '/settings': typeof SettingsRoute
+  '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
@@ -121,6 +139,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/audit-log'
     | '/auth'
     | '/cascades'
     | '/cloudflare'
@@ -128,12 +147,14 @@ export interface FileRouteTypes {
     | '/fleet-manager'
     | '/modules'
     | '/settings'
+    | '/cascades/$eventId'
     | '/clones/$cloneId'
     | '/clones/new'
     | '/hooks/fleet-drift'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/audit-log'
     | '/auth'
     | '/cascades'
     | '/cloudflare'
@@ -141,12 +162,14 @@ export interface FileRouteTypes {
     | '/fleet-manager'
     | '/modules'
     | '/settings'
+    | '/cascades/$eventId'
     | '/clones/$cloneId'
     | '/clones/new'
     | '/hooks/fleet-drift'
   id:
     | '__root__'
     | '/'
+    | '/audit-log'
     | '/auth'
     | '/cascades'
     | '/cloudflare'
@@ -154,6 +177,7 @@ export interface FileRouteTypes {
     | '/fleet-manager'
     | '/modules'
     | '/settings'
+    | '/cascades/$eventId'
     | '/clones/$cloneId'
     | '/clones/new'
     | '/hooks/fleet-drift'
@@ -161,8 +185,9 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuditLogRoute: typeof AuditLogRoute
   AuthRoute: typeof AuthRoute
-  CascadesRoute: typeof CascadesRoute
+  CascadesRoute: typeof CascadesRouteWithChildren
   CloudflareRoute: typeof CloudflareRoute
   DashboardRoute: typeof DashboardRoute
   FleetManagerRoute: typeof FleetManagerRoute
@@ -224,6 +249,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/audit-log': {
+      id: '/audit-log'
+      path: '/audit-log'
+      fullPath: '/audit-log'
+      preLoaderRoute: typeof AuditLogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -252,13 +284,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClonesCloneIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cascades/$eventId': {
+      id: '/cascades/$eventId'
+      path: '/$eventId'
+      fullPath: '/cascades/$eventId'
+      preLoaderRoute: typeof CascadesEventIdRouteImport
+      parentRoute: typeof CascadesRoute
+    }
   }
 }
 
+interface CascadesRouteChildren {
+  CascadesEventIdRoute: typeof CascadesEventIdRoute
+}
+
+const CascadesRouteChildren: CascadesRouteChildren = {
+  CascadesEventIdRoute: CascadesEventIdRoute,
+}
+
+const CascadesRouteWithChildren = CascadesRoute._addFileChildren(
+  CascadesRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuditLogRoute: AuditLogRoute,
   AuthRoute: AuthRoute,
-  CascadesRoute: CascadesRoute,
+  CascadesRoute: CascadesRouteWithChildren,
   CloudflareRoute: CloudflareRoute,
   DashboardRoute: DashboardRoute,
   FleetManagerRoute: FleetManagerRoute,
