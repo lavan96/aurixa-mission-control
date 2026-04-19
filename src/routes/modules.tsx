@@ -32,7 +32,7 @@ function ModulesPage() {
     if (!prime) return toast.error("Configure prime repo in Settings first");
     setScanning(true);
     try {
-      const res = await detectFn({ data: {} });
+      const res = await detectFn();
       if (!res.ok) {
         toast.error(res.error);
       } else {
