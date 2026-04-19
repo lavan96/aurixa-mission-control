@@ -118,6 +118,8 @@ function FleetManager() {
       refresh();
     }
   };
+
+  const totalSuggestions = clones.reduce(
     (n, c) => n + ((c.drift_suggestions as DriftSuggestion[] | null)?.length ?? 0),
     0,
   );
