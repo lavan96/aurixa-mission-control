@@ -4,6 +4,7 @@ import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { RealtimeNotifications } from "@/lib/realtime-notifications";
 
 function NotFoundComponent() {
   return (
@@ -60,6 +61,7 @@ function RootComponent() {
   return (
     <AuthProvider>
       <TooltipProvider delayDuration={150}>
+        <RealtimeNotifications />
         <Outlet />
         <Toaster />
       </TooltipProvider>
