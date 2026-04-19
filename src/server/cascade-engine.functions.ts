@@ -1,5 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Database } from "@/integrations/supabase/types";
+
+type CascadeResultUpdate = Database["public"]["Tables"]["cascade_results"]["Update"];
 
 // Cascade execution engine.
 // Processes queued cascade_results for a given cascade_event.
@@ -115,7 +118,7 @@ export const runCascade = createServerFn({ method: "POST" })
 
       // Random small failure probability for realism
       const roll = Math.random();
-      let resultPatch: Record<string, any>;
+      let resultPatch: CascadeResultUpdate;
 
       if (installedGlobs.length === 0) {
         resultPatch = {
