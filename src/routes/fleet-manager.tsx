@@ -1,16 +1,21 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/protected-route";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bot, Activity, AlertTriangle, Sparkles, GitCommit, RefreshCw } from "lucide-react";
+import { Bot, Activity, AlertTriangle, Sparkles, GitCommit, RefreshCw, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useClones } from "@/lib/queries";
 import { useServerFn } from "@tanstack/react-start";
 import { triggerFleetDriftScan } from "@/server/fleet-drift.functions";
+import { runCascade } from "@/server/cascade-engine.functions";
 import { useState } from "react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type CascadeMode = Database["public"]["Enums"]["cascade_mode"];
 
 export const Route = createFileRoute("/fleet-manager")({
   component: () => (
@@ -32,7 +37,10 @@ function FleetManager() {
   const { data: clones, refresh } = useClones();
   const drift = clones.filter((c) => c.sync_status === "behind" || c.sync_status === "failed");
   const [scanning, setScanning] = useState(false);
+  const [applyingKey, setApplyingKey] = useState<string | null>(null);
   const scanFn = useServerFn(triggerFleetDriftScan);
+  const cascadeFn = useServerFn(runCascade);
+  const navigate = useNavigate();
 
   const lastScan = clones
     .map((c) => c.last_drift_check_at)
@@ -51,6 +59,63 @@ function FleetManager() {
       toast.error(e instanceof Error ? e.message : "Scan failed");
     } finally {
       setScanning(false);
+    }
+  };
+
+  const applySuggestion = async (
+    cloneId: string,
+    cloneName: string,
+    suggestionIndex: number,
+    action: DriftSuggestion["recommended_action"],
+  ) => {
+    const key = `${cloneId}:${suggestionIndex}`;
+    const mode: CascadeMode | null =
+      action === "cascade_pr"
+        ? "pr"
+        : action === "cascade_auto_merge"
+          ? "auto_merge"
+          : action === "notify"
+            ? "notify"
+            : null;
+    if (!mode) {
+      toast.info("This suggestion is review-only — no cascade to apply.");
+      return;
+    }
+
+    setApplyingKey(key);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: ev, error } = await supabase
+        .from("cascade_events")
+        .insert({
+          trigger: "manual",
+          mode,
+          status: "pending",
+          scope_filter: { scope: "selected", clone_ids: [cloneId], source: "drift_suggestion" },
+          initiated_by: user?.id,
+        })
+        .select()
+        .single();
+      if (error || !ev) throw new Error(error?.message ?? "Failed to create cascade");
+
+      const { error: insErr } = await supabase
+        .from("cascade_results")
+        .insert({ cascade_event_id: ev.id, clone_id: cloneId, status: "queued" });
+      if (insErr) throw new Error(insErr.message);
+
+      toast.info(`Applying ${mode.replace("_", " ")} to ${cloneName}…`);
+      const res = await cascadeFn({ data: { cascadeEventId: ev.id } });
+      if (!res.ok) {
+        toast.error(res.error);
+      } else {
+        toast.success(`Cascade ${res.status} for ${cloneName}`);
+        navigate({ to: "/cascades/$eventId", params: { eventId: ev.id } });
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Apply failed");
+    } finally {
+      setApplyingKey(null);
+      refresh();
     }
   };
 
@@ -167,6 +232,24 @@ function FleetManager() {
                                 → {s.recommended_action.replace("_", " ")}
                               </div>
                             </div>
+                            <Button
+                              size="sm"
+                              variant={s.recommended_action === "review" ? "ghost" : "outline"}
+                              disabled={
+                                applyingKey === `${c.id}:${i}` ||
+                                s.recommended_action === "review"
+                              }
+                              onClick={() =>
+                                applySuggestion(c.id, c.name, i, s.recommended_action)
+                              }
+                              className="shrink-0"
+                            >
+                              <Zap className={cn(
+                                "mr-1 h-3 w-3",
+                                applyingKey === `${c.id}:${i}` && "animate-pulse",
+                              )} />
+                              {applyingKey === `${c.id}:${i}` ? "Applying…" : "Apply"}
+                            </Button>
                           </li>
                         ))}
                       </ul>

@@ -11,6 +11,7 @@ import {
   Settings,
   LogOut,
   Radio,
+  ScrollText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -20,6 +21,7 @@ const NAV = [
   { to: "/modules", label: "Modules", icon: Boxes },
   { to: "/cascades", label: "Cascades", icon: Waves },
   { to: "/fleet-manager", label: "AI Manager", icon: Bot },
+  { to: "/audit-log", label: "Audit Log", icon: ScrollText },
   { to: "/cloudflare", label: "Cloudflare", icon: Shield },
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
