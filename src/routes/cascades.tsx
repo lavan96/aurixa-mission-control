@@ -142,28 +142,36 @@ function CascadesPage() {
         ) : (
           <div className="space-y-2">
             {events.map((e) => (
-              <Card key={e.id} className="border-border/80">
-                <CardContent className="flex items-center justify-between p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-md bg-info/15 text-info">
-                      <Waves className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm font-medium">{e.mode.replace("_", " ")}</span>
-                        <Badge variant="outline" className="text-[10px] uppercase">{e.trigger}</Badge>
-                        <Badge variant="outline" className={cn("text-[10px] uppercase", statusTone(e.status))}>
-                          {e.status}
-                        </Badge>
+              <Link
+                key={e.id}
+                to="/cascades/$eventId"
+                params={{ eventId: e.id }}
+                className="block"
+              >
+                <Card className="border-border/80 transition-colors hover:border-primary/40">
+                  <CardContent className="flex items-center justify-between p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-md bg-info/15 text-info">
+                        <Waves className="h-4 w-4" />
                       </div>
-                      <div className="font-mono text-xs text-muted-foreground">
-                        {formatDistanceToNow(e.created_at)}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-sm font-medium">{e.mode.replace("_", " ")}</span>
+                          <Badge variant="outline" className="text-[10px] uppercase">{e.trigger}</Badge>
+                          <Badge variant="outline" className={cn("text-[10px] uppercase", statusTone(e.status))}>
+                            {e.status}
+                          </Badge>
+                        </div>
+                        <div className="font-mono text-xs text-muted-foreground">
+                          {formatDistanceToNow(e.created_at)}
+                          {e.summary && <> · {e.summary}</>}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </CardContent>
-              </Card>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
         )}
