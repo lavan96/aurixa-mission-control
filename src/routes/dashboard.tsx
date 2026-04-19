@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatDistanceToNow } from "@/lib/format";
+import { CloneGridSkeleton } from "@/components/list-skeletons";
+import { EmptyState } from "@/components/empty-state";
 
 export const Route = createFileRoute("/dashboard")({
   component: () => (
@@ -164,11 +166,17 @@ function Dashboard() {
       </section>
 
       {loading ? (
-        <div className="rounded-md border border-border bg-card p-12 text-center font-mono text-sm text-muted-foreground">
-          loading fleet…
-        </div>
+        <CloneGridSkeleton count={4} />
       ) : filtered.length === 0 ? (
-        <EmptyState />
+        clones.length === 0 ? (
+          <DashboardEmpty />
+        ) : (
+          <EmptyState
+            icon={<Search />}
+            title="No clones match"
+            description="Try clearing the search or switching the filter to see more clones."
+          />
+        )
       ) : (
         <section className="grid gap-3 lg:grid-cols-2">
           {filtered.map((c) => (
@@ -294,22 +302,19 @@ function StatCard({
   );
 }
 
-function EmptyState() {
+function DashboardEmpty() {
   return (
-    <div className="grid-bg flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-card/30 p-16 text-center">
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/30">
-        <GitBranch className="h-6 w-6 text-primary" />
-      </div>
-      <h3 className="font-mono text-lg font-semibold">No clones in the fleet</h3>
-      <p className="mt-2 max-w-md text-sm text-muted-foreground">
-        Provision your first clone from the prime codebase. It can be a fork, a template instance,
-        or an independent clone.
-      </p>
-      <Link to="/clones/new" className="mt-6">
-        <Button>
-          <Plus className="mr-2 h-4 w-4" /> Provision first clone
-        </Button>
-      </Link>
-    </div>
+    <EmptyState
+      icon={<GitBranch />}
+      title="No clones in the fleet"
+      description="Provision your first clone from the prime codebase. It can be a fork, a template instance, or an independent clone."
+      action={
+        <Link to="/clones/new">
+          <Button>
+            <Plus className="mr-2 h-4 w-4" /> Provision first clone
+          </Button>
+        </Link>
+      }
+    />
   );
 }
