@@ -10,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useServerFn } from "@tanstack/react-start";
+import { runCascade } from "@/server/cascade-engine.functions";
 
 export const Route = createFileRoute("/cascades")({
   component: () => (
@@ -28,6 +30,7 @@ function CascadesPage() {
   const [mode, setMode] = useState<Mode>("pr");
   const [scope, setScope] = useState<"all" | "selected">("all");
   const [busy, setBusy] = useState(false);
+  const runCascadeFn = useServerFn(runCascade);
 
   const fire = async () => {
     setBusy(true);
@@ -48,7 +51,6 @@ function CascadesPage() {
       setBusy(false);
       return;
     }
-    // queue per-clone results
     const targets = clones;
     if (targets.length > 0) {
       await supabase.from("cascade_results").insert(
@@ -59,7 +61,22 @@ function CascadesPage() {
         })),
       );
     }
-    toast.success(`Cascade ${mode.replace("_", " ")} queued for ${targets.length} clones`);
+    toast.info(`Queued ${targets.length} clones — executing…`);
+    refresh();
+
+    try {
+      const res = await runCascadeFn({ data: { cascadeEventId: ev.id } });
+      if (!res.ok) {
+        toast.error(res.error);
+      } else {
+        const { succeeded, opened, failed, skipped } = res.counts;
+        toast.success(
+          `Cascade ${res.status}: ${succeeded} merged · ${opened} PRs · ${failed} failed · ${skipped} skipped`,
+        );
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Engine failed");
+    }
     setBusy(false);
     refresh();
   };

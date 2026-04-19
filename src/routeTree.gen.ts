@@ -17,6 +17,7 @@ import { Route as CloudflareRouteImport } from './routes/cloudflare'
 import { Route as CascadesRouteImport } from './routes/cascades'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as HooksFleetDriftRouteImport } from './routes/hooks.fleet-drift'
 import { Route as ClonesNewRouteImport } from './routes/clones.new'
 import { Route as ClonesCloneIdRouteImport } from './routes/clones.$cloneId'
 
@@ -60,6 +61,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HooksFleetDriftRoute = HooksFleetDriftRouteImport.update({
+  id: '/hooks/fleet-drift',
+  path: '/hooks/fleet-drift',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ClonesNewRoute = ClonesNewRouteImport.update({
   id: '/clones/new',
   path: '/clones/new',
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
+  '/hooks/fleet-drift': typeof HooksFleetDriftRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -94,6 +101,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
+  '/hooks/fleet-drift': typeof HooksFleetDriftRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -107,6 +115,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
+  '/hooks/fleet-drift': typeof HooksFleetDriftRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -121,6 +130,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/clones/$cloneId'
     | '/clones/new'
+    | '/hooks/fleet-drift'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -133,6 +143,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/clones/$cloneId'
     | '/clones/new'
+    | '/hooks/fleet-drift'
   id:
     | '__root__'
     | '/'
@@ -145,6 +156,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/clones/$cloneId'
     | '/clones/new'
+    | '/hooks/fleet-drift'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -158,6 +170,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   ClonesCloneIdRoute: typeof ClonesCloneIdRoute
   ClonesNewRoute: typeof ClonesNewRoute
+  HooksFleetDriftRoute: typeof HooksFleetDriftRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -218,6 +231,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/hooks/fleet-drift': {
+      id: '/hooks/fleet-drift'
+      path: '/hooks/fleet-drift'
+      fullPath: '/hooks/fleet-drift'
+      preLoaderRoute: typeof HooksFleetDriftRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/clones/new': {
       id: '/clones/new'
       path: '/clones/new'
@@ -246,6 +266,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   ClonesCloneIdRoute: ClonesCloneIdRoute,
   ClonesNewRoute: ClonesNewRoute,
+  HooksFleetDriftRoute: HooksFleetDriftRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
