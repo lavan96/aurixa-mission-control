@@ -78,8 +78,11 @@ function FleetManager() {
 
   const driftIds = useMemo(() => drift.map((c) => c.id), [drift]);
 
-  const selected = useMemo(
-    () => new Set(search.selected.filter((id) => driftIds.includes(id))),
+  const selected = useMemo<Set<string>>(
+    () =>
+      new Set(
+        (search.selected as string[]).filter((id) => driftIds.includes(id)),
+      ),
     [search.selected, driftIds],
   );
   const bulkMode = search.mode;
