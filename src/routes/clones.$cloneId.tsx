@@ -50,11 +50,21 @@ function CloneDetail() {
       .insert({ clone_id: cloneId, module_id: moduleId, installed_by: user?.id });
     if (error) return toast.error(error.message);
     toast.success("Module injected — pushing commit to repo");
+    const mod = allModules.find((m) => m.id === moduleId);
     await supabase.from("audit_log").insert({
       action: "module.injected",
       entity_type: "clone",
       entity_id: cloneId,
       actor_user_id: user?.id,
+      metadata: { module_id: moduleId },
+    });
+    await supabase.from("notifications").insert({
+      kind: "module_installed",
+      severity: "info",
+      title: `Module installed: ${mod?.name ?? "module"}`,
+      body: clone ? `On ${clone.name}` : null,
+      clone_id: cloneId,
+      url: `/clones/${cloneId}`,
       metadata: { module_id: moduleId },
     });
     load();
@@ -63,6 +73,7 @@ function CloneDetail() {
     const { data: { user } } = await supabase.auth.getUser();
     await supabase.from("clone_modules").delete().eq("clone_id", cloneId).eq("module_id", moduleId);
     toast.success("Module removed");
+    const mod = allModules.find((m) => m.id === moduleId);
     await supabase.from("audit_log").insert({
       action: "module.removed",
       entity_type: "clone",
@@ -70,10 +81,26 @@ function CloneDetail() {
       actor_user_id: user?.id,
       metadata: { module_id: moduleId },
     });
+    await supabase.from("notifications").insert({
+      kind: "module_removed",
+      severity: "info",
+      title: `Module removed: ${mod?.name ?? "module"}`,
+      body: clone ? `From ${clone.name}` : null,
+      clone_id: cloneId,
+      url: `/clones/${cloneId}`,
+      metadata: { module_id: moduleId },
+    });
     load();
   };
   const destroy = async () => {
     if (!confirm("Delete this clone? This cannot be undone.")) return;
+    const cloneName = clone?.name ?? "Clone";
+    await supabase.from("notifications").insert({
+      kind: "clone_deleted",
+      severity: "warning",
+      title: `Clone deleted: ${cloneName}`,
+      metadata: { clone_id: cloneId },
+    });
     await supabase.from("clones").delete().eq("id", cloneId);
     toast.success("Clone deleted");
     history.back();
