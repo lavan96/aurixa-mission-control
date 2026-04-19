@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/protected-route";
 import { useCascadeEvents, useClones } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
