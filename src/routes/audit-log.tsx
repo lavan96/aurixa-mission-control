@@ -1,4 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
+import { z } from "zod";
 import { ProtectedRoute } from "@/components/protected-route";
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,14 +22,14 @@ import { formatDistanceToNow } from "@/lib/format";
 
 type AuditLog = Database["public"]["Tables"]["audit_log"]["Row"];
 
-export const Route = createFileRoute("/audit-log")({
-  component: () => (
-    <ProtectedRoute>
-      <AuditLogPage />
-    </ProtectedRoute>
-  ),
-  head: () => ({ meta: [{ title: "Audit Log — Mission Control" }] }),
-});
+const ACTION_VALUES = [
+  "all",
+  "cascade.executed",
+  "fleet.drift_scan",
+  "modules.detected",
+] as const;
+
+const ENTITY_VALUES = ["all", "cascade_event", "clone", "module"] as const;
 
 const ACTION_OPTIONS = [
   { value: "all", label: "All actions" },
@@ -43,38 +45,71 @@ const ENTITY_OPTIONS = [
   { value: "module", label: "Modules" },
 ];
 
+const searchSchema = z.object({
+  action: fallback(z.enum(ACTION_VALUES), "all").default("all"),
+  entity: fallback(z.enum(ENTITY_VALUES), "all").default("all"),
+  q: fallback(z.string(), "").default(""),
+});
+
+export const Route = createFileRoute("/audit-log")({
+  validateSearch: zodValidator(searchSchema),
+  component: () => (
+    <ProtectedRoute>
+      <AuditLogPage />
+    </ProtectedRoute>
+  ),
+  head: () => ({ meta: [{ title: "Audit Log — Mission Control" }] }),
+});
+
 function AuditLogPage() {
+  const search = Route.useSearch();
+  const navigate = useNavigate({ from: "/audit-log" });
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [action, setAction] = useState<string>("all");
-  const [entity, setEntity] = useState<string>("all");
-  const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
+
+  type SearchState = typeof search;
+
+  const setSearch = useCallback(
+    (patch: Partial<SearchState>) => {
+      void navigate({
+        search: (prev: SearchState) => ({ ...prev, ...patch }),
+        replace: true,
+      });
+    },
+    [navigate],
+  );
 
   const refresh = useCallback(async () => {
     setLoading(true);
     let q = supabase.from("audit_log").select("*").order("created_at", { ascending: false }).limit(200);
-    if (action !== "all") q = q.eq("action", action);
-    if (entity !== "all") q = q.eq("entity_type", entity);
+    if (search.action !== "all") q = q.eq("action", search.action);
+    if (search.entity !== "all") q = q.eq("entity_type", search.entity);
     const { data } = await q;
     setLogs(data ?? []);
     setLoading(false);
-  }, [action, entity]);
+  }, [search.action, search.entity]);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
 
-  const visible = search
+  const visible = search.q
     ? logs.filter(
         (l) =>
-          l.action.toLowerCase().includes(search.toLowerCase()) ||
-          (l.entity_type ?? "").toLowerCase().includes(search.toLowerCase()) ||
-          JSON.stringify(l.metadata).toLowerCase().includes(search.toLowerCase()),
+          l.action.toLowerCase().includes(search.q.toLowerCase()) ||
+          (l.entity_type ?? "").toLowerCase().includes(search.q.toLowerCase()) ||
+          JSON.stringify(l.metadata).toLowerCase().includes(search.q.toLowerCase()),
       )
     : logs;
 
-  const hasFilters = action !== "all" || entity !== "all" || search.length > 0;
+  const hasFilters = search.action !== "all" || search.entity !== "all" || search.q.length > 0;
+
+  const clearFilters = () =>
+    navigate({
+      search: () => ({ action: "all", entity: "all", q: "" }),
+      replace: true,
+    });
 
   return (
     <div className="space-y-6">
@@ -105,7 +140,10 @@ function AuditLogPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-3">
-          <Select value={action} onValueChange={setAction}>
+          <Select
+            value={search.action}
+            onValueChange={(v) => setSearch({ action: v as typeof search.action })}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -117,7 +155,10 @@ function AuditLogPage() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={entity} onValueChange={setEntity}>
+          <Select
+            value={search.entity}
+            onValueChange={(v) => setSearch({ entity: v as typeof search.entity })}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -132,19 +173,15 @@ function AuditLogPage() {
           <div className="relative">
             <Input
               placeholder="Search actions, metadata…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={search.q}
+              onChange={(e) => setSearch({ q: e.target.value })}
             />
             {hasFilters && (
               <Button
                 variant="ghost"
                 size="sm"
                 className="absolute right-1 top-1/2 -translate-y-1/2 h-7 px-2"
-                onClick={() => {
-                  setAction("all");
-                  setEntity("all");
-                  setSearch("");
-                }}
+                onClick={clearFilters}
               >
                 <X className="h-3.5 w-3.5" />
               </Button>
