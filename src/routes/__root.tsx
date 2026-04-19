@@ -5,6 +5,7 @@ import { AuthProvider } from "@/lib/auth";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { RealtimeNotifications } from "@/lib/realtime-notifications";
+import { BrowserPushNotifications } from "@/lib/browser-notifications";
 
 function NotFoundComponent() {
   return (
@@ -62,6 +63,7 @@ function RootComponent() {
     <AuthProvider>
       <TooltipProvider delayDuration={150}>
         <RealtimeNotifications />
+        <BrowserPushNotifications />
         <Outlet />
         <Toaster />
       </TooltipProvider>
