@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Github, ExternalLink, Shield, Trash2, Waves, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "@/lib/format";
+import { CloneActivityHistory } from "@/components/clone-activity-history";
 
 export const Route = createFileRoute("/clones/$cloneId")({
   component: () => (
