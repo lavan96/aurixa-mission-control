@@ -18,6 +18,8 @@ import { useClones, type Clone } from "@/lib/queries";
 import { useServerFn } from "@tanstack/react-start";
 import { triggerFleetDriftScan } from "@/server/fleet-drift.functions";
 import { runCascade } from "@/server/cascade-engine.functions";
+import { DriftListSkeleton } from "@/components/list-skeletons";
+import { EmptyState } from "@/components/empty-state";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "@/lib/format";
@@ -61,7 +63,7 @@ function actionToMode(
 }
 
 function FleetManager() {
-  const { data: clones, refresh } = useClones();
+  const { data: clones, loading: clonesLoading, refresh } = useClones();
   const drift = useMemo(
     () => clones.filter((c) => c.sync_status === "behind" || c.sync_status === "failed"),
     [clones],
@@ -327,10 +329,14 @@ function FleetManager() {
           </div>
         </CardHeader>
         <CardContent>
-          {drift.length === 0 ? (
-            <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-              All clones in sync. Nothing to suggest.
-            </div>
+          {clonesLoading ? (
+            <DriftListSkeleton count={3} />
+          ) : drift.length === 0 ? (
+            <EmptyState
+              icon={<Activity />}
+              title="Fleet in sync"
+              description="No drift detected. The autonomous sweeper will surface new findings here as they emerge."
+            />
           ) : (
             <ul className="space-y-3">
               {drift.map((c) => (
