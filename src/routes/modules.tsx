@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useServerFn } from "@tanstack/react-start";
+import { detectModules } from "@/server/ai-detect-modules.functions";
 
 export const Route = createFileRoute("/modules")({
   component: () => (
@@ -24,57 +26,26 @@ function ModulesPage() {
   const { data: modules, refresh } = useModules();
   const { data: prime } = usePrimeConfig();
   const [scanning, setScanning] = useState(false);
+  const detectFn = useServerFn(detectModules);
 
   const runDetection = async () => {
-    if (!prime) return toast.error("Configure prime repo first");
+    if (!prime) return toast.error("Configure prime repo in Settings first");
     setScanning(true);
-    // Placeholder: in production this calls a server function that uses Lovable AI
-    // Gateway (google/gemini-3-flash-preview, reasoning: high) to scan the repo
-    // and propose module boundaries.
-    const proposed = [
-      {
-        name: "Auth",
-        slug: "auth",
-        description: "Login, signup, session, password reset",
-        file_globs: ["src/lib/auth.tsx", "src/routes/auth.tsx", "src/components/protected-route.tsx"],
-        routes: ["/auth"],
-        ai_confidence: 0.94,
-      },
-      {
-        name: "Marketing Pages",
-        slug: "marketing-pages",
-        description: "Landing, about, pricing, contact static routes",
-        file_globs: ["src/routes/index.tsx", "src/routes/about.tsx", "src/routes/pricing.tsx"],
-        routes: ["/", "/about", "/pricing", "/contact"],
-        ai_confidence: 0.88,
-      },
-      {
-        name: "Billing",
-        slug: "billing",
-        description: "Stripe checkout, subscriptions, invoices",
-        file_globs: ["src/routes/billing.tsx", "supabase/functions/stripe-*"],
-        routes: ["/billing"],
-        ai_confidence: 0.91,
-      },
-      {
-        name: "Dashboard Core",
-        slug: "dashboard-core",
-        description: "Main authenticated dashboard shell and widgets",
-        file_globs: ["src/routes/dashboard.tsx", "src/components/app-shell.tsx"],
-        routes: ["/dashboard"],
-        ai_confidence: 0.96,
-      },
-    ];
-    for (const p of proposed) {
-      await supabase.from("modules").upsert(
-        { ...p, status: "proposed", detected_by_ai: true },
-        { onConflict: "slug", ignoreDuplicates: true },
-      );
+    try {
+      const res = await detectFn({ data: {} });
+      if (!res.ok) {
+        toast.error(res.error);
+      } else {
+        toast.success(
+          `AI proposed ${res.proposed} module(s) — ${res.inserted} new added to catalog`,
+        );
+        refresh();
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Detection failed");
+    } finally {
+      setScanning(false);
     }
-    await new Promise((r) => setTimeout(r, 600));
-    setScanning(false);
-    toast.success(`Detected ${proposed.length} modules — review below`);
-    refresh();
   };
 
   const setStatus = async (id: string, status: "approved" | "archived") => {
