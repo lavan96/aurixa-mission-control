@@ -4,12 +4,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import { usePrimeConfig } from "@/lib/queries";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Github, Cloud, Sparkles } from "lucide-react";
+import { Github, Cloud, Sparkles, Zap } from "lucide-react";
 import { GitHubStatusCard } from "@/components/github-status-card";
+import { WebhookDeliveriesPanel } from "@/components/webhook-deliveries-panel";
+import type { Database } from "@/integrations/supabase/types";
+
+type CascadeMode = Database["public"]["Enums"]["cascade_mode"];
 
 export const Route = createFileRoute("/settings/")({
   component: () => (
@@ -26,6 +31,7 @@ function SettingsGeneralPage() {
   const [repo, setRepo] = useState("");
   const [branch, setBranch] = useState("main");
   const [defaultOrg, setDefaultOrg] = useState("");
+  const [cascadeMode, setCascadeMode] = useState<CascadeMode>("pr");
 
   useEffect(() => {
     if (prime) {
@@ -33,20 +39,23 @@ function SettingsGeneralPage() {
       setRepo(prime.github_repo);
       setBranch(prime.default_branch);
       setDefaultOrg(prime.default_clone_org ?? "");
+      setCascadeMode(prime.default_cascade_mode);
     }
   }, [prime]);
 
   const save = async () => {
     if (!owner || !repo) return toast.error("Owner and repo required");
+    const payload = {
+      github_owner: owner,
+      github_repo: repo,
+      default_branch: branch,
+      default_clone_org: defaultOrg || null,
+      default_cascade_mode: cascadeMode,
+    };
     if (prime) {
-      await supabase
-        .from("prime_config")
-        .update({ github_owner: owner, github_repo: repo, default_branch: branch, default_clone_org: defaultOrg || null })
-        .eq("id", prime.id);
+      await supabase.from("prime_config").update(payload).eq("id", prime.id);
     } else {
-      await supabase
-        .from("prime_config")
-        .insert({ github_owner: owner, github_repo: repo, default_branch: branch, default_clone_org: defaultOrg || null });
+      await supabase.from("prime_config").insert(payload);
     }
     toast.success("Prime config saved");
     refresh();
@@ -78,6 +87,27 @@ function SettingsGeneralPage() {
             <Label>Default org for new clones</Label>
             <Input value={defaultOrg} onChange={(e) => setDefaultOrg(e.target.value)} placeholder="my-org" />
           </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label className="flex items-center gap-2">
+              <Zap className="h-3.5 w-3.5" /> Default cascade mode (used on commit webhooks)
+            </Label>
+            <Select value={cascadeMode} onValueChange={(v) => setCascadeMode(v as CascadeMode)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pr">
+                  PR — open a pull request on each clone for human review
+                </SelectItem>
+                <SelectItem value="auto_merge">
+                  Auto-merge — push directly to each clone's default branch
+                </SelectItem>
+                <SelectItem value="notify">
+                  Notify only — record the event, take no action
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="md:col-span-2 flex justify-end">
             <Button onClick={save}>Save prime config</Button>
           </div>
@@ -85,6 +115,8 @@ function SettingsGeneralPage() {
       </Card>
 
       <GitHubStatusCard />
+
+      <WebhookDeliveriesPanel />
 
       <Card>
         <CardHeader>
