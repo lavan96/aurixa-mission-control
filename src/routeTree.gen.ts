@@ -13,6 +13,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SchedulesRouteImport } from './routes/schedules'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as ModulesRouteImport } from './routes/modules'
+import { Route as HealthRouteImport } from './routes/health'
 import { Route as FleetManagerRouteImport } from './routes/fleet-manager'
 import { Route as DriftRouteImport } from './routes/drift'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -50,6 +51,11 @@ const NotificationsRoute = NotificationsRouteImport.update({
 const ModulesRoute = ModulesRouteImport.update({
   id: '/modules',
   path: '/modules',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HealthRoute = HealthRouteImport.update({
+  id: '/health',
+  path: '/health',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FleetManagerRoute = FleetManagerRouteImport.update({
@@ -152,6 +158,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/drift': typeof DriftRoute
   '/fleet-manager': typeof FleetManagerRoute
+  '/health': typeof HealthRoute
   '/modules': typeof ModulesRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/schedules': typeof SchedulesRoute
@@ -176,6 +183,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/drift': typeof DriftRoute
   '/fleet-manager': typeof FleetManagerRoute
+  '/health': typeof HealthRoute
   '/modules': typeof ModulesRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/schedules': typeof SchedulesRoute
@@ -200,6 +208,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/drift': typeof DriftRoute
   '/fleet-manager': typeof FleetManagerRoute
+  '/health': typeof HealthRoute
   '/modules': typeof ModulesRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/schedules': typeof SchedulesRoute
@@ -226,6 +235,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/drift'
     | '/fleet-manager'
+    | '/health'
     | '/modules'
     | '/notifications'
     | '/schedules'
@@ -250,6 +260,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/drift'
     | '/fleet-manager'
+    | '/health'
     | '/modules'
     | '/notifications'
     | '/schedules'
@@ -273,6 +284,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/drift'
     | '/fleet-manager'
+    | '/health'
     | '/modules'
     | '/notifications'
     | '/schedules'
@@ -298,6 +310,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   DriftRoute: typeof DriftRoute
   FleetManagerRoute: typeof FleetManagerRoute
+  HealthRoute: typeof HealthRoute
   ModulesRoute: typeof ModulesRouteWithChildren
   NotificationsRoute: typeof NotificationsRoute
   SchedulesRoute: typeof SchedulesRoute
@@ -338,6 +351,13 @@ declare module '@tanstack/react-router' {
       path: '/modules'
       fullPath: '/modules'
       preLoaderRoute: typeof ModulesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/health': {
+      id: '/health'
+      path: '/health'
+      fullPath: '/health'
+      preLoaderRoute: typeof HealthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/fleet-manager': {
@@ -515,6 +535,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   DriftRoute: DriftRoute,
   FleetManagerRoute: FleetManagerRoute,
+  HealthRoute: HealthRoute,
   ModulesRoute: ModulesRouteWithChildren,
   NotificationsRoute: NotificationsRoute,
   SchedulesRoute: SchedulesRoute,

@@ -71,6 +71,14 @@ export const approveCascade = createServerFn({ method: "POST" })
       metadata: { mode: ev.mode },
     });
 
+    // Clear the "awaiting approval" notification(s) for this event.
+    await supabase
+      .from("notifications")
+      .update({ read_at: new Date().toISOString() })
+      .eq("cascade_event_id", data.cascadeEventId)
+      .eq("kind", "cascade_awaiting_approval")
+      .is("read_at", null);
+
     // Run the engine now that the gate is open.
     const res = await executeCascade(supabase, data.cascadeEventId);
     if (!res.ok) return { ok: false, error: res.error };
@@ -120,6 +128,14 @@ export const rejectCascade = createServerFn({ method: "POST" })
       actor_user_id: context.userId,
       metadata: { mode: ev.mode, reason: data.reason ?? null },
     });
+
+    // Clear the "awaiting approval" notification(s) for this event.
+    await supabase
+      .from("notifications")
+      .update({ read_at: new Date().toISOString() })
+      .eq("cascade_event_id", data.cascadeEventId)
+      .eq("kind", "cascade_awaiting_approval")
+      .is("read_at", null);
 
     return { ok: true as const };
   });

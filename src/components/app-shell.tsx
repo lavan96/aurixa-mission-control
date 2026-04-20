@@ -14,6 +14,7 @@ import {
   ScrollText,
   CalendarClock,
   Sparkles,
+  Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "@/components/notifications-bell";
@@ -21,6 +22,7 @@ import { CommandPalette } from "@/components/command-palette";
 
 const NAV = [
   { to: "/dashboard", label: "Fleet", icon: LayoutDashboard },
+  { to: "/health", label: "Health", icon: Activity },
   { to: "/clones/new", label: "New Clone", icon: GitFork },
   { to: "/modules", label: "Modules", icon: Boxes },
   { to: "/cascades", label: "Cascades", icon: Waves },

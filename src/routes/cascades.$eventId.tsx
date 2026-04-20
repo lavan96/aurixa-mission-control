@@ -55,6 +55,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { runCascade } from "@/server/cascade-engine.functions";
 import { CascadeLineagePanel } from "@/components/cascade-lineage-panel";
 import { InlineDiffSummary } from "@/components/inline-diff-summary";
+import { CascadeApprovalBanner } from "@/components/cascade-approval-banner";
+import { CascadeTriageCard } from "@/components/cascade-triage-card";
+import { assessBlastRadius } from "@/server/cascade-approvals.server";
 
 type CascadeEvent = Database["public"]["Tables"]["cascade_events"]["Row"];
 type CascadeResult = Database["public"]["Tables"]["cascade_results"]["Row"];
@@ -522,7 +525,22 @@ function CascadeDetailPage() {
         </Card>
       )}
 
+      <CascadeApprovalBanner
+        cascadeEventId={event.id}
+        initiatedBy={event.initiated_by}
+        requiresApproval={event.requires_approval}
+        approvedAt={event.approved_at}
+        approvedBy={event.approved_by}
+        reasonHint={
+          assessBlastRadius(event.mode, results.length).reason ??
+          "This cascade exceeds the safety threshold."
+        }
+        onChange={refresh}
+      />
+
       <CascadeLineagePanel event={event} />
+
+      <CascadeTriageCard cascadeEventId={event.id} failureCount={failedCount} />
 
       <div className="grid gap-2 md:grid-cols-6">
         <CountTile label="Queued" value={counts.queued} icon={<CircleDot />} tone="muted" />

@@ -20,6 +20,7 @@ import { EmptyState } from "@/components/empty-state";
 import { CascadeTemplatesCard, type CascadeTemplateValue } from "@/components/cascade-templates-card";
 import { CascadeDryRunCard } from "@/components/cascade-dryrun-card";
 import { assessBlastRadius } from "@/server/cascade-approvals.server";
+import { ShieldAlert } from "lucide-react";
 
 const MODE_VALUES = ["pr", "auto_merge", "notify"] as const;
 const SCOPE_VALUES = ["all", "selected"] as const;
@@ -125,6 +126,9 @@ function CascadesPage() {
   const [busy, setBusy] = useState(false);
   const runCascadeFn = useServerFn(runCascade);
 
+  // Live blast-radius preview based on current scope/mode + clone count.
+  const blast = assessBlastRadius(mode, clones.length);
+
   const fire = async () => {
     setBusy(true);
     const { data: { user } } = await supabase.auth.getUser();
@@ -136,6 +140,7 @@ function CascadesPage() {
         status: "pending",
         scope_filter: { scope },
         initiated_by: user?.id,
+        requires_approval: blast.requiresApproval,
       })
       .select()
       .single();
@@ -154,6 +159,32 @@ function CascadesPage() {
         })),
       );
     }
+
+    if (blast.requiresApproval) {
+      // Pin a workspace-wide notification so other operators see it immediately.
+      await supabase.from("notifications").insert({
+        kind: "cascade_awaiting_approval",
+        severity: "warning",
+        title: `Approval needed · ${mode.replace("_", " ")} cascade`,
+        body: `${blast.reason} Initiated by you — needs a second operator to approve.`,
+        cascade_event_id: ev.id,
+        url: `/cascades/${ev.id}`,
+        metadata: { mode, clone_count: targets.length },
+      });
+      await supabase.from("audit_log").insert({
+        action: "cascade.awaiting_approval",
+        entity_type: "cascade_event",
+        entity_id: ev.id,
+        actor_user_id: user?.id,
+        metadata: { mode, clone_count: targets.length, reason: blast.reason },
+      });
+      toast.warning("Approval required — second operator must approve before this runs.");
+      void navigate({ to: "/cascades/$eventId", params: { eventId: ev.id } });
+      setBusy(false);
+      refresh();
+      return;
+    }
+
     toast.info(`Queued ${targets.length} clones — executing…`);
     refresh();
 
@@ -215,14 +246,33 @@ function CascadesPage() {
               </Button>
             </div>
           </div>
+          {blast.requiresApproval && (
+            <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/5 p-3 text-xs text-warning">
+              <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+              <div className="flex-1">
+                <div className="font-mono uppercase tracking-wider">Approval gate</div>
+                <div className="mt-0.5 font-mono text-[11px] text-warning/90">
+                  {blast.reason} The cascade will queue and wait — no GitHub
+                  changes happen until a different operator approves on the
+                  cascade detail page.
+                </div>
+              </div>
+            </div>
+          )}
           <div className="flex justify-end">
             <Button onClick={fire} disabled={busy || clones.length === 0}>
               <Waves className="mr-2 h-4 w-4" />
-              {busy ? "Queueing…" : "Fire cascade"}
+              {busy
+                ? "Queueing…"
+                : blast.requiresApproval
+                  ? "Queue for approval"
+                  : "Fire cascade"}
             </Button>
           </div>
         </CardContent>
       </Card>
+
+      <CascadeDryRunCard />
 
       <CascadeTemplatesCard
         current={{ mode, scope, tags: [], cloneIds: [] }}
