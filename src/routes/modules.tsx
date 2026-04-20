@@ -89,17 +89,20 @@ function ModulesPage() {
           }
         />
       ) : (
-        <div className="grid gap-3 md:grid-cols-2">
-          {modules.map((m) => (
-            <ModuleRow
-              key={m.id}
-              module={m}
-              onApprove={() => setStatus(m.id, "approved")}
-              onArchive={() => setStatus(m.id, "archived")}
-              onEdited={refresh}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-3 md:grid-cols-2">
+            {modules.map((m) => (
+              <ModuleRow
+                key={m.id}
+                module={m}
+                onApprove={() => setStatus(m.id, "approved")}
+                onArchive={() => setStatus(m.id, "archived")}
+                onEdited={refresh}
+              />
+            ))}
+          </div>
+          <FleetModuleSyncCard />
+        </>
       )}
     </div>
   );
