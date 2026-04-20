@@ -246,14 +246,33 @@ function CascadesPage() {
               </Button>
             </div>
           </div>
+          {blast.requiresApproval && (
+            <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/5 p-3 text-xs text-warning">
+              <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+              <div className="flex-1">
+                <div className="font-mono uppercase tracking-wider">Approval gate</div>
+                <div className="mt-0.5 font-mono text-[11px] text-warning/90">
+                  {blast.reason} The cascade will queue and wait — no GitHub
+                  changes happen until a different operator approves on the
+                  cascade detail page.
+                </div>
+              </div>
+            </div>
+          )}
           <div className="flex justify-end">
             <Button onClick={fire} disabled={busy || clones.length === 0}>
               <Waves className="mr-2 h-4 w-4" />
-              {busy ? "Queueing…" : "Fire cascade"}
+              {busy
+                ? "Queueing…"
+                : blast.requiresApproval
+                  ? "Queue for approval"
+                  : "Fire cascade"}
             </Button>
           </div>
         </CardContent>
       </Card>
+
+      <CascadeDryRunCard />
 
       <CascadeTemplatesCard
         current={{ mode, scope, tags: [], cloneIds: [] }}
