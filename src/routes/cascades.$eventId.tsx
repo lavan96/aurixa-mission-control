@@ -57,6 +57,7 @@ import { CascadeLineagePanel } from "@/components/cascade-lineage-panel";
 type CascadeEvent = Database["public"]["Tables"]["cascade_events"]["Row"];
 type CascadeResult = Database["public"]["Tables"]["cascade_results"]["Row"];
 type Clone = Database["public"]["Tables"]["clones"]["Row"];
+type PrimeConfig = Database["public"]["Tables"]["prime_config"]["Row"];
 type ResultWithClone = CascadeResult & { clone?: Clone | null };
 
 export const Route = createFileRoute("/cascades/$eventId")({
