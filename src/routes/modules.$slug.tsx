@@ -1,22 +1,33 @@
-import { createFileRoute, Link, useParams, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams, useNavigate, notFound } from "@tanstack/react-router";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
+import { z } from "zod";
 import { useEffect, useState } from "react";
 import { ProtectedRoute } from "@/components/protected-route";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Boxes, Waves, ChevronRight } from "lucide-react";
+import { ArrowLeft, Boxes, Waves, ChevronRight, X } from "lucide-react";
 import { StatusPill } from "@/components/status-pill";
 import { formatDistanceToNow } from "@/lib/format";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { bulkSyncModuleFn } from "@/server/module-sync.functions";
+import { cn } from "@/lib/utils";
 import type { Database } from "@/integrations/supabase/types";
 
 type Module = Database["public"]["Tables"]["modules"]["Row"];
 type Clone = Database["public"]["Tables"]["clones"]["Row"];
+type SyncStatus = Database["public"]["Enums"]["sync_status"];
+
+const STATUS_VALUES = ["in_sync", "behind", "failed", "cascading", "unknown"] as const;
+
+const searchSchema = z.object({
+  status: fallback(z.enum(STATUS_VALUES).optional(), undefined).optional(),
+});
 
 export const Route = createFileRoute("/modules/$slug")({
+  validateSearch: zodValidator(searchSchema),
   component: () => (
     <ProtectedRoute>
       <ModuleDetail />
