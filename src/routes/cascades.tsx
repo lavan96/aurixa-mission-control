@@ -24,6 +24,7 @@ const SCOPE_VALUES = ["all", "selected"] as const;
 const searchSchema = z.object({
   mode: fallback(z.enum(MODE_VALUES), "pr").default("pr"),
   scope: fallback(z.enum(SCOPE_VALUES), "all").default("all"),
+  schedule_id: fallback(z.string().uuid().optional(), undefined).optional(),
 });
 
 export const Route = createFileRoute("/cascades")({
