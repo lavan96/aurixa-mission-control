@@ -6,7 +6,8 @@ import { useCascadeEvents, useClones } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Waves, GitMerge, Send, Bell, ChevronRight } from "lucide-react";
+import { Waves, GitMerge, Send, Bell, ChevronRight, Package } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCallback, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -203,6 +204,32 @@ function CascadesPage() {
                           <Badge variant="outline" className={cn("text-[10px] uppercase", statusTone(e.status))}>
                             {e.status}
                           </Badge>
+                          {(() => {
+                            const sf = (e.scope_filter ?? {}) as {
+                              scope?: string;
+                              module_name?: string;
+                              module_globs?: string[];
+                            };
+                            if (sf.scope !== "module_sync") return null;
+                            const globCount = sf.module_globs?.length ?? 0;
+                            return (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span
+                                    className="inline-flex items-center gap-1 rounded-md border border-primary/40 bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-primary"
+                                    onClick={(ev) => ev.preventDefault()}
+                                  >
+                                    <Package className="h-3 w-3" />
+                                    module · {sf.module_name ?? "scoped"}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  Scoped module sync — pushes only {globCount} glob
+                                  {globCount === 1 ? "" : "s"}
+                                </TooltipContent>
+                              </Tooltip>
+                            );
+                          })()}
                         </div>
                         <div className="font-mono text-xs text-muted-foreground">
                           {formatDistanceToNow(e.created_at)}
