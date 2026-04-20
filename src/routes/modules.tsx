@@ -15,6 +15,7 @@ import { detectModules } from "@/server/ai-detect-modules.functions";
 import { ModuleGridSkeleton } from "@/components/list-skeletons";
 import { EmptyState } from "@/components/empty-state";
 import { FleetModuleSyncCard } from "@/components/fleet-module-sync-card";
+import { ModuleCoverageStrip } from "@/components/module-coverage-strip";
 
 export const Route = createFileRoute("/modules")({
   component: () => (
