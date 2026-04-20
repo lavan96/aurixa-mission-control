@@ -70,6 +70,48 @@ export function useCascadeEvents(limit = 25) {
   return { data, loading, refresh };
 }
 
+export type CloneModuleRow = {
+  clone_id: string;
+  module_id: string;
+  module_name: string;
+  module_slug: string;
+};
+
+export function useFleetModules() {
+  const [byClone, setByClone] = useState<Record<string, CloneModuleRow[]>>({});
+  const [loading, setLoading] = useState(true);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("clone_modules")
+      .select("clone_id, module_id, modules(name, slug)");
+    const map: Record<string, CloneModuleRow[]> = {};
+    for (const row of (data ?? []) as Array<{
+      clone_id: string;
+      module_id: string;
+      modules: { name: string; slug: string } | null;
+    }>) {
+      if (!row.modules) continue;
+      const entry: CloneModuleRow = {
+        clone_id: row.clone_id,
+        module_id: row.module_id,
+        module_name: row.modules.name,
+        module_slug: row.modules.slug,
+      };
+      (map[row.clone_id] ??= []).push(entry);
+    }
+    setByClone(map);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  return { byClone, loading, refresh };
+}
+
 export function usePrimeConfig() {
   const [data, setData] = useState<PrimeConfig | null>(null);
   const [loading, setLoading] = useState(true);
