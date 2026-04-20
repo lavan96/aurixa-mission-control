@@ -52,6 +52,7 @@ import { formatDistanceToNow } from "@/lib/format";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { runCascade } from "@/server/cascade-engine.functions";
+import { CascadeLineagePanel } from "@/components/cascade-lineage-panel";
 
 type CascadeEvent = Database["public"]["Tables"]["cascade_events"]["Row"];
 type CascadeResult = Database["public"]["Tables"]["cascade_results"]["Row"];
@@ -443,6 +444,8 @@ function CascadeDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      <CascadeLineagePanel event={event} />
 
       <div className="grid gap-2 md:grid-cols-6">
         <CountTile label="Queued" value={counts.queued} icon={<CircleDot />} tone="muted" />
