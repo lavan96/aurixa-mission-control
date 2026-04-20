@@ -75,6 +75,7 @@ function CascadeDetailPage() {
   const navigate = useNavigate();
   const [event, setEvent] = useState<CascadeEvent | null>(null);
   const [results, setResults] = useState<ResultWithClone[]>([]);
+  const [prime, setPrime] = useState<PrimeConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(false);
   const [rolling, setRolling] = useState(false);
@@ -82,16 +83,18 @@ function CascadeDetailPage() {
   const runCascadeFn = useServerFn(runCascade);
 
   const refresh = useCallback(async () => {
-    const [{ data: ev }, { data: res }] = await Promise.all([
+    const [{ data: ev }, { data: res }, { data: pr }] = await Promise.all([
       supabase.from("cascade_events").select("*").eq("id", eventId).maybeSingle(),
       supabase
         .from("cascade_results")
         .select("*, clone:clones(*)")
         .eq("cascade_event_id", eventId)
         .order("created_at", { ascending: true }),
+      supabase.from("prime_config").select("*").limit(1).maybeSingle(),
     ]);
     setEvent(ev ?? null);
     setResults((res as ResultWithClone[] | null) ?? []);
+    setPrime(pr ?? null);
     setLoading(false);
   }, [eventId]);
 
