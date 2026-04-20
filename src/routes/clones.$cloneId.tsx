@@ -8,11 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/status-pill";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Github, ExternalLink, Shield, Trash2, Waves, Plus, X } from "lucide-react";
+import { ArrowLeft, Github, ExternalLink, Shield, Trash2, Waves, Plus, RefreshCw, X } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "@/lib/format";
 import { CloneActivityHistory } from "@/components/clone-activity-history";
 import { CloneDriftSuggestionsCard } from "@/components/clone-drift-suggestions-card";
+import { bulkSyncModuleFn } from "@/server/module-sync.functions";
 import type { DriftSuggestion } from "@/server/drift-suggestions.functions";
 
 export const Route = createFileRoute("/clones/$cloneId")({
@@ -29,6 +30,7 @@ function CloneDetail() {
   const [installed, setInstalled] = useState<Module[]>([]);
   const { data: allModules } = useModules();
   const [loading, setLoading] = useState(true);
+  const [resyncingId, setResyncingId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
