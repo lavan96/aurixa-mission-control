@@ -15,6 +15,7 @@ import {
   Plus,
   Search,
   Shield,
+  Sparkles,
   Waves,
   Zap,
 } from "lucide-react";
@@ -37,7 +38,12 @@ function Dashboard() {
   const { data: prime } = usePrimeConfig();
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [filter, setFilter] = useState<"all" | "in_sync" | "behind" | "failed">("all");
+  const [filter, setFilter] = useState<"all" | "in_sync" | "behind" | "failed" | "ai">("all");
+
+  const openSuggestionsCount = (c: (typeof clones)[number]) => {
+    const sugg = (c.drift_suggestions as unknown as Array<{ status?: string }> | null) ?? [];
+    return sugg.filter((s) => (s?.status ?? "open") === "open").length;
+  };
 
   const filtered = useMemo(() => {
     return clones.filter((c) => {
@@ -45,7 +51,9 @@ function Dashboard() {
         !q ||
         c.name.toLowerCase().includes(q.toLowerCase()) ||
         c.tags?.some((t) => t.toLowerCase().includes(q.toLowerCase()));
-      const matchF = filter === "all" || c.sync_status === filter;
+      const matchF =
+        filter === "all" ||
+        (filter === "ai" ? openSuggestionsCount(c) > 0 : c.sync_status === filter);
       return matchQ && matchF;
     });
   }, [clones, q, filter]);
@@ -56,6 +64,8 @@ function Dashboard() {
       in_sync: clones.filter((c) => c.sync_status === "in_sync").length,
       behind: clones.filter((c) => c.sync_status === "behind").length,
       failed: clones.filter((c) => c.sync_status === "failed").length,
+      ai_open: clones.reduce((acc, c) => acc + openSuggestionsCount(c), 0),
+      ai_clones: clones.filter((c) => openSuggestionsCount(c) > 0).length,
     };
   }, [clones]);
 
@@ -106,7 +116,7 @@ function Dashboard() {
         </div>
       </header>
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <StatCard label="Clones" value={stats.total} icon={<GitBranch className="h-4 w-4" />} />
         <StatCard
           label="In sync"
@@ -126,6 +136,12 @@ function Dashboard() {
           tone="destructive"
           icon={<Shield className="h-4 w-4" />}
         />
+        <StatCard
+          label={`AI suggestions${stats.ai_clones ? ` · ${stats.ai_clones} clones` : ""}`}
+          value={stats.ai_open}
+          tone="primary"
+          icon={<Sparkles className="h-4 w-4" />}
+        />
       </section>
 
       <section className="flex flex-col gap-3 md:flex-row md:items-center">
@@ -138,8 +154,8 @@ function Dashboard() {
             className="pl-9 font-mono text-sm"
           />
         </div>
-        <div className="flex gap-1 rounded-md border border-border bg-surface p-1">
-          {(["all", "in_sync", "behind", "failed"] as const).map((k) => (
+        <div className="flex flex-wrap gap-1 rounded-md border border-border bg-surface p-1">
+          {(["all", "in_sync", "behind", "failed", "ai"] as const).map((k) => (
             <button
               key={k}
               onClick={() => setFilter(k)}
@@ -149,7 +165,7 @@ function Dashboard() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {k.replace("_", " ")}
+              {k === "ai" ? `ai${stats.ai_clones ? ` (${stats.ai_clones})` : ""}` : k.replace("_", " ")}
             </button>
           ))}
         </div>
@@ -218,7 +234,27 @@ function Dashboard() {
                     </div>
                   </div>
                 </div>
-                <StatusPill status={c.sync_status} behind={c.commits_behind} />
+                <div className="flex flex-col items-end gap-1.5">
+                  <StatusPill status={c.sync_status} behind={c.commits_behind} />
+                  {openSuggestionsCount(c) > 0 && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Link
+                          to="/clones/$cloneId"
+                          params={{ cloneId: c.id }}
+                          className="inline-flex items-center gap-1 rounded-md border border-primary/40 bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-primary hover:bg-primary/20"
+                        >
+                          <Sparkles className="h-3 w-3" />
+                          {openSuggestionsCount(c)} ai
+                        </Link>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {openSuggestionsCount(c)} open AI suggestion
+                        {openSuggestionsCount(c) === 1 ? "" : "s"}
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="space-y-2 px-5 pb-5">
                 <div className="font-mono text-xs text-muted-foreground">
