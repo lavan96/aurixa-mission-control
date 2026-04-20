@@ -22,6 +22,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as SettingsNotificationsRouteImport } from './routes/settings.notifications'
 import { Route as HooksFleetDriftRouteImport } from './routes/hooks.fleet-drift'
+import { Route as HooksDriftRefreshRouteImport } from './routes/hooks.drift-refresh'
 import { Route as ClonesNewRouteImport } from './routes/clones.new'
 import { Route as ClonesCloneIdRouteImport } from './routes/clones.$cloneId'
 import { Route as CascadesEventIdRouteImport } from './routes/cascades.$eventId'
@@ -91,6 +92,11 @@ const HooksFleetDriftRoute = HooksFleetDriftRouteImport.update({
   path: '/hooks/fleet-drift',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HooksDriftRefreshRoute = HooksDriftRefreshRouteImport.update({
+  id: '/hooks/drift-refresh',
+  path: '/hooks/drift-refresh',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ClonesNewRoute = ClonesNewRouteImport.update({
   id: '/clones/new',
   path: '/clones/new',
@@ -121,6 +127,7 @@ export interface FileRoutesByFullPath {
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
+  '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/': typeof SettingsIndexRoute
@@ -138,6 +145,7 @@ export interface FileRoutesByTo {
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
+  '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings': typeof SettingsIndexRoute
@@ -157,6 +165,7 @@ export interface FileRoutesById {
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
+  '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/': typeof SettingsIndexRoute
@@ -177,6 +186,7 @@ export interface FileRouteTypes {
     | '/cascades/$eventId'
     | '/clones/$cloneId'
     | '/clones/new'
+    | '/hooks/drift-refresh'
     | '/hooks/fleet-drift'
     | '/settings/notifications'
     | '/settings/'
@@ -194,6 +204,7 @@ export interface FileRouteTypes {
     | '/cascades/$eventId'
     | '/clones/$cloneId'
     | '/clones/new'
+    | '/hooks/drift-refresh'
     | '/hooks/fleet-drift'
     | '/settings/notifications'
     | '/settings'
@@ -212,6 +223,7 @@ export interface FileRouteTypes {
     | '/cascades/$eventId'
     | '/clones/$cloneId'
     | '/clones/new'
+    | '/hooks/drift-refresh'
     | '/hooks/fleet-drift'
     | '/settings/notifications'
     | '/settings/'
@@ -230,6 +242,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRouteWithChildren
   ClonesCloneIdRoute: typeof ClonesCloneIdRoute
   ClonesNewRoute: typeof ClonesNewRoute
+  HooksDriftRefreshRoute: typeof HooksDriftRefreshRoute
   HooksFleetDriftRoute: typeof HooksFleetDriftRoute
 }
 
@@ -326,6 +339,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HooksFleetDriftRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/hooks/drift-refresh': {
+      id: '/hooks/drift-refresh'
+      path: '/hooks/drift-refresh'
+      fullPath: '/hooks/drift-refresh'
+      preLoaderRoute: typeof HooksDriftRefreshRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/clones/new': {
       id: '/clones/new'
       path: '/clones/new'
@@ -389,6 +409,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRouteWithChildren,
   ClonesCloneIdRoute: ClonesCloneIdRoute,
   ClonesNewRoute: ClonesNewRoute,
+  HooksDriftRefreshRoute: HooksDriftRefreshRoute,
   HooksFleetDriftRoute: HooksFleetDriftRoute,
 }
 export const routeTree = rootRouteImport
