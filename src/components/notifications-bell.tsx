@@ -92,7 +92,7 @@ export function NotificationsBell() {
     void load();
 
     const channel = supabase
-      .channel("notif:bell")
+      .channel(`notif:bell:${session.user.id}:${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "notifications" },

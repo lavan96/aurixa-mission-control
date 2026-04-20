@@ -82,7 +82,7 @@ export function BrowserPushNotifications() {
     if (typeof window === "undefined" || !("Notification" in window)) return;
 
     const channel = supabase
-      .channel("notif:browser-push")
+      .channel(`notif:browser-push:${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "notifications" },
