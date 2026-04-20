@@ -55,8 +55,10 @@ import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "@/lib/format";
 import { toast } from "sonner";
 import { useBrowserPushSettings } from "@/lib/browser-notifications";
+import { useNotificationPreferences } from "@/lib/notification-preferences";
 import { NotificationListSkeleton } from "@/components/list-skeletons";
 import { EmptyState } from "@/components/empty-state";
+import { Settings as SettingsIcon, BellMinus } from "lucide-react";
 
 type Notification = Database["public"]["Tables"]["notifications"]["Row"];
 type Clone = Pick<Database["public"]["Tables"]["clones"]["Row"], "id" | "name">;
