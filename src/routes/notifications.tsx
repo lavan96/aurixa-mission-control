@@ -238,7 +238,7 @@ function NotificationsPage() {
   // Live updates
   useEffect(() => {
     const channel = supabase
-      .channel("notif:page")
+      .channel(`notif:page:${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "notifications" },

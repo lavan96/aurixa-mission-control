@@ -50,8 +50,9 @@ export function RealtimeNotifications() {
         }
       });
 
+    const channelSuffix = Math.random().toString(36).slice(2);
     const cascadeChannel = supabase
-      .channel("notif:cascade_events")
+      .channel(`notif:cascade_events:${channelSuffix}`)
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "cascade_events" },
@@ -94,7 +95,7 @@ export function RealtimeNotifications() {
       .subscribe();
 
     const clonesChannel = supabase
-      .channel("notif:clones-drift")
+      .channel(`notif:clones-drift:${channelSuffix}`)
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "clones" },
