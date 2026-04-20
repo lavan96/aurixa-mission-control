@@ -1,5 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
+import { z } from "zod";
 import { ProtectedRoute } from "@/components/protected-route";
 import { useClones, usePrimeConfig } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
@@ -32,7 +34,17 @@ import { formatDistanceToNow } from "@/lib/format";
 import { CloneGridSkeleton } from "@/components/list-skeletons";
 import { EmptyState } from "@/components/empty-state";
 
+const dashboardSearchSchema = z.object({
+  q: fallback(z.string(), "").default(""),
+  filter: fallback(z.enum(["all", "in_sync", "behind", "failed", "ai"]), "all").default("all"),
+  sort: fallback(
+    z.enum(["name", "commits_behind", "last_cascade_at", "ai_suggestions"]),
+    "name",
+  ).default("name"),
+});
+
 export const Route = createFileRoute("/dashboard")({
+  validateSearch: zodValidator(dashboardSearchSchema),
   component: () => (
     <ProtectedRoute>
       <Dashboard />
