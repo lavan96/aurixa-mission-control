@@ -1,14 +1,13 @@
 // Server-only core for cascade schedules. Two kinds:
 //   - fleet_cascade: cascade prime → all clones with installed modules.
 //   - module_sync:   bulk install + scoped cascade for a specific module.
-// Scheduler triggers are invoked by /hooks/run-schedules (cron) or manually
-// by an operator from /schedules.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { executeCascade } from "./cascade-engine.server";
 import { bulkSyncModule } from "./module-sync.server";
 import { nextCronTick } from "./cron";
+import { unknownTable, type CascadeScheduleRow } from "./_phase3d-types";
 
 type SupabaseLike = SupabaseClient<Database>;
 type CascadeMode = Database["public"]["Enums"]["cascade_mode"];
@@ -28,45 +27,36 @@ export type RunDueResult = {
   error?: string;
 };
 
-/**
- * Execute a single schedule immediately (manual trigger), regardless of
- * `next_run_at`. Updates last_run_at and recomputes next_run_at.
- */
 export async function runScheduleNow(
   supabase: SupabaseLike,
   scheduleId: string,
   initiatedBy: string | null,
 ): Promise<ScheduleRunOutcome> {
-  const { data: sched, error } = await supabase
-    .from("cascade_schedules")
+  const { data, error } = await unknownTable(supabase, "cascade_schedules")
     .select("*")
     .eq("id", scheduleId)
     .maybeSingle();
-  if (error || !sched) {
+  if (error || !data) {
     return {
       schedule_id: scheduleId,
       name: "(unknown)",
       ok: false,
       cascade_event_id: null,
-      error: error?.message ?? "Schedule not found",
+      error: (error?.message as string) ?? "Schedule not found",
     };
   }
-  return executeOne(supabase, sched, initiatedBy);
+  return executeOne(supabase, data as CascadeScheduleRow, initiatedBy);
 }
 
-/**
- * Pick all enabled schedules whose next_run_at is in the past (or null) and
- * run each. Cron-invoked.
- */
 export async function runDueSchedules(supabase: SupabaseLike): Promise<RunDueResult> {
   const now = new Date().toISOString();
-  const { data: due, error } = await supabase
-    .from("cascade_schedules")
+  const { data, error } = await unknownTable(supabase, "cascade_schedules")
     .select("*")
     .eq("enabled", true)
     .or(`next_run_at.is.null,next_run_at.lte.${now}`);
-  if (error) return { ok: false, ran: 0, outcomes: [], error: error.message };
-  if (!due || due.length === 0) return { ok: true, ran: 0, outcomes: [] };
+  if (error) return { ok: false, ran: 0, outcomes: [], error: error.message as string };
+  const due = (data ?? []) as CascadeScheduleRow[];
+  if (due.length === 0) return { ok: true, ran: 0, outcomes: [] };
 
   const outcomes: ScheduleRunOutcome[] = [];
   for (const s of due) {
@@ -75,11 +65,9 @@ export async function runDueSchedules(supabase: SupabaseLike): Promise<RunDueRes
   return { ok: true, ran: outcomes.length, outcomes };
 }
 
-type ScheduleRow = Database["public"]["Tables"]["cascade_schedules"]["Row"];
-
 async function executeOne(
   supabase: SupabaseLike,
-  sched: ScheduleRow,
+  sched: CascadeScheduleRow,
   initiatedBy: string | null,
 ): Promise<ScheduleRunOutcome> {
   const startedAt = new Date().toISOString();
@@ -101,8 +89,7 @@ async function executeOne(
   }
 
   const next = nextCronTick(sched.cron_expression, new Date());
-  await supabase
-    .from("cascade_schedules")
+  await unknownTable(supabase, "cascade_schedules")
     .update({
       last_run_at: startedAt,
       next_run_at: next ? next.toISOString() : null,
@@ -129,12 +116,10 @@ async function executeOne(
 
 async function runFleetCascade(
   supabase: SupabaseLike,
-  sched: ScheduleRow,
+  sched: CascadeScheduleRow,
   initiatedBy: string | null,
 ): Promise<ScheduleRunOutcome> {
-  const { data: clones, error: clonesErr } = await supabase
-    .from("clones")
-    .select("id");
+  const { data: clones, error: clonesErr } = await supabase.from("clones").select("id");
   if (clonesErr) {
     return {
       schedule_id: sched.id,
@@ -200,7 +185,7 @@ async function runFleetCascade(
 
 async function runModuleSyncSchedule(
   supabase: SupabaseLike,
-  sched: ScheduleRow,
+  sched: CascadeScheduleRow,
   initiatedBy: string | null,
 ): Promise<ScheduleRunOutcome> {
   const sf = (sched.scope_filter ?? {}) as {
@@ -222,7 +207,6 @@ async function runModuleSyncSchedule(
   if (sf.clone_ids && sf.clone_ids !== "all" && Array.isArray(sf.clone_ids)) {
     cloneIds = sf.clone_ids;
   } else {
-    // "all" — every clone that already has the module installed.
     const { data: cm } = await supabase
       .from("clone_modules")
       .select("clone_id")

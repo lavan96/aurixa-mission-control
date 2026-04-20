@@ -1,16 +1,15 @@
-// Server-only: per-clone AI auto-apply rules. After analyzeCloneDrift produces
-// fresh suggestions, this engine inspects the active policy for that clone and
-// auto-applies the safest open suggestions (up to max_per_run) by spawning
-// scoped cascade events — exactly the same mechanism the manual Apply button
-// uses, just driven by policy.
+// Per-clone AI auto-apply rules. After analyzeCloneDrift produces fresh
+// suggestions, this engine inspects the active policy and auto-applies the
+// safest open suggestions (up to max_per_run) by spawning scoped cascade
+// events — same mechanism the manual Apply button uses.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { executeCascade } from "./cascade-engine.server";
+import { unknownTable, type CloneDriftPolicyRow, type DriftSeverity } from "./_phase3d-types";
 
 type SupabaseLike = SupabaseClient<Database>;
 type CascadeMode = Database["public"]["Enums"]["cascade_mode"];
-type DriftSeverity = Database["public"]["Enums"]["drift_severity"];
 
 export type AppliedAuto = {
   suggestion_id: string;
@@ -41,11 +40,11 @@ export async function applyAutoPoliciesForClone(
   supabase: SupabaseLike,
   cloneId: string,
 ): Promise<AutoApplyResult> {
-  const { data: policy } = await supabase
-    .from("clone_drift_policies")
+  const { data: policyData } = await unknownTable(supabase, "clone_drift_policies")
     .select("*")
     .eq("clone_id", cloneId)
     .maybeSingle();
+  const policy = policyData as CloneDriftPolicyRow | null;
   if (!policy || !policy.enabled) {
     return { ok: true, applied: [], skipped_reason: "no policy or disabled" };
   }
@@ -71,12 +70,10 @@ export async function applyAutoPoliciesForClone(
     return { ok: true, applied: [], skipped_reason: "no eligible suggestions" };
   }
 
-  // Sort safest-first (low risk before medium), then take up to max_per_run.
   eligible.sort((a, b) => SEVERITY_RANK[a.risk] - SEVERITY_RANK[b.risk]);
   const batch = eligible.slice(0, Math.max(1, policy.max_per_run));
 
   const applied: AppliedAuto[] = [];
-  // We mutate suggestions array as we go to mark each as applied.
   let working = [...all];
 
   for (const s of batch) {
@@ -127,8 +124,7 @@ export async function applyAutoPoliciesForClone(
       })
       .eq("id", cloneId);
 
-    await supabase
-      .from("clone_drift_policies")
+    await unknownTable(supabase, "clone_drift_policies")
       .update({
         last_applied_at: new Date().toISOString(),
         last_applied_count: applied.length,

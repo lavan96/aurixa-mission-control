@@ -6,9 +6,10 @@ import {
 } from "./schedules.server";
 import { nextCronTick, parseCron } from "./cron";
 import type { Database } from "@/integrations/supabase/types";
+import { unknownTable, type CascadeScheduleRow } from "./_phase3d-types";
 
 type CascadeMode = Database["public"]["Enums"]["cascade_mode"];
-type ScheduleKind = Database["public"]["Enums"]["cascade_schedule_kind"];
+type ScheduleKind = "fleet_cascade" | "module_sync";
 
 export type CreateScheduleInput = {
   name: string;
@@ -39,8 +40,7 @@ export const createSchedule = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }) => {
     const next = nextCronTick(data.cron_expression);
-    const { data: row, error } = await context.supabase
-      .from("cascade_schedules")
+    const { data: row, error } = await unknownTable(context.supabase, "cascade_schedules")
       .insert({
         name: data.name,
         kind: data.kind,
@@ -54,15 +54,16 @@ export const createSchedule = createServerFn({ method: "POST" })
       })
       .select()
       .single();
-    if (error) return { ok: false as const, error: error.message };
+    if (error) return { ok: false as const, error: error.message as string };
+    const created = row as CascadeScheduleRow;
     await context.supabase.from("audit_log").insert({
       action: "schedule.created",
       entity_type: "cascade_schedule",
-      entity_id: row.id,
+      entity_id: created.id,
       actor_user_id: context.userId,
       metadata: { kind: data.kind, cron: data.cron_expression },
     });
-    return { ok: true as const, schedule: row };
+    return { ok: true as const, schedule: created };
   });
 
 export const updateSchedule = createServerFn({ method: "POST" })
@@ -77,18 +78,15 @@ export const updateSchedule = createServerFn({ method: "POST" })
     },
   )
   .handler(async ({ data, context }) => {
-    const patch: Database["public"]["Tables"]["cascade_schedules"]["Update"] = {
-      ...data.patch,
-    };
+    const patch: Record<string, unknown> = { ...data.patch };
     if (data.patch.cron_expression) {
       const next = nextCronTick(data.patch.cron_expression);
       patch.next_run_at = next ? next.toISOString() : null;
     }
-    const { error } = await context.supabase
-      .from("cascade_schedules")
+    const { error } = await unknownTable(context.supabase, "cascade_schedules")
       .update(patch)
       .eq("id", data.id);
-    if (error) return { ok: false as const, error: error.message };
+    if (error) return { ok: false as const, error: error.message as string };
     return { ok: true as const };
   });
 
@@ -99,11 +97,10 @@ export const deleteSchedule = createServerFn({ method: "POST" })
     return data;
   })
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("cascade_schedules")
+    const { error } = await unknownTable(context.supabase, "cascade_schedules")
       .delete()
       .eq("id", data.id);
-    if (error) return { ok: false as const, error: error.message };
+    if (error) return { ok: false as const, error: error.message as string };
     await context.supabase.from("audit_log").insert({
       action: "schedule.deleted",
       entity_type: "cascade_schedule",

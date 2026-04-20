@@ -1,8 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { unknownTable } from "./_phase3d-types";
 import type { Database } from "@/integrations/supabase/types";
 
-type DriftSeverity = Database["public"]["Enums"]["drift_severity"];
+type DriftSeverity = "low" | "medium" | "high";
 type CascadeMode = Database["public"]["Enums"]["cascade_mode"];
 
 export type DriftPolicyInput = {
@@ -30,20 +31,18 @@ export const upsertDriftPolicy = createServerFn({ method: "POST" })
     return data;
   })
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("clone_drift_policies")
-      .upsert(
-        {
-          clone_id: data.cloneId,
-          enabled: data.enabled,
-          auto_apply_severity: data.auto_apply_severity,
-          max_per_run: data.max_per_run,
-          cascade_mode: data.cascade_mode,
-          muted_kinds: data.muted_kinds ?? [],
-        },
-        { onConflict: "clone_id" },
-      );
-    if (error) return { ok: false as const, error: error.message };
+    const { error } = await unknownTable(context.supabase, "clone_drift_policies").upsert(
+      {
+        clone_id: data.cloneId,
+        enabled: data.enabled,
+        auto_apply_severity: data.auto_apply_severity,
+        max_per_run: data.max_per_run,
+        cascade_mode: data.cascade_mode,
+        muted_kinds: data.muted_kinds ?? [],
+      },
+      { onConflict: "clone_id" },
+    );
+    if (error) return { ok: false as const, error: error.message as string };
     await context.supabase.from("audit_log").insert({
       action: "drift_policy.updated",
       entity_type: "clone",
