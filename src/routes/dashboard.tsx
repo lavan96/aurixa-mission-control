@@ -60,12 +60,14 @@ function Dashboard() {
   const navigate = useNavigate({ from: "/dashboard" });
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
+  type DashboardSearch = z.infer<typeof dashboardSearchSchema>;
   const setQ = (value: string) =>
-    navigate({ search: (prev) => ({ ...prev, q: value }), replace: true });
+    navigate({ search: (prev: DashboardSearch) => ({ ...prev, q: value }), replace: true });
   const setFilter = (value: typeof filter) =>
-    navigate({ search: (prev) => ({ ...prev, filter: value }), replace: true });
+    navigate({ search: (prev: DashboardSearch) => ({ ...prev, filter: value }), replace: true });
   const setSort = (value: typeof sort) =>
-    navigate({ search: (prev) => ({ ...prev, sort: value }), replace: true });
+    navigate({ search: (prev: DashboardSearch) => ({ ...prev, sort: value }), replace: true });
+
 
   const openSuggestionsCount = (c: (typeof clones)[number]) => {
     const sugg = (c.drift_suggestions as unknown as Array<{ status?: string }> | null) ?? [];
