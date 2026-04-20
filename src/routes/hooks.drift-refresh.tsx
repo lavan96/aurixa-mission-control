@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { runDriftRefresh } from "@/server/drift-refresh.functions";
+import { runDriftRefresh } from "@/server/drift-refresh.server";
 
 // Cron-invoked endpoint. pg_cron schedules a POST here every 5 min.
 // Auth: requires DRIFT_REFRESH_TOKEN as Bearer token.
