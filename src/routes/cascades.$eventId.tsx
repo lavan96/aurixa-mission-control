@@ -57,6 +57,7 @@ import { CascadeLineagePanel } from "@/components/cascade-lineage-panel";
 type CascadeEvent = Database["public"]["Tables"]["cascade_events"]["Row"];
 type CascadeResult = Database["public"]["Tables"]["cascade_results"]["Row"];
 type Clone = Database["public"]["Tables"]["clones"]["Row"];
+type PrimeConfig = Database["public"]["Tables"]["prime_config"]["Row"];
 type ResultWithClone = CascadeResult & { clone?: Clone | null };
 
 export const Route = createFileRoute("/cascades/$eventId")({
@@ -74,6 +75,7 @@ function CascadeDetailPage() {
   const navigate = useNavigate();
   const [event, setEvent] = useState<CascadeEvent | null>(null);
   const [results, setResults] = useState<ResultWithClone[]>([]);
+  const [prime, setPrime] = useState<PrimeConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(false);
   const [rolling, setRolling] = useState(false);
@@ -81,16 +83,18 @@ function CascadeDetailPage() {
   const runCascadeFn = useServerFn(runCascade);
 
   const refresh = useCallback(async () => {
-    const [{ data: ev }, { data: res }] = await Promise.all([
+    const [{ data: ev }, { data: res }, { data: pr }] = await Promise.all([
       supabase.from("cascade_events").select("*").eq("id", eventId).maybeSingle(),
       supabase
         .from("cascade_results")
         .select("*, clone:clones(*)")
         .eq("cascade_event_id", eventId)
         .order("created_at", { ascending: true }),
+      supabase.from("prime_config").select("*").limit(1).maybeSingle(),
     ]);
     setEvent(ev ?? null);
     setResults((res as ResultWithClone[] | null) ?? []);
+    setPrime(pr ?? null);
     setLoading(false);
   }, [eventId]);
 
@@ -345,7 +349,19 @@ function CascadeDetailPage() {
                 {event.status}
               </Badge>
               {event.source_sha && (
-                <code className="font-mono">prime@{event.source_sha.slice(0, 7)}</code>
+                prime ? (
+                  <a
+                    href={`https://github.com/${prime.github_owner}/${prime.github_repo}/commit/${event.source_sha}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-mono hover:text-foreground hover:underline"
+                    title={`View on GitHub · ${prime.github_owner}/${prime.github_repo}`}
+                  >
+                    prime@{event.source_sha.slice(0, 7)}
+                  </a>
+                ) : (
+                  <code className="font-mono">prime@{event.source_sha.slice(0, 7)}</code>
+                )
               )}
               <span>· started {formatDistanceToNow(event.created_at)}</span>
               {event.completed_at && (
