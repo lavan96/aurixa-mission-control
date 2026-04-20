@@ -155,6 +155,115 @@ export type Database = {
           },
         ]
       }
+      cascade_schedules: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          cron_expression: string
+          enabled: boolean
+          id: string
+          kind: Database["public"]["Enums"]["cascade_schedule_kind"]
+          last_cascade_event_id: string | null
+          last_run_at: string | null
+          mode: Database["public"]["Enums"]["cascade_mode"]
+          name: string
+          next_run_at: string | null
+          notes: string | null
+          scope_filter: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          cron_expression: string
+          enabled?: boolean
+          id?: string
+          kind: Database["public"]["Enums"]["cascade_schedule_kind"]
+          last_cascade_event_id?: string | null
+          last_run_at?: string | null
+          mode?: Database["public"]["Enums"]["cascade_mode"]
+          name: string
+          next_run_at?: string | null
+          notes?: string | null
+          scope_filter?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          cron_expression?: string
+          enabled?: boolean
+          id?: string
+          kind?: Database["public"]["Enums"]["cascade_schedule_kind"]
+          last_cascade_event_id?: string | null
+          last_run_at?: string | null
+          mode?: Database["public"]["Enums"]["cascade_mode"]
+          name?: string
+          next_run_at?: string | null
+          notes?: string | null
+          scope_filter?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cascade_schedules_last_cascade_event_id_fkey"
+            columns: ["last_cascade_event_id"]
+            isOneToOne: false
+            referencedRelation: "cascade_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clone_drift_policies: {
+        Row: {
+          auto_apply_severity: Database["public"]["Enums"]["drift_severity"]
+          cascade_mode: Database["public"]["Enums"]["cascade_mode"]
+          clone_id: string
+          created_at: string
+          enabled: boolean
+          id: string
+          last_applied_at: string | null
+          last_applied_count: number
+          max_per_run: number
+          muted_kinds: string[]
+          updated_at: string
+        }
+        Insert: {
+          auto_apply_severity?: Database["public"]["Enums"]["drift_severity"]
+          cascade_mode?: Database["public"]["Enums"]["cascade_mode"]
+          clone_id: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          last_applied_at?: string | null
+          last_applied_count?: number
+          max_per_run?: number
+          muted_kinds?: string[]
+          updated_at?: string
+        }
+        Update: {
+          auto_apply_severity?: Database["public"]["Enums"]["drift_severity"]
+          cascade_mode?: Database["public"]["Enums"]["cascade_mode"]
+          clone_id?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          last_applied_at?: string | null
+          last_applied_count?: number
+          max_per_run?: number
+          muted_kinds?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clone_drift_policies_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: true
+            referencedRelation: "clones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clone_modules: {
         Row: {
           clone_id: string
@@ -563,7 +672,9 @@ export type Database = {
         | "failed"
         | "pr_opened"
         | "skipped"
+      cascade_schedule_kind: "fleet_cascade" | "module_sync"
       cascade_trigger: "manual" | "commit" | "scheduled"
+      drift_severity: "low" | "medium" | "high"
       module_status: "proposed" | "approved" | "archived"
       notification_kind:
         | "cascade_completed"
@@ -723,7 +834,9 @@ export const Constants = {
         "pr_opened",
         "skipped",
       ],
+      cascade_schedule_kind: ["fleet_cascade", "module_sync"],
       cascade_trigger: ["manual", "commit", "scheduled"],
+      drift_severity: ["low", "medium", "high"],
       module_status: ["proposed", "approved", "archived"],
       notification_kind: [
         "cascade_completed",
