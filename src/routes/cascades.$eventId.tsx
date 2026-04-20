@@ -57,7 +57,7 @@ import { CascadeLineagePanel } from "@/components/cascade-lineage-panel";
 import { InlineDiffSummary } from "@/components/inline-diff-summary";
 import { CascadeApprovalBanner } from "@/components/cascade-approval-banner";
 import { CascadeTriageCard } from "@/components/cascade-triage-card";
-import { assessBlastRadius } from "@/server/cascade-approvals.server";
+import { assessBlastRadius } from "@/lib/blast-radius";
 
 type CascadeEvent = Database["public"]["Tables"]["cascade_events"]["Row"];
 type CascadeResult = Database["public"]["Tables"]["cascade_results"]["Row"];

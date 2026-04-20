@@ -19,7 +19,7 @@ import { CardRowSkeleton } from "@/components/list-skeletons";
 import { EmptyState } from "@/components/empty-state";
 import { CascadeTemplatesCard, type CascadeTemplateValue } from "@/components/cascade-templates-card";
 import { CascadeDryRunCard } from "@/components/cascade-dryrun-card";
-import { assessBlastRadius } from "@/server/cascade-approvals.server";
+import { assessBlastRadius } from "@/lib/blast-radius";
 import { ShieldAlert } from "lucide-react";
 
 const MODE_VALUES = ["pr", "auto_merge", "notify"] as const;
