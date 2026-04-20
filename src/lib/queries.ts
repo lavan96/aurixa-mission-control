@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 import type { Database } from "@/integrations/supabase/types";
 
 export type Clone = Database["public"]["Tables"]["clones"]["Row"];
@@ -113,19 +114,40 @@ export function useFleetModules() {
 }
 
 export function usePrimeConfig() {
+  const { session, loading: authLoading } = useAuth();
   const [data, setData] = useState<PrimeConfig | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase.from("prime_config").select("*").limit(1).maybeSingle();
+    setError(null);
+    const { data, error } = await supabase
+      .from("prime_config")
+      .select("*")
+      .limit(1)
+      .maybeSingle();
+    if (error) {
+      console.error("usePrimeConfig load failed:", error);
+      setError(error.message);
+    }
     setData(data ?? null);
     setLoading(false);
   }, []);
 
+  // Re-fetch whenever the auth session changes (e.g. just signed in) — the
+  // RLS policy on prime_config requires `is_operator(auth.uid())`, so a
+  // pre-auth fetch silently returns null. Without this, the form stays empty
+  // even after the user signs in.
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    if (authLoading) return;
+    if (!session) {
+      setData(null);
+      setLoading(false);
+      return;
+    }
+    void refresh();
+  }, [refresh, session, authLoading]);
 
-  return { data, loading, refresh };
+  return { data, loading, error, refresh };
 }

@@ -26,22 +26,28 @@ export const Route = createFileRoute("/settings/")({
 });
 
 function SettingsGeneralPage() {
-  const { data: prime, refresh } = usePrimeConfig();
+  const { data: prime, loading: primeLoading, error: primeError, refresh } = usePrimeConfig();
   const [owner, setOwner] = useState("");
   const [repo, setRepo] = useState("");
   const [branch, setBranch] = useState("main");
   const [defaultOrg, setDefaultOrg] = useState("");
   const [cascadeMode, setCascadeMode] = useState<CascadeMode>("pr");
+  const [hydrated, setHydrated] = useState(false);
 
+  // Hydrate the form once when the prime row loads. Without the `hydrated`
+  // guard, every refresh() (e.g. after a save) would overwrite in-progress
+  // edits — and if `prime` flips back to null briefly during a re-fetch we
+  // would *not* clobber the form to empty.
   useEffect(() => {
-    if (prime) {
+    if (prime && !hydrated) {
       setOwner(prime.github_owner);
       setRepo(prime.github_repo);
       setBranch(prime.default_branch);
       setDefaultOrg(prime.default_clone_org ?? "");
       setCascadeMode(prime.default_cascade_mode);
+      setHydrated(true);
     }
-  }, [prime]);
+  }, [prime, hydrated]);
 
   const [saving, setSaving] = useState(false);
 
@@ -98,6 +104,21 @@ function SettingsGeneralPage() {
           <CardDescription>The single source-of-truth codebase that all clones cascade from.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
+          {primeLoading && !prime ? (
+            <div className="md:col-span-2 rounded-md border border-border bg-surface px-3 py-2 font-mono text-xs text-muted-foreground">
+              Loading prime configuration…
+            </div>
+          ) : null}
+          {primeError ? (
+            <div className="md:col-span-2 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 font-mono text-xs text-destructive">
+              Failed to load prime config: {primeError}
+            </div>
+          ) : null}
+          {!primeLoading && !prime && !primeError ? (
+            <div className="md:col-span-2 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 font-mono text-xs text-warning">
+              No prime config saved yet — fill in the fields below and click Save.
+            </div>
+          ) : null}
           <div className="space-y-2">
             <Label>GitHub owner</Label>
             <Input value={owner} onChange={(e) => setOwner(e.target.value)} placeholder="my-org" />
