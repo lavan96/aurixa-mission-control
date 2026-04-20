@@ -102,10 +102,8 @@ export const getGitHubStatus = createServerFn({ method: "POST" })
         };
       }
     }
-    if ("data" in instRes && instRes.data) {
-      // listInstallationReposForAuthenticatedUser exposes installation header
-      // info via per-repo data; we rely on visibleCount above.
-      status.installation = status.installation ?? {
+    if (!status.installation) {
+      status.installation = {
         id: 0,
         account: "Unknown",
         target_type: "Unknown",
