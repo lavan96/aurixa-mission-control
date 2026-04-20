@@ -116,7 +116,7 @@ function Dashboard() {
         </div>
       </header>
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <StatCard label="Clones" value={stats.total} icon={<GitBranch className="h-4 w-4" />} />
         <StatCard
           label="In sync"
@@ -135,6 +135,12 @@ function Dashboard() {
           value={stats.failed}
           tone="destructive"
           icon={<Shield className="h-4 w-4" />}
+        />
+        <StatCard
+          label={`AI suggestions${stats.ai_clones ? ` · ${stats.ai_clones} clones` : ""}`}
+          value={stats.ai_open}
+          tone="primary"
+          icon={<Sparkles className="h-4 w-4" />}
         />
       </section>
 
