@@ -432,6 +432,17 @@ function Dashboard() {
           ))}
         </section>
       )}
+
+      <BulkTagDialog
+        open={bulkTagOpen}
+        onOpenChange={setBulkTagOpen}
+        clones={clones}
+        selectedIds={selected}
+        onDone={() => {
+          setSelected(new Set());
+          refreshClones();
+        }}
+      />
     </div>
   );
 }
