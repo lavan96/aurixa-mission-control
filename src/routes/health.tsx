@@ -168,7 +168,22 @@ function FleetHealthPage() {
               {[...data.rows]
                 .sort((a, b) => riskScore(b) - riskScore(a))
                 .map((r) => (
-                  <FleetRow key={r.cloneId} row={r} />
+                  <FleetRow
+                    key={r.cloneId}
+                    row={r}
+                    onUpdated={(next) =>
+                      setData((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              rows: prev.rows.map((row) =>
+                                row.cloneId === next.cloneId ? next : row,
+                              ),
+                            }
+                          : prev,
+                      )
+                    }
+                  />
                 ))}
             </CardContent>
           </Card>
