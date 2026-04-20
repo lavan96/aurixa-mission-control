@@ -253,6 +253,17 @@ function Dashboard() {
             </SelectItem>
           </SelectContent>
         </Select>
+        {moduleFilter && (
+          <button
+            onClick={() => setModuleFilter("")}
+            className="inline-flex items-center gap-1.5 rounded-md border border-primary/40 bg-primary/10 px-2 py-1 font-mono text-[11px] uppercase tracking-wider text-primary hover:bg-primary/20"
+            title="Clear module filter"
+          >
+            <Package className="h-3 w-3" />
+            module · {moduleFilterName ?? moduleFilter.slice(0, 6)}
+            <X className="h-3 w-3" />
+          </button>
+        )}
         {selected.size > 0 && (
           <div className="ml-auto flex items-center gap-2">
             <Badge variant="secondary" className="font-mono">
