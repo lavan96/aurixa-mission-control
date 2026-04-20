@@ -234,7 +234,27 @@ function Dashboard() {
                     </div>
                   </div>
                 </div>
-                <StatusPill status={c.sync_status} behind={c.commits_behind} />
+                <div className="flex flex-col items-end gap-1.5">
+                  <StatusPill status={c.sync_status} behind={c.commits_behind} />
+                  {openSuggestionsCount(c) > 0 && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Link
+                          to="/clones/$cloneId"
+                          params={{ cloneId: c.id }}
+                          className="inline-flex items-center gap-1 rounded-md border border-primary/40 bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-primary hover:bg-primary/20"
+                        >
+                          <Sparkles className="h-3 w-3" />
+                          {openSuggestionsCount(c)} ai
+                        </Link>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {openSuggestionsCount(c)} open AI suggestion
+                        {openSuggestionsCount(c) === 1 ? "" : "s"}
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="space-y-2 px-5 pb-5">
                 <div className="font-mono text-xs text-muted-foreground">
