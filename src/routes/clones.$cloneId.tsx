@@ -210,22 +210,54 @@ function CloneDetail() {
                     No modules installed
                   </div>
                 )}
-                {installed.map((m) => (
-                  <div
-                    key={m.id}
-                    className="flex items-center justify-between rounded-md border border-border bg-surface px-3 py-2"
-                  >
-                    <span className="font-mono text-sm">{m.name}</span>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => remove(m.id)}
-                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                {installed.map((m) => {
+                  const noGlobs = (m.file_globs ?? []).length === 0;
+                  const isResyncing = resyncingId === m.id;
+                  return (
+                    <div
+                      key={m.id}
+                      className="flex items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-2"
                     >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
+                      <div className="min-w-0">
+                        <div className="font-mono text-sm">{m.name}</div>
+                        <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                          {(m.file_globs ?? []).length} glob
+                          {(m.file_globs ?? []).length === 1 ? "" : "s"}
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => resync(m.id)}
+                          disabled={isResyncing || noGlobs}
+                          title={
+                            noGlobs
+                              ? "Module has no file_globs to push"
+                              : "Re-sync this module's files only"
+                          }
+                          className="h-7 gap-1 px-2 text-muted-foreground hover:text-primary"
+                        >
+                          <RefreshCw
+                            className={`h-3.5 w-3.5 ${isResyncing ? "animate-spin" : ""}`}
+                          />
+                          <span className="font-mono text-[10px] uppercase tracking-wider">
+                            re-sync
+                          </span>
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => remove(m.id)}
+                          disabled={isResyncing}
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
             <div>
