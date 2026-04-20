@@ -19,7 +19,7 @@ import { CardRowSkeleton } from "@/components/list-skeletons";
 import { EmptyState } from "@/components/empty-state";
 import { CascadeTemplatesCard, type CascadeTemplateValue } from "@/components/cascade-templates-card";
 import { CascadeDryRunCard } from "@/components/cascade-dryrun-card";
-import { assessBlastRadius } from "@/server/cascade-approvals.server";
+import { assessBlastRadius } from "@/lib/blast-radius";
 import { ShieldAlert } from "lucide-react";
 
 const MODE_VALUES = ["pr", "auto_merge", "notify"] as const;
@@ -125,6 +125,23 @@ function CascadesPage() {
 
   const [busy, setBusy] = useState(false);
   const runCascadeFn = useServerFn(runCascade);
+
+  // Realtime: when any operator inserts/updates/deletes a cascade event
+  // (e.g. another operator approves and the engine flips status to running),
+  // refresh the list so we don't show stale "pending" rows.
+  useEffect(() => {
+    const channel = supabase
+      .channel("cascades-list")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "cascade_events" },
+        () => refresh(),
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [refresh]);
 
   // Live blast-radius preview based on current scope/mode + clone count.
   const blast = assessBlastRadius(mode, clones.length);

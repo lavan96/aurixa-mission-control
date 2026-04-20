@@ -6,6 +6,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { executeCascade } from "./cascade-engine.server";
+import { assessBlastRadius } from "./cascade-approvals.server";
 import { unknownTable, type CloneDriftPolicyRow, type DriftSeverity } from "./_phase3d-types";
 
 type SupabaseLike = SupabaseClient<Database>;
@@ -77,12 +78,18 @@ export async function applyAutoPoliciesForClone(
   let working = [...all];
 
   for (const s of batch) {
+    // Auto-apply targets a single clone, so blast-radius almost never trips.
+    // Still flag it so the safety system stays consistent (e.g. if thresholds
+    // are tightened later or if the policy mode is changed to auto_merge).
+    const blast = assessBlastRadius(policy.cascade_mode, 1);
+
     const { data: ev, error: evErr } = await supabase
       .from("cascade_events")
       .insert({
         trigger: "scheduled",
         mode: policy.cascade_mode,
         status: "pending",
+        requires_approval: blast.requiresApproval,
         scope_filter: {
           scope: "ai_suggestion",
           clone_ids: [cloneId],
@@ -108,6 +115,22 @@ export async function applyAutoPoliciesForClone(
         ? { ...x, status: "applied" as const, applied_event_id: ev.id }
         : x,
     );
+
+    if (blast.requiresApproval) {
+      // Pin a notification — auto-apply will not run the engine until approved.
+      await supabase.from("notifications").insert({
+        kind: "cascade_awaiting_approval",
+        severity: "warning",
+        title: `Approval needed · auto-applied AI suggestion`,
+        body: `${blast.reason ?? ""} ${s.summary}`,
+        cascade_event_id: ev.id,
+        clone_id: cloneId,
+        url: `/cascades/${ev.id}`,
+        metadata: { mode: policy.cascade_mode, scope: "ai_suggestion", clone_id: cloneId },
+      });
+      // Don't push into `applied[]` — engine never ran.
+      continue;
+    }
 
     const res = await executeCascade(supabase, ev.id);
     if (res.ok) {

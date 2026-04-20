@@ -45,21 +45,44 @@ export function CascadeApprovalBanner({
     void supabase.auth.getUser().then(({ data }) => setMe(data.user?.id ?? null));
   }, []);
 
+  // Reload approval history whenever the parent re-fetches the event OR a
+  // realtime change touches cascade_approvals for this event (so a co-worker's
+  // approve/reject updates the banner without refresh).
   useEffect(() => {
     let cancel = false;
-    void supabase
-      .from("cascade_approvals")
-      .select("id, approver_user_id, decision, reason, created_at")
-      .eq("cascade_event_id", cascadeEventId)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        if (cancel) return;
-        setHistory((data as ApprovalRow[] | null) ?? []);
-      });
+    const load = () => {
+      void supabase
+        .from("cascade_approvals")
+        .select("id, approver_user_id, decision, reason, created_at")
+        .eq("cascade_event_id", cascadeEventId)
+        .order("created_at", { ascending: false })
+        .then(({ data }) => {
+          if (cancel) return;
+          setHistory((data as ApprovalRow[] | null) ?? []);
+        });
+    };
+    load();
+    const channel = supabase
+      .channel(`cascade-approvals-${cascadeEventId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "cascade_approvals",
+          filter: `cascade_event_id=eq.${cascadeEventId}`,
+        },
+        () => {
+          load();
+          onChange();
+        },
+      )
+      .subscribe();
     return () => {
       cancel = true;
+      void supabase.removeChannel(channel);
     };
-  }, [cascadeEventId, approvedAt]);
+  }, [cascadeEventId, approvedAt, onChange]);
 
   if (!requiresApproval) return null;
 

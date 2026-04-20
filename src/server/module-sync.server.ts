@@ -4,6 +4,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { executeCascade } from "./cascade-engine.server";
+import { assessBlastRadius } from "./cascade-approvals.server";
 
 type SupabaseLike = SupabaseClient<Database>;
 type CascadeMode = Database["public"]["Enums"]["cascade_mode"];
@@ -125,12 +126,15 @@ export async function bulkSyncModule(args: {
     });
   }
 
+  const blast = assessBlastRadius(cascadeMode, validIds.length);
+
   const { data: ev, error: evErr } = await supabase
     .from("cascade_events")
     .insert({
       trigger: "manual",
       mode: cascadeMode,
       status: "pending",
+      requires_approval: blast.requiresApproval,
       scope_filter: {
         scope: "module_sync",
         clone_ids: validIds,
@@ -158,6 +162,41 @@ export async function bulkSyncModule(args: {
   const { error: rErr } = await supabase.from("cascade_results").insert(rows);
   if (rErr) {
     return base(moduleId, action, validIds, { ok: false, error: rErr.message });
+  }
+
+  if (blast.requiresApproval) {
+    await supabase.from("notifications").insert({
+      kind: "cascade_awaiting_approval",
+      severity: "warning",
+      title: `Approval needed · module sync (${mod.name})`,
+      body: `${blast.reason ?? ""} Module-sync cascade across ${validIds.length} clone(s).`,
+      cascade_event_id: ev.id,
+      url: `/cascades/${ev.id}`,
+      metadata: {
+        mode: cascadeMode,
+        clone_count: validIds.length,
+        module_id: moduleId,
+        scope: "module_sync",
+      },
+    });
+    await supabase.from("audit_log").insert({
+      action: "cascade.awaiting_approval",
+      entity_type: "cascade_event",
+      entity_id: ev.id,
+      actor_user_id: initiatedBy,
+      metadata: {
+        mode: cascadeMode,
+        scope: "module_sync",
+        module_id: moduleId,
+        clone_count: validIds.length,
+        reason: blast.reason,
+      },
+    });
+    return base(moduleId, action, validIds, {
+      ok: true,
+      cascade_event_id: ev.id,
+      error: blast.reason ?? "Awaiting second-operator approval",
+    });
   }
 
   const runRes = await executeCascade(supabase, ev.id);

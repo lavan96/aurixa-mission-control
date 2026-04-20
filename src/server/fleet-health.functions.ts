@@ -6,6 +6,7 @@ export type { FleetHealth, FleetHealthRow } from "./fleet-health.server";
 
 export const fetchFleetHealth = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<FleetHealth> => {
-    return getFleetHealth(context.supabase);
+  .inputValidator((data: { force?: boolean } = {}) => data ?? {})
+  .handler(async ({ data, context }): Promise<FleetHealth> => {
+    return getFleetHealth(context.supabase, { force: !!data?.force });
   });

@@ -2,8 +2,44 @@
 // and AI-summarized recent activity over the last 7 days.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import { unknownTable } from "./_phase3d-types";
 
 type SupabaseLike = SupabaseClient<Database>;
+
+// 5-minute TTL — fresh enough that operators see meaningful changes,
+// stale enough to make /health load instantly after the first probe.
+export const HEALTH_SNAPSHOT_TTL_MS = 5 * 60 * 1000;
+
+export async function readCachedCloneHealth(
+  supabase: SupabaseLike,
+  cloneId: string,
+): Promise<{ payload: CloneHealth; probedAt: string } | null> {
+  const { data } = await unknownTable(supabase, "clone_health_snapshots")
+    .select("payload, probed_at")
+    .eq("clone_id", cloneId)
+    .maybeSingle();
+  const row = data as { payload: CloneHealth; probed_at: string } | null;
+  if (!row) return null;
+  const age = Date.now() - new Date(row.probed_at).getTime();
+  if (age > HEALTH_SNAPSHOT_TTL_MS) return null;
+  return { payload: row.payload, probedAt: row.probed_at };
+}
+
+async function writeSnapshot(
+  supabase: SupabaseLike,
+  cloneId: string,
+  payload: CloneHealth,
+): Promise<void> {
+  await unknownTable(supabase, "clone_health_snapshots").upsert(
+    {
+      clone_id: cloneId,
+      payload: payload as unknown,
+      probed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "clone_id" },
+  );
+}
 
 export type CloneHealth = {
   cloneId: string;
@@ -40,7 +76,12 @@ async function pingDeploy(url: string): Promise<{ status: "up" | "down" | "unkno
 export async function getCloneHealth(
   supabase: SupabaseLike,
   cloneId: string,
+  opts: { skipCache?: boolean } = {},
 ): Promise<CloneHealth> {
+  if (!opts.skipCache) {
+    const cached = await readCachedCloneHealth(supabase, cloneId);
+    if (cached) return cached.payload;
+  }
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
   const [{ data: clone }, { data: results }, { data: audit }] = await Promise.all([
@@ -126,7 +167,7 @@ export async function getCloneHealth(
     }
   }
 
-  return {
+  const result: CloneHealth = {
     cloneId,
     deployUrl: clone?.deploy_url ?? null,
     uptime,
@@ -137,4 +178,13 @@ export async function getCloneHealth(
     driftSuggestionsOpen: driftOpen,
     aiSummary,
   };
+
+  // Best-effort cache write — failure here must not break the dashboard.
+  try {
+    await writeSnapshot(supabase, cloneId, result);
+  } catch {
+    // ignore
+  }
+
+  return result;
 }

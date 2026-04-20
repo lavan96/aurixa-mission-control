@@ -22,10 +22,10 @@ export function CloneHealthCard({ cloneId }: { cloneId: string }) {
   const [health, setHealth] = useState<CloneHealth | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const load = async () => {
+  const load = async (force = false) => {
     setLoading(true);
     try {
-      const data = await fetchFn({ data: { cloneId } });
+      const data = await fetchFn({ data: { cloneId, force } });
       setHealth(data);
     } finally {
       setLoading(false);
@@ -33,7 +33,7 @@ export function CloneHealthCard({ cloneId }: { cloneId: string }) {
   };
 
   useEffect(() => {
-    void load();
+    void load(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cloneId]);
 
@@ -48,7 +48,7 @@ export function CloneHealthCard({ cloneId }: { cloneId: string }) {
             Deploy uptime + last-week activity, summarized by AI.
           </CardDescription>
         </div>
-        <Button size="sm" variant="outline" onClick={load} disabled={loading}>
+        <Button size="sm" variant="outline" onClick={() => void load(true)} disabled={loading}>
           <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", loading && "animate-spin")} />
           Refresh
         </Button>
