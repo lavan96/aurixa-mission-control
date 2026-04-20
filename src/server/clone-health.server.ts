@@ -76,7 +76,12 @@ async function pingDeploy(url: string): Promise<{ status: "up" | "down" | "unkno
 export async function getCloneHealth(
   supabase: SupabaseLike,
   cloneId: string,
+  opts: { skipCache?: boolean } = {},
 ): Promise<CloneHealth> {
+  if (!opts.skipCache) {
+    const cached = await readCachedCloneHealth(supabase, cloneId);
+    if (cached) return cached.payload;
+  }
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
   const [{ data: clone }, { data: results }, { data: audit }] = await Promise.all([
@@ -162,7 +167,7 @@ export async function getCloneHealth(
     }
   }
 
-  return {
+  const result: CloneHealth = {
     cloneId,
     deployUrl: clone?.deploy_url ?? null,
     uptime,
@@ -173,4 +178,13 @@ export async function getCloneHealth(
     driftSuggestionsOpen: driftOpen,
     aiSummary,
   };
+
+  // Best-effort cache write — failure here must not break the dashboard.
+  try {
+    await writeSnapshot(supabase, cloneId, result);
+  } catch {
+    // ignore
+  }
+
+  return result;
 }
