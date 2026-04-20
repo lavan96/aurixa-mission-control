@@ -129,5 +129,13 @@ export const rejectCascade = createServerFn({ method: "POST" })
       metadata: { mode: ev.mode, reason: data.reason ?? null },
     });
 
+    // Clear the "awaiting approval" notification(s) for this event.
+    await supabase
+      .from("notifications")
+      .update({ read_at: new Date().toISOString() })
+      .eq("cascade_event_id", data.cascadeEventId)
+      .eq("kind", "cascade_awaiting_approval")
+      .is("read_at", null);
+
     return { ok: true as const };
   });
