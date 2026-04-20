@@ -466,7 +466,13 @@ function CascadeDetailPage() {
               No clones queued for this cascade.
             </div>
           ) : (
-            <GroupedResults results={results} eventInFlight={inFlight} onChange={refresh} />
+            <GroupedResults
+              results={results}
+              eventInFlight={inFlight}
+              eventMode={event.mode}
+              onChange={refresh}
+              onRetryWithMode={retryWithMode}
+            />
           )}
         </CardContent>
       </Card>
@@ -486,11 +492,15 @@ const GROUP_ORDER: { status: CascadeResult["status"]; label: string; tone: strin
 function GroupedResults({
   results,
   eventInFlight,
+  eventMode,
   onChange,
+  onRetryWithMode,
 }: {
   results: ResultWithClone[];
   eventInFlight: boolean;
+  eventMode: CascadeEvent["mode"];
   onChange: () => void;
+  onRetryWithMode: (cloneId: string, mode: CascadeEvent["mode"]) => Promise<void>;
 }) {
   const groups = useMemo(() => {
     const map = new Map<CascadeResult["status"], ResultWithClone[]>();
@@ -517,7 +527,9 @@ function GroupedResults({
             g.status === "failed" || g.status === "queued" || g.status === "pushing"
           }
           eventInFlight={eventInFlight}
+          eventMode={eventMode}
           onChange={onChange}
+          onRetryWithMode={onRetryWithMode}
         />
       ))}
     </div>
@@ -531,7 +543,9 @@ function ResultsGroup({
   items,
   defaultOpen,
   eventInFlight,
+  eventMode,
   onChange,
+  onRetryWithMode,
 }: {
   status: CascadeResult["status"];
   label: string;
@@ -539,7 +553,9 @@ function ResultsGroup({
   items: ResultWithClone[];
   defaultOpen: boolean;
   eventInFlight: boolean;
+  eventMode: CascadeEvent["mode"];
   onChange: () => void;
+  onRetryWithMode: (cloneId: string, mode: CascadeEvent["mode"]) => Promise<void>;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -570,7 +586,9 @@ function ResultsGroup({
             key={r.id}
             result={r}
             eventInFlight={eventInFlight}
+            eventMode={eventMode}
             onChange={onChange}
+            onRetryWithMode={onRetryWithMode}
           />
         ))}
       </CollapsibleContent>
