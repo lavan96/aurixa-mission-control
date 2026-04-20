@@ -55,7 +55,7 @@ function ModuleDetail() {
 
   const setStatusFilter = (s: SyncStatus | null) =>
     navigate({
-      search: (prev) => ({ ...prev, status: s ?? undefined }),
+      search: (prev: { status?: SyncStatus }) => ({ ...prev, status: s ?? undefined }),
       replace: true,
     });
 
