@@ -56,12 +56,16 @@ export const Route = createFileRoute("/dashboard")({
 function Dashboard() {
   const { data: clones, loading } = useClones();
   const { data: prime } = usePrimeConfig();
-  const [q, setQ] = useState("");
+  const { q, filter, sort } = Route.useSearch();
+  const navigate = useNavigate({ from: "/dashboard" });
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [filter, setFilter] = useState<"all" | "in_sync" | "behind" | "failed" | "ai">("all");
-  const [sort, setSort] = useState<
-    "name" | "commits_behind" | "last_cascade_at" | "ai_suggestions"
-  >("name");
+
+  const setQ = (value: string) =>
+    navigate({ search: (prev) => ({ ...prev, q: value }), replace: true });
+  const setFilter = (value: typeof filter) =>
+    navigate({ search: (prev) => ({ ...prev, filter: value }), replace: true });
+  const setSort = (value: typeof sort) =>
+    navigate({ search: (prev) => ({ ...prev, sort: value }), replace: true });
 
   const openSuggestionsCount = (c: (typeof clones)[number]) => {
     const sugg = (c.drift_suggestions as unknown as Array<{ status?: string }> | null) ?? [];
