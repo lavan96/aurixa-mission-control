@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { analyzeCloneDrift, type AnalyzeDriftResult } from "./drift-suggestions.server";
+import { applyAutoPoliciesForClone } from "./drift-policies.server";
 import { executeCascade } from "./cascade-engine.server";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -9,6 +10,8 @@ export type { DriftSuggestion, AnalyzeDriftResult } from "./drift-suggestions.se
 type CascadeMode = Database["public"]["Enums"]["cascade_mode"];
 
 // Analyze a single clone's drift via Lovable AI and persist suggestions.
+// After fresh suggestions land, evaluate the clone's auto-apply policy and
+// fire scoped cascades for eligible items so policies actually flow.
 export const analyzeDrift = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { cloneId: string }) => {
@@ -17,8 +20,16 @@ export const analyzeDrift = createServerFn({ method: "POST" })
     }
     return data;
   })
-  .handler(async ({ data, context }): Promise<AnalyzeDriftResult> => {
-    return analyzeCloneDrift(context.supabase, data.cloneId);
+  .handler(async ({ data, context }): Promise<AnalyzeDriftResult & { auto_applied?: number }> => {
+    const result = await analyzeCloneDrift(context.supabase, data.cloneId);
+    let auto_applied = 0;
+    try {
+      const auto = await applyAutoPoliciesForClone(context.supabase, data.cloneId);
+      if (auto.ok) auto_applied = auto.applied.length;
+    } catch {
+      // Non-fatal — surface analyze result even if auto-apply hiccups.
+    }
+    return { ...result, auto_applied };
   });
 
 export type ApplySuggestionResult =
