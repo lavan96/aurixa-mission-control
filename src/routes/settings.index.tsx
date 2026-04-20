@@ -43,22 +43,49 @@ function SettingsGeneralPage() {
     }
   }, [prime]);
 
+  const [saving, setSaving] = useState(false);
+
   const save = async () => {
-    if (!owner || !repo) return toast.error("Owner and repo required");
+    if (!owner.trim() || !repo.trim()) return toast.error("Owner and repo required");
+    if (!branch.trim()) return toast.error("Default branch required");
+    setSaving(true);
     const payload = {
-      github_owner: owner,
-      github_repo: repo,
-      default_branch: branch,
-      default_clone_org: defaultOrg || null,
+      github_owner: owner.trim(),
+      github_repo: repo.trim(),
+      default_branch: branch.trim(),
+      default_clone_org: defaultOrg.trim() || null,
       default_cascade_mode: cascadeMode,
     };
-    if (prime) {
-      await supabase.from("prime_config").update(payload).eq("id", prime.id);
-    } else {
-      await supabase.from("prime_config").insert(payload);
+    try {
+      // Re-check for an existing row right before write so a stale `prime`
+      // snapshot doesn't make us insert a duplicate after another tab saved.
+      const { data: existing, error: lookupErr } = await supabase
+        .from("prime_config")
+        .select("id")
+        .limit(1)
+        .maybeSingle();
+      if (lookupErr) throw lookupErr;
+
+      if (existing) {
+        const { error } = await supabase
+          .from("prime_config")
+          .update(payload)
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("prime_config").insert(payload);
+        if (error) throw error;
+      }
+      toast.success("Prime config saved");
+      await refresh();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to save prime config";
+      // Surface the real DB error (RLS, NOT NULL, etc.) instead of swallowing.
+      toast.error(msg);
+      console.error("Prime config save failed:", e);
+    } finally {
+      setSaving(false);
     }
-    toast.success("Prime config saved");
-    refresh();
   };
 
   return (
@@ -109,7 +136,9 @@ function SettingsGeneralPage() {
             </Select>
           </div>
           <div className="md:col-span-2 flex justify-end">
-            <Button onClick={save}>Save prime config</Button>
+            <Button onClick={save} disabled={saving}>
+              {saving ? "Saving…" : "Save prime config"}
+            </Button>
           </div>
         </CardContent>
       </Card>

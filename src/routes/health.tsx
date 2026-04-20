@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   CircleCheck,
   CircleX,
+  Clock,
   RefreshCw,
   Loader2,
   Sparkles,
@@ -68,6 +69,11 @@ function FleetHealthPage() {
 
   const totals = data?.totals;
   const upPct = totals && totals.total > 0 ? Math.round((totals.up / totals.total) * 100) : null;
+  // Stale = snapshot older than the 5-min cron pre-warm interval. If this
+  // climbs above zero, the warm-health cron is failing silently — surface it.
+  const STALE_MS = 5 * 60 * 1000;
+  const staleCount =
+    data?.rows.filter((r) => Date.now() - new Date(r.probedAt).getTime() > STALE_MS).length ?? 0;
 
   return (
     <div className="space-y-6">
@@ -114,7 +120,7 @@ function FleetHealthPage() {
 
       {data && totals && (
         <>
-          <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-6">
             <SummaryTile
               icon={<Activity />}
               label="Clones"
@@ -149,6 +155,17 @@ function FleetHealthPage() {
               value={String(totals.openDrift + totals.behind)}
               detail={`${totals.openDrift} drift · ${totals.behind} behind`}
               tone={totals.openDrift + totals.behind > 0 ? "warning" : "success"}
+            />
+            <SummaryTile
+              icon={<Clock />}
+              label="Stale snapshots"
+              value={String(staleCount)}
+              detail={
+                staleCount === 0
+                  ? "cron pre-warm healthy"
+                  : "cron pre-warm may be failing"
+              }
+              tone={staleCount > 0 ? "warning" : "success"}
             />
           </div>
 
