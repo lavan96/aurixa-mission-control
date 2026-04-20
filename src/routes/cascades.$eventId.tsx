@@ -349,7 +349,19 @@ function CascadeDetailPage() {
                 {event.status}
               </Badge>
               {event.source_sha && (
-                <code className="font-mono">prime@{event.source_sha.slice(0, 7)}</code>
+                prime ? (
+                  <a
+                    href={`https://github.com/${prime.github_owner}/${prime.github_repo}/commit/${event.source_sha}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-mono hover:text-foreground hover:underline"
+                    title={`View on GitHub · ${prime.github_owner}/${prime.github_repo}`}
+                  >
+                    prime@{event.source_sha.slice(0, 7)}
+                  </a>
+                ) : (
+                  <code className="font-mono">prime@{event.source_sha.slice(0, 7)}</code>
+                )
               )}
               <span>· started {formatDistanceToNow(event.created_at)}</span>
               {event.completed_at && (
