@@ -75,12 +75,13 @@ export function ModuleCoverageStrip({
   }
 
   type Seg = { key: "in_sync" | "behind" | "failed" | "other"; n: number; cls: string };
-  const segs: Seg[] = [
+  const allSegs: Seg[] = [
     { key: "in_sync", n: counts.in_sync, cls: "bg-success/70 hover:bg-success" },
     { key: "behind", n: counts.behind, cls: "bg-warning/70 hover:bg-warning" },
     { key: "failed", n: counts.failed, cls: "bg-destructive/70 hover:bg-destructive" },
     { key: "other", n: counts.other, cls: "bg-muted-foreground/40 hover:bg-muted-foreground/60" },
-  ].filter((s) => s.n > 0);
+  ];
+  const segs: Seg[] = allSegs.filter((s) => s.n > 0);
 
   const renderSeg = (s: Seg) => {
     const className = cn("h-full transition-colors", s.cls);
