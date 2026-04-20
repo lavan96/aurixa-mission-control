@@ -54,6 +54,7 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { runCascade } from "@/server/cascade-engine.functions";
 import { CascadeLineagePanel } from "@/components/cascade-lineage-panel";
+import { InlineDiffSummary } from "@/components/inline-diff-summary";
 
 type CascadeEvent = Database["public"]["Tables"]["cascade_events"]["Row"];
 type CascadeResult = Database["public"]["Tables"]["cascade_results"]["Row"];
@@ -755,7 +756,12 @@ function ResultRow({
             </div>
           )}
           {result.diff_summary && (
-            <div className="mt-1 text-xs text-muted-foreground">{result.diff_summary}</div>
+            <div className="mt-2">
+              <InlineDiffSummary
+                summary={result.diff_summary}
+                filesChanged={result.files_changed}
+              />
+            </div>
           )}
           {result.error_message && (
             <div className="mt-1 font-mono text-xs text-destructive">{result.error_message}</div>
