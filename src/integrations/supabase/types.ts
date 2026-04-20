@@ -44,13 +44,51 @@ export type Database = {
         }
         Relationships: []
       }
+      cascade_approvals: {
+        Row: {
+          approver_user_id: string
+          cascade_event_id: string
+          created_at: string
+          decision: string
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          approver_user_id: string
+          cascade_event_id: string
+          created_at?: string
+          decision: string
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          approver_user_id?: string
+          cascade_event_id?: string
+          created_at?: string
+          decision?: string
+          id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cascade_approvals_cascade_event_id_fkey"
+            columns: ["cascade_event_id"]
+            isOneToOne: false
+            referencedRelation: "cascade_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cascade_events: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           completed_at: string | null
           created_at: string
           id: string
           initiated_by: string | null
           mode: Database["public"]["Enums"]["cascade_mode"]
+          requires_approval: boolean
           scope_filter: Json
           source_branch: string | null
           source_sha: string | null
@@ -61,11 +99,14 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           completed_at?: string | null
           created_at?: string
           id?: string
           initiated_by?: string | null
           mode: Database["public"]["Enums"]["cascade_mode"]
+          requires_approval?: boolean
           scope_filter?: Json
           source_branch?: string | null
           source_sha?: string | null
@@ -76,11 +117,14 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           completed_at?: string | null
           created_at?: string
           id?: string
           initiated_by?: string | null
           mode?: Database["public"]["Enums"]["cascade_mode"]
+          requires_approval?: boolean
           scope_filter?: Json
           source_branch?: string | null
           source_sha?: string | null

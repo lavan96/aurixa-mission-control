@@ -9,6 +9,7 @@ import {
   getFileContent,
   type RepoRef,
 } from "./github-app.server";
+import { isBlockedByApproval } from "./cascade-approvals.server";
 
 type CascadeResultUpdate = Database["public"]["Tables"]["cascade_results"]["Update"];
 type SupabaseLike = SupabaseClient<Database>;
@@ -49,6 +50,12 @@ export async function executeCascade(
   }
   if (event.status === "completed" || event.status === "failed") {
     return { ok: false, error: `Already ${event.status}` };
+  }
+  // Blast-radius gate — block engine if a second-operator approval is required
+  // and not yet recorded. Engine will re-run via approveCascade.
+  const gate = await isBlockedByApproval(supabase, cascadeEventId);
+  if (gate.blocked) {
+    return { ok: false, error: gate.reason ?? "Awaiting approval" };
   }
   const prime = primeRes.data;
   if (!prime) {
