@@ -73,6 +73,24 @@ const KINDS: {
     icon: XCircle,
   },
   {
+    value: "cascade_awaiting_approval",
+    label: "Cascade awaiting approval",
+    description: "A high-blast-radius cascade needs a second-operator approval.",
+    icon: AlertTriangle,
+  },
+  {
+    value: "cascade_approved",
+    label: "Cascade approved",
+    description: "Your pending cascade was approved by another operator.",
+    icon: CheckCircle2,
+  },
+  {
+    value: "cascade_rejected",
+    label: "Cascade rejected",
+    description: "Your pending cascade was rejected by another operator.",
+    icon: XCircle,
+  },
+  {
     value: "drift_high",
     label: "Drift — high",
     description: "AI flagged a high-severity drift finding.",

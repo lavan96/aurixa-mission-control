@@ -812,6 +812,8 @@ export type Database = {
         | "module_installed"
         | "module_removed"
         | "cascade_awaiting_approval"
+        | "cascade_approved"
+        | "cascade_rejected"
       notification_severity: "info" | "success" | "warning" | "error"
       provisioning_method: "fork" | "template" | "clone"
       sync_status: "in_sync" | "behind" | "cascading" | "failed" | "unknown"
@@ -975,6 +977,8 @@ export const Constants = {
         "module_installed",
         "module_removed",
         "cascade_awaiting_approval",
+        "cascade_approved",
+        "cascade_rejected",
       ],
       notification_severity: ["info", "success", "warning", "error"],
       provisioning_method: ["fork", "template", "clone"],

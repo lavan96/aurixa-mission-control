@@ -25,6 +25,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as SettingsNotificationsRouteImport } from './routes/settings.notifications'
 import { Route as ModulesSlugRouteImport } from './routes/modules.$slug'
+import { Route as HooksWarmHealthRouteImport } from './routes/hooks.warm-health'
 import { Route as HooksRunSchedulesRouteImport } from './routes/hooks.run-schedules'
 import { Route as HooksGithubRouteImport } from './routes/hooks.github'
 import { Route as HooksFleetDriftRouteImport } from './routes/hooks.fleet-drift'
@@ -113,6 +114,11 @@ const ModulesSlugRoute = ModulesSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => ModulesRoute,
 } as any)
+const HooksWarmHealthRoute = HooksWarmHealthRouteImport.update({
+  id: '/hooks/warm-health',
+  path: '/hooks/warm-health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HooksRunSchedulesRoute = HooksRunSchedulesRouteImport.update({
   id: '/hooks/run-schedules',
   path: '/hooks/run-schedules',
@@ -170,6 +176,7 @@ export interface FileRoutesByFullPath {
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
   '/hooks/github': typeof HooksGithubRoute
   '/hooks/run-schedules': typeof HooksRunSchedulesRoute
+  '/hooks/warm-health': typeof HooksWarmHealthRoute
   '/modules/$slug': typeof ModulesSlugRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/': typeof SettingsIndexRoute
@@ -194,6 +201,7 @@ export interface FileRoutesByTo {
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
   '/hooks/github': typeof HooksGithubRoute
   '/hooks/run-schedules': typeof HooksRunSchedulesRoute
+  '/hooks/warm-health': typeof HooksWarmHealthRoute
   '/modules/$slug': typeof ModulesSlugRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings': typeof SettingsIndexRoute
@@ -220,6 +228,7 @@ export interface FileRoutesById {
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
   '/hooks/github': typeof HooksGithubRoute
   '/hooks/run-schedules': typeof HooksRunSchedulesRoute
+  '/hooks/warm-health': typeof HooksWarmHealthRoute
   '/modules/$slug': typeof ModulesSlugRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/': typeof SettingsIndexRoute
@@ -247,6 +256,7 @@ export interface FileRouteTypes {
     | '/hooks/fleet-drift'
     | '/hooks/github'
     | '/hooks/run-schedules'
+    | '/hooks/warm-health'
     | '/modules/$slug'
     | '/settings/notifications'
     | '/settings/'
@@ -271,6 +281,7 @@ export interface FileRouteTypes {
     | '/hooks/fleet-drift'
     | '/hooks/github'
     | '/hooks/run-schedules'
+    | '/hooks/warm-health'
     | '/modules/$slug'
     | '/settings/notifications'
     | '/settings'
@@ -296,6 +307,7 @@ export interface FileRouteTypes {
     | '/hooks/fleet-drift'
     | '/hooks/github'
     | '/hooks/run-schedules'
+    | '/hooks/warm-health'
     | '/modules/$slug'
     | '/settings/notifications'
     | '/settings/'
@@ -321,6 +333,7 @@ export interface RootRouteChildren {
   HooksFleetDriftRoute: typeof HooksFleetDriftRoute
   HooksGithubRoute: typeof HooksGithubRoute
   HooksRunSchedulesRoute: typeof HooksRunSchedulesRoute
+  HooksWarmHealthRoute: typeof HooksWarmHealthRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -437,6 +450,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesSlugRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/hooks/warm-health': {
+      id: '/hooks/warm-health'
+      path: '/hooks/warm-health'
+      fullPath: '/hooks/warm-health'
+      preLoaderRoute: typeof HooksWarmHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/hooks/run-schedules': {
       id: '/hooks/run-schedules'
       path: '/hooks/run-schedules'
@@ -546,16 +566,8 @@ const rootRouteChildren: RootRouteChildren = {
   HooksFleetDriftRoute: HooksFleetDriftRoute,
   HooksGithubRoute: HooksGithubRoute,
   HooksRunSchedulesRoute: HooksRunSchedulesRoute,
+  HooksWarmHealthRoute: HooksWarmHealthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

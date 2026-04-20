@@ -19,6 +19,8 @@ import {
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "@/lib/format";
 import { fetchFleetHealth, type FleetHealth, type FleetHealthRow } from "@/server/fleet-health.functions";
+import { fetchCloneHealth } from "@/server/clone-health.functions";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/health")({
   component: () => (
@@ -166,7 +168,22 @@ function FleetHealthPage() {
               {[...data.rows]
                 .sort((a, b) => riskScore(b) - riskScore(a))
                 .map((r) => (
-                  <FleetRow key={r.cloneId} row={r} />
+                  <FleetRow
+                    key={r.cloneId}
+                    row={r}
+                    onUpdated={(next) =>
+                      setData((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              rows: prev.rows.map((row) =>
+                                row.cloneId === next.cloneId ? next : row,
+                              ),
+                            }
+                          : prev,
+                      )
+                    }
+                  />
                 ))}
             </CardContent>
           </Card>
@@ -186,7 +203,15 @@ function riskScore(r: FleetHealthRow): number {
   return s;
 }
 
-function FleetRow({ row }: { row: FleetHealthRow }) {
+function FleetRow({
+  row,
+  onUpdated,
+}: {
+  row: FleetHealthRow;
+  onUpdated: (next: FleetHealthRow) => void;
+}) {
+  const refreshFn = useServerFn(fetchCloneHealth);
+  const [refreshing, setRefreshing] = useState(false);
   const h = row.health;
   const uptimeTone =
     h.uptime.status === "up"
@@ -195,16 +220,40 @@ function FleetRow({ row }: { row: FleetHealthRow }) {
         ? "border-destructive/40"
         : "border-border/60";
 
+  const handleRefresh = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setRefreshing(true);
+    try {
+      const fresh = await refreshFn({ data: { cloneId: row.cloneId, force: true } });
+      onUpdated({
+        ...row,
+        health: fresh,
+        probedAt: new Date().toISOString(),
+        fromCache: false,
+      });
+      toast.success(`${row.name} re-probed`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Refresh failed");
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
-    <Link
-      to="/clones/$cloneId"
-      params={{ cloneId: row.cloneId }}
+    <div
       className={cn(
-        "flex flex-col gap-2 rounded-md border bg-surface p-3 transition-colors hover:bg-muted/30 md:flex-row md:items-center",
+        "group relative flex flex-col gap-2 rounded-md border bg-surface p-3 transition-colors hover:bg-muted/30 md:flex-row md:items-center",
         uptimeTone,
       )}
     >
-      <div className="flex flex-1 items-start gap-3 min-w-0">
+      <Link
+        to="/clones/$cloneId"
+        params={{ cloneId: row.cloneId }}
+        className="absolute inset-0 z-0 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label={`Open clone ${row.name}`}
+      />
+      <div className="relative z-10 flex flex-1 items-start gap-3 min-w-0 pointer-events-none">
         <UptimeIcon status={h.uptime.status} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -228,6 +277,7 @@ function FleetRow({ row }: { row: FleetHealthRow }) {
                 {h.failureCount7d} fail · 7d
               </Badge>
             )}
+            <CacheAgeBadge probedAt={row.probedAt} fromCache={row.fromCache} />
           </div>
           {h.aiSummary && (
             <div className="mt-1 flex items-start gap-1.5 text-xs text-muted-foreground">
@@ -237,7 +287,7 @@ function FleetRow({ row }: { row: FleetHealthRow }) {
           )}
         </div>
       </div>
-      <div className="flex shrink-0 flex-wrap items-center gap-3 text-right md:flex-col md:items-end md:gap-0.5">
+      <div className="relative z-10 flex shrink-0 flex-wrap items-center gap-3 text-right pointer-events-none md:flex-col md:items-end md:gap-0.5">
         <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
           {h.uptime.latencyMs !== null
             ? `${h.uptime.latencyMs}ms · ${h.uptime.httpStatus ?? "—"}`
@@ -250,7 +300,46 @@ function FleetRow({ row }: { row: FleetHealthRow }) {
           {h.lastSuccessfulCascadeAt ? formatDistanceToNow(h.lastSuccessfulCascadeAt) : "—"}
         </div>
       </div>
-    </Link>
+      <div className="relative z-10 flex shrink-0">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="h-7 gap-1 px-2 font-mono text-[10px] uppercase"
+          aria-label={`Re-probe ${row.name}`}
+        >
+          {refreshing ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <RefreshCw className="h-3 w-3" />
+          )}
+          Re-probe
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function CacheAgeBadge({
+  probedAt,
+  fromCache,
+}: {
+  probedAt: string;
+  fromCache: boolean;
+}) {
+  const ageMs = Date.now() - new Date(probedAt).getTime();
+  const stale = ageMs > 5 * 60 * 1000;
+  const label = fromCache ? `probed ${formatDistanceToNow(probedAt)}` : "fresh probe";
+  const tone = stale
+    ? "border-warning/40 text-warning"
+    : fromCache
+      ? "border-border text-muted-foreground"
+      : "border-success/40 text-success";
+  return (
+    <Badge variant="outline" className={cn("font-mono text-[10px] uppercase", tone)}>
+      {label}
+    </Badge>
   );
 }
 

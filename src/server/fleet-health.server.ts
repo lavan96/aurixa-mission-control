@@ -2,7 +2,11 @@
 // failure / drift counts over the last 7 days. Used by the /health dashboard.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { getCloneHealth, type CloneHealth } from "./clone-health.server";
+import {
+  getCloneHealth,
+  readCachedCloneHealth,
+  type CloneHealth,
+} from "./clone-health.server";
 
 type SupabaseLike = SupabaseClient<Database>;
 
@@ -13,6 +17,8 @@ export type FleetHealthRow = {
   syncStatus: Database["public"]["Enums"]["sync_status"];
   commitsBehind: number;
   health: CloneHealth;
+  probedAt: string;
+  fromCache: boolean;
 };
 
 export type FleetHealth = {
@@ -42,9 +48,19 @@ export async function getFleetHealth(
   const list = clones ?? [];
   // Probe in parallel — getCloneHealth honors a 5-min snapshot cache, so the
   // first /health visit is slow (HEAD pings + AI summary) but subsequent
-  // visits within the TTL are nearly instant DB reads.
-  const healths = await Promise.all(
-    list.map((c) => getCloneHealth(supabase, c.id, { skipCache: !!opts.force })),
+  // visits within the TTL are nearly instant DB reads. We also expose
+  // probedAt + fromCache per row so the UI can show a cache-age badge.
+  const probed = await Promise.all(
+    list.map(async (c) => {
+      const cached = opts.force
+        ? null
+        : await readCachedCloneHealth(supabase, c.id);
+      if (cached) {
+        return { health: cached.payload, probedAt: cached.probedAt, fromCache: true };
+      }
+      const health = await getCloneHealth(supabase, c.id, { skipCache: true });
+      return { health, probedAt: new Date().toISOString(), fromCache: false };
+    }),
   );
 
   const rows: FleetHealthRow[] = list.map((c, i) => ({
@@ -53,7 +69,9 @@ export async function getFleetHealth(
     slug: c.slug,
     syncStatus: c.sync_status,
     commitsBehind: c.commits_behind,
-    health: healths[i],
+    health: probed[i].health,
+    probedAt: probed[i].probedAt,
+    fromCache: probed[i].fromCache,
   }));
 
   const totals = rows.reduce(
