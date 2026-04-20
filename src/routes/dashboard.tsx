@@ -9,6 +9,14 @@ import { StatusPill } from "@/components/status-pill";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ArrowDownUp,
   GitBranch,
   ExternalLink,
   Github,
@@ -39,6 +47,9 @@ function Dashboard() {
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<"all" | "in_sync" | "behind" | "failed" | "ai">("all");
+  const [sort, setSort] = useState<
+    "name" | "commits_behind" | "last_cascade_at" | "ai_suggestions"
+  >("name");
 
   const openSuggestionsCount = (c: (typeof clones)[number]) => {
     const sugg = (c.drift_suggestions as unknown as Array<{ status?: string }> | null) ?? [];
@@ -46,7 +57,7 @@ function Dashboard() {
   };
 
   const filtered = useMemo(() => {
-    return clones.filter((c) => {
+    const list = clones.filter((c) => {
       const matchQ =
         !q ||
         c.name.toLowerCase().includes(q.toLowerCase()) ||
@@ -56,7 +67,26 @@ function Dashboard() {
         (filter === "ai" ? openSuggestionsCount(c) > 0 : c.sync_status === filter);
       return matchQ && matchF;
     });
-  }, [clones, q, filter]);
+    const sorted = [...list];
+    sorted.sort((a, b) => {
+      switch (sort) {
+        case "name":
+          return a.name.localeCompare(b.name);
+        case "commits_behind":
+          return (b.commits_behind ?? 0) - (a.commits_behind ?? 0);
+        case "last_cascade_at": {
+          const at = a.last_cascade_at ? new Date(a.last_cascade_at).getTime() : 0;
+          const bt = b.last_cascade_at ? new Date(b.last_cascade_at).getTime() : 0;
+          return bt - at;
+        }
+        case "ai_suggestions":
+          return openSuggestionsCount(b) - openSuggestionsCount(a);
+        default:
+          return 0;
+      }
+    });
+    return sorted;
+  }, [clones, q, filter, sort]);
 
   const stats = useMemo(() => {
     return {
@@ -169,6 +199,24 @@ function Dashboard() {
             </button>
           ))}
         </div>
+        <Select value={sort} onValueChange={(v) => setSort(v as typeof sort)}>
+          <SelectTrigger className="w-[200px] font-mono text-xs">
+            <ArrowDownUp className="h-3.5 w-3.5 text-muted-foreground" />
+            <SelectValue placeholder="Sort by…" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="name" className="font-mono text-xs">name (a→z)</SelectItem>
+            <SelectItem value="commits_behind" className="font-mono text-xs">
+              commits behind (high→low)
+            </SelectItem>
+            <SelectItem value="last_cascade_at" className="font-mono text-xs">
+              last cascade (recent first)
+            </SelectItem>
+            <SelectItem value="ai_suggestions" className="font-mono text-xs">
+              ai suggestions (high→low)
+            </SelectItem>
+          </SelectContent>
+        </Select>
         {selected.size > 0 && (
           <div className="ml-auto flex items-center gap-2">
             <Badge variant="secondary" className="font-mono">
