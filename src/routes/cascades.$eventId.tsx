@@ -690,7 +690,18 @@ function ResultRow({
         <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
           {result.files_changed} file{result.files_changed === 1 ? "" : "s"}
         </div>
-        {result.commit_sha && (
+        {result.commit_sha && clone && (
+          <a
+            href={`https://github.com/${clone.github_owner}/${clone.github_repo}/commit/${result.commit_sha}`}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] hover:bg-muted/70 hover:underline"
+            title="View commit on GitHub"
+          >
+            {result.commit_sha.slice(0, 7)}
+          </a>
+        )}
+        {result.commit_sha && !clone && (
           <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
             {result.commit_sha.slice(0, 7)}
           </code>
@@ -702,7 +713,15 @@ function ResultRow({
             rel="noreferrer"
             className="inline-flex items-center gap-1 font-mono text-[11px] text-accent hover:underline"
           >
-            View PR <ExternalLink className="h-3 w-3" />
+            {eventMode === "notify" ? (
+              <>
+                View drift issue <ExternalLink className="h-3 w-3" />
+              </>
+            ) : (
+              <>
+                View PR <ExternalLink className="h-3 w-3" />
+              </>
+            )}
           </a>
         )}
         {canSkip && (
