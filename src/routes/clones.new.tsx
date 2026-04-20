@@ -66,15 +66,24 @@ const METHODS: {
 function NewClone() {
   const nav = useNavigate();
   const { data: modules } = useModules();
+  const { data: prime } = usePrimeConfig();
+  const provision = useServerFn(provisionClone);
   const [name, setName] = useState("");
   const [tags, setTags] = useState("");
   const [method, setMethod] = useState<Method>("template");
   const [ownerMode, setOwnerMode] = useState<"org" | "transfer">("org");
-  const [transferEmail, setTransferEmail] = useState("");
+  const [transferTarget, setTransferTarget] = useState("");
   const [cloudflare, setCloudflare] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // Default the org field to the prime's default_clone_org once it loads
+  useEffect(() => {
+    if (prime?.default_clone_org && !transferTarget) {
+      // Pre-populate transfer target as a hint, but don't force ownerMode
+    }
+  }, [prime, transferTarget]);
 
   const togglePick = (id: string) => {
     const n = new Set(picked);
@@ -87,57 +96,52 @@ function NewClone() {
       toast.error("Name is required");
       return;
     }
-    setBusy(true);
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data, error } = await supabase
-      .from("clones")
-      .insert({
-        name,
-        slug: `${slug}-${Math.random().toString(36).slice(2, 6)}`,
-        tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
-        provisioning_method: method,
-        github_owner: ownerMode === "transfer" ? transferEmail : "your-org",
-        github_repo: slug,
-        cloudflare_enabled: cloudflare,
-        sync_status: "in_sync",
-        owner_user_id: user?.id,
-        notes,
-      })
-      .select()
-      .single();
-    if (error) {
-      toast.error(error.message);
-      setBusy(false);
+    const targetOwner =
+      ownerMode === "transfer"
+        ? transferTarget.trim()
+        : (prime?.default_clone_org?.trim() || prime?.github_owner?.trim() || "");
+
+    if ((method === "fork" || method === "template") && !targetOwner) {
+      toast.error(
+        ownerMode === "transfer"
+          ? "Enter the GitHub org/user that will own the new repo"
+          : "Set a default clone org in Settings, or pick 'Transfer to client' and enter one",
+      );
       return;
     }
-    if (picked.size > 0 && data) {
-      const rows = Array.from(picked).map((module_id) => ({
-        clone_id: data.id,
-        module_id,
-        installed_by: user?.id,
-      }));
-      await supabase.from("clone_modules").insert(rows);
+
+    setBusy(true);
+    try {
+      const result = await provision({
+        data: {
+          name,
+          slug: `${slug}-${Math.random().toString(36).slice(2, 6)}`,
+          method,
+          targetOwner: targetOwner || "manual",
+          tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
+          cloudflareEnabled: cloudflare,
+          notes,
+          moduleIds: Array.from(picked),
+        },
+      });
+
+      if (!result.ok) {
+        toast.error(result.error);
+        setBusy(false);
+        return;
+      }
+      toast.success(
+        method === "clone"
+          ? "Clone registered (independent — wire up the repo manually)"
+          : `Clone provisioned${result.githubUrl ? " on GitHub" : ""}`,
+      );
+      setBusy(false);
+      nav({ to: "/clones/$cloneId", params: { cloneId: result.cloneId } });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Provisioning failed");
+      setBusy(false);
     }
-    await supabase.from("audit_log").insert({
-      action: "clone.created",
-      entity_type: "clone",
-      entity_id: data!.id,
-      actor_user_id: user?.id,
-      metadata: { method, cloudflare, modules: Array.from(picked) },
-    });
-    await supabase.from("notifications").insert({
-      kind: "clone_created",
-      severity: "success",
-      title: `Clone created: ${name}`,
-      body: `Provisioned via ${method}${picked.size > 0 ? ` with ${picked.size} module${picked.size === 1 ? "" : "s"}` : ""}`,
-      clone_id: data!.id,
-      url: `/clones/${data!.id}`,
-      metadata: { method, cloudflare },
-    });
-    toast.success("Clone registered");
-    setBusy(false);
-    nav({ to: "/clones/$cloneId", params: { cloneId: data!.id } });
   };
 
   return (
