@@ -154,8 +154,8 @@ function Dashboard() {
             className="pl-9 font-mono text-sm"
           />
         </div>
-        <div className="flex gap-1 rounded-md border border-border bg-surface p-1">
-          {(["all", "in_sync", "behind", "failed"] as const).map((k) => (
+        <div className="flex flex-wrap gap-1 rounded-md border border-border bg-surface p-1">
+          {(["all", "in_sync", "behind", "failed", "ai"] as const).map((k) => (
             <button
               key={k}
               onClick={() => setFilter(k)}
@@ -165,7 +165,7 @@ function Dashboard() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {k.replace("_", " ")}
+              {k === "ai" ? `ai${stats.ai_clones ? ` (${stats.ai_clones})` : ""}` : k.replace("_", " ")}
             </button>
           ))}
         </div>
