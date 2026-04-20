@@ -6,7 +6,7 @@ import { useCascadeEvents, useClones } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Waves, GitMerge, Send, Bell, ChevronRight, Package } from "lucide-react";
+import { Waves, GitMerge, Send, Bell, ChevronRight, Package, Bot } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCallback, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -204,6 +204,30 @@ function CascadesPage() {
                           <Badge variant="outline" className={cn("text-[10px] uppercase", statusTone(e.status))}>
                             {e.status}
                           </Badge>
+                          {(() => {
+                            const sf = (e.scope_filter ?? {}) as {
+                              scope?: string;
+                              module_name?: string;
+                              module_globs?: string[];
+                              auto_applied?: boolean;
+                            };
+                            return sf.auto_applied ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span
+                                    className="inline-flex items-center gap-1 rounded-md border border-accent/40 bg-accent/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-accent"
+                                    onClick={(ev) => ev.preventDefault()}
+                                  >
+                                    <Bot className="h-3 w-3" />
+                                    auto-applied
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  Triggered by a per-clone AI auto-apply policy
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : null;
+                          })()}
                           {(() => {
                             const sf = (e.scope_filter ?? {}) as {
                               scope?: string;

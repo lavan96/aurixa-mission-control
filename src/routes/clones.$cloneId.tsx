@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "@/lib/format";
 import { CloneActivityHistory } from "@/components/clone-activity-history";
 import { CloneDriftSuggestionsCard } from "@/components/clone-drift-suggestions-card";
+import { CloneDriftPolicyCard } from "@/components/clone-drift-policy-card";
 import { bulkSyncModuleFn } from "@/server/module-sync.functions";
 import type { DriftSuggestion } from "@/server/drift-suggestions.functions";
 
@@ -320,6 +321,8 @@ function CloneDetail() {
         lastCheckedAt={clone.last_drift_check_at}
         onChange={load}
       />
+
+      <CloneDriftPolicyCard cloneId={cloneId} />
 
       <CloneActivityHistory cloneId={cloneId} />
     </div>

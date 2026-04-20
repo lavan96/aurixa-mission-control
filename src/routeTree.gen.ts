@@ -23,6 +23,7 @@ import { Route as AuditLogRouteImport } from './routes/audit-log'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as SettingsNotificationsRouteImport } from './routes/settings.notifications'
+import { Route as ModulesSlugRouteImport } from './routes/modules.$slug'
 import { Route as HooksRunSchedulesRouteImport } from './routes/hooks.run-schedules'
 import { Route as HooksGithubRouteImport } from './routes/hooks.github'
 import { Route as HooksFleetDriftRouteImport } from './routes/hooks.fleet-drift'
@@ -101,6 +102,11 @@ const SettingsNotificationsRoute = SettingsNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => SettingsRoute,
 } as any)
+const ModulesSlugRoute = ModulesSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => ModulesRoute,
+} as any)
 const HooksRunSchedulesRoute = HooksRunSchedulesRouteImport.update({
   id: '/hooks/run-schedules',
   path: '/hooks/run-schedules',
@@ -146,7 +152,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/drift': typeof DriftRoute
   '/fleet-manager': typeof FleetManagerRoute
-  '/modules': typeof ModulesRoute
+  '/modules': typeof ModulesRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/schedules': typeof SchedulesRoute
   '/settings': typeof SettingsRouteWithChildren
@@ -157,6 +163,7 @@ export interface FileRoutesByFullPath {
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
   '/hooks/github': typeof HooksGithubRoute
   '/hooks/run-schedules': typeof HooksRunSchedulesRoute
+  '/modules/$slug': typeof ModulesSlugRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/': typeof SettingsIndexRoute
 }
@@ -169,7 +176,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/drift': typeof DriftRoute
   '/fleet-manager': typeof FleetManagerRoute
-  '/modules': typeof ModulesRoute
+  '/modules': typeof ModulesRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/schedules': typeof SchedulesRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
@@ -179,6 +186,7 @@ export interface FileRoutesByTo {
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
   '/hooks/github': typeof HooksGithubRoute
   '/hooks/run-schedules': typeof HooksRunSchedulesRoute
+  '/modules/$slug': typeof ModulesSlugRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings': typeof SettingsIndexRoute
 }
@@ -192,7 +200,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/drift': typeof DriftRoute
   '/fleet-manager': typeof FleetManagerRoute
-  '/modules': typeof ModulesRoute
+  '/modules': typeof ModulesRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/schedules': typeof SchedulesRoute
   '/settings': typeof SettingsRouteWithChildren
@@ -203,6 +211,7 @@ export interface FileRoutesById {
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
   '/hooks/github': typeof HooksGithubRoute
   '/hooks/run-schedules': typeof HooksRunSchedulesRoute
+  '/modules/$slug': typeof ModulesSlugRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/': typeof SettingsIndexRoute
 }
@@ -228,6 +237,7 @@ export interface FileRouteTypes {
     | '/hooks/fleet-drift'
     | '/hooks/github'
     | '/hooks/run-schedules'
+    | '/modules/$slug'
     | '/settings/notifications'
     | '/settings/'
   fileRoutesByTo: FileRoutesByTo
@@ -250,6 +260,7 @@ export interface FileRouteTypes {
     | '/hooks/fleet-drift'
     | '/hooks/github'
     | '/hooks/run-schedules'
+    | '/modules/$slug'
     | '/settings/notifications'
     | '/settings'
   id:
@@ -273,6 +284,7 @@ export interface FileRouteTypes {
     | '/hooks/fleet-drift'
     | '/hooks/github'
     | '/hooks/run-schedules'
+    | '/modules/$slug'
     | '/settings/notifications'
     | '/settings/'
   fileRoutesById: FileRoutesById
@@ -286,7 +298,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   DriftRoute: typeof DriftRoute
   FleetManagerRoute: typeof FleetManagerRoute
-  ModulesRoute: typeof ModulesRoute
+  ModulesRoute: typeof ModulesRouteWithChildren
   NotificationsRoute: typeof NotificationsRoute
   SchedulesRoute: typeof SchedulesRoute
   SettingsRoute: typeof SettingsRouteWithChildren
@@ -398,6 +410,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsNotificationsRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/modules/$slug': {
+      id: '/modules/$slug'
+      path: '/$slug'
+      fullPath: '/modules/$slug'
+      preLoaderRoute: typeof ModulesSlugRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/hooks/run-schedules': {
       id: '/hooks/run-schedules'
       path: '/hooks/run-schedules'
@@ -462,6 +481,17 @@ const CascadesRouteWithChildren = CascadesRoute._addFileChildren(
   CascadesRouteChildren,
 )
 
+interface ModulesRouteChildren {
+  ModulesSlugRoute: typeof ModulesSlugRoute
+}
+
+const ModulesRouteChildren: ModulesRouteChildren = {
+  ModulesSlugRoute: ModulesSlugRoute,
+}
+
+const ModulesRouteWithChildren =
+  ModulesRoute._addFileChildren(ModulesRouteChildren)
+
 interface SettingsRouteChildren {
   SettingsNotificationsRoute: typeof SettingsNotificationsRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
@@ -485,7 +515,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   DriftRoute: DriftRoute,
   FleetManagerRoute: FleetManagerRoute,
-  ModulesRoute: ModulesRoute,
+  ModulesRoute: ModulesRouteWithChildren,
   NotificationsRoute: NotificationsRoute,
   SchedulesRoute: SchedulesRoute,
   SettingsRoute: SettingsRouteWithChildren,

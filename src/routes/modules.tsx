@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/protected-route";
 import { useModules, usePrimeConfig } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
@@ -144,7 +144,13 @@ function ModuleRow({
           {edit ? (
             <Input value={name} onChange={(e) => setName(e.target.value)} />
           ) : (
-            <CardTitle className="text-base font-mono">{m.name}</CardTitle>
+            <Link
+              to="/modules/$slug"
+              params={{ slug: m.slug }}
+              className="hover:underline"
+            >
+              <CardTitle className="text-base font-mono">{m.name}</CardTitle>
+            </Link>
           )}
           <CardDescription className="mt-1 font-mono text-[11px]">{m.slug}</CardDescription>
         </div>
