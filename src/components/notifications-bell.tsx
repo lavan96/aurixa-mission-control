@@ -11,6 +11,7 @@ import {
   GitFork,
   Trash2,
   Boxes,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -173,15 +174,32 @@ export function NotificationsBell() {
               </Badge>
             )}
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={unread === 0}
-            onClick={markAllRead}
-            className="h-7 text-xs"
-          >
-            <CheckCheck className="mr-1 h-3 w-3" /> Mark all read
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={unread === 0}
+              onClick={markAllRead}
+              className="h-7 text-xs"
+            >
+              <CheckCheck className="mr-1 h-3 w-3" /> Mark all read
+            </Button>
+            <Button
+              asChild
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              title="Notification settings"
+            >
+              <Link
+                to="/settings/notifications"
+                onClick={() => setOpen(false)}
+                aria-label="Notification settings"
+              >
+                <Settings className="h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          </div>
         </div>
         <ScrollArea className="h-[420px]">
           {items.length === 0 ? (
