@@ -26,22 +26,28 @@ export const Route = createFileRoute("/settings/")({
 });
 
 function SettingsGeneralPage() {
-  const { data: prime, refresh } = usePrimeConfig();
+  const { data: prime, loading: primeLoading, error: primeError, refresh } = usePrimeConfig();
   const [owner, setOwner] = useState("");
   const [repo, setRepo] = useState("");
   const [branch, setBranch] = useState("main");
   const [defaultOrg, setDefaultOrg] = useState("");
   const [cascadeMode, setCascadeMode] = useState<CascadeMode>("pr");
+  const [hydrated, setHydrated] = useState(false);
 
+  // Hydrate the form once when the prime row loads. Without the `hydrated`
+  // guard, every refresh() (e.g. after a save) would overwrite in-progress
+  // edits — and if `prime` flips back to null briefly during a re-fetch we
+  // would *not* clobber the form to empty.
   useEffect(() => {
-    if (prime) {
+    if (prime && !hydrated) {
       setOwner(prime.github_owner);
       setRepo(prime.github_repo);
       setBranch(prime.default_branch);
       setDefaultOrg(prime.default_clone_org ?? "");
       setCascadeMode(prime.default_cascade_mode);
+      setHydrated(true);
     }
-  }, [prime]);
+  }, [prime, hydrated]);
 
   const [saving, setSaving] = useState(false);
 
