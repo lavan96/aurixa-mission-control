@@ -6,9 +6,9 @@ import { useCascadeEvents, useClones } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Waves, GitMerge, Send, Bell, ChevronRight, Package, Bot } from "lucide-react";
+import { Waves, GitMerge, Send, Bell, ChevronRight, Package, Bot, X, CalendarClock } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "@/lib/format";
@@ -24,6 +24,7 @@ const SCOPE_VALUES = ["all", "selected"] as const;
 const searchSchema = z.object({
   mode: fallback(z.enum(MODE_VALUES), "pr").default("pr"),
   scope: fallback(z.enum(SCOPE_VALUES), "all").default("all"),
+  schedule_id: fallback(z.string().uuid().optional(), undefined).optional(),
 });
 
 export const Route = createFileRoute("/cascades")({
@@ -45,6 +46,7 @@ function CascadesPage() {
   const navigate = useNavigate({ from: "/cascades" });
   const mode = search.mode;
   const scope = search.scope;
+  const scheduleId = search.schedule_id;
 
   type SearchState = typeof search;
   const setMode = useCallback(
@@ -63,6 +65,59 @@ function CascadesPage() {
       }),
     [navigate],
   );
+  const clearScheduleFilter = useCallback(
+    () =>
+      void navigate({
+        search: (prev: SearchState) => ({ ...prev, schedule_id: undefined }),
+        replace: true,
+      }),
+    [navigate],
+  );
+
+  // When filtering by schedule_id, look up cascade_event_ids from audit_log
+  // (schedule.executed rows) and intersect with the events list.
+  const [scheduleEventIds, setScheduleEventIds] = useState<Set<string> | null>(null);
+  const [scheduleName, setScheduleName] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    if (!scheduleId) {
+      setScheduleEventIds(null);
+      setScheduleName(null);
+      return;
+    }
+    (async () => {
+      const [{ data: audit }, { data: sched }] = await Promise.all([
+        supabase
+          .from("audit_log")
+          .select("metadata")
+          .eq("action", "schedule.executed")
+          .eq("entity_type", "cascade_schedule")
+          .eq("entity_id", scheduleId)
+          .order("created_at", { ascending: false })
+          .limit(500),
+        supabase
+          .from("cascade_schedules")
+          .select("name")
+          .eq("id", scheduleId)
+          .maybeSingle(),
+      ]);
+      if (cancelled) return;
+      const ids = new Set<string>();
+      for (const a of audit ?? []) {
+        const m = (a.metadata ?? {}) as { cascade_event_id?: string | null };
+        if (m.cascade_event_id) ids.add(m.cascade_event_id);
+      }
+      setScheduleEventIds(ids);
+      setScheduleName(sched?.name ?? null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [scheduleId]);
+
+  const visibleEvents = scheduleEventIds
+    ? events.filter((e) => scheduleEventIds.has(e.id))
+    : events;
 
   const [busy, setBusy] = useState(false);
   const runCascadeFn = useServerFn(runCascade);
@@ -167,24 +222,41 @@ function CascadesPage() {
       </Card>
 
       <section>
-        <h2 className="mb-3 font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
-          history
-        </h2>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
+            history
+          </h2>
+          {scheduleId && (
+            <button
+              type="button"
+              onClick={clearScheduleFilter}
+              className="inline-flex items-center gap-1.5 rounded-md border border-primary/40 bg-primary/10 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-primary transition-colors hover:bg-primary/20"
+            >
+              <CalendarClock className="h-3 w-3" />
+              schedule · {scheduleName ?? scheduleId.slice(0, 8)}
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
         {eventsLoading ? (
           <div className="space-y-2">
             <CardRowSkeleton />
             <CardRowSkeleton />
             <CardRowSkeleton />
           </div>
-        ) : events.length === 0 ? (
+        ) : visibleEvents.length === 0 ? (
           <EmptyState
             icon={<Waves />}
-            title="No cascades yet"
-            description="Fire your first cascade above to push prime updates downstream. Every run lands in this history."
+            title={scheduleId ? "No fires for this schedule" : "No cascades yet"}
+            description={
+              scheduleId
+                ? "This schedule has not produced any cascade events yet, or they have been cleaned up."
+                : "Fire your first cascade above to push prime updates downstream. Every run lands in this history."
+            }
           />
         ) : (
           <div className="space-y-2">
-            {events.map((e) => (
+            {visibleEvents.map((e) => (
               <Link
                 key={e.id}
                 to="/cascades/$eventId"

@@ -172,7 +172,7 @@ function ModuleRow({
         ) : (
           <p className="text-sm text-muted-foreground">{m.description || "—"}</p>
         )}
-        <ModuleCoverageStrip moduleId={m.id} />
+        <ModuleCoverageStrip moduleId={m.id} moduleSlug={m.slug} />
         <div className="space-y-1">
           <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
             routes

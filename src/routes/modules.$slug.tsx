@@ -1,22 +1,33 @@
-import { createFileRoute, Link, useParams, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams, useNavigate, notFound } from "@tanstack/react-router";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
+import { z } from "zod";
 import { useEffect, useState } from "react";
 import { ProtectedRoute } from "@/components/protected-route";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Boxes, Waves, ChevronRight } from "lucide-react";
+import { ArrowLeft, Boxes, Waves, ChevronRight, X } from "lucide-react";
 import { StatusPill } from "@/components/status-pill";
 import { formatDistanceToNow } from "@/lib/format";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { bulkSyncModuleFn } from "@/server/module-sync.functions";
+import { cn } from "@/lib/utils";
 import type { Database } from "@/integrations/supabase/types";
 
 type Module = Database["public"]["Tables"]["modules"]["Row"];
 type Clone = Database["public"]["Tables"]["clones"]["Row"];
+type SyncStatus = Database["public"]["Enums"]["sync_status"];
+
+const STATUS_VALUES = ["in_sync", "behind", "failed", "cascading", "unknown"] as const;
+
+const searchSchema = z.object({
+  status: fallback(z.enum(STATUS_VALUES).optional(), undefined).optional(),
+});
 
 export const Route = createFileRoute("/modules/$slug")({
+  validateSearch: zodValidator(searchSchema),
   component: () => (
     <ProtectedRoute>
       <ModuleDetail />
@@ -34,11 +45,19 @@ export const Route = createFileRoute("/modules/$slug")({
 
 function ModuleDetail() {
   const { slug } = useParams({ from: "/modules/$slug" });
+  const { status: statusFilter } = Route.useSearch();
+  const navigate = useNavigate({ from: "/modules/$slug" });
   const [module, setModule] = useState<Module | null>(null);
   const [clones, setClones] = useState<Clone[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const bulkSync = useServerFn(bulkSyncModuleFn);
+
+  const setStatusFilter = (s: SyncStatus | null) =>
+    navigate({
+      search: (prev: { status?: SyncStatus }) => ({ ...prev, status: s ?? undefined }),
+      replace: true,
+    });
 
   const load = async () => {
     setLoading(true);
@@ -143,8 +162,38 @@ function ModuleDetail() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Coverage</CardTitle>
-          <CardDescription>Clones with this module installed and their current sync state.</CardDescription>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <CardTitle className="text-base">Coverage</CardTitle>
+              <CardDescription>Clones with this module installed and their current sync state.</CardDescription>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <FilterChip active={!statusFilter} onClick={() => setStatusFilter(null)}>
+                all · {clones.length}
+              </FilterChip>
+              <FilterChip
+                active={statusFilter === "in_sync"}
+                tone="success"
+                onClick={() => setStatusFilter("in_sync")}
+              >
+                in sync · {inSync}
+              </FilterChip>
+              <FilterChip
+                active={statusFilter === "behind"}
+                tone="warning"
+                onClick={() => setStatusFilter("behind")}
+              >
+                behind · {behind}
+              </FilterChip>
+              <FilterChip
+                active={statusFilter === "failed"}
+                tone="destructive"
+                onClick={() => setStatusFilter("failed")}
+              >
+                failed · {failed}
+              </FilterChip>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {clones.length === 0 ? (
@@ -152,34 +201,54 @@ function ModuleDetail() {
               <Boxes className="mx-auto mb-2 h-5 w-5" />
               No clones have this module installed yet.
             </div>
-          ) : (
-            <div className="space-y-2">
-              {clones.map((c) => (
-                <Link
-                  key={c.id}
-                  to="/clones/$cloneId"
-                  params={{ cloneId: c.id }}
-                  className="block"
-                >
-                  <Card className="border-border/80 transition-colors hover:border-primary/40">
-                    <CardContent className="flex items-center justify-between p-4">
-                      <div className="min-w-0">
-                        <div className="font-mono text-sm font-medium">{c.name}</div>
-                        <div className="font-mono text-xs text-muted-foreground">
-                          {c.github_owner}/{c.github_repo}
-                          {c.last_cascade_at && <> · last cascade {formatDistanceToNow(c.last_cascade_at)}</>}
+          ) : (() => {
+            const filtered = statusFilter
+              ? clones.filter((c) => c.sync_status === statusFilter)
+              : clones;
+            if (filtered.length === 0) {
+              return (
+                <div className="flex flex-col items-center gap-2 rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+                  <Boxes className="h-5 w-5" />
+                  No clones match the {statusFilter?.replace("_", " ")} filter.
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter(null)}
+                    className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-primary hover:underline"
+                  >
+                    <X className="h-3 w-3" /> clear filter
+                  </button>
+                </div>
+              );
+            }
+            return (
+              <div className="space-y-2">
+                {filtered.map((c) => (
+                  <Link
+                    key={c.id}
+                    to="/clones/$cloneId"
+                    params={{ cloneId: c.id }}
+                    className="block"
+                  >
+                    <Card className="border-border/80 transition-colors hover:border-primary/40">
+                      <CardContent className="flex items-center justify-between p-4">
+                        <div className="min-w-0">
+                          <div className="font-mono text-sm font-medium">{c.name}</div>
+                          <div className="font-mono text-xs text-muted-foreground">
+                            {c.github_owner}/{c.github_repo}
+                            {c.last_cascade_at && <> · last cascade {formatDistanceToNow(c.last_cascade_at)}</>}
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <StatusPill status={c.sync_status} behind={c.commits_behind} />
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          )}
+                        <div className="flex items-center gap-2">
+                          <StatusPill status={c.sync_status} behind={c.commits_behind} />
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            );
+          })()}
         </CardContent>
       </Card>
 
@@ -231,5 +300,39 @@ function StatTile({
         <div className={`mt-1 text-2xl font-semibold ${toneCls}`}>{value}</div>
       </CardContent>
     </Card>
+  );
+}
+
+function FilterChip({
+  active,
+  tone,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  tone?: "success" | "warning" | "destructive";
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  const toneCls = !active
+    ? "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+    : tone === "success"
+      ? "border-success/50 bg-success/10 text-success"
+      : tone === "warning"
+        ? "border-warning/50 bg-warning/10 text-warning"
+        : tone === "destructive"
+          ? "border-destructive/50 bg-destructive/10 text-destructive"
+          : "border-primary/50 bg-primary/10 text-primary";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center rounded-md border px-2 py-1 font-mono text-[10px] uppercase tracking-wider transition-colors",
+        toneCls,
+      )}
+    >
+      {children}
+    </button>
   );
 }

@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
-import { ChevronRight, History } from "lucide-react";
+import { ChevronRight, History, ListFilter } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "@/lib/format";
+import { ScheduleFiresSparkline } from "@/components/schedule-fires-sparkline";
 import type { Database } from "@/integrations/supabase/types";
 
 type EventRow = Database["public"]["Tables"]["cascade_events"]["Row"];
@@ -99,8 +100,20 @@ export function ScheduleRecentFires({ scheduleId }: { scheduleId: string }) {
 
   return (
     <div className="space-y-1.5">
-      <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-        <History className="h-3 w-3" /> recent fires
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+          <History className="h-3 w-3" /> recent fires
+        </div>
+        <div className="flex items-center gap-3">
+          <ScheduleFiresSparkline statuses={events.map((e) => e.status)} />
+          <Link
+            to="/cascades"
+            search={{ schedule_id: scheduleId }}
+            className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
+          >
+            <ListFilter className="h-3 w-3" /> view all fires
+          </Link>
+        </div>
       </div>
       <ul className="space-y-1">
         {events.map((e) => (

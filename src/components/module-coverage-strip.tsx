@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Boxes } from "lucide-react";
@@ -16,7 +17,13 @@ type Counts = {
 
 const EMPTY: Counts = { total: 0, in_sync: 0, behind: 0, failed: 0, other: 0 };
 
-export function ModuleCoverageStrip({ moduleId }: { moduleId: string }) {
+export function ModuleCoverageStrip({
+  moduleId,
+  moduleSlug,
+}: {
+  moduleId: string;
+  moduleSlug?: string;
+}) {
   const [counts, setCounts] = useState<Counts | null>(null);
 
   useEffect(() => {
@@ -67,12 +74,71 @@ export function ModuleCoverageStrip({ moduleId }: { moduleId: string }) {
     );
   }
 
-  const segs = [
-    { key: "in_sync", n: counts.in_sync, cls: "bg-success/70" },
-    { key: "behind", n: counts.behind, cls: "bg-warning/70" },
-    { key: "failed", n: counts.failed, cls: "bg-destructive/70" },
-    { key: "other", n: counts.other, cls: "bg-muted-foreground/40" },
-  ].filter((s) => s.n > 0);
+  type Seg = { key: "in_sync" | "behind" | "failed" | "other"; n: number; cls: string };
+  const allSegs: Seg[] = [
+    { key: "in_sync", n: counts.in_sync, cls: "bg-success/70 hover:bg-success" },
+    { key: "behind", n: counts.behind, cls: "bg-warning/70 hover:bg-warning" },
+    { key: "failed", n: counts.failed, cls: "bg-destructive/70 hover:bg-destructive" },
+    { key: "other", n: counts.other, cls: "bg-muted-foreground/40 hover:bg-muted-foreground/60" },
+  ];
+  const segs: Seg[] = allSegs.filter((s) => s.n > 0);
+
+  const renderSeg = (s: Seg) => {
+    const className = cn("h-full transition-colors", s.cls);
+    const style = { width: `${(s.n / counts.total) * 100}%` };
+    const title = `${s.key.replace("_", " ")}: ${s.n} — click to filter`;
+    if (moduleSlug && s.key !== "other") {
+      return (
+        <Link
+          key={s.key}
+          to="/modules/$slug"
+          params={{ slug: moduleSlug }}
+          search={{ status: s.key }}
+          className={className}
+          style={style}
+          title={title}
+          onClick={(e) => e.stopPropagation()}
+        />
+      );
+    }
+    return (
+      <div
+        key={s.key}
+        className={className}
+        style={style}
+        title={`${s.key.replace("_", " ")}: ${s.n}`}
+      />
+    );
+  };
+
+  const renderCount = (
+    key: "in_sync" | "behind" | "failed",
+    label: string,
+    cls: string,
+    n: number,
+  ) => {
+    if (n === 0) return null;
+    const text = `${n} ${label}`;
+    if (moduleSlug) {
+      return (
+        <Link
+          key={key}
+          to="/modules/$slug"
+          params={{ slug: moduleSlug }}
+          search={{ status: key }}
+          className={cn(cls, "hover:underline")}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {text}
+        </Link>
+      );
+    }
+    return (
+      <span key={key} className={cls}>
+        {text}
+      </span>
+    );
+  };
 
   return (
     <div className="space-y-1.5">
@@ -81,25 +147,12 @@ export function ModuleCoverageStrip({ moduleId }: { moduleId: string }) {
         coverage · {counts.total} clone{counts.total === 1 ? "" : "s"}
       </div>
       <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-muted/40">
-        {segs.map((s) => (
-          <div
-            key={s.key}
-            className={cn("h-full", s.cls)}
-            style={{ width: `${(s.n / counts.total) * 100}%` }}
-            title={`${s.key}: ${s.n}`}
-          />
-        ))}
+        {segs.map(renderSeg)}
       </div>
       <div className="flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-[10px] text-muted-foreground">
-        {counts.in_sync > 0 && (
-          <span className="text-success">{counts.in_sync} in sync</span>
-        )}
-        {counts.behind > 0 && (
-          <span className="text-warning">{counts.behind} behind</span>
-        )}
-        {counts.failed > 0 && (
-          <span className="text-destructive">{counts.failed} failed</span>
-        )}
+        {renderCount("in_sync", "in sync", "text-success", counts.in_sync)}
+        {renderCount("behind", "behind", "text-warning", counts.behind)}
+        {renderCount("failed", "failed", "text-destructive", counts.failed)}
         {counts.other > 0 && <span>{counts.other} unknown</span>}
       </div>
     </div>
