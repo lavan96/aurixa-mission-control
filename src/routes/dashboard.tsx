@@ -98,7 +98,10 @@ function Dashboard() {
       const matchF =
         filter === "all" ||
         (filter === "ai" ? openSuggestionsCount(c) > 0 : c.sync_status === filter);
-      return matchQ && matchF;
+      const matchM =
+        !moduleFilter ||
+        (modulesByClone[c.id]?.some((m) => m.module_id === moduleFilter) ?? false);
+      return matchQ && matchF && matchM;
     });
     const sorted = [...list];
     sorted.sort((a, b) => {
@@ -119,7 +122,7 @@ function Dashboard() {
       }
     });
     return sorted;
-  }, [clones, q, filter, sort]);
+  }, [clones, q, filter, sort, moduleFilter, modulesByClone]);
 
   const stats = useMemo(() => {
     return {
