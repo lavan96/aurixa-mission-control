@@ -79,6 +79,20 @@ export const approveCascade = createServerFn({ method: "POST" })
       .eq("kind", "cascade_awaiting_approval")
       .is("read_at", null);
 
+    // Ping the original initiator with a verdict notification so they don't
+    // need to keep the page open to learn their cascade got approved.
+    if (ev.initiated_by) {
+      await supabase.from("notifications").insert({
+        kind: "cascade_approved",
+        severity: "success",
+        title: "Cascade approved",
+        body: `Operator ${context.userId.slice(0, 8)} approved your cascade — engine running now.`,
+        cascade_event_id: data.cascadeEventId,
+        url: `/cascades/${data.cascadeEventId}`,
+        metadata: { mode: ev.mode, reason: data.reason ?? null, approver: context.userId },
+      });
+    }
+
     // Run the engine now that the gate is open.
     const res = await executeCascade(supabase, data.cascadeEventId);
     if (!res.ok) return { ok: false, error: res.error };
@@ -136,6 +150,22 @@ export const rejectCascade = createServerFn({ method: "POST" })
       .eq("cascade_event_id", data.cascadeEventId)
       .eq("kind", "cascade_awaiting_approval")
       .is("read_at", null);
+
+    // Ping the original initiator with a verdict notification so they don't
+    // need to keep the page open to learn their cascade got rejected.
+    if (ev.initiated_by) {
+      await supabase.from("notifications").insert({
+        kind: "cascade_rejected",
+        severity: "warning",
+        title: "Cascade rejected",
+        body: data.reason
+          ? `Operator ${context.userId.slice(0, 8)} rejected your cascade: ${data.reason}`
+          : `Operator ${context.userId.slice(0, 8)} rejected your cascade.`,
+        cascade_event_id: data.cascadeEventId,
+        url: `/cascades/${data.cascadeEventId}`,
+        metadata: { mode: ev.mode, reason: data.reason ?? null, approver: context.userId },
+      });
+    }
 
     return { ok: true as const };
   });
