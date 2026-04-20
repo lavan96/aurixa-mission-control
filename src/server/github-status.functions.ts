@@ -54,14 +54,11 @@ export const getGitHubStatus = createServerFn({ method: "POST" })
       };
     }
 
-    // Load app metadata + installation + visible repos in parallel
-    const [appRes, instRes, reposRes, primeRes, clonesRes] = await Promise.all([
+    // Load app metadata + accessible repos in parallel.
+    // We are authenticated as the installation, so listReposAccessibleToInstallation
+    // returns exactly the repos this installation can see.
+    const [appRes, reposRes, primeRes, clonesRes] = await Promise.all([
       octokit.apps.getAuthenticated().catch((e) => ({ error: e })),
-      // installation list — we authenticate as the installation, so this
-      // returns just our installation
-      octokit.apps
-        .listInstallationReposForAuthenticatedUser({ per_page: 100 })
-        .catch((e) => ({ error: e })),
       octokit.apps
         .listReposAccessibleToInstallation({ per_page: 100 })
         .catch((e) => ({ error: e })),
