@@ -302,3 +302,37 @@ function StatTile({
     </Card>
   );
 }
+
+function FilterChip({
+  active,
+  tone,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  tone?: "success" | "warning" | "destructive";
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  const toneCls = !active
+    ? "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+    : tone === "success"
+      ? "border-success/50 bg-success/10 text-success"
+      : tone === "warning"
+        ? "border-warning/50 bg-warning/10 text-warning"
+        : tone === "destructive"
+          ? "border-destructive/50 bg-destructive/10 text-destructive"
+          : "border-primary/50 bg-primary/10 text-primary";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center rounded-md border px-2 py-1 font-mono text-[10px] uppercase tracking-wider transition-colors",
+        toneCls,
+      )}
+    >
+      {children}
+    </button>
+  );
+}
