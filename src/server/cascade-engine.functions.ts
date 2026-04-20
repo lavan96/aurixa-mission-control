@@ -249,22 +249,22 @@ export const runCascade = createServerFn({ method: "POST" })
       metadata: { mode: event.mode, succeeded, opened, failed, skipped },
     });
 
-    const cloneNotifs = (queuedRes.data ?? [])
-      .map((r) => {
-        const clone = (r as { clones: { id: string; name: string } | null }).clones;
-        if (!clone) return null;
-        return {
-          kind,
-          severity,
-          title: `${clone.name} · ${event.mode.replace("_", " ")}`,
-          body: summary,
-          clone_id: clone.id,
-          cascade_event_id: event.id,
-          url: `/cascades/${event.id}`,
-          metadata: { mode: event.mode },
-        };
-      })
-      .filter(Boolean) as Array<Record<string, unknown>>;
+    type NotifInsert = Database["public"]["Tables"]["notifications"]["Insert"];
+    const cloneNotifs: NotifInsert[] = [];
+    for (const r of queuedRes.data ?? []) {
+      const clone = (r as { clones: { id: string; name: string } | null }).clones;
+      if (!clone) continue;
+      cloneNotifs.push({
+        kind,
+        severity,
+        title: `${clone.name} · ${event.mode.replace("_", " ")}`,
+        body: summary,
+        clone_id: clone.id,
+        cascade_event_id: event.id,
+        url: `/cascades/${event.id}`,
+        metadata: { mode: event.mode },
+      });
+    }
     if (cloneNotifs.length > 0) {
       await supabase.from("notifications").insert(cloneNotifs);
     }
@@ -290,7 +290,7 @@ async function processClone(args: {
     github_repo: string;
     default_branch: string;
   };
-  supabase: ReturnType<typeof requireSupabaseAuth> extends never ? never : any;
+  supabase: SupabaseLike;
   eventId: string;
 }): Promise<CascadeResultUpdate> {
   const { octokit, primeRef, sourceSha, mode, clone, supabase } = args;
