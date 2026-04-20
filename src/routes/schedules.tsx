@@ -1,0 +1,215 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ProtectedRoute } from "@/components/protected-route";
+import { useEffect, useState, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { CalendarClock, Play, Trash2, Plus } from "lucide-react";
+import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  createSchedule,
+  deleteSchedule,
+  runScheduleNow,
+  updateSchedule,
+} from "@/server/schedules.functions";
+import { describeCron } from "@/server/cron";
+import { formatDistanceToNow } from "@/lib/format";
+
+export const Route = createFileRoute("/schedules")({
+  component: () => (
+    <ProtectedRoute>
+      <SchedulesPage />
+    </ProtectedRoute>
+  ),
+  head: () => ({ meta: [{ title: "Schedules — Aurixa Systems Mission Control" }] }),
+});
+
+type Sched = {
+  id: string;
+  name: string;
+  kind: "fleet_cascade" | "module_sync";
+  cron_expression: string;
+  mode: "pr" | "auto_merge" | "notify";
+  enabled: boolean;
+  last_run_at: string | null;
+  next_run_at: string | null;
+  notes: string | null;
+  scope_filter: Record<string, unknown>;
+};
+
+function SchedulesPage() {
+  const [list, setList] = useState<Sched[]>([]);
+  const [loading, setLoading] = useState(true);
+  const create = useServerFn(createSchedule);
+  const update = useServerFn(updateSchedule);
+  const del = useServerFn(deleteSchedule);
+  const runNow = useServerFn(runScheduleNow);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    const { data } = await (supabase as any)
+      .from("cascade_schedules")
+      .select("*")
+      .order("created_at", { ascending: false });
+    setList((data ?? []) as Sched[]);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const [name, setName] = useState("");
+  const [cron, setCron] = useState("0 * * * *");
+  const [kind, setKind] = useState<"fleet_cascade" | "module_sync">("fleet_cascade");
+  const [mode, setMode] = useState<"pr" | "auto_merge" | "notify">("pr");
+  const [busy, setBusy] = useState(false);
+
+  const onCreate = async () => {
+    if (!name) return toast.error("Name required");
+    setBusy(true);
+    try {
+      const res = await create({ data: { name, kind, cron_expression: cron, mode } });
+      if (!res.ok) toast.error(res.error);
+      else {
+        toast.success("Schedule created");
+        setName("");
+        refresh();
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <header>
+        <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
+          recurring jobs
+        </p>
+        <h1 className="mt-1 text-3xl font-semibold tracking-tight">Schedules</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Cron-driven cascades and module syncs. Times in UTC.
+        </p>
+      </header>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">New schedule</CardTitle>
+          <CardDescription>5-field cron, e.g. <code className="font-mono">0 9 * * 1</code> = Mondays 09:00 UTC.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 md:grid-cols-5">
+            <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
+            <Input placeholder="0 * * * *" value={cron} onChange={(e) => setCron(e.target.value)} className="font-mono" />
+            <Select value={kind} onValueChange={(v) => setKind(v as any)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="fleet_cascade">Fleet cascade</SelectItem>
+                <SelectItem value="module_sync">Module sync</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={mode} onValueChange={(v) => setMode(v as any)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pr">PR</SelectItem>
+                <SelectItem value="auto_merge">Auto-merge</SelectItem>
+                <SelectItem value="notify">Notify</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button onClick={onCreate} disabled={busy}>
+              <Plus className="mr-1 h-4 w-4" /> Create
+            </Button>
+          </div>
+          <p className="mt-2 font-mono text-[11px] text-muted-foreground">
+            preview · {describeCron(cron)}
+          </p>
+        </CardContent>
+      </Card>
+
+      <section className="space-y-2">
+        {loading ? (
+          <div className="font-mono text-sm text-muted-foreground">loading…</div>
+        ) : list.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center text-sm text-muted-foreground">
+              <CalendarClock className="mx-auto mb-2 h-8 w-8 opacity-50" />
+              No schedules yet.
+            </CardContent>
+          </Card>
+        ) : (
+          list.map((s) => (
+            <Card key={s.id}>
+              <CardContent className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-mono text-sm font-semibold">{s.name}</span>
+                    <Badge variant="outline" className="text-[10px] uppercase">{s.kind.replace("_", " ")}</Badge>
+                    <Badge variant="outline" className="text-[10px] uppercase">{s.mode.replace("_", " ")}</Badge>
+                    <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px]">{s.cron_expression}</code>
+                  </div>
+                  <div className="mt-1 font-mono text-[11px] text-muted-foreground">
+                    {describeCron(s.cron_expression)}
+                    {s.last_run_at && <> · last {formatDistanceToNow(s.last_run_at)}</>}
+                    {s.next_run_at && <> · next {formatDistanceToNow(s.next_run_at)}</>}
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Switch
+                    checked={s.enabled}
+                    onCheckedChange={async (v) => {
+                      const res = await update({ data: { id: s.id, patch: { enabled: v } } });
+                      if (!res.ok) toast.error(res.error);
+                      refresh();
+                    }}
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={async () => {
+                      const out = await runNow({ data: { id: s.id } });
+                      if (!out.ok) toast.error(out.error ?? "Run failed");
+                      else if (out.cascade_event_id) {
+                        toast.success("Schedule executed", {
+                          action: {
+                            label: "View",
+                            onClick: () => { window.location.href = `/cascades/${out.cascade_event_id}`; },
+                          },
+                        });
+                      } else toast.success("Schedule executed");
+                      refresh();
+                    }}
+                  >
+                    <Play className="mr-1 h-3.5 w-3.5" /> Run now
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={async () => {
+                      if (!confirm("Delete this schedule?")) return;
+                      const res = await del({ data: { id: s.id } });
+                      if (!res.ok) toast.error(res.error);
+                      else { toast.success("Deleted"); refresh(); }
+                    }}
+                    className="text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </section>
+
+      <p className="font-mono text-[11px] text-muted-foreground">
+        Tip: Schedules tick every minute via the <Link to="/audit-log" className="underline">/hooks/run-schedules</Link> cron job.
+      </p>
+    </div>
+  );
+}

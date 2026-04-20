@@ -10,9 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SchedulesRouteImport } from './routes/schedules'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as ModulesRouteImport } from './routes/modules'
 import { Route as FleetManagerRouteImport } from './routes/fleet-manager'
+import { Route as DriftRouteImport } from './routes/drift'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CloudflareRouteImport } from './routes/cloudflare'
 import { Route as CascadesRouteImport } from './routes/cascades'
@@ -21,6 +23,7 @@ import { Route as AuditLogRouteImport } from './routes/audit-log'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as SettingsNotificationsRouteImport } from './routes/settings.notifications'
+import { Route as HooksRunSchedulesRouteImport } from './routes/hooks.run-schedules'
 import { Route as HooksGithubRouteImport } from './routes/hooks.github'
 import { Route as HooksFleetDriftRouteImport } from './routes/hooks.fleet-drift'
 import { Route as HooksDriftRefreshRouteImport } from './routes/hooks.drift-refresh'
@@ -31,6 +34,11 @@ import { Route as CascadesEventIdRouteImport } from './routes/cascades.$eventId'
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SchedulesRoute = SchedulesRouteImport.update({
+  id: '/schedules',
+  path: '/schedules',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NotificationsRoute = NotificationsRouteImport.update({
@@ -46,6 +54,11 @@ const ModulesRoute = ModulesRouteImport.update({
 const FleetManagerRoute = FleetManagerRouteImport.update({
   id: '/fleet-manager',
   path: '/fleet-manager',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DriftRoute = DriftRouteImport.update({
+  id: '/drift',
+  path: '/drift',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -88,6 +101,11 @@ const SettingsNotificationsRoute = SettingsNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => SettingsRoute,
 } as any)
+const HooksRunSchedulesRoute = HooksRunSchedulesRouteImport.update({
+  id: '/hooks/run-schedules',
+  path: '/hooks/run-schedules',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HooksGithubRoute = HooksGithubRouteImport.update({
   id: '/hooks/github',
   path: '/hooks/github',
@@ -126,9 +144,11 @@ export interface FileRoutesByFullPath {
   '/cascades': typeof CascadesRouteWithChildren
   '/cloudflare': typeof CloudflareRoute
   '/dashboard': typeof DashboardRoute
+  '/drift': typeof DriftRoute
   '/fleet-manager': typeof FleetManagerRoute
   '/modules': typeof ModulesRoute
   '/notifications': typeof NotificationsRoute
+  '/schedules': typeof SchedulesRoute
   '/settings': typeof SettingsRouteWithChildren
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
@@ -136,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
   '/hooks/github': typeof HooksGithubRoute
+  '/hooks/run-schedules': typeof HooksRunSchedulesRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/': typeof SettingsIndexRoute
 }
@@ -146,15 +167,18 @@ export interface FileRoutesByTo {
   '/cascades': typeof CascadesRouteWithChildren
   '/cloudflare': typeof CloudflareRoute
   '/dashboard': typeof DashboardRoute
+  '/drift': typeof DriftRoute
   '/fleet-manager': typeof FleetManagerRoute
   '/modules': typeof ModulesRoute
   '/notifications': typeof NotificationsRoute
+  '/schedules': typeof SchedulesRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
   '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
   '/hooks/github': typeof HooksGithubRoute
+  '/hooks/run-schedules': typeof HooksRunSchedulesRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings': typeof SettingsIndexRoute
 }
@@ -166,9 +190,11 @@ export interface FileRoutesById {
   '/cascades': typeof CascadesRouteWithChildren
   '/cloudflare': typeof CloudflareRoute
   '/dashboard': typeof DashboardRoute
+  '/drift': typeof DriftRoute
   '/fleet-manager': typeof FleetManagerRoute
   '/modules': typeof ModulesRoute
   '/notifications': typeof NotificationsRoute
+  '/schedules': typeof SchedulesRoute
   '/settings': typeof SettingsRouteWithChildren
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
@@ -176,6 +202,7 @@ export interface FileRoutesById {
   '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
   '/hooks/github': typeof HooksGithubRoute
+  '/hooks/run-schedules': typeof HooksRunSchedulesRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/': typeof SettingsIndexRoute
 }
@@ -188,9 +215,11 @@ export interface FileRouteTypes {
     | '/cascades'
     | '/cloudflare'
     | '/dashboard'
+    | '/drift'
     | '/fleet-manager'
     | '/modules'
     | '/notifications'
+    | '/schedules'
     | '/settings'
     | '/cascades/$eventId'
     | '/clones/$cloneId'
@@ -198,6 +227,7 @@ export interface FileRouteTypes {
     | '/hooks/drift-refresh'
     | '/hooks/fleet-drift'
     | '/hooks/github'
+    | '/hooks/run-schedules'
     | '/settings/notifications'
     | '/settings/'
   fileRoutesByTo: FileRoutesByTo
@@ -208,15 +238,18 @@ export interface FileRouteTypes {
     | '/cascades'
     | '/cloudflare'
     | '/dashboard'
+    | '/drift'
     | '/fleet-manager'
     | '/modules'
     | '/notifications'
+    | '/schedules'
     | '/cascades/$eventId'
     | '/clones/$cloneId'
     | '/clones/new'
     | '/hooks/drift-refresh'
     | '/hooks/fleet-drift'
     | '/hooks/github'
+    | '/hooks/run-schedules'
     | '/settings/notifications'
     | '/settings'
   id:
@@ -227,9 +260,11 @@ export interface FileRouteTypes {
     | '/cascades'
     | '/cloudflare'
     | '/dashboard'
+    | '/drift'
     | '/fleet-manager'
     | '/modules'
     | '/notifications'
+    | '/schedules'
     | '/settings'
     | '/cascades/$eventId'
     | '/clones/$cloneId'
@@ -237,6 +272,7 @@ export interface FileRouteTypes {
     | '/hooks/drift-refresh'
     | '/hooks/fleet-drift'
     | '/hooks/github'
+    | '/hooks/run-schedules'
     | '/settings/notifications'
     | '/settings/'
   fileRoutesById: FileRoutesById
@@ -248,15 +284,18 @@ export interface RootRouteChildren {
   CascadesRoute: typeof CascadesRouteWithChildren
   CloudflareRoute: typeof CloudflareRoute
   DashboardRoute: typeof DashboardRoute
+  DriftRoute: typeof DriftRoute
   FleetManagerRoute: typeof FleetManagerRoute
   ModulesRoute: typeof ModulesRoute
   NotificationsRoute: typeof NotificationsRoute
+  SchedulesRoute: typeof SchedulesRoute
   SettingsRoute: typeof SettingsRouteWithChildren
   ClonesCloneIdRoute: typeof ClonesCloneIdRoute
   ClonesNewRoute: typeof ClonesNewRoute
   HooksDriftRefreshRoute: typeof HooksDriftRefreshRoute
   HooksFleetDriftRoute: typeof HooksFleetDriftRoute
   HooksGithubRoute: typeof HooksGithubRoute
+  HooksRunSchedulesRoute: typeof HooksRunSchedulesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -266,6 +305,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/schedules': {
+      id: '/schedules'
+      path: '/schedules'
+      fullPath: '/schedules'
+      preLoaderRoute: typeof SchedulesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notifications': {
@@ -287,6 +333,13 @@ declare module '@tanstack/react-router' {
       path: '/fleet-manager'
       fullPath: '/fleet-manager'
       preLoaderRoute: typeof FleetManagerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/drift': {
+      id: '/drift'
+      path: '/drift'
+      fullPath: '/drift'
+      preLoaderRoute: typeof DriftRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -344,6 +397,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/notifications'
       preLoaderRoute: typeof SettingsNotificationsRouteImport
       parentRoute: typeof SettingsRoute
+    }
+    '/hooks/run-schedules': {
+      id: '/hooks/run-schedules'
+      path: '/hooks/run-schedules'
+      fullPath: '/hooks/run-schedules'
+      preLoaderRoute: typeof HooksRunSchedulesRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/hooks/github': {
       id: '/hooks/github'
@@ -423,15 +483,18 @@ const rootRouteChildren: RootRouteChildren = {
   CascadesRoute: CascadesRouteWithChildren,
   CloudflareRoute: CloudflareRoute,
   DashboardRoute: DashboardRoute,
+  DriftRoute: DriftRoute,
   FleetManagerRoute: FleetManagerRoute,
   ModulesRoute: ModulesRoute,
   NotificationsRoute: NotificationsRoute,
+  SchedulesRoute: SchedulesRoute,
   SettingsRoute: SettingsRouteWithChildren,
   ClonesCloneIdRoute: ClonesCloneIdRoute,
   ClonesNewRoute: ClonesNewRoute,
   HooksDriftRefreshRoute: HooksDriftRefreshRoute,
   HooksFleetDriftRoute: HooksFleetDriftRoute,
   HooksGithubRoute: HooksGithubRoute,
+  HooksRunSchedulesRoute: HooksRunSchedulesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
