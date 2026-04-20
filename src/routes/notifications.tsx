@@ -330,6 +330,12 @@ function NotificationsPage() {
             <p className="mt-1 text-sm text-muted-foreground">
               Full history of cascade outcomes, drift findings, and fleet activity.
             </p>
+            <MuteSummaryChip
+              kinds={prefs.muted_kinds.length}
+              severities={prefs.muted_severities.length}
+              toasts={prefs.mute_toasts}
+              push={prefs.mute_browser_push}
+            />
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
