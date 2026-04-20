@@ -14,6 +14,7 @@ import { formatDistanceToNow } from "@/lib/format";
 import { CloneActivityHistory } from "@/components/clone-activity-history";
 import { CloneDriftSuggestionsCard } from "@/components/clone-drift-suggestions-card";
 import { CloneDriftPolicyCard } from "@/components/clone-drift-policy-card";
+import { CloneHealthCard } from "@/components/clone-health-card";
 import { bulkSyncModuleFn } from "@/server/module-sync.functions";
 import type { DriftSuggestion } from "@/server/drift-suggestions.functions";
 
@@ -191,6 +192,8 @@ function CloneDetail() {
         <InfoTile label="Lovable" value={clone.lovable_project_url ?? "—"} icon={<ExternalLink className="h-4 w-4" />} link={clone.lovable_project_url} />
         <InfoTile label="Deploy" value={clone.deploy_url ?? "—"} icon={<ExternalLink className="h-4 w-4" />} link={clone.deploy_url} />
       </div>
+
+      <CloneHealthCard cloneId={cloneId} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
