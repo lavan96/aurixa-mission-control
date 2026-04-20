@@ -302,19 +302,23 @@ async function processClone(args: {
 
   if (mode === "notify") {
     const body =
-      `**Aurixa cascade — drift notice**\n\n` +
-      `Prime ${primeRef.owner}/${primeRef.repo}@${shortSha(sourceSha)} ` +
-      `has ${primeFiles.length} file(s) in your installed modules that may be behind.\n\n` +
-      `_No commits were made. This is notify-only mode._`;
-    await octokit.repos.createCommitComment({
+      `### Aurixa cascade — drift notice\n\n` +
+      `Prime \`${primeRef.owner}/${primeRef.repo}@${shortSha(sourceSha)}\` ` +
+      `has **${primeFiles.length}** file(s) in your installed modules that may be behind.\n\n` +
+      `_No commits were made. This is notify-only mode._\n\n` +
+      `Files in scope:\n${primeFiles.slice(0, 20).map((p) => `- \`${p}\``).join("\n")}` +
+      (primeFiles.length > 20 ? `\n\n…and ${primeFiles.length - 20} more.` : "");
+    const { data: issue } = await octokit.issues.create({
       owner: cloneRef.owner,
       repo: cloneRef.repo,
-      commit_sha: cloneBranchSha,
+      title: `Aurixa drift notice · prime@${shortSha(sourceSha)} (${primeFiles.length} files)`,
       body,
+      labels: ["aurixa", "drift-notice"],
     });
     return {
       status: "succeeded",
-      diff_summary: `Drift notification posted on ${shortSha(cloneBranchSha)} (${primeFiles.length} files in scope)`,
+      diff_summary: `Drift issue #${issue.number} opened (${primeFiles.length} files in scope)`,
+      pr_url: issue.html_url,
       files_changed: primeFiles.length,
       completed_at: new Date().toISOString(),
     };
@@ -352,6 +356,12 @@ async function processClone(args: {
     };
   }
 
+  // Build the "diff_summary" — first 5 file paths + count of remainder
+  const summaryFiles = treeEntries.slice(0, 5).map((t) => t.path);
+  const summarySuffix =
+    treeEntries.length > 5 ? ` (+${treeEntries.length - 5} more)` : "";
+  const fileSummary = `${summaryFiles.join(", ")}${summarySuffix}`;
+
   const { data: cloneCommit } = await octokit.git.getCommit({
     owner: cloneRef.owner,
     repo: cloneRef.repo,
@@ -376,6 +386,72 @@ async function processClone(args: {
     parents: [cloneBranchSha],
   });
 
+  // === auto_merge: try direct fast-forward push to default branch first ===
+  if (mode === "auto_merge") {
+    try {
+      await octokit.git.updateRef({
+        owner: cloneRef.owner,
+        repo: cloneRef.repo,
+        ref: `heads/${cloneRef.branch}`,
+        sha: newCommit.sha,
+        force: false,
+      });
+      return {
+        status: "succeeded",
+        commit_sha: newCommit.sha.slice(0, 7),
+        diff_summary: `Pushed ${treeEntries.length} files directly to ${cloneRef.branch}: ${fileSummary}`,
+        files_changed: treeEntries.length,
+        completed_at: new Date().toISOString(),
+      };
+    } catch (directPushErr) {
+      // Fall back to branch + PR + merge (handles protected branches)
+      const branch = branchName(sourceSha);
+      try {
+        await octokit.git.createRef({
+          owner: cloneRef.owner,
+          repo: cloneRef.repo,
+          ref: `refs/heads/${branch}`,
+          sha: newCommit.sha,
+        });
+        const { data: pr } = await octokit.pulls.create({
+          owner: cloneRef.owner,
+          repo: cloneRef.repo,
+          title: `Aurixa cascade · prime@${shortSha(sourceSha)} → ${treeEntries.length} file(s)`,
+          head: branch,
+          base: cloneRef.branch,
+          body:
+            `Direct push to \`${cloneRef.branch}\` was blocked — falling back to PR + merge.\n\n` +
+            `Files synchronized:\n\n` +
+            treeEntries.map((t) => `- \`${t.path}\``).join("\n"),
+        });
+        const { data: merged } = await octokit.pulls.merge({
+          owner: cloneRef.owner,
+          repo: cloneRef.repo,
+          pull_number: pr.number,
+          merge_method: "squash",
+          commit_title: `Aurixa cascade prime@${shortSha(sourceSha)} (#${pr.number})`,
+        });
+        return {
+          status: "succeeded",
+          commit_sha: merged.sha?.slice(0, 7) ?? null,
+          pr_url: pr.html_url,
+          diff_summary: `Auto-merged via PR (direct push blocked): ${fileSummary}`,
+          files_changed: treeEntries.length,
+          completed_at: new Date().toISOString(),
+        };
+      } catch (prErr) {
+        return {
+          status: "failed",
+          diff_summary: `Auto-merge failed: ${fileSummary}`,
+          files_changed: treeEntries.length,
+          error_message: `Direct push: ${directPushErr instanceof Error ? directPushErr.message : "unknown"}; PR fallback: ${prErr instanceof Error ? prErr.message : "unknown"}`,
+          completed_at: new Date().toISOString(),
+        };
+      }
+    }
+  }
+
+  // === pr mode: branch + open PR (do not merge) ===
   const branch = branchName(sourceSha);
   await octokit.git.createRef({
     owner: cloneRef.owner,
@@ -383,7 +459,6 @@ async function processClone(args: {
     ref: `refs/heads/${branch}`,
     sha: newCommit.sha,
   });
-
   const { data: pr } = await octokit.pulls.create({
     owner: cloneRef.owner,
     repo: cloneRef.repo,
@@ -396,39 +471,11 @@ async function processClone(args: {
       treeEntries.map((t) => `- \`${t.path}\``).join("\n"),
   });
 
-  if (mode === "auto_merge") {
-    try {
-      const { data: merged } = await octokit.pulls.merge({
-        owner: cloneRef.owner,
-        repo: cloneRef.repo,
-        pull_number: pr.number,
-        merge_method: "squash",
-        commit_title: `Aurixa cascade prime@${shortSha(sourceSha)} (#${pr.number})`,
-      });
-      return {
-        status: "succeeded",
-        commit_sha: merged.sha?.slice(0, 7) ?? null,
-        pr_url: pr.html_url,
-        diff_summary: `Auto-merged ${treeEntries.length} files from prime@${shortSha(sourceSha)}`,
-        files_changed: treeEntries.length,
-        completed_at: new Date().toISOString(),
-      };
-    } catch (e) {
-      return {
-        status: "pr_opened",
-        pr_url: pr.html_url,
-        diff_summary: `Auto-merge blocked — PR left open for manual merge (${treeEntries.length} files)`,
-        files_changed: treeEntries.length,
-        error_message: e instanceof Error ? e.message : "Merge blocked",
-        completed_at: new Date().toISOString(),
-      };
-    }
-  }
-
   return {
     status: "pr_opened",
     pr_url: pr.html_url,
-    diff_summary: `${treeEntries.length} files updated across installed modules`,
+    commit_sha: newCommit.sha.slice(0, 7),
+    diff_summary: `PR #${pr.number} opened: ${fileSummary}`,
     files_changed: treeEntries.length,
     completed_at: new Date().toISOString(),
   };
