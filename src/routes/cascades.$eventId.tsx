@@ -719,6 +719,65 @@ function ResultRow({
             {skipping ? "Skipping…" : "Skip"}
           </Button>
         )}
+        {canRetry && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={retryBusy}
+                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                title="Re-run this clone with a different delivery mode"
+              >
+                <RotateCcw className={cn("mr-1 h-3 w-3", retryBusy && "animate-spin")} />
+                {retryBusy ? "Retrying…" : "Retry as"}
+                <ChevronDown className="ml-0.5 h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Re-run with mode
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={() => void handleRetry("pr")}
+                disabled={retryBusy}
+              >
+                <GitMerge className="mr-2 h-3.5 w-3.5" />
+                <span className="flex-1">Open PR</span>
+                {eventMode === "pr" && (
+                  <span className="font-mono text-[9px] uppercase text-muted-foreground">
+                    same
+                  </span>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => void handleRetry("auto_merge")}
+                disabled={retryBusy}
+              >
+                <Send className="mr-2 h-3.5 w-3.5" />
+                <span className="flex-1">Auto-merge</span>
+                {eventMode === "auto_merge" && (
+                  <span className="font-mono text-[9px] uppercase text-muted-foreground">
+                    same
+                  </span>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => void handleRetry("notify")}
+                disabled={retryBusy}
+              >
+                <Bell className="mr-2 h-3.5 w-3.5" />
+                <span className="flex-1">Notify only</span>
+                {eventMode === "notify" && (
+                  <span className="font-mono text-[9px] uppercase text-muted-foreground">
+                    same
+                  </span>
+                )}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
     </div>
   );
