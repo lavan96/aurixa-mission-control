@@ -19,6 +19,7 @@ import {
 } from "@/server/schedules.functions";
 import { describeCron } from "@/server/cron";
 import { formatDistanceToNow } from "@/lib/format";
+import { ScheduleRecentFires } from "@/components/schedule-recent-fires";
 
 export const Route = createFileRoute("/schedules")({
   component: () => (
@@ -145,61 +146,66 @@ function SchedulesPage() {
         ) : (
           list.map((s) => (
             <Card key={s.id}>
-              <CardContent className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-sm font-semibold">{s.name}</span>
-                    <Badge variant="outline" className="text-[10px] uppercase">{s.kind.replace("_", " ")}</Badge>
-                    <Badge variant="outline" className="text-[10px] uppercase">{s.mode.replace("_", " ")}</Badge>
-                    <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px]">{s.cron_expression}</code>
+              <CardContent className="space-y-3 p-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-sm font-semibold">{s.name}</span>
+                      <Badge variant="outline" className="text-[10px] uppercase">{s.kind.replace("_", " ")}</Badge>
+                      <Badge variant="outline" className="text-[10px] uppercase">{s.mode.replace("_", " ")}</Badge>
+                      <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px]">{s.cron_expression}</code>
+                    </div>
+                    <div className="mt-1 font-mono text-[11px] text-muted-foreground">
+                      {describeCron(s.cron_expression)}
+                      {s.last_run_at && <> · last {formatDistanceToNow(s.last_run_at)}</>}
+                      {s.next_run_at && <> · next {formatDistanceToNow(s.next_run_at)}</>}
+                    </div>
                   </div>
-                  <div className="mt-1 font-mono text-[11px] text-muted-foreground">
-                    {describeCron(s.cron_expression)}
-                    {s.last_run_at && <> · last {formatDistanceToNow(s.last_run_at)}</>}
-                    {s.next_run_at && <> · next {formatDistanceToNow(s.next_run_at)}</>}
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Switch
+                      checked={s.enabled}
+                      onCheckedChange={async (v) => {
+                        const res = await update({ data: { id: s.id, patch: { enabled: v } } });
+                        if (!res.ok) toast.error(res.error);
+                        refresh();
+                      }}
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={async () => {
+                        const out = await runNow({ data: { id: s.id } });
+                        if (!out.ok) toast.error(out.error ?? "Run failed");
+                        else if (out.cascade_event_id) {
+                          toast.success("Schedule executed", {
+                            action: {
+                              label: "View",
+                              onClick: () => { window.location.href = `/cascades/${out.cascade_event_id}`; },
+                            },
+                          });
+                        } else toast.success("Schedule executed");
+                        refresh();
+                      }}
+                    >
+                      <Play className="mr-1 h-3.5 w-3.5" /> Run now
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={async () => {
+                        if (!confirm("Delete this schedule?")) return;
+                        const res = await del({ data: { id: s.id } });
+                        if (!res.ok) toast.error(res.error);
+                        else { toast.success("Deleted"); refresh(); }
+                      }}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <Switch
-                    checked={s.enabled}
-                    onCheckedChange={async (v) => {
-                      const res = await update({ data: { id: s.id, patch: { enabled: v } } });
-                      if (!res.ok) toast.error(res.error);
-                      refresh();
-                    }}
-                  />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={async () => {
-                      const out = await runNow({ data: { id: s.id } });
-                      if (!out.ok) toast.error(out.error ?? "Run failed");
-                      else if (out.cascade_event_id) {
-                        toast.success("Schedule executed", {
-                          action: {
-                            label: "View",
-                            onClick: () => { window.location.href = `/cascades/${out.cascade_event_id}`; },
-                          },
-                        });
-                      } else toast.success("Schedule executed");
-                      refresh();
-                    }}
-                  >
-                    <Play className="mr-1 h-3.5 w-3.5" /> Run now
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={async () => {
-                      if (!confirm("Delete this schedule?")) return;
-                      const res = await del({ data: { id: s.id } });
-                      if (!res.ok) toast.error(res.error);
-                      else { toast.success("Deleted"); refresh(); }
-                    }}
-                    className="text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                <div className="border-t border-border/60 pt-3">
+                  <ScheduleRecentFires scheduleId={s.id} />
                 </div>
               </CardContent>
             </Card>

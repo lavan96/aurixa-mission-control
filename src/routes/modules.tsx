@@ -15,6 +15,7 @@ import { detectModules } from "@/server/ai-detect-modules.functions";
 import { ModuleGridSkeleton } from "@/components/list-skeletons";
 import { EmptyState } from "@/components/empty-state";
 import { FleetModuleSyncCard } from "@/components/fleet-module-sync-card";
+import { ModuleCoverageStrip } from "@/components/module-coverage-strip";
 
 export const Route = createFileRoute("/modules")({
   component: () => (
@@ -171,6 +172,7 @@ function ModuleRow({
         ) : (
           <p className="text-sm text-muted-foreground">{m.description || "—"}</p>
         )}
+        <ModuleCoverageStrip moduleId={m.id} />
         <div className="space-y-1">
           <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
             routes
