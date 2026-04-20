@@ -355,6 +355,36 @@ function Dashboard() {
                 <div className="font-mono text-xs text-muted-foreground">
                   {c.github_owner}/{c.github_repo}
                 </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Package className="h-3 w-3 text-muted-foreground" />
+                  {(modulesByClone[c.id] ?? []).length === 0 ? (
+                    <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                      no modules
+                    </span>
+                  ) : (
+                    (modulesByClone[c.id] ?? []).map((m) => {
+                      const active = moduleFilter === m.module_id;
+                      return (
+                        <button
+                          key={m.module_id}
+                          onClick={() => setModuleFilter(active ? "" : m.module_id)}
+                          title={
+                            active
+                              ? "Clear filter"
+                              : `Filter fleet by ${m.module_name}`
+                          }
+                          className={`rounded border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider transition-colors ${
+                            active
+                              ? "border-primary/60 bg-primary/15 text-primary"
+                              : "border-border bg-muted text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                          }`}
+                        >
+                          {m.module_name}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
                 <div className="flex flex-wrap gap-2 text-xs">
                   {c.github_url && (
                     <a
