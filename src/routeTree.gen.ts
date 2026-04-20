@@ -21,6 +21,7 @@ import { Route as AuditLogRouteImport } from './routes/audit-log'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as SettingsNotificationsRouteImport } from './routes/settings.notifications'
+import { Route as HooksRunSchedulesRouteImport } from './routes/hooks.run-schedules'
 import { Route as HooksGithubRouteImport } from './routes/hooks.github'
 import { Route as HooksFleetDriftRouteImport } from './routes/hooks.fleet-drift'
 import { Route as HooksDriftRefreshRouteImport } from './routes/hooks.drift-refresh'
@@ -88,6 +89,11 @@ const SettingsNotificationsRoute = SettingsNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => SettingsRoute,
 } as any)
+const HooksRunSchedulesRoute = HooksRunSchedulesRouteImport.update({
+  id: '/hooks/run-schedules',
+  path: '/hooks/run-schedules',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HooksGithubRoute = HooksGithubRouteImport.update({
   id: '/hooks/github',
   path: '/hooks/github',
@@ -136,6 +142,7 @@ export interface FileRoutesByFullPath {
   '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
   '/hooks/github': typeof HooksGithubRoute
+  '/hooks/run-schedules': typeof HooksRunSchedulesRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/': typeof SettingsIndexRoute
 }
@@ -155,6 +162,7 @@ export interface FileRoutesByTo {
   '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
   '/hooks/github': typeof HooksGithubRoute
+  '/hooks/run-schedules': typeof HooksRunSchedulesRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings': typeof SettingsIndexRoute
 }
@@ -176,6 +184,7 @@ export interface FileRoutesById {
   '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
   '/hooks/github': typeof HooksGithubRoute
+  '/hooks/run-schedules': typeof HooksRunSchedulesRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/': typeof SettingsIndexRoute
 }
@@ -198,6 +207,7 @@ export interface FileRouteTypes {
     | '/hooks/drift-refresh'
     | '/hooks/fleet-drift'
     | '/hooks/github'
+    | '/hooks/run-schedules'
     | '/settings/notifications'
     | '/settings/'
   fileRoutesByTo: FileRoutesByTo
@@ -217,6 +227,7 @@ export interface FileRouteTypes {
     | '/hooks/drift-refresh'
     | '/hooks/fleet-drift'
     | '/hooks/github'
+    | '/hooks/run-schedules'
     | '/settings/notifications'
     | '/settings'
   id:
@@ -237,6 +248,7 @@ export interface FileRouteTypes {
     | '/hooks/drift-refresh'
     | '/hooks/fleet-drift'
     | '/hooks/github'
+    | '/hooks/run-schedules'
     | '/settings/notifications'
     | '/settings/'
   fileRoutesById: FileRoutesById
@@ -257,6 +269,7 @@ export interface RootRouteChildren {
   HooksDriftRefreshRoute: typeof HooksDriftRefreshRoute
   HooksFleetDriftRoute: typeof HooksFleetDriftRoute
   HooksGithubRoute: typeof HooksGithubRoute
+  HooksRunSchedulesRoute: typeof HooksRunSchedulesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -345,6 +358,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsNotificationsRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/hooks/run-schedules': {
+      id: '/hooks/run-schedules'
+      path: '/hooks/run-schedules'
+      fullPath: '/hooks/run-schedules'
+      preLoaderRoute: typeof HooksRunSchedulesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/hooks/github': {
       id: '/hooks/github'
       path: '/hooks/github'
@@ -432,6 +452,7 @@ const rootRouteChildren: RootRouteChildren = {
   HooksDriftRefreshRoute: HooksDriftRefreshRoute,
   HooksFleetDriftRoute: HooksFleetDriftRoute,
   HooksGithubRoute: HooksGithubRoute,
+  HooksRunSchedulesRoute: HooksRunSchedulesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
