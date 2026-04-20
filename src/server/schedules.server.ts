@@ -7,6 +7,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { executeCascade } from "./cascade-engine.server";
 import { bulkSyncModule } from "./module-sync.server";
 import { nextCronTick } from "./cron";
+import { assessBlastRadius } from "./cascade-approvals.server";
 import { unknownTable, type CascadeScheduleRow } from "./_phase3d-types";
 
 type SupabaseLike = SupabaseClient<Database>;
@@ -139,12 +140,15 @@ async function runFleetCascade(
     };
   }
 
+  const blast = assessBlastRadius(sched.mode, clones.length);
+
   const { data: ev, error: evErr } = await supabase
     .from("cascade_events")
     .insert({
       trigger: "scheduled",
       mode: sched.mode,
       status: "pending",
+      requires_approval: blast.requiresApproval,
       scope_filter: {
         scope: "scheduled_fleet",
         schedule_id: sched.id,
@@ -172,6 +176,45 @@ async function runFleetCascade(
       status: "queued" as const,
     })),
   );
+
+  // Blast-radius gate — pin a notification & skip engine until a second
+  // operator approves on /cascades/$eventId.
+  if (blast.requiresApproval) {
+    await supabase.from("notifications").insert({
+      kind: "cascade_awaiting_approval",
+      severity: "warning",
+      title: `Approval needed · scheduled ${sched.mode.replace("_", " ")} cascade`,
+      body: `${blast.reason ?? ""} Triggered by schedule "${sched.name}".`,
+      cascade_event_id: ev.id,
+      url: `/cascades/${ev.id}`,
+      metadata: {
+        mode: sched.mode,
+        clone_count: clones.length,
+        schedule_id: sched.id,
+        trigger: "scheduled",
+      },
+    });
+    await supabase.from("audit_log").insert({
+      action: "cascade.awaiting_approval",
+      entity_type: "cascade_event",
+      entity_id: ev.id,
+      actor_user_id: initiatedBy,
+      metadata: {
+        mode: sched.mode,
+        trigger: "scheduled",
+        schedule_id: sched.id,
+        clone_count: clones.length,
+        reason: blast.reason,
+      },
+    });
+    return {
+      schedule_id: sched.id,
+      name: sched.name,
+      ok: true,
+      cascade_event_id: ev.id,
+      error: blast.reason ?? "Awaiting second-operator approval",
+    };
+  }
 
   const res = await executeCascade(supabase, ev.id);
   return {
