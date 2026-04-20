@@ -4,9 +4,11 @@
 // just synonyms — the casts remain safe because they widen one client type
 // into another that simply knows about extra tables.
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database, Json } from "@/integrations/supabase/types";
 
 type CascadeMode = Database["public"]["Enums"]["cascade_mode"];
+
+export type { Json };
 
 export type ScheduleKind = "fleet_cascade" | "module_sync";
 export type DriftSeverity = "low" | "medium" | "high";
@@ -17,7 +19,7 @@ export type CascadeScheduleRow = {
   kind: ScheduleKind;
   cron_expression: string;
   mode: CascadeMode;
-  scope_filter: Record<string, unknown>;
+  scope_filter: Json;
   enabled: boolean;
   last_run_at: string | null;
   next_run_at: string | null;
