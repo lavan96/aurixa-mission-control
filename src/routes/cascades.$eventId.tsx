@@ -46,6 +46,7 @@ import {
   ChevronDown,
   RotateCcw,
   History,
+  Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "@/lib/format";
@@ -324,7 +325,13 @@ function CascadeDetailPage() {
   const scopeMeta = (event.scope_filter ?? {}) as {
     rollback_of?: string;
     retry_of?: string;
+    scope?: string;
+    module_id?: string;
+    module_name?: string;
+    module_globs?: string[];
+    clone_ids?: string[];
   };
+  const isModuleSync = scopeMeta.scope === "module_sync" && !!scopeMeta.module_id;
 
   return (
     <div className="space-y-6">
@@ -472,6 +479,44 @@ function CascadeDetailPage() {
         <Card className="border-border/80">
           <CardContent className="p-4 font-mono text-xs text-muted-foreground">
             {event.summary}
+          </CardContent>
+        </Card>
+      )}
+
+      {isModuleSync && (
+        <Card className="border-primary/40 bg-primary/5">
+          <CardHeader className="space-y-1 p-4 pb-2">
+            <div className="flex items-center gap-2">
+              <Package className="h-4 w-4 text-primary" />
+              <CardTitle className="text-sm">
+                Scoped module sync · {scopeMeta.module_name ?? "module"}
+              </CardTitle>
+              <Badge variant="outline" className="ml-auto font-mono text-[10px] uppercase">
+                {(scopeMeta.clone_ids?.length ?? results.length)} clone
+                {(scopeMeta.clone_ids?.length ?? results.length) === 1 ? "" : "s"}
+              </Badge>
+            </div>
+            <CardDescription className="font-mono text-[11px]">
+              This cascade only pushes files matching the module's globs.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 pt-2">
+            {(scopeMeta.module_globs ?? []).length === 0 ? (
+              <div className="font-mono text-[11px] text-muted-foreground">
+                No globs recorded.
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {(scopeMeta.module_globs ?? []).map((g) => (
+                  <code
+                    key={g}
+                    className="rounded border border-border bg-surface px-1.5 py-0.5 font-mono text-[11px]"
+                  >
+                    {g}
+                  </code>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
