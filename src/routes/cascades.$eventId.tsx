@@ -599,15 +599,29 @@ function ResultsGroup({
 function ResultRow({
   result,
   eventInFlight,
+  eventMode,
   onChange,
+  onRetryWithMode,
 }: {
   result: ResultWithClone;
   eventInFlight: boolean;
+  eventMode: CascadeEvent["mode"];
   onChange: () => void;
+  onRetryWithMode: (cloneId: string, mode: CascadeEvent["mode"]) => Promise<void>;
 }) {
   const clone = result.clone;
   const [skipping, setSkipping] = useState(false);
+  const [retryBusy, setRetryBusy] = useState(false);
   const canSkip = result.status === "queued";
+  // Allow per-result retry once the row has settled (success/PR/failed/skipped)
+  // and we have a clone id to target. Disabled while parent event in flight.
+  const canRetry =
+    !!clone &&
+    !eventInFlight &&
+    (result.status === "failed" ||
+      result.status === "succeeded" ||
+      result.status === "pr_opened" ||
+      result.status === "skipped");
 
   const skip = async () => {
     if (!canSkip) return;
@@ -628,6 +642,16 @@ function ResultRow({
     toast.success(`Skipped ${clone?.name ?? "clone"}`);
     setSkipping(false);
     onChange();
+  };
+
+  const handleRetry = async (mode: CascadeEvent["mode"]) => {
+    if (!clone) return;
+    setRetryBusy(true);
+    try {
+      await onRetryWithMode(clone.id, mode);
+    } finally {
+      setRetryBusy(false);
+    }
   };
 
   return (
