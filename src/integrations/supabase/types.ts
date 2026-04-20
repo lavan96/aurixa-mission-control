@@ -353,6 +353,41 @@ export type Database = {
           },
         ]
       }
+      clone_health_snapshots: {
+        Row: {
+          clone_id: string
+          created_at: string
+          id: string
+          payload: Json
+          probed_at: string
+          updated_at: string
+        }
+        Insert: {
+          clone_id: string
+          created_at?: string
+          id?: string
+          payload: Json
+          probed_at?: string
+          updated_at?: string
+        }
+        Update: {
+          clone_id?: string
+          created_at?: string
+          id?: string
+          payload?: Json
+          probed_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clone_health_snapshots_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: true
+            referencedRelation: "clones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clone_modules: {
         Row: {
           clone_id: string
