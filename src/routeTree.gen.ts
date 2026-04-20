@@ -10,9 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SchedulesRouteImport } from './routes/schedules'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as ModulesRouteImport } from './routes/modules'
 import { Route as FleetManagerRouteImport } from './routes/fleet-manager'
+import { Route as DriftRouteImport } from './routes/drift'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CloudflareRouteImport } from './routes/cloudflare'
 import { Route as CascadesRouteImport } from './routes/cascades'
@@ -34,6 +36,11 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SchedulesRoute = SchedulesRouteImport.update({
+  id: '/schedules',
+  path: '/schedules',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NotificationsRoute = NotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
@@ -47,6 +54,11 @@ const ModulesRoute = ModulesRouteImport.update({
 const FleetManagerRoute = FleetManagerRouteImport.update({
   id: '/fleet-manager',
   path: '/fleet-manager',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DriftRoute = DriftRouteImport.update({
+  id: '/drift',
+  path: '/drift',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -132,9 +144,11 @@ export interface FileRoutesByFullPath {
   '/cascades': typeof CascadesRouteWithChildren
   '/cloudflare': typeof CloudflareRoute
   '/dashboard': typeof DashboardRoute
+  '/drift': typeof DriftRoute
   '/fleet-manager': typeof FleetManagerRoute
   '/modules': typeof ModulesRoute
   '/notifications': typeof NotificationsRoute
+  '/schedules': typeof SchedulesRoute
   '/settings': typeof SettingsRouteWithChildren
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
@@ -153,9 +167,11 @@ export interface FileRoutesByTo {
   '/cascades': typeof CascadesRouteWithChildren
   '/cloudflare': typeof CloudflareRoute
   '/dashboard': typeof DashboardRoute
+  '/drift': typeof DriftRoute
   '/fleet-manager': typeof FleetManagerRoute
   '/modules': typeof ModulesRoute
   '/notifications': typeof NotificationsRoute
+  '/schedules': typeof SchedulesRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
@@ -174,9 +190,11 @@ export interface FileRoutesById {
   '/cascades': typeof CascadesRouteWithChildren
   '/cloudflare': typeof CloudflareRoute
   '/dashboard': typeof DashboardRoute
+  '/drift': typeof DriftRoute
   '/fleet-manager': typeof FleetManagerRoute
   '/modules': typeof ModulesRoute
   '/notifications': typeof NotificationsRoute
+  '/schedules': typeof SchedulesRoute
   '/settings': typeof SettingsRouteWithChildren
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
@@ -197,9 +215,11 @@ export interface FileRouteTypes {
     | '/cascades'
     | '/cloudflare'
     | '/dashboard'
+    | '/drift'
     | '/fleet-manager'
     | '/modules'
     | '/notifications'
+    | '/schedules'
     | '/settings'
     | '/cascades/$eventId'
     | '/clones/$cloneId'
@@ -218,9 +238,11 @@ export interface FileRouteTypes {
     | '/cascades'
     | '/cloudflare'
     | '/dashboard'
+    | '/drift'
     | '/fleet-manager'
     | '/modules'
     | '/notifications'
+    | '/schedules'
     | '/cascades/$eventId'
     | '/clones/$cloneId'
     | '/clones/new'
@@ -238,9 +260,11 @@ export interface FileRouteTypes {
     | '/cascades'
     | '/cloudflare'
     | '/dashboard'
+    | '/drift'
     | '/fleet-manager'
     | '/modules'
     | '/notifications'
+    | '/schedules'
     | '/settings'
     | '/cascades/$eventId'
     | '/clones/$cloneId'
@@ -260,9 +284,11 @@ export interface RootRouteChildren {
   CascadesRoute: typeof CascadesRouteWithChildren
   CloudflareRoute: typeof CloudflareRoute
   DashboardRoute: typeof DashboardRoute
+  DriftRoute: typeof DriftRoute
   FleetManagerRoute: typeof FleetManagerRoute
   ModulesRoute: typeof ModulesRoute
   NotificationsRoute: typeof NotificationsRoute
+  SchedulesRoute: typeof SchedulesRoute
   SettingsRoute: typeof SettingsRouteWithChildren
   ClonesCloneIdRoute: typeof ClonesCloneIdRoute
   ClonesNewRoute: typeof ClonesNewRoute
@@ -279,6 +305,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/schedules': {
+      id: '/schedules'
+      path: '/schedules'
+      fullPath: '/schedules'
+      preLoaderRoute: typeof SchedulesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notifications': {
@@ -300,6 +333,13 @@ declare module '@tanstack/react-router' {
       path: '/fleet-manager'
       fullPath: '/fleet-manager'
       preLoaderRoute: typeof FleetManagerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/drift': {
+      id: '/drift'
+      path: '/drift'
+      fullPath: '/drift'
+      preLoaderRoute: typeof DriftRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -443,9 +483,11 @@ const rootRouteChildren: RootRouteChildren = {
   CascadesRoute: CascadesRouteWithChildren,
   CloudflareRoute: CloudflareRoute,
   DashboardRoute: DashboardRoute,
+  DriftRoute: DriftRoute,
   FleetManagerRoute: FleetManagerRoute,
   ModulesRoute: ModulesRoute,
   NotificationsRoute: NotificationsRoute,
+  SchedulesRoute: SchedulesRoute,
   SettingsRoute: SettingsRouteWithChildren,
   ClonesCloneIdRoute: ClonesCloneIdRoute,
   ClonesNewRoute: ClonesNewRoute,
@@ -457,3 +499,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}

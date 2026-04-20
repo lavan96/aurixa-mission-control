@@ -12,6 +12,8 @@ import {
   LogOut,
   Radio,
   ScrollText,
+  CalendarClock,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "@/components/notifications-bell";
@@ -21,6 +23,8 @@ const NAV = [
   { to: "/clones/new", label: "New Clone", icon: GitFork },
   { to: "/modules", label: "Modules", icon: Boxes },
   { to: "/cascades", label: "Cascades", icon: Waves },
+  { to: "/schedules", label: "Schedules", icon: CalendarClock },
+  { to: "/drift", label: "Drift", icon: Sparkles },
   { to: "/fleet-manager", label: "AI Manager", icon: Bot },
   { to: "/audit-log", label: "Audit Log", icon: ScrollText },
   { to: "/cloudflare", label: "Cloudflare", icon: Shield },
