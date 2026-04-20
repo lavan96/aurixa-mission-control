@@ -76,7 +76,7 @@ export const applyDriftSuggestion = createServerFn({ method: "POST" })
           summary: suggestion.summary,
         },
         summary: `AI suggestion · ${suggestion.summary}`,
-        initiated_by: context.user.id,
+        initiated_by: context.userId,
       })
       .select()
       .single();
