@@ -21,7 +21,9 @@ import { Route as AuditLogRouteImport } from './routes/audit-log'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as SettingsNotificationsRouteImport } from './routes/settings.notifications'
+import { Route as HooksGithubRouteImport } from './routes/hooks.github'
 import { Route as HooksFleetDriftRouteImport } from './routes/hooks.fleet-drift'
+import { Route as HooksDriftRefreshRouteImport } from './routes/hooks.drift-refresh'
 import { Route as ClonesNewRouteImport } from './routes/clones.new'
 import { Route as ClonesCloneIdRouteImport } from './routes/clones.$cloneId'
 import { Route as CascadesEventIdRouteImport } from './routes/cascades.$eventId'
@@ -86,9 +88,19 @@ const SettingsNotificationsRoute = SettingsNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => SettingsRoute,
 } as any)
+const HooksGithubRoute = HooksGithubRouteImport.update({
+  id: '/hooks/github',
+  path: '/hooks/github',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HooksFleetDriftRoute = HooksFleetDriftRouteImport.update({
   id: '/hooks/fleet-drift',
   path: '/hooks/fleet-drift',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HooksDriftRefreshRoute = HooksDriftRefreshRouteImport.update({
+  id: '/hooks/drift-refresh',
+  path: '/hooks/drift-refresh',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClonesNewRoute = ClonesNewRouteImport.update({
@@ -121,7 +133,9 @@ export interface FileRoutesByFullPath {
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
+  '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
+  '/hooks/github': typeof HooksGithubRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/': typeof SettingsIndexRoute
 }
@@ -138,7 +152,9 @@ export interface FileRoutesByTo {
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
+  '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
+  '/hooks/github': typeof HooksGithubRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings': typeof SettingsIndexRoute
 }
@@ -157,7 +173,9 @@ export interface FileRoutesById {
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
+  '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
+  '/hooks/github': typeof HooksGithubRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/': typeof SettingsIndexRoute
 }
@@ -177,7 +195,9 @@ export interface FileRouteTypes {
     | '/cascades/$eventId'
     | '/clones/$cloneId'
     | '/clones/new'
+    | '/hooks/drift-refresh'
     | '/hooks/fleet-drift'
+    | '/hooks/github'
     | '/settings/notifications'
     | '/settings/'
   fileRoutesByTo: FileRoutesByTo
@@ -194,7 +214,9 @@ export interface FileRouteTypes {
     | '/cascades/$eventId'
     | '/clones/$cloneId'
     | '/clones/new'
+    | '/hooks/drift-refresh'
     | '/hooks/fleet-drift'
+    | '/hooks/github'
     | '/settings/notifications'
     | '/settings'
   id:
@@ -212,7 +234,9 @@ export interface FileRouteTypes {
     | '/cascades/$eventId'
     | '/clones/$cloneId'
     | '/clones/new'
+    | '/hooks/drift-refresh'
     | '/hooks/fleet-drift'
+    | '/hooks/github'
     | '/settings/notifications'
     | '/settings/'
   fileRoutesById: FileRoutesById
@@ -230,7 +254,9 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRouteWithChildren
   ClonesCloneIdRoute: typeof ClonesCloneIdRoute
   ClonesNewRoute: typeof ClonesNewRoute
+  HooksDriftRefreshRoute: typeof HooksDriftRefreshRoute
   HooksFleetDriftRoute: typeof HooksFleetDriftRoute
+  HooksGithubRoute: typeof HooksGithubRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -319,11 +345,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsNotificationsRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/hooks/github': {
+      id: '/hooks/github'
+      path: '/hooks/github'
+      fullPath: '/hooks/github'
+      preLoaderRoute: typeof HooksGithubRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/hooks/fleet-drift': {
       id: '/hooks/fleet-drift'
       path: '/hooks/fleet-drift'
       fullPath: '/hooks/fleet-drift'
       preLoaderRoute: typeof HooksFleetDriftRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hooks/drift-refresh': {
+      id: '/hooks/drift-refresh'
+      path: '/hooks/drift-refresh'
+      fullPath: '/hooks/drift-refresh'
+      preLoaderRoute: typeof HooksDriftRefreshRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/clones/new': {
@@ -389,7 +429,9 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRouteWithChildren,
   ClonesCloneIdRoute: ClonesCloneIdRoute,
   ClonesNewRoute: ClonesNewRoute,
+  HooksDriftRefreshRoute: HooksDriftRefreshRoute,
   HooksFleetDriftRoute: HooksFleetDriftRoute,
+  HooksGithubRoute: HooksGithubRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
