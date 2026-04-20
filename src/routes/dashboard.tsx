@@ -38,7 +38,12 @@ function Dashboard() {
   const { data: prime } = usePrimeConfig();
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [filter, setFilter] = useState<"all" | "in_sync" | "behind" | "failed">("all");
+  const [filter, setFilter] = useState<"all" | "in_sync" | "behind" | "failed" | "ai">("all");
+
+  const openSuggestionsCount = (c: (typeof clones)[number]) => {
+    const sugg = (c.drift_suggestions as unknown as Array<{ status?: string }> | null) ?? [];
+    return sugg.filter((s) => (s?.status ?? "open") === "open").length;
+  };
 
   const filtered = useMemo(() => {
     return clones.filter((c) => {
@@ -46,7 +51,9 @@ function Dashboard() {
         !q ||
         c.name.toLowerCase().includes(q.toLowerCase()) ||
         c.tags?.some((t) => t.toLowerCase().includes(q.toLowerCase()));
-      const matchF = filter === "all" || c.sync_status === filter;
+      const matchF =
+        filter === "all" ||
+        (filter === "ai" ? openSuggestionsCount(c) > 0 : c.sync_status === filter);
       return matchQ && matchF;
     });
   }, [clones, q, filter]);
@@ -57,6 +64,8 @@ function Dashboard() {
       in_sync: clones.filter((c) => c.sync_status === "in_sync").length,
       behind: clones.filter((c) => c.sync_status === "behind").length,
       failed: clones.filter((c) => c.sync_status === "failed").length,
+      ai_open: clones.reduce((acc, c) => acc + openSuggestionsCount(c), 0),
+      ai_clones: clones.filter((c) => openSuggestionsCount(c) > 0).length,
     };
   }, [clones]);
 
