@@ -141,6 +141,7 @@ export async function executeCascade(
         mode: event.mode,
         clone,
         supabase,
+        scopeFilter: event.scope_filter as Record<string, unknown> | null,
       });
 
       await supabase.from("cascade_results").update(patch).eq("id", r.id);
@@ -257,18 +258,30 @@ async function processClone(args: {
     default_branch: string;
   };
   supabase: SupabaseLike;
+  scopeFilter: Record<string, unknown> | null;
 }): Promise<CascadeResultUpdate> {
-  const { octokit, primeRef, sourceSha, mode, clone, supabase } = args;
+  const { octokit, primeRef, sourceSha, mode, clone, supabase, scopeFilter } = args;
 
-  const { data: cmods } = await supabase
-    .from("clone_modules")
-    .select("modules(file_globs)")
-    .eq("clone_id", clone.id);
+  // Module-sync cascades pin the file_globs to a single module so the push
+  // only touches that module's files, not every installed module on the clone.
+  const overrideGlobs = Array.isArray(scopeFilter?.module_globs)
+    ? (scopeFilter!.module_globs as unknown[]).filter((g): g is string => typeof g === "string")
+    : null;
 
-  const installedGlobs: string[] = (cmods ?? []).flatMap(
-    (cm: { modules: { file_globs: string[] | null } | null }) =>
-      cm.modules?.file_globs ?? [],
-  );
+  let installedGlobs: string[];
+  if (overrideGlobs && overrideGlobs.length > 0) {
+    installedGlobs = overrideGlobs;
+  } else {
+    const { data: cmods } = await supabase
+      .from("clone_modules")
+      .select("modules(file_globs)")
+      .eq("clone_id", clone.id);
+
+    installedGlobs = (cmods ?? []).flatMap(
+      (cm: { modules: { file_globs: string[] | null } | null }) =>
+        cm.modules?.file_globs ?? [],
+    );
+  }
 
   if (installedGlobs.length === 0) {
     return {
