@@ -214,6 +214,51 @@ export type Database = {
           },
         ]
       }
+      cascade_templates: {
+        Row: {
+          clone_ids: string[]
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          last_used_at: string | null
+          mode: Database["public"]["Enums"]["cascade_mode"]
+          name: string
+          scope: string
+          tags: string[]
+          updated_at: string
+          use_count: number
+        }
+        Insert: {
+          clone_ids?: string[]
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          last_used_at?: string | null
+          mode?: Database["public"]["Enums"]["cascade_mode"]
+          name: string
+          scope?: string
+          tags?: string[]
+          updated_at?: string
+          use_count?: number
+        }
+        Update: {
+          clone_ids?: string[]
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          last_used_at?: string | null
+          mode?: Database["public"]["Enums"]["cascade_mode"]
+          name?: string
+          scope?: string
+          tags?: string[]
+          updated_at?: string
+          use_count?: number
+        }
+        Relationships: []
+      }
       clone_drift_policies: {
         Row: {
           auto_apply_severity: Database["public"]["Enums"]["drift_severity"]
