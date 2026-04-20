@@ -15,6 +15,7 @@ import {
   Plus,
   Search,
   Shield,
+  Sparkles,
   Waves,
   Zap,
 } from "lucide-react";
