@@ -42,14 +42,16 @@ function FleetHealthPage() {
   const fetchFn = useServerFn(fetchFleetHealth);
   const [data, setData] = useState<FleetHealth | null>(null);
   const [loading, setLoading] = useState(false);
+  const [refreshedAt, setRefreshedAt] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const load = async () => {
+  const load = async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchFn({});
+      const res = await fetchFn({ data: { force } });
       setData(res);
+      setRefreshedAt(new Date());
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load fleet health");
     } finally {
@@ -58,7 +60,7 @@ function FleetHealthPage() {
   };
 
   useEffect(() => {
-    void load();
+    void load(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -75,12 +77,23 @@ function FleetHealthPage() {
           <h1 className="mt-1 text-3xl font-semibold tracking-tight">Fleet health</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Live uptime + 7-day cascade & drift roll-up across every clone.
+            {refreshedAt && (
+              <span className="ml-2 font-mono text-xs text-muted-foreground/70">
+                · loaded {formatDistanceToNow(refreshedAt.toISOString())}
+              </span>
+            )}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={load} disabled={loading}>
-          <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", loading && "animate-spin")} />
-          {loading ? "Probing fleet…" : "Refresh"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => void load(false)} disabled={loading}>
+            <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", loading && "animate-spin")} />
+            Reload (cached)
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => void load(true)} disabled={loading}>
+            <Zap className="mr-1.5 h-3.5 w-3.5" />
+            {loading ? "Probing fleet…" : "Force probe"}
+          </Button>
+        </div>
       </header>
 
       {error && (
