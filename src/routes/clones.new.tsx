@@ -268,8 +268,8 @@ function NewClone() {
           </div>
           {ownerMode === "transfer" && (
             <Input
-              value={transferEmail}
-              onChange={(e) => setTransferEmail(e.target.value)}
+              value={transferTarget}
+              onChange={(e) => setTransferTarget(e.target.value)}
               placeholder="client-org-or-username"
             />
           )}
