@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Github, RefreshCw, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getGitHubStatus, type GitHubStatus } from "@/server/github-status.functions";
+import { useAuth } from "@/lib/auth";
 
 export function GitHubStatusCard() {
   const fn = useServerFn(getGitHubStatus);
+  const { session, loading: authLoading } = useAuth();
   const [status, setStatus] = useState<GitHubStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -18,10 +20,22 @@ export function GitHubStatusCard() {
       const res = await fn();
       setStatus(res);
     } catch (e) {
+      // The auth middleware throws raw Response objects on 401 — unwrap so
+      // we don't render "[object Response]" or crash the error boundary.
+      let message = "Unknown error";
+      if (e instanceof Response) {
+        try {
+          message = (await e.text()) || `HTTP ${e.status}`;
+        } catch {
+          message = `HTTP ${e.status}`;
+        }
+      } else if (e instanceof Error) {
+        message = e.message;
+      }
       setStatus({
         ok: false,
         configured: false,
-        error: e instanceof Error ? e.message : "Unknown error",
+        error: message,
         repos: [],
       });
     } finally {
@@ -30,9 +44,22 @@ export function GitHubStatusCard() {
   };
 
   useEffect(() => {
+    // Wait for auth to resolve before firing — calling unauthenticated yields
+    // a 401 Response throw that crashes the page.
+    if (authLoading) return;
+    if (!session) {
+      setStatus({
+        ok: false,
+        configured: false,
+        error: "Sign in to view GitHub App status",
+        repos: [],
+      });
+      setLoading(false);
+      return;
+    }
     void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [authLoading, session]);
 
   const reachableCount = status?.repos.filter((r) => r.ok).length ?? 0;
   const totalCount = status?.repos.length ?? 0;
