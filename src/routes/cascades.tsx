@@ -46,6 +46,7 @@ function CascadesPage() {
   const navigate = useNavigate({ from: "/cascades" });
   const mode = search.mode;
   const scope = search.scope;
+  const scheduleId = search.schedule_id;
 
   type SearchState = typeof search;
   const setMode = useCallback(
@@ -64,6 +65,59 @@ function CascadesPage() {
       }),
     [navigate],
   );
+  const clearScheduleFilter = useCallback(
+    () =>
+      void navigate({
+        search: (prev: SearchState) => ({ ...prev, schedule_id: undefined }),
+        replace: true,
+      }),
+    [navigate],
+  );
+
+  // When filtering by schedule_id, look up cascade_event_ids from audit_log
+  // (schedule.executed rows) and intersect with the events list.
+  const [scheduleEventIds, setScheduleEventIds] = useState<Set<string> | null>(null);
+  const [scheduleName, setScheduleName] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    if (!scheduleId) {
+      setScheduleEventIds(null);
+      setScheduleName(null);
+      return;
+    }
+    (async () => {
+      const [{ data: audit }, { data: sched }] = await Promise.all([
+        supabase
+          .from("audit_log")
+          .select("metadata")
+          .eq("action", "schedule.executed")
+          .eq("entity_type", "cascade_schedule")
+          .eq("entity_id", scheduleId)
+          .order("created_at", { ascending: false })
+          .limit(500),
+        supabase
+          .from("cascade_schedules")
+          .select("name")
+          .eq("id", scheduleId)
+          .maybeSingle(),
+      ]);
+      if (cancelled) return;
+      const ids = new Set<string>();
+      for (const a of audit ?? []) {
+        const m = (a.metadata ?? {}) as { cascade_event_id?: string | null };
+        if (m.cascade_event_id) ids.add(m.cascade_event_id);
+      }
+      setScheduleEventIds(ids);
+      setScheduleName(sched?.name ?? null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [scheduleId]);
+
+  const visibleEvents = scheduleEventIds
+    ? events.filter((e) => scheduleEventIds.has(e.id))
+    : events;
 
   const [busy, setBusy] = useState(false);
   const runCascadeFn = useServerFn(runCascade);
