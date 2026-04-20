@@ -12,6 +12,8 @@ import { ArrowLeft, Github, ExternalLink, Shield, Trash2, Waves, Plus, X } from 
 import { toast } from "sonner";
 import { formatDistanceToNow } from "@/lib/format";
 import { CloneActivityHistory } from "@/components/clone-activity-history";
+import { CloneDriftSuggestionsCard } from "@/components/clone-drift-suggestions-card";
+import type { DriftSuggestion } from "@/server/drift-suggestions.functions";
 
 export const Route = createFileRoute("/clones/$cloneId")({
   component: () => (
@@ -252,6 +254,13 @@ function CloneDetail() {
           )}
         </CardContent>
       </Card>
+
+      <CloneDriftSuggestionsCard
+        cloneId={cloneId}
+        suggestions={(clone.drift_suggestions as unknown as DriftSuggestion[] | null) ?? []}
+        lastCheckedAt={clone.last_drift_check_at}
+        onChange={load}
+      />
 
       <CloneActivityHistory cloneId={cloneId} />
     </div>
