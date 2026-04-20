@@ -9,6 +9,7 @@ import { usePrimeConfig } from "@/lib/queries";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Github, Cloud, Sparkles } from "lucide-react";
+import { GitHubStatusCard } from "@/components/github-status-card";
 
 export const Route = createFileRoute("/settings/")({
   component: () => (
@@ -82,6 +83,8 @@ function SettingsGeneralPage() {
           </div>
         </CardContent>
       </Card>
+
+      <GitHubStatusCard />
 
       <Card>
         <CardHeader>
