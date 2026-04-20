@@ -363,6 +363,21 @@ function CascadeDetailPage() {
                   <code className="font-mono">prime@{event.source_sha.slice(0, 7)}</code>
                 )
               )}
+              {event.source_branch && (
+                prime ? (
+                  <a
+                    href={`https://github.com/${prime.github_owner}/${prime.github_repo}/tree/${event.source_branch}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-mono hover:text-foreground hover:underline"
+                    title={`View branch on GitHub · ${prime.github_owner}/${prime.github_repo}@${event.source_branch}`}
+                  >
+                    ({event.source_branch})
+                  </a>
+                ) : (
+                  <code className="font-mono">({event.source_branch})</code>
+                )
+              )}
               <span>· started {formatDistanceToNow(event.created_at)}</span>
               {event.completed_at && (
                 <span>· finished {formatDistanceToNow(event.completed_at)}</span>
