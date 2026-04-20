@@ -30,15 +30,22 @@ export type FleetHealth = {
   };
 };
 
-export async function getFleetHealth(supabase: SupabaseLike): Promise<FleetHealth> {
+export async function getFleetHealth(
+  supabase: SupabaseLike,
+  opts: { force?: boolean } = {},
+): Promise<FleetHealth> {
   const { data: clones } = await supabase
     .from("clones")
     .select("id, name, slug, sync_status, commits_behind")
     .order("name");
 
   const list = clones ?? [];
-  // Run all clone health probes in parallel — each one HEAD-pings + AI-summarizes.
-  const healths = await Promise.all(list.map((c) => getCloneHealth(supabase, c.id)));
+  // Probe in parallel — getCloneHealth honors a 5-min snapshot cache, so the
+  // first /health visit is slow (HEAD pings + AI summary) but subsequent
+  // visits within the TTL are nearly instant DB reads.
+  const healths = await Promise.all(
+    list.map((c) => getCloneHealth(supabase, c.id, { skipCache: !!opts.force })),
+  );
 
   const rows: FleetHealthRow[] = list.map((c, i) => ({
     cloneId: c.id,
