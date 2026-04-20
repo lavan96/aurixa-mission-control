@@ -104,6 +104,21 @@ function SettingsGeneralPage() {
           <CardDescription>The single source-of-truth codebase that all clones cascade from.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
+          {primeLoading && !prime ? (
+            <div className="md:col-span-2 rounded-md border border-border bg-surface px-3 py-2 font-mono text-xs text-muted-foreground">
+              Loading prime configuration…
+            </div>
+          ) : null}
+          {primeError ? (
+            <div className="md:col-span-2 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 font-mono text-xs text-destructive">
+              Failed to load prime config: {primeError}
+            </div>
+          ) : null}
+          {!primeLoading && !prime && !primeError ? (
+            <div className="md:col-span-2 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 font-mono text-xs text-warning">
+              No prime config saved yet — fill in the fields below and click Save.
+            </div>
+          ) : null}
           <div className="space-y-2">
             <Label>GitHub owner</Label>
             <Input value={owner} onChange={(e) => setOwner(e.target.value)} placeholder="my-org" />
