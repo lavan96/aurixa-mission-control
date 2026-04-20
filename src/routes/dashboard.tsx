@@ -1,5 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
+import { z } from "zod";
 import { ProtectedRoute } from "@/components/protected-route";
 import { useClones, usePrimeConfig } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
@@ -32,7 +34,17 @@ import { formatDistanceToNow } from "@/lib/format";
 import { CloneGridSkeleton } from "@/components/list-skeletons";
 import { EmptyState } from "@/components/empty-state";
 
+const dashboardSearchSchema = z.object({
+  q: fallback(z.string(), "").default(""),
+  filter: fallback(z.enum(["all", "in_sync", "behind", "failed", "ai"]), "all").default("all"),
+  sort: fallback(
+    z.enum(["name", "commits_behind", "last_cascade_at", "ai_suggestions"]),
+    "name",
+  ).default("name"),
+});
+
 export const Route = createFileRoute("/dashboard")({
+  validateSearch: zodValidator(dashboardSearchSchema),
   component: () => (
     <ProtectedRoute>
       <Dashboard />
@@ -44,12 +56,18 @@ export const Route = createFileRoute("/dashboard")({
 function Dashboard() {
   const { data: clones, loading } = useClones();
   const { data: prime } = usePrimeConfig();
-  const [q, setQ] = useState("");
+  const { q, filter, sort } = Route.useSearch();
+  const navigate = useNavigate({ from: "/dashboard" });
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [filter, setFilter] = useState<"all" | "in_sync" | "behind" | "failed" | "ai">("all");
-  const [sort, setSort] = useState<
-    "name" | "commits_behind" | "last_cascade_at" | "ai_suggestions"
-  >("name");
+
+  type DashboardSearch = z.infer<typeof dashboardSearchSchema>;
+  const setQ = (value: string) =>
+    navigate({ search: (prev: DashboardSearch) => ({ ...prev, q: value }), replace: true });
+  const setFilter = (value: typeof filter) =>
+    navigate({ search: (prev: DashboardSearch) => ({ ...prev, filter: value }), replace: true });
+  const setSort = (value: typeof sort) =>
+    navigate({ search: (prev: DashboardSearch) => ({ ...prev, sort: value }), replace: true });
+
 
   const openSuggestionsCount = (c: (typeof clones)[number]) => {
     const sugg = (c.drift_suggestions as unknown as Array<{ status?: string }> | null) ?? [];
