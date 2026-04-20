@@ -17,6 +17,7 @@ import {
 import { useClones, type Clone } from "@/lib/queries";
 import { useServerFn } from "@tanstack/react-start";
 import { triggerFleetDriftScan } from "@/server/fleet-drift.functions";
+import { refreshFleetDrift } from "@/server/drift-refresh.functions";
 import { runCascade } from "@/server/cascade-engine.functions";
 import { DriftListSkeleton } from "@/components/list-skeletons";
 import { EmptyState } from "@/components/empty-state";
@@ -76,7 +77,30 @@ function FleetManager() {
   const [applyingKey, setApplyingKey] = useState<string | null>(null);
   const [bulkApplying, setBulkApplying] = useState(false);
   const scanFn = useServerFn(triggerFleetDriftScan);
+  const driftRefreshFn = useServerFn(refreshFleetDrift);
   const cascadeFn = useServerFn(runCascade);
+
+  // Silent drift refresh: real GitHub commits-behind compare on mount + every 5 min.
+  useEffect(() => {
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const res = await driftRefreshFn();
+        if (!cancelled && res.ok && res.updated > 0) {
+          refresh();
+        }
+      } catch {
+        // Silent — failures are surfaced via per-clone sync_status updates
+      }
+    };
+    void tick();
+    const id = setInterval(() => void tick(), 5 * 60 * 1000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const driftIds = useMemo(() => drift.map((c) => c.id), [drift]);
 
