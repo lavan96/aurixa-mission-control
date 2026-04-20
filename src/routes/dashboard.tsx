@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { ProtectedRoute } from "@/components/protected-route";
-import { useClones, usePrimeConfig } from "@/lib/queries";
+import { useClones, useFleetModules, usePrimeConfig } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -22,11 +22,13 @@ import {
   GitBranch,
   ExternalLink,
   Github,
+  Package,
   Plus,
   Search,
   Shield,
   Sparkles,
   Waves,
+  X,
   Zap,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -41,6 +43,7 @@ const dashboardSearchSchema = z.object({
     z.enum(["name", "commits_behind", "last_cascade_at", "ai_suggestions"]),
     "name",
   ).default("name"),
+  module: fallback(z.string(), "").default(""),
 });
 
 export const Route = createFileRoute("/dashboard")({
@@ -56,7 +59,8 @@ export const Route = createFileRoute("/dashboard")({
 function Dashboard() {
   const { data: clones, loading } = useClones();
   const { data: prime } = usePrimeConfig();
-  const { q, filter, sort } = Route.useSearch();
+  const { byClone: modulesByClone } = useFleetModules();
+  const { q, filter, sort, module: moduleFilter } = Route.useSearch();
   const navigate = useNavigate({ from: "/dashboard" });
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -67,6 +71,17 @@ function Dashboard() {
     navigate({ search: (prev: DashboardSearch) => ({ ...prev, filter: value }), replace: true });
   const setSort = (value: typeof sort) =>
     navigate({ search: (prev: DashboardSearch) => ({ ...prev, sort: value }), replace: true });
+  const setModuleFilter = (value: string) =>
+    navigate({ search: (prev: DashboardSearch) => ({ ...prev, module: value }), replace: true });
+
+  const moduleFilterName = useMemo(() => {
+    if (!moduleFilter) return null;
+    for (const list of Object.values(modulesByClone)) {
+      const hit = list.find((m) => m.module_id === moduleFilter);
+      if (hit) return hit.module_name;
+    }
+    return null;
+  }, [moduleFilter, modulesByClone]);
 
 
   const openSuggestionsCount = (c: (typeof clones)[number]) => {
@@ -83,7 +98,10 @@ function Dashboard() {
       const matchF =
         filter === "all" ||
         (filter === "ai" ? openSuggestionsCount(c) > 0 : c.sync_status === filter);
-      return matchQ && matchF;
+      const matchM =
+        !moduleFilter ||
+        (modulesByClone[c.id]?.some((m) => m.module_id === moduleFilter) ?? false);
+      return matchQ && matchF && matchM;
     });
     const sorted = [...list];
     sorted.sort((a, b) => {
@@ -104,7 +122,7 @@ function Dashboard() {
       }
     });
     return sorted;
-  }, [clones, q, filter, sort]);
+  }, [clones, q, filter, sort, moduleFilter, modulesByClone]);
 
   const stats = useMemo(() => {
     return {
@@ -235,6 +253,17 @@ function Dashboard() {
             </SelectItem>
           </SelectContent>
         </Select>
+        {moduleFilter && (
+          <button
+            onClick={() => setModuleFilter("")}
+            className="inline-flex items-center gap-1.5 rounded-md border border-primary/40 bg-primary/10 px-2 py-1 font-mono text-[11px] uppercase tracking-wider text-primary hover:bg-primary/20"
+            title="Clear module filter"
+          >
+            <Package className="h-3 w-3" />
+            module · {moduleFilterName ?? moduleFilter.slice(0, 6)}
+            <X className="h-3 w-3" />
+          </button>
+        )}
         {selected.size > 0 && (
           <div className="ml-auto flex items-center gap-2">
             <Badge variant="secondary" className="font-mono">
@@ -325,6 +354,36 @@ function Dashboard() {
               <CardContent className="space-y-2 px-5 pb-5">
                 <div className="font-mono text-xs text-muted-foreground">
                   {c.github_owner}/{c.github_repo}
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Package className="h-3 w-3 text-muted-foreground" />
+                  {(modulesByClone[c.id] ?? []).length === 0 ? (
+                    <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                      no modules
+                    </span>
+                  ) : (
+                    (modulesByClone[c.id] ?? []).map((m) => {
+                      const active = moduleFilter === m.module_id;
+                      return (
+                        <button
+                          key={m.module_id}
+                          onClick={() => setModuleFilter(active ? "" : m.module_id)}
+                          title={
+                            active
+                              ? "Clear filter"
+                              : `Filter fleet by ${m.module_name}`
+                          }
+                          className={`rounded border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider transition-colors ${
+                            active
+                              ? "border-primary/60 bg-primary/15 text-primary"
+                              : "border-border bg-muted text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                          }`}
+                        >
+                          {m.module_name}
+                        </button>
+                      );
+                    })
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-2 text-xs">
                   {c.github_url && (

@@ -8,11 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/status-pill";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Github, ExternalLink, Shield, Trash2, Waves, Plus, X } from "lucide-react";
+import { ArrowLeft, Github, ExternalLink, Shield, Trash2, Waves, Plus, RefreshCw, X } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "@/lib/format";
 import { CloneActivityHistory } from "@/components/clone-activity-history";
 import { CloneDriftSuggestionsCard } from "@/components/clone-drift-suggestions-card";
+import { bulkSyncModuleFn } from "@/server/module-sync.functions";
 import type { DriftSuggestion } from "@/server/drift-suggestions.functions";
 
 export const Route = createFileRoute("/clones/$cloneId")({
@@ -29,6 +30,7 @@ function CloneDetail() {
   const [installed, setInstalled] = useState<Module[]>([]);
   const { data: allModules } = useModules();
   const [loading, setLoading] = useState(true);
+  const [resyncingId, setResyncingId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -94,6 +96,31 @@ function CloneDetail() {
       metadata: { module_id: moduleId },
     });
     load();
+  };
+  const resync = async (moduleId: string) => {
+    const mod = allModules.find((m) => m.id === moduleId);
+    setResyncingId(moduleId);
+    try {
+      const res = await bulkSyncModuleFn({
+        data: {
+          moduleId,
+          cloneIds: [cloneId],
+          action: "install",
+          cascade: true,
+          cascadeMode: "pr",
+        },
+      });
+      if (!res.ok) {
+        toast.error(res.error ?? "Re-sync failed");
+        return;
+      }
+      toast.success(`Re-synced ${mod?.name ?? "module"} — cascading scoped files`);
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Re-sync failed");
+    } finally {
+      setResyncingId(null);
+    }
   };
   const destroy = async () => {
     if (!confirm("Delete this clone? This cannot be undone.")) return;
@@ -183,22 +210,54 @@ function CloneDetail() {
                     No modules installed
                   </div>
                 )}
-                {installed.map((m) => (
-                  <div
-                    key={m.id}
-                    className="flex items-center justify-between rounded-md border border-border bg-surface px-3 py-2"
-                  >
-                    <span className="font-mono text-sm">{m.name}</span>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => remove(m.id)}
-                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                {installed.map((m) => {
+                  const noGlobs = (m.file_globs ?? []).length === 0;
+                  const isResyncing = resyncingId === m.id;
+                  return (
+                    <div
+                      key={m.id}
+                      className="flex items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-2"
                     >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
+                      <div className="min-w-0">
+                        <div className="font-mono text-sm">{m.name}</div>
+                        <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                          {(m.file_globs ?? []).length} glob
+                          {(m.file_globs ?? []).length === 1 ? "" : "s"}
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => resync(m.id)}
+                          disabled={isResyncing || noGlobs}
+                          title={
+                            noGlobs
+                              ? "Module has no file_globs to push"
+                              : "Re-sync this module's files only"
+                          }
+                          className="h-7 gap-1 px-2 text-muted-foreground hover:text-primary"
+                        >
+                          <RefreshCw
+                            className={`h-3.5 w-3.5 ${isResyncing ? "animate-spin" : ""}`}
+                          />
+                          <span className="font-mono text-[10px] uppercase tracking-wider">
+                            re-sync
+                          </span>
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => remove(m.id)}
+                          disabled={isResyncing}
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
             <div>
