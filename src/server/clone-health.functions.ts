@@ -6,10 +6,10 @@ export type { CloneHealth } from "./clone-health.server";
 
 export const fetchCloneHealth = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { cloneId: string }) => {
+  .inputValidator((data: { cloneId: string; force?: boolean }) => {
     if (!data?.cloneId) throw new Error("cloneId required");
     return data;
   })
   .handler(async ({ data, context }): Promise<CloneHealth> => {
-    return getCloneHealth(context.supabase, data.cloneId);
+    return getCloneHealth(context.supabase, data.cloneId, { skipCache: !!data.force });
   });
