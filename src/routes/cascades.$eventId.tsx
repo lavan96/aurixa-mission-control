@@ -525,7 +525,22 @@ function CascadeDetailPage() {
         </Card>
       )}
 
+      <CascadeApprovalBanner
+        cascadeEventId={event.id}
+        initiatedBy={event.initiated_by}
+        requiresApproval={event.requires_approval}
+        approvedAt={event.approved_at}
+        approvedBy={event.approved_by}
+        reasonHint={
+          assessBlastRadius(event.mode, results.length).reason ??
+          "This cascade exceeds the safety threshold."
+        }
+        onChange={refresh}
+      />
+
       <CascadeLineagePanel event={event} />
+
+      <CascadeTriageCard cascadeEventId={event.id} failureCount={failedCount} />
 
       <div className="grid gap-2 md:grid-cols-6">
         <CountTile label="Queued" value={counts.queued} icon={<CircleDot />} tone="muted" />
