@@ -9,6 +9,8 @@ import {
 } from "./github-app.server";
 
 type CascadeResultUpdate = Database["public"]["Tables"]["cascade_results"]["Update"];
+import type { SupabaseClient } from "@supabase/supabase-js";
+type SupabaseLike = SupabaseClient<Database>;
 
 // Real cascade execution engine backed by the Aurixa GitHub App.
 // Per cascade_event: resolve prime HEAD, then for each queued cascade_result
