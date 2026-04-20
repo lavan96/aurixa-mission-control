@@ -417,6 +417,7 @@ export type Database = {
         Row: {
           created_at: string
           default_branch: string
+          default_cascade_mode: Database["public"]["Enums"]["cascade_mode"]
           default_clone_org: string | null
           github_app_installation_id: string | null
           github_owner: string
@@ -428,6 +429,7 @@ export type Database = {
         Insert: {
           created_at?: string
           default_branch?: string
+          default_cascade_mode?: Database["public"]["Enums"]["cascade_mode"]
           default_clone_org?: string | null
           github_app_installation_id?: string | null
           github_owner: string
@@ -439,6 +441,7 @@ export type Database = {
         Update: {
           created_at?: string
           default_branch?: string
+          default_cascade_mode?: Database["public"]["Enums"]["cascade_mode"]
           default_clone_org?: string | null
           github_app_installation_id?: string | null
           github_owner?: string
