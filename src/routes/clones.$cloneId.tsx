@@ -97,6 +97,31 @@ function CloneDetail() {
     });
     load();
   };
+  const resync = async (moduleId: string) => {
+    const mod = allModules.find((m) => m.id === moduleId);
+    setResyncingId(moduleId);
+    try {
+      const res = await bulkSyncModuleFn({
+        data: {
+          moduleId,
+          cloneIds: [cloneId],
+          action: "install",
+          cascade: true,
+          cascadeMode: "pr",
+        },
+      });
+      if (!res.ok) {
+        toast.error(res.error ?? "Re-sync failed");
+        return;
+      }
+      toast.success(`Re-synced ${mod?.name ?? "module"} — cascading scoped files`);
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Re-sync failed");
+    } finally {
+      setResyncingId(null);
+    }
+  };
   const destroy = async () => {
     if (!confirm("Delete this clone? This cannot be undone.")) return;
     const cloneName = clone?.name ?? "Clone";
