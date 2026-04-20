@@ -17,6 +17,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { runCascade } from "@/server/cascade-engine.functions";
 import { CardRowSkeleton } from "@/components/list-skeletons";
 import { EmptyState } from "@/components/empty-state";
+import { CascadeTemplatesCard, type CascadeTemplateValue } from "@/components/cascade-templates-card";
 
 const MODE_VALUES = ["pr", "auto_merge", "notify"] as const;
 const SCOPE_VALUES = ["all", "selected"] as const;
@@ -220,6 +221,15 @@ function CascadesPage() {
           </div>
         </CardContent>
       </Card>
+
+      <CascadeTemplatesCard
+        current={{ mode, scope, tags: [], cloneIds: [] }}
+        onApply={(v: CascadeTemplateValue) => {
+          setMode(v.mode);
+          if (v.scope === "all" || v.scope === "selected") setScope(v.scope);
+          else setScope("selected");
+        }}
+      />
 
       <section>
         <div className="mb-3 flex items-center justify-between gap-2">

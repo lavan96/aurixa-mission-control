@@ -35,6 +35,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { formatDistanceToNow } from "@/lib/format";
 import { CloneGridSkeleton } from "@/components/list-skeletons";
 import { EmptyState } from "@/components/empty-state";
+import { BulkTagDialog } from "@/components/bulk-tag-dialog";
+import { Tag } from "lucide-react";
 
 const dashboardSearchSchema = z.object({
   q: fallback(z.string(), "").default(""),
@@ -63,6 +65,8 @@ function Dashboard() {
   const { q, filter, sort, module: moduleFilter } = Route.useSearch();
   const navigate = useNavigate({ from: "/dashboard" });
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkTagOpen, setBulkTagOpen] = useState(false);
+  const { refresh: refreshClones } = useClones();
 
   type DashboardSearch = z.infer<typeof dashboardSearchSchema>;
   const setQ = (value: string) =>
@@ -269,6 +273,9 @@ function Dashboard() {
             <Badge variant="secondary" className="font-mono">
               {selected.size} selected
             </Badge>
+            <Button size="sm" variant="outline" onClick={() => setBulkTagOpen(true)}>
+              <Tag className="mr-1.5 h-3.5 w-3.5" /> Edit tags
+            </Button>
             <Button size="sm" variant="outline">
               <Waves className="mr-1.5 h-3.5 w-3.5" /> Cascade selected
             </Button>
