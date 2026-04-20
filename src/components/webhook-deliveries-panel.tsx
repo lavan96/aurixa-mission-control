@@ -39,6 +39,22 @@ export function WebhookDeliveriesPanel() {
 
   useEffect(() => {
     refresh();
+    const channel = supabase
+      .channel("webhook-deliveries")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "audit_log" },
+        (payload) => {
+          const row = payload.new as AuditRow;
+          if (typeof row.action === "string" && row.action.startsWith("webhook.")) {
+            setRows((prev) => [row, ...prev].slice(0, 20));
+          }
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [refresh]);
 
   return (
