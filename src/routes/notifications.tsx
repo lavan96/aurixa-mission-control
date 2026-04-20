@@ -623,3 +623,35 @@ function filterSummary(s: {
   if (s.read !== "all") parts.push(`read=${s.read}`);
   return parts.length === 0 ? "(none)" : parts.join(" · ");
 }
+
+function MuteSummaryChip({
+  kinds,
+  severities,
+  toasts,
+  push,
+}: {
+  kinds: number;
+  severities: number;
+  toasts: boolean;
+  push: boolean;
+}) {
+  const total = kinds + severities + (toasts ? 1 : 0) + (push ? 1 : 0);
+  if (total === 0) return null;
+  const parts: string[] = [];
+  if (kinds > 0) parts.push(`${kinds} kind${kinds === 1 ? "" : "s"}`);
+  if (severities > 0)
+    parts.push(`${severities} severit${severities === 1 ? "y" : "ies"}`);
+  if (toasts) parts.push("toasts");
+  if (push) parts.push("push");
+  return (
+    <Link
+      to="/settings/notifications"
+      className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-warning/40 bg-warning/10 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-warning transition-colors hover:bg-warning/20"
+      title="Manage notification preferences"
+    >
+      <BellMinus className="h-3 w-3" />
+      muted: {parts.join(" · ")}
+      <SettingsIcon className="h-3 w-3 opacity-60" />
+    </Link>
+  );
+}
