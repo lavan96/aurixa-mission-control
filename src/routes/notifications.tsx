@@ -55,8 +55,10 @@ import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "@/lib/format";
 import { toast } from "sonner";
 import { useBrowserPushSettings } from "@/lib/browser-notifications";
+import { useNotificationPreferences } from "@/lib/notification-preferences";
 import { NotificationListSkeleton } from "@/components/list-skeletons";
 import { EmptyState } from "@/components/empty-state";
+import { Settings as SettingsIcon, BellMinus } from "lucide-react";
 
 type Notification = Database["public"]["Tables"]["notifications"]["Row"];
 type Clone = Pick<Database["public"]["Tables"]["clones"]["Row"], "id" | "name">;
@@ -168,6 +170,7 @@ function NotificationsPage() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/notifications" });
   const push = useBrowserPushSettings();
+  const { prefs } = useNotificationPreferences();
 
   const [items, setItems] = useState<Notification[]>([]);
   const [total, setTotal] = useState(0);
@@ -327,6 +330,12 @@ function NotificationsPage() {
             <p className="mt-1 text-sm text-muted-foreground">
               Full history of cascade outcomes, drift findings, and fleet activity.
             </p>
+            <MuteSummaryChip
+              kinds={prefs.muted_kinds.length}
+              severities={prefs.muted_severities.length}
+              toasts={prefs.mute_toasts}
+              push={prefs.mute_browser_push}
+            />
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -613,4 +622,36 @@ function filterSummary(s: {
   if (s.clone !== "all") parts.push("clone=specific");
   if (s.read !== "all") parts.push(`read=${s.read}`);
   return parts.length === 0 ? "(none)" : parts.join(" · ");
+}
+
+function MuteSummaryChip({
+  kinds,
+  severities,
+  toasts,
+  push,
+}: {
+  kinds: number;
+  severities: number;
+  toasts: boolean;
+  push: boolean;
+}) {
+  const total = kinds + severities + (toasts ? 1 : 0) + (push ? 1 : 0);
+  if (total === 0) return null;
+  const parts: string[] = [];
+  if (kinds > 0) parts.push(`${kinds} kind${kinds === 1 ? "" : "s"}`);
+  if (severities > 0)
+    parts.push(`${severities} severit${severities === 1 ? "y" : "ies"}`);
+  if (toasts) parts.push("toasts");
+  if (push) parts.push("push");
+  return (
+    <Link
+      to="/settings/notifications"
+      className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-warning/40 bg-warning/10 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-warning transition-colors hover:bg-warning/20"
+      title="Manage notification preferences"
+    >
+      <BellMinus className="h-3 w-3" />
+      muted: {parts.join(" · ")}
+      <SettingsIcon className="h-3 w-3 opacity-60" />
+    </Link>
+  );
 }

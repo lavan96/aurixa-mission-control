@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter, useNavigate } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/protected-route";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +11,25 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   ArrowLeft,
   ExternalLink,
@@ -25,6 +44,8 @@ import {
   SkipForward,
   GitPullRequest,
   ChevronDown,
+  RotateCcw,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "@/lib/format";
@@ -49,10 +70,13 @@ export const Route = createFileRoute("/cascades/$eventId")({
 function CascadeDetailPage() {
   const { eventId } = Route.useParams();
   const router = useRouter();
+  const navigate = useNavigate();
   const [event, setEvent] = useState<CascadeEvent | null>(null);
   const [results, setResults] = useState<ResultWithClone[]>([]);
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(false);
+  const [rolling, setRolling] = useState(false);
+  const [rollbackOpen, setRollbackOpen] = useState(false);
   const runCascadeFn = useServerFn(runCascade);
 
   const refresh = useCallback(async () => {
@@ -145,6 +169,114 @@ function CascadeDetailPage() {
     refresh();
   };
 
+  // Helper: create a brand-new cascade event scoped to a set of clones,
+  // queue cascade_results, and execute. Used by per-result retry-with-mode
+  // and the whole-event rollback action.
+  const spawnSubCascade = useCallback(
+    async (opts: {
+      mode: CascadeEvent["mode"];
+      cloneIds: string[];
+      summary?: string;
+      scopeMeta?: Record<string, unknown>;
+      navigateAfter?: boolean;
+    }) => {
+      if (opts.cloneIds.length === 0) {
+        toast.info("No clones to act on");
+        return null;
+      }
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: ev, error } = await supabase
+        .from("cascade_events")
+        .insert({
+          trigger: "manual",
+          mode: opts.mode,
+          status: "pending",
+          scope_filter: {
+            scope: "selected",
+            clone_ids: opts.cloneIds,
+            ...(opts.scopeMeta ?? {}),
+          },
+          summary: opts.summary,
+          initiated_by: user?.id,
+        })
+        .select()
+        .single();
+      if (error || !ev) {
+        toast.error(error?.message || "Failed to start cascade");
+        return null;
+      }
+      const { error: rerr } = await supabase.from("cascade_results").insert(
+        opts.cloneIds.map((id) => ({
+          cascade_event_id: ev.id,
+          clone_id: id,
+          status: "queued" as const,
+        })),
+      );
+      if (rerr) {
+        toast.error(rerr.message);
+        return null;
+      }
+      try {
+        const res = await runCascadeFn({ data: { cascadeEventId: ev.id } });
+        if (!res.ok) toast.error(res.error);
+        else
+          toast.success(
+            `Cascade ${res.status}: ${res.counts.succeeded} merged · ${res.counts.opened} PRs · ${res.counts.failed} failed`,
+          );
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Cascade failed");
+      }
+      if (opts.navigateAfter) {
+        void navigate({ to: "/cascades/$eventId", params: { eventId: ev.id } });
+      }
+      return ev.id;
+    },
+    [navigate, runCascadeFn],
+  );
+
+  const retryWithMode = useCallback(
+    async (cloneId: string, mode: CascadeEvent["mode"]) => {
+      await spawnSubCascade({
+        mode,
+        cloneIds: [cloneId],
+        summary: `Retry of cascade ${eventId.slice(0, 8)} for one clone in ${mode.replace("_", " ")} mode`,
+        scopeMeta: { retry_of: eventId },
+        navigateAfter: true,
+      });
+    },
+    [spawnSubCascade, eventId],
+  );
+
+  // Rollback: reverse-apply prime by re-running cascade against clones that
+  // were touched by this event. We default to PR mode so the rollback is
+  // reviewable before landing.
+  const rollbackEvent = useCallback(
+    async (mode: CascadeEvent["mode"]) => {
+      if (!event) return;
+      setRolling(true);
+      try {
+        const touched = results
+          .filter((r) => r.status === "succeeded" || r.status === "pr_opened")
+          .map((r) => r.clone_id);
+        if (touched.length === 0) {
+          toast.info("Nothing to roll back — no clones were updated.");
+          return;
+        }
+        await spawnSubCascade({
+          mode,
+          cloneIds: touched,
+          summary: `Rollback of cascade ${eventId.slice(0, 8)} (${touched.length} clones, ${mode.replace("_", " ")})`,
+          scopeMeta: { rollback_of: eventId, source_mode: event.mode },
+          navigateAfter: true,
+        });
+      } finally {
+        setRolling(false);
+        setRollbackOpen(false);
+      }
+    },
+    [event, results, spawnSubCascade, eventId],
+  );
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center text-muted-foreground">
@@ -178,6 +310,16 @@ function CascadeDetailPage() {
   };
   const failedCount = counts.failed;
   const inFlight = event.status === "running" || event.status === "pending";
+  const touchedCount = counts.succeeded + counts.pr_opened;
+  const canRollback =
+    !inFlight &&
+    touchedCount > 0 &&
+    (event.status === "completed" || event.status === "partial");
+
+  const scopeMeta = (event.scope_filter ?? {}) as {
+    rollback_of?: string;
+    retry_of?: string;
+  };
 
   return (
     <div className="space-y-6">
@@ -208,10 +350,28 @@ function CascadeDetailPage() {
               {event.completed_at && (
                 <span>· finished {formatDistanceToNow(event.completed_at)}</span>
               )}
+              {scopeMeta.rollback_of && (
+                <Link
+                  to="/cascades/$eventId"
+                  params={{ eventId: scopeMeta.rollback_of }}
+                  className="inline-flex items-center gap-1 rounded border border-warning/40 px-1.5 py-0.5 font-mono text-[10px] uppercase text-warning hover:bg-warning/10"
+                >
+                  <History className="h-3 w-3" /> rollback of {scopeMeta.rollback_of.slice(0, 8)}
+                </Link>
+              )}
+              {scopeMeta.retry_of && (
+                <Link
+                  to="/cascades/$eventId"
+                  params={{ eventId: scopeMeta.retry_of }}
+                  className="inline-flex items-center gap-1 rounded border border-info/40 px-1.5 py-0.5 font-mono text-[10px] uppercase text-info hover:bg-info/10"
+                >
+                  <RotateCcw className="h-3 w-3" /> retry of {scopeMeta.retry_of.slice(0, 8)}
+                </Link>
+              )}
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={() => router.invalidate()}>
             <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Refresh
           </Button>
@@ -221,8 +381,60 @@ function CascadeDetailPage() {
               Retry {failedCount} failed
             </Button>
           )}
+          {canRollback && (
+            <AlertDialog open={rollbackOpen} onOpenChange={setRollbackOpen}>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-warning/40 text-warning hover:bg-warning/10 hover:text-warning"
+                  disabled={rolling}
+                >
+                  <History className={cn("mr-1.5 h-3.5 w-3.5", rolling && "animate-spin")} />
+                  Roll back ({touchedCount})
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Roll back this cascade?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This creates a <strong>reverse cascade event</strong> against{" "}
+                    {touchedCount} clone{touchedCount === 1 ? "" : "s"} that were
+                    updated by this run. Pick a delivery mode — PR is recommended
+                    so the rollback diff is reviewable before landing.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="flex-col gap-2 sm:flex-row">
+                  <AlertDialogCancel disabled={rolling}>Cancel</AlertDialogCancel>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={rolling}
+                    onClick={() => void rollbackEvent("notify")}
+                  >
+                    <Bell className="mr-1.5 h-3.5 w-3.5" /> Notify only
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={rolling}
+                    onClick={() => void rollbackEvent("auto_merge")}
+                  >
+                    <Send className="mr-1.5 h-3.5 w-3.5" /> Auto-merge
+                  </Button>
+                  <AlertDialogAction
+                    disabled={rolling}
+                    onClick={() => void rollbackEvent("pr")}
+                  >
+                    <GitMerge className="mr-1.5 h-3.5 w-3.5" /> Open PRs
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
       </header>
+
 
       {event.summary && (
         <Card className="border-border/80">
@@ -254,7 +466,13 @@ function CascadeDetailPage() {
               No clones queued for this cascade.
             </div>
           ) : (
-            <GroupedResults results={results} eventInFlight={inFlight} onChange={refresh} />
+            <GroupedResults
+              results={results}
+              eventInFlight={inFlight}
+              eventMode={event.mode}
+              onChange={refresh}
+              onRetryWithMode={retryWithMode}
+            />
           )}
         </CardContent>
       </Card>
@@ -274,11 +492,15 @@ const GROUP_ORDER: { status: CascadeResult["status"]; label: string; tone: strin
 function GroupedResults({
   results,
   eventInFlight,
+  eventMode,
   onChange,
+  onRetryWithMode,
 }: {
   results: ResultWithClone[];
   eventInFlight: boolean;
+  eventMode: CascadeEvent["mode"];
   onChange: () => void;
+  onRetryWithMode: (cloneId: string, mode: CascadeEvent["mode"]) => Promise<void>;
 }) {
   const groups = useMemo(() => {
     const map = new Map<CascadeResult["status"], ResultWithClone[]>();
@@ -305,7 +527,9 @@ function GroupedResults({
             g.status === "failed" || g.status === "queued" || g.status === "pushing"
           }
           eventInFlight={eventInFlight}
+          eventMode={eventMode}
           onChange={onChange}
+          onRetryWithMode={onRetryWithMode}
         />
       ))}
     </div>
@@ -319,7 +543,9 @@ function ResultsGroup({
   items,
   defaultOpen,
   eventInFlight,
+  eventMode,
   onChange,
+  onRetryWithMode,
 }: {
   status: CascadeResult["status"];
   label: string;
@@ -327,7 +553,9 @@ function ResultsGroup({
   items: ResultWithClone[];
   defaultOpen: boolean;
   eventInFlight: boolean;
+  eventMode: CascadeEvent["mode"];
   onChange: () => void;
+  onRetryWithMode: (cloneId: string, mode: CascadeEvent["mode"]) => Promise<void>;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -358,7 +586,9 @@ function ResultsGroup({
             key={r.id}
             result={r}
             eventInFlight={eventInFlight}
+            eventMode={eventMode}
             onChange={onChange}
+            onRetryWithMode={onRetryWithMode}
           />
         ))}
       </CollapsibleContent>
@@ -369,15 +599,29 @@ function ResultsGroup({
 function ResultRow({
   result,
   eventInFlight,
+  eventMode,
   onChange,
+  onRetryWithMode,
 }: {
   result: ResultWithClone;
   eventInFlight: boolean;
+  eventMode: CascadeEvent["mode"];
   onChange: () => void;
+  onRetryWithMode: (cloneId: string, mode: CascadeEvent["mode"]) => Promise<void>;
 }) {
   const clone = result.clone;
   const [skipping, setSkipping] = useState(false);
+  const [retryBusy, setRetryBusy] = useState(false);
   const canSkip = result.status === "queued";
+  // Allow per-result retry once the row has settled (success/PR/failed/skipped)
+  // and we have a clone id to target. Disabled while parent event in flight.
+  const canRetry =
+    !!clone &&
+    !eventInFlight &&
+    (result.status === "failed" ||
+      result.status === "succeeded" ||
+      result.status === "pr_opened" ||
+      result.status === "skipped");
 
   const skip = async () => {
     if (!canSkip) return;
@@ -398,6 +642,16 @@ function ResultRow({
     toast.success(`Skipped ${clone?.name ?? "clone"}`);
     setSkipping(false);
     onChange();
+  };
+
+  const handleRetry = async (mode: CascadeEvent["mode"]) => {
+    if (!clone) return;
+    setRetryBusy(true);
+    try {
+      await onRetryWithMode(clone.id, mode);
+    } finally {
+      setRetryBusy(false);
+    }
   };
 
   return (
@@ -464,6 +718,65 @@ function ResultRow({
             <SkipForward className="mr-1 h-3 w-3" />
             {skipping ? "Skipping…" : "Skip"}
           </Button>
+        )}
+        {canRetry && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={retryBusy}
+                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                title="Re-run this clone with a different delivery mode"
+              >
+                <RotateCcw className={cn("mr-1 h-3 w-3", retryBusy && "animate-spin")} />
+                {retryBusy ? "Retrying…" : "Retry as"}
+                <ChevronDown className="ml-0.5 h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Re-run with mode
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={() => void handleRetry("pr")}
+                disabled={retryBusy}
+              >
+                <GitMerge className="mr-2 h-3.5 w-3.5" />
+                <span className="flex-1">Open PR</span>
+                {eventMode === "pr" && (
+                  <span className="font-mono text-[9px] uppercase text-muted-foreground">
+                    same
+                  </span>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => void handleRetry("auto_merge")}
+                disabled={retryBusy}
+              >
+                <Send className="mr-2 h-3.5 w-3.5" />
+                <span className="flex-1">Auto-merge</span>
+                {eventMode === "auto_merge" && (
+                  <span className="font-mono text-[9px] uppercase text-muted-foreground">
+                    same
+                  </span>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => void handleRetry("notify")}
+                disabled={retryBusy}
+              >
+                <Bell className="mr-2 h-3.5 w-3.5" />
+                <span className="flex-1">Notify only</span>
+                {eventMode === "notify" && (
+                  <span className="font-mono text-[9px] uppercase text-muted-foreground">
+                    same
+                  </span>
+                )}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
     </div>
