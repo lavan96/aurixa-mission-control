@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { ProtectedRoute } from "@/components/protected-route";
-import { useClones, usePrimeConfig } from "@/lib/queries";
+import { useClones, useFleetModules, usePrimeConfig } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -22,11 +22,13 @@ import {
   GitBranch,
   ExternalLink,
   Github,
+  Package,
   Plus,
   Search,
   Shield,
   Sparkles,
   Waves,
+  X,
   Zap,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -41,6 +43,7 @@ const dashboardSearchSchema = z.object({
     z.enum(["name", "commits_behind", "last_cascade_at", "ai_suggestions"]),
     "name",
   ).default("name"),
+  module: fallback(z.string(), "").default(""),
 });
 
 export const Route = createFileRoute("/dashboard")({
@@ -56,7 +59,8 @@ export const Route = createFileRoute("/dashboard")({
 function Dashboard() {
   const { data: clones, loading } = useClones();
   const { data: prime } = usePrimeConfig();
-  const { q, filter, sort } = Route.useSearch();
+  const { byClone: modulesByClone } = useFleetModules();
+  const { q, filter, sort, module: moduleFilter } = Route.useSearch();
   const navigate = useNavigate({ from: "/dashboard" });
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -67,6 +71,17 @@ function Dashboard() {
     navigate({ search: (prev: DashboardSearch) => ({ ...prev, filter: value }), replace: true });
   const setSort = (value: typeof sort) =>
     navigate({ search: (prev: DashboardSearch) => ({ ...prev, sort: value }), replace: true });
+  const setModuleFilter = (value: string) =>
+    navigate({ search: (prev: DashboardSearch) => ({ ...prev, module: value }), replace: true });
+
+  const moduleFilterName = useMemo(() => {
+    if (!moduleFilter) return null;
+    for (const list of Object.values(modulesByClone)) {
+      const hit = list.find((m) => m.module_id === moduleFilter);
+      if (hit) return hit.module_name;
+    }
+    return null;
+  }, [moduleFilter, modulesByClone]);
 
 
   const openSuggestionsCount = (c: (typeof clones)[number]) => {
