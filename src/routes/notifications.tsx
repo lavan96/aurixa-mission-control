@@ -170,6 +170,7 @@ function NotificationsPage() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/notifications" });
   const push = useBrowserPushSettings();
+  const { prefs } = useNotificationPreferences();
 
   const [items, setItems] = useState<Notification[]>([]);
   const [total, setTotal] = useState(0);
