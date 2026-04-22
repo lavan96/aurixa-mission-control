@@ -33,6 +33,7 @@ interface Props {
   onApplyFilters?: () => void;
   onClearFilters?: () => void;
   multiSelectCount?: number;
+  onClearSelection?: () => void;
 }
 
 const STATUS_OPTIONS: {
