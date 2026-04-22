@@ -384,6 +384,7 @@ function YggdrasilPage() {
         onApplyFilters={handleApplyFilters}
         onClearFilters={handleClearFilters}
         multiSelectCount={stagedCompare.length}
+        onClearSelection={() => setStagedCompare([])}
       />
 
       {loading ? (
