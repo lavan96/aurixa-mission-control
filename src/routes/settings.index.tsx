@@ -86,6 +86,7 @@ function SettingsGeneralPage() {
         if (error) throw error;
       }
       toast.success("Prime config saved");
+      setHydrated(false);          // allow re-hydration from refreshed data
       await refresh();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to save prime config";
