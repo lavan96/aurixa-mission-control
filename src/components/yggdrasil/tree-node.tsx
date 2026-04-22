@@ -62,7 +62,7 @@ export function TreeNodeCircle({ node, index, highlighted, onSelect }: Props) {
         opacity={0}
         filter={isTrunk ? "url(#trunk-glow)" : "url(#node-glow)"}
         initial={{ opacity: 0, scale: 0 }}
-        animate={{ opacity: hovered ? 0.5 : 0.25, scale: 1 }}
+        animate={{ opacity: isActive ? 0.5 : 0.25, scale: 1 }}
         transition={{ delay, duration: 0.8 }}
       />
 
