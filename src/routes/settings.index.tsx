@@ -50,6 +50,7 @@ function SettingsGeneralPage() {
 
   const save = async () => {
     if (!owner.trim() || !repo.trim()) return toast.error("Owner and repo required");
+    if (repo.trim().includes("://") || repo.trim().includes(".")) return toast.error("Repo should be the repository name only (e.g. 'my-repo'), not a URL");
     if (!branch.trim()) return toast.error("Default branch required");
     setSaving(true);
     const payload = {
