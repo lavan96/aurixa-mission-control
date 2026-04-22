@@ -67,6 +67,16 @@ export function GitHubSetupWizard() {
     try {
       const res = await statusFn();
       setGhStatus(res);
+
+      // Audit log
+      const { data: { user } } = await supabase.auth.getUser();
+      await supabase.from("audit_log").insert({
+        action: "github.wizard_connection_tested",
+        entity_type: "settings",
+        actor_user_id: user?.id,
+        metadata: { configured: res.configured, ok: res.ok, app: res.app?.name },
+      });
+
       if (res.ok && res.configured) {
         setStep("verify");
       }
