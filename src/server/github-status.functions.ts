@@ -42,6 +42,8 @@ export const getGitHubStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<GitHubStatus> => {
     const { supabase } = context;
+    // Clear cache so re-checks pick up rotated secrets / converted keys
+    clearAppOctokitCache();
     let octokit;
     try {
       octokit = getAppOctokit();
