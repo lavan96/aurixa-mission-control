@@ -65,7 +65,7 @@ function SettingsGeneralPage() {
     setSaving(true);
     const payload = {
       github_owner: owner.trim(),
-      github_repo: repo.trim(),
+      github_repo: cleanRepo,
       default_branch: branch.trim(),
       default_clone_org: defaultOrg.trim() || null,
       default_cascade_mode: cascadeMode,
