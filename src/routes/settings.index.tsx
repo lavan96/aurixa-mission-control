@@ -50,6 +50,7 @@ function SettingsGeneralPage() {
 
   const save = async () => {
     if (!owner.trim() || !repo.trim()) return toast.error("Owner and repo required");
+    if (repo.trim().includes("://") || repo.trim().includes(".")) return toast.error("Repo should be the repository name only (e.g. 'my-repo'), not a URL");
     if (!branch.trim()) return toast.error("Default branch required");
     setSaving(true);
     const payload = {
@@ -83,8 +84,14 @@ function SettingsGeneralPage() {
         if (error) throw error;
       }
       toast.success("Prime config saved");
-      setHydrated(false);          // allow re-hydration from refreshed data
+      // Refresh the backing data WITHOUT resetting hydrated — the form
+      // already holds the correct values (they came from the inputs the
+      // user just submitted). Setting hydrated=false before refresh()
+      // caused a race: the useEffect would re-hydrate from STALE prime
+      // data before refresh completed, locking in old values forever.
       await refresh();
+      // Mark as hydrated so the next refresh doesn't clobber user edits
+      setHydrated(true);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to save prime config";
       // Surface the real DB error (RLS, NOT NULL, etc.) instead of swallowing.
