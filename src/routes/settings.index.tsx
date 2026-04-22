@@ -50,7 +50,17 @@ function SettingsGeneralPage() {
 
   const save = async () => {
     if (!owner.trim() || !repo.trim()) return toast.error("Owner and repo required");
-    if (repo.trim().includes("://") || repo.trim().includes(".")) return toast.error("Repo should be the repository name only (e.g. 'my-repo'), not a URL");
+    // Auto-sanitize: strip URLs down to just the repo name
+    let cleanRepo = repo.trim();
+    try {
+      const parsed = new URL(cleanRepo);
+      cleanRepo = parsed.pathname.replace(/^\//, "").replace(/\/$/, "").split("/").pop() || cleanRepo;
+      setRepo(cleanRepo);
+      toast.info(`Extracted repo name: ${cleanRepo}`);
+    } catch {
+      // Not a URL — good
+    }
+    if (cleanRepo.includes("://") || cleanRepo.includes(".")) return toast.error("Repo should be the repository name only (e.g. 'my-repo'), not a URL");
     if (!branch.trim()) return toast.error("Default branch required");
     setSaving(true);
     const payload = {
