@@ -1,77 +1,190 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle, Copy, ArrowRight, Key, Terminal } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { CheckCircle2, XCircle, Copy, Key, Terminal, ShieldCheck, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import forge from "node-forge";
 
-type KeyStatus = "idle" | "pkcs1" | "pkcs8" | "invalid";
+type KeyFormat = "idle" | "pkcs1" | "pkcs8" | "other-pem" | "invalid";
+
+interface VerifyResult {
+  ok: boolean;
+  algorithm: string;
+  bitLength: number;
+  message: string;
+}
+
+function detectFormat(pem: string): KeyFormat {
+  const t = pem.trim();
+  if (!t) return "idle";
+  if (t.includes("-----BEGIN RSA PRIVATE KEY-----")) return "pkcs1";
+  if (t.includes("-----BEGIN PRIVATE KEY-----")) return "pkcs8";
+  if (t.includes("-----BEGIN")) return "other-pem";
+  return "invalid";
+}
+
+/** Convert PKCS#1 PEM → PKCS#8 PEM using node-forge */
+function convertToPkcs8(pkcs1Pem: string): string {
+  const privateKey = forge.pki.privateKeyFromPem(pkcs1Pem);
+  const asn1 = forge.pki.privateKeyToAsn1(privateKey);
+  const wrapped = forge.pki.wrapRsaPrivateKey(asn1);
+  return forge.pki.privateKeyInfoToPem(wrapped);
+}
+
+/** Deep-verify: parse the key, check it's RSA, check bit length is GitHub-compatible */
+function deepVerify(pem: string): VerifyResult {
+  const trimmed = pem.trim();
+
+  // Must be PKCS#8
+  if (!trimmed.includes("-----BEGIN PRIVATE KEY-----")) {
+    return {
+      ok: false,
+      algorithm: "unknown",
+      bitLength: 0,
+      message:
+        "Key is not in PKCS#8 format. Expected header: -----BEGIN PRIVATE KEY-----",
+    };
+  }
+
+  // Try to extract the RSA private key from PKCS#8 wrapper
+  let privateKey: forge.pki.rsa.PrivateKey;
+  try {
+    const der = forge.pki.pemToDer(trimmed);
+    const asn1 = forge.asn1.fromDer(der);
+    privateKey = forge.pki.privateKeyFromAsn1(asn1) as forge.pki.rsa.PrivateKey;
+  } catch {
+    return {
+      ok: false,
+      algorithm: "unknown",
+      bitLength: 0,
+      message:
+        "Failed to parse key as a valid RSA private key. Ensure this is an unencrypted RSA key from your GitHub App.",
+    };
+  }
+
+  // Check it's RSA by verifying expected properties
+  if (!privateKey.n || !privateKey.e || !privateKey.d) {
+    return {
+      ok: false,
+      algorithm: "unknown",
+      bitLength: 0,
+      message:
+        "Key parsed but does not contain RSA components (n, e, d). GitHub Apps require an RSA key.",
+    };
+  }
+
+  const bitLength = privateKey.n.bitLength();
+
+  // GitHub requires RSA 2048+
+  if (bitLength < 2048) {
+    return {
+      ok: false,
+      algorithm: "RSA",
+      bitLength,
+      message: `RSA key is only ${bitLength}-bit. GitHub Apps require at least 2048-bit RSA keys.`,
+    };
+  }
+
+  // Quick sanity: sign + verify a test payload
+  try {
+    const md = forge.md.sha256.create();
+    md.update("github-app-key-test", "utf8");
+    const signature = privateKey.sign(md);
+    const publicKey = forge.pki.setRsaPublicKey(privateKey.n, privateKey.e);
+    const verifyMd = forge.md.sha256.create();
+    verifyMd.update("github-app-key-test", "utf8");
+    const valid = publicKey.verify(verifyMd.digest().bytes(), signature);
+    if (!valid) {
+      return {
+        ok: false,
+        algorithm: "RSA",
+        bitLength,
+        message:
+          "Key sign/verify self-test failed. The key may be corrupted or truncated.",
+      };
+    }
+  } catch {
+    return {
+      ok: false,
+      algorithm: "RSA",
+      bitLength,
+      message:
+        "Key sign/verify self-test threw an error. The key may be corrupted.",
+    };
+  }
+
+  return {
+    ok: true,
+    algorithm: "RSA",
+    bitLength,
+    message: `Valid RSA-${bitLength} private key in PKCS#8 format. Sign/verify self-test passed. Ready for GitHub App use.`,
+  };
+}
 
 export function PemKeyHelper() {
   const [input, setInput] = useState("");
   const [converted, setConverted] = useState("");
-  const [status, setStatus] = useState<KeyStatus>("idle");
+  const [format, setFormat] = useState<KeyFormat>("idle");
+  const [autoConvert, setAutoConvert] = useState(true);
+  const [verifyResult, setVerifyResult] = useState<VerifyResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
-  const detect = (pem: string): KeyStatus => {
-    const trimmed = pem.trim();
-    if (trimmed.includes("-----BEGIN RSA PRIVATE KEY-----")) return "pkcs1";
-    if (trimmed.includes("-----BEGIN PRIVATE KEY-----")) return "pkcs8";
-    if (trimmed.includes("-----BEGIN")) return "invalid";
-    return "idle";
-  };
+  const tryAutoConvert = useCallback(
+    (pem: string): { fmt: KeyFormat; conv: string } => {
+      const fmt = detectFormat(pem);
+      if (fmt === "pkcs1" && autoConvert) {
+        try {
+          const pkcs8 = convertToPkcs8(pem);
+          return { fmt: "pkcs8", conv: pkcs8 };
+        } catch {
+          return { fmt: "invalid", conv: "" };
+        }
+      }
+      return { fmt, conv: "" };
+    },
+    [autoConvert],
+  );
 
   const handleInput = (val: string) => {
     setInput(val);
-    setConverted("");
+    setVerifyResult(null);
     setError(null);
     setCopied(false);
-    setStatus(detect(val));
+
+    const { fmt, conv } = tryAutoConvert(val);
+    setFormat(fmt);
+    setConverted(conv);
   };
 
-  const convert = () => {
+  const manualConvert = () => {
     setError(null);
     try {
-      const privateKey = forge.pki.privateKeyFromPem(input.trim());
-      const pkcs8Pem = forge.pki.privateKeyToPem(privateKey);
-
-      // node-forge's privateKeyToPem outputs RSA PRIVATE KEY (PKCS#1).
-      // We need to convert to PKCS#8 using privateKeyInfoToPem.
-      const asn1 = forge.pki.privateKeyToAsn1(privateKey);
-      const privateKeyInfo = forge.pki.wrapRsaPrivateKey(asn1);
-      const pkcs8 = forge.pki.privateKeyInfoToPem(privateKeyInfo);
-
+      const pkcs8 = convertToPkcs8(input.trim());
       setConverted(pkcs8);
-      setStatus("pkcs8");
+      setFormat("pkcs8");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to parse key");
-      setStatus("invalid");
+      setError(e instanceof Error ? e.message : "Conversion failed");
+      setFormat("invalid");
     }
   };
 
-  const verify = () => {
+  const runVerify = () => {
+    setVerifying(true);
     setError(null);
-    try {
-      const trimmed = (converted || input).trim();
-      if (!trimmed.includes("-----BEGIN PRIVATE KEY-----")) {
-        setError("Key is not in PKCS#8 format. It must start with -----BEGIN PRIVATE KEY-----");
-        return;
-      }
-      // Try to parse it back
-      const info = forge.pki.pemToDer(trimmed);
-      if (info.length() < 100) {
-        setError("Key appears too short to be valid.");
-        return;
-      }
-      setStatus("pkcs8");
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Key verification failed");
-      setStatus("invalid");
-    }
+    // Small timeout so the spinner renders
+    setTimeout(() => {
+      const pem = converted || input;
+      const result = deepVerify(pem);
+      setVerifyResult(result);
+      if (!result.ok) setFormat("invalid");
+      setVerifying(false);
+    }, 100);
   };
 
   const copyToClipboard = async () => {
@@ -81,12 +194,15 @@ export function PemKeyHelper() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const effectiveKey = converted || input;
+  const canVerify = effectiveKey.trim().includes("-----BEGIN PRIVATE KEY-----");
+
   return (
     <Card className="border-border/60 bg-card/80 backdrop-blur">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-mono tracking-wide">
           <Key className="h-4 w-4 text-primary" />
-          PRIVATE KEY CONVERTER &amp; VALIDATOR
+          {"PRIVATE KEY CONVERTER & VALIDATOR"}
         </CardTitle>
         <CardDescription className="text-xs">
           GitHub App keys are often downloaded in <strong>PKCS#1</strong> format
@@ -110,9 +226,20 @@ export function PemKeyHelper() {
   -out converted-key.pem`}
           </pre>
           <p className="text-[11px] text-muted-foreground">
-            Then paste the contents of <code className="rounded bg-muted px-0.5">converted-key.pem</code> into
-            the secret field — or use the converter below.
+            Or use the in-browser converter below.
           </p>
+        </div>
+
+        {/* Auto-convert toggle */}
+        <div className="flex items-center gap-3">
+          <Switch
+            id="auto-convert"
+            checked={autoConvert}
+            onCheckedChange={setAutoConvert}
+          />
+          <Label htmlFor="auto-convert" className="text-xs cursor-pointer">
+            Auto-convert PKCS#1 to PKCS#8 on paste
+          </Label>
         </div>
 
         {/* Input */}
@@ -123,24 +250,26 @@ export function PemKeyHelper() {
           <Textarea
             rows={6}
             className="font-mono text-[11px] leading-relaxed"
-            placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;MIIEpAIBAAKCAQEA...&#10;-----END RSA PRIVATE KEY-----"
+            placeholder={"-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA...\n-----END RSA PRIVATE KEY-----"}
             value={input}
             onChange={(e) => handleInput(e.target.value)}
           />
-          {status !== "idle" && (
+          {format !== "idle" && (
             <div className="flex items-center gap-2">
               <Badge
                 variant="outline"
                 className={cn(
                   "text-[10px] uppercase",
-                  status === "pkcs1" && "border-warning/40 text-warning",
-                  status === "pkcs8" && "border-success/40 text-success",
-                  status === "invalid" && "border-destructive/40 text-destructive",
+                  format === "pkcs1" && "border-warning/40 text-warning",
+                  format === "pkcs8" && "border-success/40 text-success",
+                  format === "other-pem" && "border-warning/40 text-warning",
+                  format === "invalid" && "border-destructive/40 text-destructive",
                 )}
               >
-                {status === "pkcs1" && "PKCS#1 detected — needs conversion"}
-                {status === "pkcs8" && "PKCS#8 format ✓"}
-                {status === "invalid" && "Unrecognised format"}
+                {format === "pkcs1" && "PKCS#1 detected — click Convert below"}
+                {format === "pkcs8" && (converted ? "Auto-converted to PKCS#8 ✓" : "PKCS#8 format ✓")}
+                {format === "other-pem" && "Unrecognised PEM type — expected RSA private key"}
+                {format === "invalid" && "Invalid or unrecognised key"}
               </Badge>
             </div>
           )}
@@ -148,20 +277,23 @@ export function PemKeyHelper() {
 
         {/* Actions */}
         <div className="flex flex-wrap gap-2">
-          {status === "pkcs1" && (
-            <Button size="sm" onClick={convert}>
-              <ArrowRight className="mr-1.5 h-3.5 w-3.5" />
+          {format === "pkcs1" && !autoConvert && (
+            <Button size="sm" onClick={manualConvert}>
               Convert to PKCS#8
             </Button>
           )}
           <Button
             size="sm"
             variant="outline"
-            onClick={verify}
-            disabled={!input.trim() && !converted.trim()}
+            onClick={runVerify}
+            disabled={!canVerify || verifying}
           >
-            <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
-            Verify key
+            {verifying ? (
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />
+            )}
+            Verify as GitHub App key
           </Button>
         </div>
 
@@ -192,11 +324,29 @@ export function PemKeyHelper() {
           </div>
         )}
 
-        {/* Verification success */}
-        {status === "pkcs8" && !error && (converted || input.includes("BEGIN PRIVATE KEY")) && (
-          <div className="flex items-start gap-2 rounded-md border border-success/40 bg-success/5 p-3 text-xs text-success">
-            <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            Key is in the correct PKCS#8 format and ready to be saved as a secret.
+        {/* Verify result */}
+        {verifyResult && (
+          <div
+            className={cn(
+              "flex items-start gap-2 rounded-md border p-3 text-xs",
+              verifyResult.ok
+                ? "border-success/40 bg-success/5 text-success"
+                : "border-destructive/40 bg-destructive/5 text-destructive",
+            )}
+          >
+            {verifyResult.ok ? (
+              <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            ) : (
+              <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            )}
+            <div className="space-y-0.5">
+              <div>{verifyResult.message}</div>
+              {verifyResult.ok && (
+                <div className="text-[10px] text-muted-foreground">
+                  Algorithm: {verifyResult.algorithm} · Key size: {verifyResult.bitLength}-bit
+                </div>
+              )}
+            </div>
           </div>
         )}
       </CardContent>
