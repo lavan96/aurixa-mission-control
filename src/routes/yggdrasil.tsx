@@ -148,7 +148,7 @@ function YggdrasilPage() {
   // Helper to update search params
   const updateSearch = useCallback(
     (updates: Partial<z.infer<typeof yggdrasilSearchSchema>>) => {
-      navigate({ search: (prev) => ({ ...prev, ...updates }), replace: true });
+      navigate({ search: (prev: z.infer<typeof yggdrasilSearchSchema>) => ({ ...prev, ...updates }), replace: true });
     },
     [navigate],
   );
