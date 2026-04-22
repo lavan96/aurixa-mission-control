@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { getAppOctokit } from "./github-app.server";
+import { getAppOctokit, clearAppOctokitCache } from "./github-app.server";
 
 // Diagnostics for the Aurixa GitHub App installation. Used by the
 // "GitHub App connection" card on /settings to surface whether the
