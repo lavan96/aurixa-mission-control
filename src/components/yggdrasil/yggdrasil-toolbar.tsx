@@ -32,6 +32,7 @@ interface Props {
   hasUncommittedChanges?: boolean;
   onApplyFilters?: () => void;
   onClearFilters?: () => void;
+  multiSelectCount?: number;
 }
 
 const STATUS_OPTIONS: {
