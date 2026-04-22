@@ -10,6 +10,7 @@ import type { TreeNode } from "./use-tree-layout";
 interface Props {
   node: TreeNode;
   index: number;
+  highlighted?: boolean;
   onSelect?: (node: TreeNode) => void;
 }
 
