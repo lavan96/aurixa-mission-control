@@ -17,11 +17,7 @@ import type { Database } from "@/integrations/supabase/types";
 type CascadeMode = Database["public"]["Enums"]["cascade_mode"];
 
 export const Route = createFileRoute("/settings/")({
-  component: () => (
-    <ProtectedRoute>
-      <SettingsGeneralPage />
-    </ProtectedRoute>
-  ),
+  component: SettingsGeneralPage,
   head: () => ({ meta: [{ title: "Settings — Aurixa Systems Mission Control" }] }),
 });
 
