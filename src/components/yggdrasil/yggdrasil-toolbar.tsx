@@ -93,6 +93,7 @@ export function YggdrasilToolbar({
   hasUncommittedChanges,
   onApplyFilters,
   onClearFilters,
+  multiSelectCount,
 }: Props) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [legendHovered, setLegendHovered] = useState<StatusFilter | null>(null);
