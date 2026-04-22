@@ -25,6 +25,7 @@ import { Route as AuditLogRouteImport } from './routes/audit-log'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as SettingsNotificationsRouteImport } from './routes/settings.notifications'
+import { Route as ModulesBuilderRouteImport } from './routes/modules.builder'
 import { Route as ModulesSlugRouteImport } from './routes/modules.$slug'
 import { Route as HooksWarmHealthRouteImport } from './routes/hooks.warm-health'
 import { Route as HooksRunSchedulesRouteImport } from './routes/hooks.run-schedules'
@@ -115,6 +116,11 @@ const SettingsNotificationsRoute = SettingsNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => SettingsRoute,
 } as any)
+const ModulesBuilderRoute = ModulesBuilderRouteImport.update({
+  id: '/builder',
+  path: '/builder',
+  getParentRoute: () => ModulesRoute,
+} as any)
 const ModulesSlugRoute = ModulesSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
@@ -185,6 +191,7 @@ export interface FileRoutesByFullPath {
   '/hooks/run-schedules': typeof HooksRunSchedulesRoute
   '/hooks/warm-health': typeof HooksWarmHealthRoute
   '/modules/$slug': typeof ModulesSlugRoute
+  '/modules/builder': typeof ModulesBuilderRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/': typeof SettingsIndexRoute
 }
@@ -211,6 +218,7 @@ export interface FileRoutesByTo {
   '/hooks/run-schedules': typeof HooksRunSchedulesRoute
   '/hooks/warm-health': typeof HooksWarmHealthRoute
   '/modules/$slug': typeof ModulesSlugRoute
+  '/modules/builder': typeof ModulesBuilderRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings': typeof SettingsIndexRoute
 }
@@ -239,6 +247,7 @@ export interface FileRoutesById {
   '/hooks/run-schedules': typeof HooksRunSchedulesRoute
   '/hooks/warm-health': typeof HooksWarmHealthRoute
   '/modules/$slug': typeof ModulesSlugRoute
+  '/modules/builder': typeof ModulesBuilderRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/': typeof SettingsIndexRoute
 }
@@ -268,6 +277,7 @@ export interface FileRouteTypes {
     | '/hooks/run-schedules'
     | '/hooks/warm-health'
     | '/modules/$slug'
+    | '/modules/builder'
     | '/settings/notifications'
     | '/settings/'
   fileRoutesByTo: FileRoutesByTo
@@ -294,6 +304,7 @@ export interface FileRouteTypes {
     | '/hooks/run-schedules'
     | '/hooks/warm-health'
     | '/modules/$slug'
+    | '/modules/builder'
     | '/settings/notifications'
     | '/settings'
   id:
@@ -321,6 +332,7 @@ export interface FileRouteTypes {
     | '/hooks/run-schedules'
     | '/hooks/warm-health'
     | '/modules/$slug'
+    | '/modules/builder'
     | '/settings/notifications'
     | '/settings/'
   fileRoutesById: FileRoutesById
@@ -463,6 +475,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsNotificationsRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/modules/builder': {
+      id: '/modules/builder'
+      path: '/builder'
+      fullPath: '/modules/builder'
+      preLoaderRoute: typeof ModulesBuilderRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/$slug': {
       id: '/modules/$slug'
       path: '/$slug'
@@ -543,10 +562,12 @@ const CascadesRouteWithChildren = CascadesRoute._addFileChildren(
 
 interface ModulesRouteChildren {
   ModulesSlugRoute: typeof ModulesSlugRoute
+  ModulesBuilderRoute: typeof ModulesBuilderRoute
 }
 
 const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesSlugRoute: ModulesSlugRoute,
+  ModulesBuilderRoute: ModulesBuilderRoute,
 }
 
 const ModulesRouteWithChildren =

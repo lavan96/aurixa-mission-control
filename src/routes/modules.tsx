@@ -69,10 +69,18 @@ function ModulesPage() {
             AI-detected slices of the prime codebase. Approve or edit before injecting into clones.
           </p>
         </div>
-        <Button onClick={runDetection} disabled={scanning}>
-          <Sparkles className="mr-2 h-4 w-4" />
-          {scanning ? "Scanning prime…" : "Run AI detection"}
-        </Button>
+        <div className="flex gap-2">
+          <Link to="/modules/builder">
+            <Button variant="outline">
+              <Boxes className="mr-2 h-4 w-4" />
+              Module Builder
+            </Button>
+          </Link>
+          <Button onClick={runDetection} disabled={scanning}>
+            <Sparkles className="mr-2 h-4 w-4" />
+            {scanning ? "Scanning prime…" : "Run AI detection"}
+          </Button>
+        </div>
       </header>
 
       {loading ? (
