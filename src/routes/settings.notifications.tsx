@@ -32,11 +32,7 @@ import {
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/settings/notifications")({
-  component: () => (
-    <ProtectedRoute>
-      <SettingsNotificationsPage />
-    </ProtectedRoute>
-  ),
+  component: SettingsNotificationsPage,
   head: () => ({
     meta: [{ title: "Notification Preferences — Aurixa Systems Mission Control" }],
   }),
