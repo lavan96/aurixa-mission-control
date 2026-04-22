@@ -1,9 +1,11 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
@@ -29,6 +31,9 @@ import {
   Filter,
   Search,
   AlertTriangle,
+  Save,
+  Trash2,
+  CheckSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useClones, type Clone } from "@/lib/queries";
@@ -52,6 +57,7 @@ type TimeFilter = "all" | "24h" | "7d" | "30d";
 type ErrorTypeFilter = "all" | "auth" | "conflict" | "timeout" | "network" | "other";
 
 const STORAGE_KEY = "aurixa:bulk-cascade-filters";
+const PRESETS_KEY = "aurixa:bulk-cascade-presets";
 
 function classifyError(err?: string): ErrorTypeFilter {
   if (!err) return "other";
@@ -83,6 +89,13 @@ type SavedFilters = {
   errorTypeFilter: ErrorTypeFilter;
 };
 
+type FilterPreset = SavedFilters & {
+  id: string;
+  label: string;
+  dryRun: boolean;
+  selectAll: boolean;
+};
+
 function loadSavedFilters(): SavedFilters | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -101,6 +114,24 @@ function saveFilters(f: SavedFilters) {
   }
 }
 
+function loadPresets(): FilterPreset[] {
+  try {
+    const raw = localStorage.getItem(PRESETS_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as FilterPreset[];
+  } catch {
+    return [];
+  }
+}
+
+function persistPresets(presets: FilterPreset[]) {
+  try {
+    localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
+  } catch {
+    // ignore
+  }
+}
+
 export function BulkCascadeCard() {
   const { data: clones } = useClones();
   const runCascadeFn = useServerFn(runCascade);
@@ -110,10 +141,17 @@ export function BulkCascadeCard() {
   const [expanded, setExpanded] = useState(false);
   const [dryRun, setDryRun] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [selectAllFiltered, setSelectAllFiltered] = useState(true);
 
   // Rollback confirmation
   const [rollbackTarget, setRollbackTarget] = useState<{ clone_id: string; name: string; previous_sha: string } | null>(null);
   const [rollbackConfirmText, setRollbackConfirmText] = useState("");
+  const [rollbackReason, setRollbackReason] = useState("");
+
+  // Presets
+  const [presets, setPresets] = useState<FilterPreset[]>(() => loadPresets());
+  const [newPresetName, setNewPresetName] = useState("");
+  const [showPresetSave, setShowPresetSave] = useState(false);
 
   // Filters — initialise from localStorage
   const saved = useMemo(() => loadSavedFilters(), []);
@@ -156,11 +194,14 @@ export function BulkCascadeCard() {
     return result;
   }, [clones, nameFilter, statusFilter, timeFilter]);
 
+  // The actual target set respects the "select all filtered" checkbox
+  const targetClones = selectAllFiltered ? filteredClones : [];
+
   // Filter progress rows by error type (for retry targeting)
   const filteredProgress = useMemo(() => {
     if (errorTypeFilter === "all") return progress;
     return progress.filter((p) => {
-      if (p.status !== "failed") return true; // show non-failed rows always
+      if (p.status !== "failed") return true;
       return classifyError(p.error) === errorTypeFilter;
     });
   }, [progress, errorTypeFilter]);
@@ -174,7 +215,7 @@ export function BulkCascadeCard() {
   const failed = progress.filter((p) => p.status === "failed").length;
   const failedClones = progress.filter((p) => p.status === "failed");
 
-  // Error type breakdown for the filter dropdown
+  // Error type breakdown
   const errorBreakdown = useMemo(() => {
     const counts: Record<ErrorTypeFilter, number> = { all: 0, auth: 0, conflict: 0, timeout: 0, network: 0, other: 0 };
     for (const p of failedClones) {
@@ -227,9 +268,9 @@ export function BulkCascadeCard() {
     };
   }, [eventId]);
 
-  const fireBulk = async (targetClones?: Clone[]) => {
-    const targets = targetClones ?? filteredClones;
-    if (targets.length === 0) return toast.error("No clones match your filters");
+  const fireBulk = async () => {
+    const targets = targetClones;
+    if (targets.length === 0) return toast.error("No clones selected — check your filters or enable 'Select all filtered'");
     setRunning(true);
     setExpanded(true);
 
@@ -335,7 +376,6 @@ export function BulkCascadeCard() {
 
   const retryFailed = async () => {
     if (!eventId || failedClones.length === 0) return;
-    // If error-type filter is active, only retry matching failures
     const toRetry =
       errorTypeFilter === "all"
         ? failedClones
@@ -387,6 +427,10 @@ export function BulkCascadeCard() {
 
   const executeRollback = async () => {
     if (!rollbackTarget) return;
+    if (!rollbackReason.trim()) {
+      toast.error("Please enter a rollback reason");
+      return;
+    }
     const { clone_id: cloneId, previous_sha: previousSha } = rollbackTarget;
     toast.info("Rolling back clone…");
     const {
@@ -397,7 +441,11 @@ export function BulkCascadeCard() {
       entity_type: "clone",
       entity_id: cloneId,
       actor_user_id: user?.id,
-      metadata: { previous_sha: previousSha, cascade_event_id: eventId },
+      metadata: {
+        previous_sha: previousSha,
+        cascade_event_id: eventId,
+        reason: rollbackReason.trim(),
+      },
     });
     await supabase
       .from("clones")
@@ -410,7 +458,50 @@ export function BulkCascadeCard() {
     );
     setRollbackTarget(null);
     setRollbackConfirmText("");
+    setRollbackReason("");
     toast.success("Clone rolled back to previous version");
+  };
+
+  // Preset management
+  const saveCurrentPreset = () => {
+    const name = newPresetName.trim();
+    if (!name) return toast.error("Enter a preset name");
+    if (presets.some((p) => p.label === name)) return toast.error("Preset name already exists");
+    const preset: FilterPreset = {
+      id: crypto.randomUUID(),
+      label: name,
+      nameFilter,
+      statusFilter,
+      timeFilter,
+      errorTypeFilter,
+      dryRun,
+      selectAll: selectAllFiltered,
+    };
+    const updated = [...presets, preset];
+    setPresets(updated);
+    persistPresets(updated);
+    setNewPresetName("");
+    setShowPresetSave(false);
+    toast.success(`Preset "${name}" saved`);
+  };
+
+  const applyPreset = (id: string) => {
+    const preset = presets.find((p) => p.id === id);
+    if (!preset) return;
+    setNameFilter(preset.nameFilter);
+    setStatusFilter(preset.statusFilter);
+    setTimeFilter(preset.timeFilter);
+    setErrorTypeFilter(preset.errorTypeFilter);
+    setDryRun(preset.dryRun);
+    setSelectAllFiltered(preset.selectAll);
+    toast.info(`Preset "${preset.label}" applied`);
+  };
+
+  const deletePreset = (id: string) => {
+    const updated = presets.filter((p) => p.id !== id);
+    setPresets(updated);
+    persistPresets(updated);
+    toast.success("Preset deleted");
   };
 
   const hasActiveFilters = nameFilter || statusFilter !== "all" || timeFilter !== "all";
@@ -453,13 +544,12 @@ export function BulkCascadeCard() {
                 {dryRun ? "Dry-run ON" : "Dry-run"}
               </Button>
               <div className="flex items-center gap-2">
-                {/* Live selection summary */}
                 <span className="hidden sm:inline font-mono text-[11px] text-muted-foreground whitespace-nowrap">
-                  {filteredClones.length === clones.length
-                    ? `${filteredClones.length} clones`
-                    : `${filteredClones.length} of ${clones.length} selected`}
+                  {targetClones.length === clones.length
+                    ? `${targetClones.length} clones`
+                    : `${targetClones.length} of ${clones.length} selected`}
                 </span>
-                <Button onClick={() => fireBulk()} disabled={running || filteredClones.length === 0} size="sm">
+                <Button onClick={fireBulk} disabled={running || targetClones.length === 0} size="sm">
                   {running ? (
                     <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
                   ) : (
@@ -468,8 +558,8 @@ export function BulkCascadeCard() {
                   {running
                     ? "Running…"
                     : dryRun
-                      ? `Preview (${filteredClones.length})`
-                      : `Cascade (${filteredClones.length})`}
+                      ? `Preview (${targetClones.length})`
+                      : `Cascade (${targetClones.length})`}
                 </Button>
               </div>
             </div>
@@ -479,6 +569,66 @@ export function BulkCascadeCard() {
         {/* Filters */}
         {showFilters && (
           <CardContent className="border-t border-border pt-4 pb-0">
+            {/* Preset bar */}
+            <div className="mb-3 flex items-center gap-2 flex-wrap">
+              {presets.length > 0 && (
+                <Select onValueChange={applyPreset} value="">
+                  <SelectTrigger className="h-8 w-auto min-w-[140px] text-xs">
+                    <SelectValue placeholder="Load preset…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {presets.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        <span className="flex items-center gap-2">
+                          {p.label}
+                          {p.dryRun && (
+                            <Badge variant="outline" className="text-[8px] px-1">dry</Badge>
+                          )}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {presets.length > 0 && (
+                <Select onValueChange={deletePreset} value="">
+                  <SelectTrigger className="h-8 w-auto min-w-[40px] text-xs text-destructive border-destructive/30">
+                    <Trash2 className="h-3 w-3" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {presets.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        Delete "{p.label}"
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {showPresetSave ? (
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    placeholder="Preset name…"
+                    value={newPresetName}
+                    onChange={(e) => setNewPresetName(e.target.value)}
+                    className="h-8 w-36 text-xs"
+                    onKeyDown={(e) => e.key === "Enter" && saveCurrentPreset()}
+                    autoFocus
+                  />
+                  <Button size="sm" variant="default" className="h-8 px-2" onClick={saveCurrentPreset}>
+                    <Save className="h-3 w-3" />
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-8 px-2" onClick={() => { setShowPresetSave(false); setNewPresetName(""); }}>
+                    ✕
+                  </Button>
+                </div>
+              ) : (
+                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setShowPresetSave(true)}>
+                  <Save className="mr-1 h-3 w-3" />
+                  Save preset
+                </Button>
+              )}
+            </div>
+
             <div className="grid gap-3 md:grid-cols-4">
               <div>
                 <label className="mb-1 block font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -548,10 +698,46 @@ export function BulkCascadeCard() {
                 </Select>
               </div>
             </div>
+
+            {/* Error category breakdown row */}
+            {errorBreakdown.all > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {(["auth", "conflict", "timeout", "network", "other"] as const).map((k) =>
+                  errorBreakdown[k] > 0 ? (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => setErrorTypeFilter(k === errorTypeFilter ? "all" : k)}
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 font-mono text-[10px] transition-colors",
+                        k === errorTypeFilter
+                          ? "border-destructive/60 bg-destructive/10 text-destructive"
+                          : "border-border text-muted-foreground hover:border-destructive/40 hover:text-destructive",
+                      )}
+                    >
+                      <span className="font-semibold">{errorBreakdown[k]}</span>
+                      {ERROR_TYPE_LABELS[k]}
+                    </button>
+                  ) : null,
+                )}
+              </div>
+            )}
+
             <div className="mt-2 mb-3 flex items-center justify-between">
-              <span className="font-mono text-[10px] text-muted-foreground">
-                {filteredClones.length} of {clones.length} clones match
-              </span>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox
+                    checked={selectAllFiltered}
+                    onCheckedChange={(checked) => setSelectAllFiltered(checked === true)}
+                  />
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Select all filtered ({filteredClones.length})
+                  </span>
+                </label>
+                <span className="font-mono text-[10px] text-muted-foreground">
+                  {filteredClones.length} of {clones.length} clones match
+                </span>
+              </div>
               {hasActiveFilters && (
                 <button
                   type="button"
@@ -736,6 +922,7 @@ export function BulkCascadeCard() {
           if (!open) {
             setRollbackTarget(null);
             setRollbackConfirmText("");
+            setRollbackReason("");
           }
         }}
       >
@@ -751,23 +938,38 @@ export function BulkCascadeCard() {
                   This will revert <strong className="text-foreground">{rollbackTarget?.name}</strong> to
                   SHA <code className="rounded bg-muted px-1 py-0.5 text-[11px]">{rollbackTarget?.previous_sha?.slice(0, 12)}</code>.
                 </p>
-                <p>
-                  Type the clone name below to confirm:
-                </p>
-                <Input
-                  placeholder={rollbackTarget?.name ?? ""}
-                  value={rollbackConfirmText}
-                  onChange={(e) => setRollbackConfirmText(e.target.value)}
-                  className="font-mono text-sm"
-                  autoFocus
-                />
+                <div>
+                  <label className="mb-1 block font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Reason for rollback <span className="text-destructive">*</span>
+                  </label>
+                  <Textarea
+                    placeholder="e.g. Cascade introduced a breaking change in auth module…"
+                    value={rollbackReason}
+                    onChange={(e) => setRollbackReason(e.target.value)}
+                    className="text-sm min-h-[60px]"
+                    rows={2}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Type clone name to confirm
+                  </label>
+                  <Input
+                    placeholder={rollbackTarget?.name ?? ""}
+                    value={rollbackConfirmText}
+                    onChange={(e) => setRollbackConfirmText(e.target.value)}
+                    className="font-mono text-sm"
+                  />
+                </div>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              disabled={rollbackConfirmText !== rollbackTarget?.name}
+              disabled={
+                rollbackConfirmText !== rollbackTarget?.name || !rollbackReason.trim()
+              }
               onClick={executeRollback}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
