@@ -15,6 +15,7 @@ import { formatDistanceToNow } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useServerFn } from "@tanstack/react-start";
 import { runCascade } from "@/server/cascade-engine.functions";
+import { BulkCascadeCard } from "@/components/bulk-cascade-card";
 import { CardRowSkeleton } from "@/components/list-skeletons";
 import { EmptyState } from "@/components/empty-state";
 import { CascadeTemplatesCard, type CascadeTemplateValue } from "@/components/cascade-templates-card";
@@ -288,6 +289,8 @@ function CascadesPage() {
           </div>
         </CardContent>
       </Card>
+
+      <BulkCascadeCard />
 
       <CascadeDryRunCard />
 

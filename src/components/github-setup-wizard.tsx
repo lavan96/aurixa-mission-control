@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { validateGitHubSecrets, type ValidationResult } from "@/server/github-validate.functions";
 import { getGitHubStatus, type GitHubStatus } from "@/server/github-status.functions";
 import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 
 type WizardStep = "validate" | "connect" | "verify";
 
@@ -40,6 +41,16 @@ export function GitHubSetupWizard() {
     try {
       const res = await validateFn();
       setValidation(res);
+
+      // Audit log
+      const { data: { user } } = await supabase.auth.getUser();
+      await supabase.from("audit_log").insert({
+        action: "github.secrets_validated",
+        entity_type: "settings",
+        actor_user_id: user?.id,
+        metadata: { all_valid: res.allValid, results: res.secrets.map((s) => ({ name: s.name, valid: s.valid })) },
+      });
+
       if (res.allValid) {
         setStep("connect");
       }
@@ -56,6 +67,16 @@ export function GitHubSetupWizard() {
     try {
       const res = await statusFn();
       setGhStatus(res);
+
+      // Audit log
+      const { data: { user } } = await supabase.auth.getUser();
+      await supabase.from("audit_log").insert({
+        action: "github.wizard_connection_tested",
+        entity_type: "settings",
+        actor_user_id: user?.id,
+        metadata: { configured: res.configured, ok: res.ok, app: res.app?.name },
+      });
+
       if (res.ok && res.configured) {
         setStep("verify");
       }

@@ -511,6 +511,36 @@ export type Database = {
         }
         Relationships: []
       }
+      module_config_snapshots: {
+        Row: {
+          clone_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          label: string
+          module_ids: string[]
+        }
+        Insert: {
+          clone_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          module_ids?: string[]
+        }
+        Update: {
+          clone_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          module_ids?: string[]
+        }
+        Relationships: []
+      }
       modules: {
         Row: {
           ai_confidence: number | null
@@ -520,7 +550,9 @@ export type Database = {
           detected_by_ai: boolean
           file_globs: string[]
           id: string
+          incompatible_with: string[]
           name: string
+          requires: string[]
           routes: string[]
           slug: string
           status: Database["public"]["Enums"]["module_status"]
@@ -534,7 +566,9 @@ export type Database = {
           detected_by_ai?: boolean
           file_globs?: string[]
           id?: string
+          incompatible_with?: string[]
           name: string
+          requires?: string[]
           routes?: string[]
           slug: string
           status?: Database["public"]["Enums"]["module_status"]
@@ -548,7 +582,9 @@ export type Database = {
           detected_by_ai?: boolean
           file_globs?: string[]
           id?: string
+          incompatible_with?: string[]
           name?: string
+          requires?: string[]
           routes?: string[]
           slug?: string
           status?: Database["public"]["Enums"]["module_status"]
