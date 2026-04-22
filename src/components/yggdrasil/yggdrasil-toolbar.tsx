@@ -209,6 +209,15 @@ export function YggdrasilToolbar({
         </div>
       )}
 
+      {/* Multi-select badge */}
+      {(multiSelectCount ?? 0) > 0 && (
+        <div className="flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1">
+          <span className="font-mono text-[10px] font-medium text-primary">
+            {multiSelectCount} comparing
+          </span>
+        </div>
+      )}
+
       {/* Clear & Apply buttons for staged filters */}
       <AnimatePresence>
         {hasUncommittedChanges && (
