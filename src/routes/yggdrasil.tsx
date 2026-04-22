@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { ProtectedRoute } from "@/components/protected-route";
 import { AppShell } from "@/components/app-shell";
 import { useClones, usePrimeConfig } from "@/lib/queries";
@@ -10,6 +10,7 @@ import { TreePine } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { fetchFleetHealth } from "@/server/fleet-health.functions";
 import { toast } from "sonner";
+import type { TreeNode } from "@/components/yggdrasil/use-tree-layout";
 
 export const Route = createFileRoute("/yggdrasil")({
   component: () => (
@@ -27,6 +28,19 @@ export const Route = createFileRoute("/yggdrasil")({
   }),
 });
 
+/** Collect all descendant IDs from a node recursively */
+function collectDescendantIds(node: TreeNode): Set<string> {
+  const ids = new Set<string>();
+  function walk(n: TreeNode) {
+    for (const child of n.children) {
+      ids.add(child.id);
+      walk(child);
+    }
+  }
+  walk(node);
+  return ids;
+}
+
 function YggdrasilPage() {
   const { data: clones, loading, refresh: refreshClones } = useClones();
   const { data: prime } = usePrimeConfig();
@@ -37,13 +51,33 @@ function YggdrasilPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
+  const [descendantFilterEnabled, setDescendantFilterEnabled] = useState(false);
+
+  /** Reference to tree container dimensions for centering calculations */
+  const treeDimensionsRef = useRef({ width: 1000, height: 700 });
+  /** Exposed node positions from the layout */
+  const layoutNodesRef = useRef<TreeNode[]>([]);
 
   const fetchHealthFn = useServerFn(fetchFleetHealth);
 
   const filteredClones = useMemo(() => {
-    if (activeFilters.length === 0) return clones;
-    return clones.filter((c) => activeFilters.includes(c.sync_status as StatusFilter));
-  }, [clones, activeFilters]);
+    let result = clones;
+
+    // Status filters
+    if (activeFilters.length > 0) {
+      result = result.filter((c) => activeFilters.includes(c.sync_status as StatusFilter));
+    }
+
+    // Descendant filter — when enabled and a node is selected, only show descendants
+    if (descendantFilterEnabled && selectedNode && selectedNode.id !== "__trunk__") {
+      const descendantIds = collectDescendantIds(selectedNode);
+      descendantIds.add(selectedNode.id);
+      result = result.filter((c) => descendantIds.has(c.id));
+    }
+
+    return result;
+  }, [clones, activeFilters, descendantFilterEnabled, selectedNode]);
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
@@ -59,11 +93,24 @@ function YggdrasilPage() {
       .map((c) => ({ id: c.id, name: c.name, repo: `${c.github_owner}/${c.github_repo}` }));
   }, [clones, searchQuery]);
 
+  /** Auto-pan & zoom to center the selected node */
   const handleSearchSelect = useCallback((id: string) => {
     setHighlightId(id);
     setSearchQuery("");
-    // Clear highlight after 3s
-    setTimeout(() => setHighlightId(null), 3000);
+
+    // Find the node in the layout to get its coordinates
+    const targetNode = layoutNodesRef.current.find((n) => n.id === id);
+    if (targetNode) {
+      const dims = treeDimensionsRef.current;
+      const targetZoom = 1.5;
+      // Center the node in the viewport
+      const panX = dims.width / 2 - targetNode.x * targetZoom;
+      const panY = dims.height / 2 - targetNode.y * targetZoom;
+      setZoom(targetZoom);
+      setPan({ x: panX, y: panY });
+    }
+
+    setTimeout(() => setHighlightId(null), 4000);
   }, []);
 
   const handleRefresh = useCallback(async () => {
@@ -125,6 +172,9 @@ function YggdrasilPage() {
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onZoomReset={handleZoomReset}
+        selectedNode={selectedNode}
+        descendantFilterEnabled={descendantFilterEnabled}
+        onDescendantFilterToggle={setDescendantFilterEnabled}
       />
 
       {loading ? (
@@ -144,6 +194,11 @@ function YggdrasilPage() {
           zoom={zoom}
           pan={pan}
           onPanChange={setPan}
+          onLayoutReady={(nodes, dims) => {
+            layoutNodesRef.current = nodes;
+            treeDimensionsRef.current = dims;
+          }}
+          onNodeSelect={setSelectedNode}
         />
       )}
     </div>

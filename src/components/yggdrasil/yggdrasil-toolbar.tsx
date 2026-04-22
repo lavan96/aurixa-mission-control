@@ -1,14 +1,15 @@
 /**
- * YggdrasilToolbar — filters, search, and refresh controls for the tree.
+ * YggdrasilToolbar — filters, search, legend, descendant toggle, and refresh controls.
  */
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Filter, RefreshCw, X, ZoomIn, ZoomOut, Maximize } from "lucide-react";
+import { Search, Filter, RefreshCw, X, ZoomIn, ZoomOut, Maximize, Info, GitFork } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
+import type { TreeNode } from "./use-tree-layout";
 
 export type StatusFilter = "in_sync" | "behind" | "failed";
 
@@ -25,12 +26,35 @@ interface Props {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onZoomReset: () => void;
+  selectedNode?: TreeNode | null;
+  descendantFilterEnabled?: boolean;
+  onDescendantFilterToggle?: (enabled: boolean) => void;
 }
 
-const STATUS_OPTIONS: { value: StatusFilter; label: string; color: string }[] = [
-  { value: "in_sync", label: "In Sync", color: "oklch(0.78 0.18 150)" },
-  { value: "behind", label: "Behind", color: "oklch(0.82 0.17 80)" },
-  { value: "failed", label: "Failed", color: "oklch(0.66 0.24 25)" },
+const STATUS_OPTIONS: {
+  value: StatusFilter;
+  label: string;
+  color: string;
+  description: string;
+}[] = [
+  {
+    value: "in_sync",
+    label: "In Sync",
+    color: "oklch(0.78 0.18 150)",
+    description: "Clone is up-to-date with the prime repository. All commits have been successfully cascaded.",
+  },
+  {
+    value: "behind",
+    label: "Behind",
+    color: "oklch(0.82 0.17 80)",
+    description: "Clone is missing recent commits from the prime. A cascade is needed to bring it current.",
+  },
+  {
+    value: "failed",
+    label: "Failed",
+    color: "oklch(0.66 0.24 25)",
+    description: "Last cascade attempt failed due to merge conflicts or CI errors. Manual intervention required.",
+  },
 ];
 
 export function YggdrasilToolbar({
@@ -46,8 +70,12 @@ export function YggdrasilToolbar({
   onZoomIn,
   onZoomOut,
   onZoomReset,
+  selectedNode,
+  descendantFilterEnabled,
+  onDescendantFilterToggle,
 }: Props) {
   const [searchOpen, setSearchOpen] = useState(false);
+  const [legendHovered, setLegendHovered] = useState<StatusFilter | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
 
   const toggleFilter = (f: StatusFilter) => {
@@ -58,7 +86,6 @@ export function YggdrasilToolbar({
     );
   };
 
-  // Close search dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
@@ -69,27 +96,69 @@ export function YggdrasilToolbar({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  const showDescendantToggle =
+    selectedNode && selectedNode.id !== "__trunk__" && selectedNode.children.length > 0;
+
   return (
     <div className="flex flex-wrap items-center gap-3">
-      {/* Status filters */}
+      {/* Status filters with legend tooltips */}
       <div className="flex items-center gap-1.5">
         <Filter className="h-3.5 w-3.5 text-muted-foreground" />
         {STATUS_OPTIONS.map((opt) => {
           const active = activeFilters.includes(opt.value);
           return (
-            <button
-              key={opt.value}
-              onClick={() => toggleFilter(opt.value)}
-              className={cn(
-                "rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-wider transition-all",
-                active
-                  ? "border-transparent text-background"
-                  : "border-border/60 text-muted-foreground hover:border-border hover:text-foreground",
-              )}
-              style={active ? { background: opt.color } : undefined}
-            >
-              {opt.label}
-            </button>
+            <div key={opt.value} className="relative">
+              <button
+                onClick={() => toggleFilter(opt.value)}
+                onMouseEnter={() => setLegendHovered(opt.value)}
+                onMouseLeave={() => setLegendHovered(null)}
+                className={cn(
+                  "flex items-center gap-1 rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-wider transition-all",
+                  active
+                    ? "border-transparent text-background"
+                    : "border-border/60 text-muted-foreground hover:border-border hover:text-foreground",
+                )}
+                style={active ? { background: opt.color } : undefined}
+              >
+                {opt.label}
+                <Info className="h-2.5 w-2.5 opacity-50" />
+              </button>
+
+              {/* Legend tooltip */}
+              <AnimatePresence>
+                {legendHovered === opt.value && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 4, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 4, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute left-1/2 top-full z-50 mt-2 w-56 -translate-x-1/2 rounded-lg border border-border/60 bg-popover p-3 shadow-xl"
+                  >
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ background: opt.color }}
+                      />
+                      <span className="font-mono text-[11px] font-semibold uppercase tracking-wider">
+                        {opt.label}
+                      </span>
+                    </div>
+                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+                      {opt.description}
+                    </p>
+                    {/* Contextual count when selection is active */}
+                    {selectedNode && selectedNode.id !== "__trunk__" && (
+                      <p className="mt-1.5 border-t border-border/40 pt-1.5 font-mono text-[10px] text-muted-foreground/70">
+                        {selectedNode.children.filter((c) => c.syncStatus === opt.value).length} in{" "}
+                        {selectedNode.name}'s subtree
+                      </p>
+                    )}
+                    {/* Arrow */}
+                    <div className="absolute -top-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 border-l border-t border-border/60 bg-popover" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           );
         })}
         {activeFilters.length > 0 && (
@@ -101,6 +170,21 @@ export function YggdrasilToolbar({
           </button>
         )}
       </div>
+
+      {/* Descendant filter toggle */}
+      {showDescendantToggle && (
+        <div className="flex items-center gap-2 rounded-full border border-border/60 px-3 py-1">
+          <GitFork className="h-3 w-3 text-muted-foreground" />
+          <span className="font-mono text-[10px] text-muted-foreground">
+            {selectedNode.name} subtree
+          </span>
+          <Switch
+            checked={descendantFilterEnabled ?? false}
+            onCheckedChange={(val) => onDescendantFilterToggle?.(val)}
+            className="h-4 w-7 [&>span]:h-3 [&>span]:w-3"
+          />
+        </div>
+      )}
 
       {/* Search */}
       <div ref={searchRef} className="relative">
