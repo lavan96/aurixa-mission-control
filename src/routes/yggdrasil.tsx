@@ -3,7 +3,7 @@ import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { ProtectedRoute } from "@/components/protected-route";
-import { AppShell } from "@/components/app-shell";
+
 import { useClones, usePrimeConfig } from "@/lib/queries";
 import { YggdrasilTree } from "@/components/yggdrasil/yggdrasil-tree";
 import { TreeStats } from "@/components/yggdrasil/tree-stats";
