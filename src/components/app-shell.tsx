@@ -15,6 +15,7 @@ import {
   CalendarClock,
   Sparkles,
   Activity,
+  TreePine,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "@/components/notifications-bell";
@@ -31,6 +32,7 @@ const NAV = [
   { to: "/fleet-manager", label: "AI Manager", icon: Bot },
   { to: "/audit-log", label: "Audit Log", icon: ScrollText },
   { to: "/cloudflare", label: "Cloudflare", icon: Shield },
+  { to: "/yggdrasil", label: "Yggdrasil", icon: TreePine },
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
