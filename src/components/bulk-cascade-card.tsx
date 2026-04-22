@@ -142,6 +142,7 @@ export function BulkCascadeCard() {
   const [dryRun, setDryRun] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [selectAllFiltered, setSelectAllFiltered] = useState(true);
+  const [showSelectAllConfirm, setShowSelectAllConfirm] = useState(false);
 
   // Rollback confirmation
   const [rollbackTarget, setRollbackTarget] = useState<{ clone_id: string; name: string; previous_sha: string } | null>(null);
@@ -577,16 +578,26 @@ export function BulkCascadeCard() {
                     <SelectValue placeholder="Load preset…" />
                   </SelectTrigger>
                   <SelectContent>
-                    {presets.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        <span className="flex items-center gap-2">
-                          {p.label}
-                          {p.dryRun && (
-                            <Badge variant="outline" className="text-[8px] px-1">dry</Badge>
-                          )}
-                        </span>
-                      </SelectItem>
-                    ))}
+                    {presets.map((p) => {
+                      const details: string[] = [];
+                      if (p.dryRun) details.push("dry-run");
+                      if (p.statusFilter !== "all") details.push(p.statusFilter);
+                      if (p.timeFilter !== "all") details.push(p.timeFilter);
+                      if (p.errorTypeFilter !== "all") details.push(ERROR_TYPE_LABELS[p.errorTypeFilter]);
+                      if (p.nameFilter) details.push(`"${p.nameFilter}"`);
+                      return (
+                        <SelectItem key={p.id} value={p.id}>
+                          <span className="flex items-center gap-2">
+                            <span>{p.label}</span>
+                            {details.length > 0 && (
+                              <span className="text-muted-foreground text-[9px]">
+                                {details.join(" · ")}
+                              </span>
+                            )}
+                          </span>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               )}
@@ -728,7 +739,13 @@ export function BulkCascadeCard() {
                 <label className="flex items-center gap-2 cursor-pointer">
                   <Checkbox
                     checked={selectAllFiltered}
-                    onCheckedChange={(checked) => setSelectAllFiltered(checked === true)}
+                    onCheckedChange={(checked) => {
+                      if (checked === true && !selectAllFiltered) {
+                        setShowSelectAllConfirm(true);
+                      } else {
+                        setSelectAllFiltered(false);
+                      }
+                    }}
                   />
                   <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                     Select all filtered ({filteredClones.length})
@@ -737,6 +754,34 @@ export function BulkCascadeCard() {
                 <span className="font-mono text-[10px] text-muted-foreground">
                   {filteredClones.length} of {clones.length} clones match
                 </span>
+                {/* Inline confirmation for select-all */}
+                {showSelectAllConfirm && (
+                  <div className="flex items-center gap-2 rounded-md border border-warning/40 bg-warning/5 px-2.5 py-1.5 animate-in fade-in slide-in-from-left-2">
+                    <AlertTriangle className="h-3.5 w-3.5 text-warning shrink-0" />
+                    <span className="font-mono text-[10px] text-warning">
+                      Include <strong>{filteredClones.length}</strong> clone{filteredClones.length !== 1 ? "s" : ""} in cascade?
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="default"
+                      className="h-6 px-2 text-[10px]"
+                      onClick={() => {
+                        setSelectAllFiltered(true);
+                        setShowSelectAllConfirm(false);
+                      }}
+                    >
+                      Confirm
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 px-2 text-[10px]"
+                      onClick={() => setShowSelectAllConfirm(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                )}
               </div>
               {hasActiveFilters && (
                 <button
@@ -941,14 +986,27 @@ export function BulkCascadeCard() {
                 <div>
                   <label className="mb-1 block font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                     Reason for rollback <span className="text-destructive">*</span>
+                    <span className="ml-2 normal-case tracking-normal text-muted-foreground">
+                      ({rollbackReason.trim().length}/500)
+                    </span>
                   </label>
                   <Textarea
                     placeholder="e.g. Cascade introduced a breaking change in auth module…"
                     value={rollbackReason}
-                    onChange={(e) => setRollbackReason(e.target.value)}
-                    className="text-sm min-h-[60px]"
+                    onChange={(e) => {
+                      if (e.target.value.length <= 500) setRollbackReason(e.target.value);
+                    }}
+                    className={cn(
+                      "text-sm min-h-[60px]",
+                      rollbackReason.trim().length > 0 && rollbackReason.trim().length < 10 && "border-destructive focus-visible:ring-destructive",
+                    )}
                     rows={2}
                   />
+                  {rollbackReason.trim().length > 0 && rollbackReason.trim().length < 10 && (
+                    <p className="mt-1 font-mono text-[10px] text-destructive">
+                      Reason must be at least 10 characters ({10 - rollbackReason.trim().length} more needed)
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="mb-1 block font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -968,7 +1026,9 @@ export function BulkCascadeCard() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               disabled={
-                rollbackConfirmText !== rollbackTarget?.name || !rollbackReason.trim()
+                rollbackConfirmText !== rollbackTarget?.name ||
+                rollbackReason.trim().length < 10 ||
+                rollbackReason.trim().length > 500
               }
               onClick={executeRollback}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
