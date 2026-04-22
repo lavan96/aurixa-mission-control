@@ -11,6 +11,7 @@ interface Props {
   node: TreeNode;
   index: number;
   highlighted?: boolean;
+  selected?: boolean;
   onSelect?: (node: TreeNode) => void;
 }
 
@@ -21,13 +22,13 @@ const STATUS_COLORS: Record<string, { fill: string; glow: string }> = {
   unknown: { fill: "oklch(0.60 0.10 250)", glow: "oklch(0.70 0.14 250)" },
 };
 
-export function TreeNodeCircle({ node, index, highlighted, onSelect }: Props) {
+export function TreeNodeCircle({ node, index, highlighted, selected, onSelect }: Props) {
   const [hovered, setHovered] = useState(false);
 
   const isTrunk = node.id === "__trunk__";
   const radius = isTrunk ? 18 : Math.max(8, 14 - node.depth * 2);
   const colors = STATUS_COLORS[node.syncStatus] ?? STATUS_COLORS.unknown;
-  const isActive = hovered || highlighted;
+  const isActive = hovered || highlighted || selected;
 
   const delay = 0.5 + index * 0.06;
 

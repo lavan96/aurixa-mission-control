@@ -14,6 +14,7 @@ import { AmbientParticles } from "./ambient-particles";
 import { RunicInscription } from "./runic-inscription";
 import { YGGDRASIL_FILTER_DEFS } from "./tree-filters";
 import { YggdrasilNodePanel } from "./node-detail-panel";
+import { SubtreeStatsPanel } from "./subtree-stats-panel";
 
 interface Props {
   clones: Clone[];
@@ -24,12 +25,12 @@ interface Props {
   onPanChange: (pan: { x: number; y: number }) => void;
   onLayoutReady?: (nodes: TreeNode[], dims: { width: number; height: number }) => void;
   onNodeSelect?: (node: TreeNode | null) => void;
+  selectedNodeId?: string | null;
 }
 
-export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPanChange, onLayoutReady, onNodeSelect }: Props) {
+export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPanChange, onLayoutReady, onNodeSelect, selectedNodeId }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 1000, height: 700 });
-  const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
   const [dragging, setDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
 
@@ -48,6 +49,11 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
 
   const layout = useTreeLayout(clones, dimensions.width, dimensions.height);
 
+  // Resolve selected node from ID
+  const selectedNode = selectedNodeId
+    ? layout.nodes.find((n) => n.id === selectedNodeId) ?? null
+    : null;
+
   // Expose layout nodes to parent for auto-pan on search
   useEffect(() => {
     onLayoutReady?.(layout.nodes, dimensions);
@@ -55,7 +61,6 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
 
   const handleNodeSelect = useCallback((n: TreeNode) => {
     const node = n.id === "__trunk__" ? null : n;
-    setSelectedNode(node);
     onNodeSelect?.(node);
   }, [onNodeSelect]);
 
@@ -98,6 +103,7 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
       onPointerUp={onPointerUp}
       onPointerLeave={onPointerUp}
       onWheel={onWheel}
+      tabIndex={0}
     >
       {/* Atmospheric background gradient */}
       <div
@@ -199,6 +205,7 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
               node={node}
               index={i}
               highlighted={highlightId === node.id}
+              selected={selectedNodeId === node.id}
               onSelect={handleNodeSelect}
             />
           ))}
@@ -242,16 +249,20 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
         </div>
       )}
 
+      {/* Subtree stats panel — small floating panel next to selected node */}
+      <AnimatePresence>
+        {selectedNode && selectedNode.children.length > 0 && (
+          <SubtreeStatsPanel node={selectedNode} zoom={zoom} pan={pan} dimensions={dimensions} />
+        )}
+      </AnimatePresence>
+
       {/* Node detail panel */}
       <AnimatePresence>
         {selectedNode && (
           <YggdrasilNodePanel
             node={selectedNode}
             allNodes={layout.nodes}
-            onClose={() => {
-              setSelectedNode(null);
-              onNodeSelect?.(null);
-            }}
+            onClose={() => onNodeSelect?.(null)}
           />
         )}
       </AnimatePresence>
