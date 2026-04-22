@@ -22,9 +22,11 @@ interface Props {
   zoom: number;
   pan: { x: number; y: number };
   onPanChange: (pan: { x: number; y: number }) => void;
+  onLayoutReady?: (nodes: TreeNode[], dims: { width: number; height: number }) => void;
+  onNodeSelect?: (node: TreeNode | null) => void;
 }
 
-export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPanChange }: Props) {
+export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPanChange, onLayoutReady, onNodeSelect }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 1000, height: 700 });
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
@@ -45,6 +47,17 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
   }, []);
 
   const layout = useTreeLayout(clones, dimensions.width, dimensions.height);
+
+  // Expose layout nodes to parent for auto-pan on search
+  useEffect(() => {
+    onLayoutReady?.(layout.nodes, dimensions);
+  }, [layout.nodes, dimensions, onLayoutReady]);
+
+  const handleNodeSelect = useCallback((n: TreeNode) => {
+    const node = n.id === "__trunk__" ? null : n;
+    setSelectedNode(node);
+    onNodeSelect?.(node);
+  }, [onNodeSelect]);
 
   // Pan handlers
   const onPointerDown = useCallback(
@@ -68,12 +81,9 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
   );
   const onPointerUp = useCallback(() => setDragging(false), []);
 
-  // Wheel zoom
   const onWheel = useCallback(
     (e: React.WheelEvent) => {
-      // Prevent page scroll
       e.stopPropagation();
-      // We don't call e.preventDefault() here because it's a passive handler
     },
     [],
   );
@@ -120,7 +130,10 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
       >
         <g
           transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}
-          style={{ transformOrigin: `${dimensions.width / 2}px ${dimensions.height / 2}px` }}
+          style={{
+            transformOrigin: `${dimensions.width / 2}px ${dimensions.height / 2}px`,
+            transition: dragging ? "none" : "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+          }}
         >
           {/* Ambient particles */}
           <AmbientParticles
@@ -186,7 +199,7 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
               node={node}
               index={i}
               highlighted={highlightId === node.id}
-              onSelect={(n) => setSelectedNode(n.id === "__trunk__" ? null : n)}
+              onSelect={handleNodeSelect}
             />
           ))}
 
@@ -235,7 +248,10 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
           <YggdrasilNodePanel
             node={selectedNode}
             allNodes={layout.nodes}
-            onClose={() => setSelectedNode(null)}
+            onClose={() => {
+              setSelectedNode(null);
+              onNodeSelect?.(null);
+            }}
           />
         )}
       </AnimatePresence>
