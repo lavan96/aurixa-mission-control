@@ -124,7 +124,7 @@ export function TreeNodeCircle({ node, index, onSelect }: Props) {
           fontFamily="var(--font-mono)"
           fontWeight={400}
           letterSpacing="0.1em"
-          textTransform="uppercase"
+          style={{ textTransform: "uppercase" }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 0.7 }}
           transition={{ delay: delay + 0.4, duration: 0.5 }}
