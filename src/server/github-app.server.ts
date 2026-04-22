@@ -3,6 +3,7 @@
 // Worker isolate to avoid re-signing JWTs on every call.
 import { createAppAuth } from "@octokit/auth-app";
 import { Octokit } from "@octokit/rest";
+import forge from "node-forge";
 
 const cache = new Map<string, Octokit>();
 
@@ -13,15 +14,50 @@ function readEnv(name: string): string {
 }
 
 /**
+ * Normalize and, if necessary, convert a PEM private key to PKCS#8 format.
+ * GitHub's API (via @octokit/auth-app / universal-github-app-jwt) only
+ * accepts PKCS#8 (`BEGIN PRIVATE KEY`). Keys downloaded from GitHub App
+ * settings are PKCS#1 (`BEGIN RSA PRIVATE KEY`), so we auto-convert.
+ */
+function ensurePkcs8(pem: string): string {
+  // Normalize literal \n sequences to real newlines
+  const normalized = pem.replace(/\\n/g, "\n").trim();
+
+  // Already PKCS#8 — nothing to do
+  if (normalized.includes("-----BEGIN PRIVATE KEY-----")) {
+    return normalized;
+  }
+
+  // PKCS#1 → PKCS#8 conversion using node-forge
+  if (normalized.includes("-----BEGIN RSA PRIVATE KEY-----")) {
+    try {
+      const privateKey = forge.pki.privateKeyFromPem(normalized);
+      const asn1 = forge.pki.privateKeyToAsn1(privateKey);
+      const wrapped = forge.pki.wrapRsaPrivateKey(asn1);
+      const pkcs8Pem = forge.pki.privateKeyInfoToPem(wrapped);
+      console.log("[github-app] Auto-converted private key from PKCS#1 to PKCS#8");
+      return pkcs8Pem.trim();
+    } catch (e) {
+      throw new Error(
+        `Failed to convert PKCS#1 private key to PKCS#8: ${e instanceof Error ? e.message : String(e)}. ` +
+        `Use the PEM Key Helper on the auth page to convert manually, or run: ` +
+        `openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in key.pem -out converted.pem`
+      );
+    }
+  }
+
+  // Unknown format — pass through and let the auth library report the error
+  return normalized;
+}
+
+/**
  * Returns an Octokit client authenticated as a specific installation of the
  * Aurixa GitHub App. If installationId is omitted, falls back to the default
  * installation configured via GITHUB_APP_INSTALLATION_ID.
  */
 export function getAppOctokit(installationId?: string | number): Octokit {
   const appId = readEnv("GITHUB_APP_ID");
-  // Private keys often arrive with literal "\n" sequences when pasted into
-  // secret managers — normalize to real newlines so the PEM parses.
-  const privateKey = readEnv("GITHUB_APP_PRIVATE_KEY").replace(/\\n/g, "\n");
+  const privateKey = ensurePkcs8(readEnv("GITHUB_APP_PRIVATE_KEY"));
   const installation = String(
     installationId ?? readEnv("GITHUB_APP_INSTALLATION_ID"),
   );
