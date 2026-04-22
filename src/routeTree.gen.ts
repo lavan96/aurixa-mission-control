@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as YggdrasilRouteImport } from './routes/yggdrasil'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SchedulesRouteImport } from './routes/schedules'
 import { Route as NotificationsRouteImport } from './routes/notifications'
@@ -34,6 +35,11 @@ import { Route as ClonesNewRouteImport } from './routes/clones.new'
 import { Route as ClonesCloneIdRouteImport } from './routes/clones.$cloneId'
 import { Route as CascadesEventIdRouteImport } from './routes/cascades.$eventId'
 
+const YggdrasilRoute = YggdrasilRouteImport.update({
+  id: '/yggdrasil',
+  path: '/yggdrasil',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -169,6 +175,7 @@ export interface FileRoutesByFullPath {
   '/notifications': typeof NotificationsRoute
   '/schedules': typeof SchedulesRoute
   '/settings': typeof SettingsRouteWithChildren
+  '/yggdrasil': typeof YggdrasilRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
@@ -194,6 +201,7 @@ export interface FileRoutesByTo {
   '/modules': typeof ModulesRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/schedules': typeof SchedulesRoute
+  '/yggdrasil': typeof YggdrasilRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
@@ -221,6 +229,7 @@ export interface FileRoutesById {
   '/notifications': typeof NotificationsRoute
   '/schedules': typeof SchedulesRoute
   '/settings': typeof SettingsRouteWithChildren
+  '/yggdrasil': typeof YggdrasilRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
@@ -249,6 +258,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/schedules'
     | '/settings'
+    | '/yggdrasil'
     | '/cascades/$eventId'
     | '/clones/$cloneId'
     | '/clones/new'
@@ -274,6 +284,7 @@ export interface FileRouteTypes {
     | '/modules'
     | '/notifications'
     | '/schedules'
+    | '/yggdrasil'
     | '/cascades/$eventId'
     | '/clones/$cloneId'
     | '/clones/new'
@@ -300,6 +311,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/schedules'
     | '/settings'
+    | '/yggdrasil'
     | '/cascades/$eventId'
     | '/clones/$cloneId'
     | '/clones/new'
@@ -327,6 +339,7 @@ export interface RootRouteChildren {
   NotificationsRoute: typeof NotificationsRoute
   SchedulesRoute: typeof SchedulesRoute
   SettingsRoute: typeof SettingsRouteWithChildren
+  YggdrasilRoute: typeof YggdrasilRoute
   ClonesCloneIdRoute: typeof ClonesCloneIdRoute
   ClonesNewRoute: typeof ClonesNewRoute
   HooksDriftRefreshRoute: typeof HooksDriftRefreshRoute
@@ -338,6 +351,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/yggdrasil': {
+      id: '/yggdrasil'
+      path: '/yggdrasil'
+      fullPath: '/yggdrasil'
+      preLoaderRoute: typeof YggdrasilRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -560,6 +580,7 @@ const rootRouteChildren: RootRouteChildren = {
   NotificationsRoute: NotificationsRoute,
   SchedulesRoute: SchedulesRoute,
   SettingsRoute: SettingsRouteWithChildren,
+  YggdrasilRoute: YggdrasilRoute,
   ClonesCloneIdRoute: ClonesCloneIdRoute,
   ClonesNewRoute: ClonesNewRoute,
   HooksDriftRefreshRoute: HooksDriftRefreshRoute,
@@ -571,12 +592,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
