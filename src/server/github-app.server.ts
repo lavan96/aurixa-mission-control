@@ -77,6 +77,11 @@ export function getAppOctokit(installationId?: string | number): Octokit {
   return octokit;
 }
 
+/** Clear cached Octokit instances (e.g. after secret rotation). */
+export function clearAppOctokitCache() {
+  cache.clear();
+}
+
 export type RepoRef = {
   owner: string;
   repo: string;
