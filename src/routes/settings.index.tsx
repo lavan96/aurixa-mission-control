@@ -165,6 +165,8 @@ function SettingsGeneralPage() {
         </CardContent>
       </Card>
 
+      <GitHubSetupWizard />
+
       <GitHubStatusCard />
 
       <WebhookDeliveriesPanel />
