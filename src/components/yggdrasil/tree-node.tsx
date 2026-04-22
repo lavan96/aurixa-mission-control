@@ -73,7 +73,7 @@ export function TreeNodeCircle({ node, index, highlighted, onSelect }: Props) {
         r={radius}
         fill={isTrunk ? "oklch(0.78 0.16 200)" : colors.fill}
         stroke={isTrunk ? "oklch(0.85 0.18 195)" : colors.glow}
-        strokeWidth={hovered ? 2.5 : 1.5}
+        strokeWidth={isActive ? 2.5 : 1.5}
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{
