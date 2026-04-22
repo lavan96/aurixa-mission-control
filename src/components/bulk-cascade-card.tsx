@@ -428,8 +428,13 @@ export function BulkCascadeCard() {
 
   const executeRollback = async () => {
     if (!rollbackTarget) return;
-    if (!rollbackReason.trim()) {
-      toast.error("Please enter a rollback reason");
+    const trimmed = rollbackReason.trim();
+    if (trimmed.length < 10) {
+      toast.error("Rollback reason must be at least 10 characters");
+      return;
+    }
+    if (trimmed.length > 500) {
+      toast.error("Rollback reason must be 500 characters or fewer");
       return;
     }
     const { clone_id: cloneId, previous_sha: previousSha } = rollbackTarget;
