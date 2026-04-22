@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Radio } from "lucide-react";
 import { toast } from "sonner";
+import { PemKeyHelper } from "@/components/pem-key-helper";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
@@ -43,7 +44,8 @@ function AuthPage() {
 
   return (
     <div className="grid-bg flex min-h-screen items-center justify-center p-6">
-      <Card className="w-full max-w-md border-border/80 bg-card/90 backdrop-blur">
+      <div className="w-full max-w-md space-y-6">
+      <Card className="border-border/80 bg-card/90 backdrop-blur">
         <CardHeader className="items-center text-center">
           <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-md bg-primary/15 ring-1 ring-primary/40">
             <Radio className="h-6 w-6 text-primary" />
@@ -92,6 +94,8 @@ function AuthPage() {
           </Tabs>
         </CardContent>
       </Card>
+      <PemKeyHelper />
+      </div>
     </div>
   );
 }
