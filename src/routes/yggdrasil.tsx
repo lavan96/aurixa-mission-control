@@ -1,10 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState, useMemo, useCallback } from "react";
 import { ProtectedRoute } from "@/components/protected-route";
 import { AppShell } from "@/components/app-shell";
 import { useClones, usePrimeConfig } from "@/lib/queries";
 import { YggdrasilTree } from "@/components/yggdrasil/yggdrasil-tree";
 import { TreeStats } from "@/components/yggdrasil/tree-stats";
+import { YggdrasilToolbar, type StatusFilter } from "@/components/yggdrasil/yggdrasil-toolbar";
 import { TreePine } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { fetchFleetHealth } from "@/server/fleet-health.functions";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/yggdrasil")({
   component: () => (
@@ -23,8 +28,60 @@ export const Route = createFileRoute("/yggdrasil")({
 });
 
 function YggdrasilPage() {
-  const { data: clones, loading } = useClones();
+  const { data: clones, loading, refresh: refreshClones } = useClones();
   const { data: prime } = usePrimeConfig();
+
+  const [activeFilters, setActiveFilters] = useState<StatusFilter[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+
+  const fetchHealthFn = useServerFn(fetchFleetHealth);
+
+  const filteredClones = useMemo(() => {
+    if (activeFilters.length === 0) return clones;
+    return clones.filter((c) => activeFilters.includes(c.sync_status as StatusFilter));
+  }, [clones, activeFilters]);
+
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase();
+    return clones
+      .filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.github_repo.toLowerCase().includes(q) ||
+          c.github_owner.toLowerCase().includes(q),
+      )
+      .slice(0, 8)
+      .map((c) => ({ id: c.id, name: c.name, repo: `${c.github_owner}/${c.github_repo}` }));
+  }, [clones, searchQuery]);
+
+  const handleSearchSelect = useCallback((id: string) => {
+    setHighlightId(id);
+    setSearchQuery("");
+    // Clear highlight after 3s
+    setTimeout(() => setHighlightId(null), 3000);
+  }, []);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await fetchHealthFn({ data: { force: true } });
+      await refreshClones();
+      toast.success("Fleet statuses refreshed");
+    } catch {
+      toast.error("Failed to refresh statuses");
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchHealthFn, refreshClones]);
+
+  const handleZoomIn = () => setZoom((z) => Math.min(3, z + 0.2));
+  const handleZoomOut = () => setZoom((z) => Math.max(0.3, z - 0.2));
+  const handleZoomReset = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
 
   const primeName = prime ? `${prime.github_owner}/${prime.github_repo}` : undefined;
 
@@ -55,6 +112,21 @@ function YggdrasilPage() {
 
       <TreeStats clones={clones} />
 
+      <YggdrasilToolbar
+        activeFilters={activeFilters}
+        onFiltersChange={setActiveFilters}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchResults={searchResults}
+        onSearchSelect={handleSearchSelect}
+        onRefresh={handleRefresh}
+        refreshing={refreshing}
+        zoom={zoom}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onZoomReset={handleZoomReset}
+      />
+
       {loading ? (
         <div className="flex h-[500px] items-center justify-center rounded-xl border border-border/40 bg-background">
           <div className="text-center">
@@ -65,7 +137,14 @@ function YggdrasilPage() {
           </div>
         </div>
       ) : (
-        <YggdrasilTree clones={clones} primeName={primeName} />
+        <YggdrasilTree
+          clones={filteredClones}
+          primeName={primeName}
+          highlightId={highlightId}
+          zoom={zoom}
+          pan={pan}
+          onPanChange={setPan}
+        />
       )}
     </div>
   );

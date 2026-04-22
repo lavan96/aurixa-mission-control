@@ -10,6 +10,7 @@ import type { TreeNode } from "./use-tree-layout";
 interface Props {
   node: TreeNode;
   index: number;
+  highlighted?: boolean;
   onSelect?: (node: TreeNode) => void;
 }
 
@@ -20,12 +21,13 @@ const STATUS_COLORS: Record<string, { fill: string; glow: string }> = {
   unknown: { fill: "oklch(0.60 0.10 250)", glow: "oklch(0.70 0.14 250)" },
 };
 
-export function TreeNodeCircle({ node, index, onSelect }: Props) {
+export function TreeNodeCircle({ node, index, highlighted, onSelect }: Props) {
   const [hovered, setHovered] = useState(false);
 
   const isTrunk = node.id === "__trunk__";
   const radius = isTrunk ? 18 : Math.max(8, 14 - node.depth * 2);
   const colors = STATUS_COLORS[node.syncStatus] ?? STATUS_COLORS.unknown;
+  const isActive = hovered || highlighted;
 
   const delay = 0.5 + index * 0.06;
 
@@ -51,6 +53,21 @@ export function TreeNodeCircle({ node, index, onSelect }: Props) {
         />
       )}
 
+      {/* Highlight pulse ring for search */}
+      {highlighted && !isTrunk && (
+        <motion.circle
+          cx={node.x}
+          cy={node.y}
+          r={radius + 12}
+          fill="none"
+          stroke="oklch(0.85 0.20 200)"
+          strokeWidth={2}
+          initial={{ r: radius, opacity: 0.8 }}
+          animate={{ r: radius + 20, opacity: 0 }}
+          transition={{ duration: 1.5, repeat: Infinity, ease: "easeOut" }}
+        />
+      )}
+
       {/* Outer glow */}
       <motion.circle
         cx={node.x}
@@ -60,7 +77,7 @@ export function TreeNodeCircle({ node, index, onSelect }: Props) {
         opacity={0}
         filter={isTrunk ? "url(#trunk-glow)" : "url(#node-glow)"}
         initial={{ opacity: 0, scale: 0 }}
-        animate={{ opacity: hovered ? 0.5 : 0.25, scale: 1 }}
+        animate={{ opacity: isActive ? 0.5 : 0.25, scale: 1 }}
         transition={{ delay, duration: 0.8 }}
       />
 
@@ -71,7 +88,7 @@ export function TreeNodeCircle({ node, index, onSelect }: Props) {
         r={radius}
         fill={isTrunk ? "oklch(0.78 0.16 200)" : colors.fill}
         stroke={isTrunk ? "oklch(0.85 0.18 195)" : colors.glow}
-        strokeWidth={hovered ? 2.5 : 1.5}
+        strokeWidth={isActive ? 2.5 : 1.5}
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{
