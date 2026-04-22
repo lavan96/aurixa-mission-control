@@ -1,8 +1,7 @@
 /**
  * YggdrasilTree — the main SVG canvas that renders the entire
  * world tree visualization with all its layers.
- * Supports pan & zoom via mouse drag + wheel.
- * Supports multi-select via Shift/Ctrl-click.
+ * Supports pan & zoom, single-select, and multi-select with range selection.
  */
 
 import { useRef, useState, useEffect, useCallback } from "react";
@@ -28,14 +27,48 @@ interface Props {
   onLayoutReady?: (nodes: TreeNode[], dims: { width: number; height: number }) => void;
   onNodeSelect?: (node: TreeNode | null) => void;
   selectedNodeId?: string | null;
+  multiSelectedIds?: string[];
+  onMultiSelectChange?: (ids: string[]) => void;
 }
 
-export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPanChange, onLayoutReady, onNodeSelect, selectedNodeId }: Props) {
+/**
+ * Given two nodes that share a parent, return all sibling IDs between them (inclusive).
+ */
+function getSiblingRange(a: TreeNode, b: TreeNode, allNodes: TreeNode[]): string[] {
+  if (a.parentId !== b.parentId || !a.parentId) return [a.id, b.id];
+  const parent = allNodes.find((n) => n.id === a.parentId);
+  if (!parent) return [a.id, b.id];
+  const siblings = parent.children;
+  const idxA = siblings.findIndex((s) => s.id === a.id);
+  const idxB = siblings.findIndex((s) => s.id === b.id);
+  if (idxA === -1 || idxB === -1) return [a.id, b.id];
+  const lo = Math.min(idxA, idxB);
+  const hi = Math.max(idxA, idxB);
+  return siblings.slice(lo, hi + 1).map((s) => s.id);
+}
+
+export function YggdrasilTree({
+  clones,
+  primeName,
+  highlightId,
+  zoom,
+  pan,
+  onPanChange,
+  onLayoutReady,
+  onNodeSelect,
+  selectedNodeId,
+  multiSelectedIds = [],
+  onMultiSelectChange,
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 1000, height: 700 });
   const [dragging, setDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
-  const [multiSelectedIds, setMultiSelectedIds] = useState<Set<string>>(new Set());
+
+  // Track the anchor node for Shift range selection
+  const shiftAnchorRef = useRef<string | null>(null);
+
+  const multiSelectedSet = new Set(multiSelectedIds);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -52,15 +85,12 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
 
   const layout = useTreeLayout(clones, dimensions.width, dimensions.height);
 
-  // Resolve selected node from ID
   const selectedNode = selectedNodeId
     ? layout.nodes.find((n) => n.id === selectedNodeId) ?? null
     : null;
 
-  // Resolve multi-selected nodes
-  const multiSelectedNodes = layout.nodes.filter((n) => multiSelectedIds.has(n.id));
+  const multiSelectedNodes = layout.nodes.filter((n) => multiSelectedSet.has(n.id));
 
-  // Expose layout nodes to parent for auto-pan on search
   useEffect(() => {
     onLayoutReady?.(layout.nodes, dimensions);
   }, [layout.nodes, dimensions, onLayoutReady]);
@@ -69,40 +99,64 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
     const isTrunk = n.id === "__trunk__";
     if (isTrunk) {
       onNodeSelect?.(null);
-      setMultiSelectedIds(new Set());
+      onMultiSelectChange?.([]);
+      shiftAnchorRef.current = null;
       return;
     }
 
-    // Multi-select: Shift or Ctrl/Cmd
-    if (event.shiftKey || event.ctrlKey || event.metaKey) {
-      setMultiSelectedIds((prev) => {
-        const next = new Set(prev);
-        if (next.has(n.id)) {
-          next.delete(n.id);
-        } else {
-          next.add(n.id);
+    if (event.shiftKey) {
+      // Range selection: select all siblings between anchor and this node
+      const anchor = shiftAnchorRef.current;
+      if (anchor) {
+        const anchorNode = layout.nodes.find((nd) => nd.id === anchor);
+        if (anchorNode) {
+          const rangeIds = getSiblingRange(anchorNode, n, layout.nodes);
+          // Merge with existing selection (union)
+          const merged = new Set(multiSelectedIds);
+          for (const id of rangeIds) merged.add(id);
+          onMultiSelectChange?.([...merged]);
+          return;
         }
-        return next;
-      });
+      }
+      // No anchor yet — start multi-select with this node as anchor
+      shiftAnchorRef.current = n.id;
+      const merged = new Set(multiSelectedIds);
+      if (merged.has(n.id)) {
+        merged.delete(n.id);
+      } else {
+        merged.add(n.id);
+      }
+      onMultiSelectChange?.([...merged]);
+      return;
+    }
+
+    if (event.ctrlKey || event.metaKey) {
+      // Toggle single node in multi-select
+      shiftAnchorRef.current = n.id;
+      const merged = new Set(multiSelectedIds);
+      if (merged.has(n.id)) {
+        merged.delete(n.id);
+      } else {
+        merged.add(n.id);
+      }
+      onMultiSelectChange?.([...merged]);
       return;
     }
 
     // Normal click — single select, clear multi-select
-    setMultiSelectedIds(new Set());
+    shiftAnchorRef.current = null;
+    onMultiSelectChange?.([]);
     onNodeSelect?.(n);
-  }, [onNodeSelect]);
+  }, [onNodeSelect, onMultiSelectChange, multiSelectedIds, layout.nodes]);
 
   const handleRemoveFromMultiSelect = useCallback((id: string) => {
-    setMultiSelectedIds((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
-  }, []);
+    onMultiSelectChange?.(multiSelectedIds.filter((x) => x !== id));
+  }, [onMultiSelectChange, multiSelectedIds]);
 
   const handleCloseComparison = useCallback(() => {
-    setMultiSelectedIds(new Set());
-  }, []);
+    onMultiSelectChange?.([]);
+    shiftAnchorRef.current = null;
+  }, [onMultiSelectChange]);
 
   // Pan handlers
   const onPointerDown = useCallback(
@@ -133,8 +187,7 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
     [],
   );
 
-  // Show single-select panel only when no multi-select is active
-  const showSinglePanel = selectedNode && multiSelectedIds.size === 0;
+  const showSinglePanel = selectedNode && multiSelectedIds.length === 0;
   const showComparisonPanel = multiSelectedNodes.length >= 2;
 
   return (
@@ -170,7 +223,6 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
         dangerouslySetInnerHTML={{ __html: YGGDRASIL_FILTER_DEFS }}
       />
 
-      {/* Actual SVG content on top */}
       <svg
         width={dimensions.width}
         height={dimensions.height}
@@ -185,14 +237,12 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
             transition: dragging ? "none" : "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
           }}
         >
-          {/* Ambient particles */}
           <AmbientParticles
             width={dimensions.width}
             height={dimensions.height}
             count={clones.length > 0 ? 30 + clones.length * 3 : 20}
           />
 
-          {/* Ground fog */}
           <motion.rect
             x={0}
             y={dimensions.height * 0.6}
@@ -204,23 +254,13 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
             transition={{ delay: 0.5, duration: 2 }}
           />
 
-          {/* Runic inscriptions along trunk */}
           {layout.trunkNode && (
             <>
-              <RunicInscription
-                x={layout.trunkNode.x - 30}
-                y={layout.trunkNode.y + 30}
-                count={4}
-              />
-              <RunicInscription
-                x={layout.trunkNode.x + 30}
-                y={layout.trunkNode.y + 40}
-                count={3}
-              />
+              <RunicInscription x={layout.trunkNode.x - 30} y={layout.trunkNode.y + 30} count={4} />
+              <RunicInscription x={layout.trunkNode.x + 30} y={layout.trunkNode.y + 40} count={3} />
             </>
           )}
 
-          {/* Trunk line */}
           {layout.trunkNode && (
             <motion.line
               x1={layout.trunkNode.x}
@@ -237,12 +277,10 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
             />
           )}
 
-          {/* Branches */}
           {layout.branches.map((branch, i) => (
             <TreeBranchPath key={i} branch={branch} index={i} />
           ))}
 
-          {/* Nodes */}
           {layout.nodes.map((node, i) => (
             <TreeNodeCircle
               key={node.id}
@@ -250,12 +288,11 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
               index={i}
               highlighted={highlightId === node.id}
               selected={selectedNodeId === node.id}
-              multiSelected={multiSelectedIds.has(node.id)}
+              multiSelected={multiSelectedSet.has(node.id)}
               onSelect={handleNodeSelect}
             />
           ))}
 
-          {/* Title inscription at top */}
           <motion.text
             x={dimensions.width / 2}
             y={30}
@@ -275,7 +312,6 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
         </g>
       </svg>
 
-      {/* Empty state overlay */}
       {clones.length === 0 && (
         <div className="absolute inset-0 z-30 flex flex-col items-center justify-center">
           <motion.div
@@ -284,24 +320,18 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 2, duration: 0.8 }}
           >
-            <p className="font-mono text-lg text-muted-foreground">
-              The tree awaits its first roots.
-            </p>
-            <p className="mt-2 font-mono text-xs text-muted-foreground/60">
-              Add clones to watch Yggdrasil grow.
-            </p>
+            <p className="font-mono text-lg text-muted-foreground">The tree awaits its first roots.</p>
+            <p className="mt-2 font-mono text-xs text-muted-foreground/60">Add clones to watch Yggdrasil grow.</p>
           </motion.div>
         </div>
       )}
 
-      {/* Subtree stats panel — small floating panel next to selected node */}
       <AnimatePresence>
         {showSinglePanel && selectedNode.children.length > 0 && (
           <SubtreeStatsPanel node={selectedNode} zoom={zoom} pan={pan} dimensions={dimensions} />
         )}
       </AnimatePresence>
 
-      {/* Single node detail panel */}
       <AnimatePresence>
         {showSinglePanel && (
           <YggdrasilNodePanel
@@ -312,7 +342,6 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
         )}
       </AnimatePresence>
 
-      {/* Multi-select comparison panel */}
       <AnimatePresence>
         {showComparisonPanel && (
           <MultiSelectComparisonPanel
@@ -323,11 +352,10 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
         )}
       </AnimatePresence>
 
-      {/* Multi-select hint */}
-      {multiSelectedIds.size === 1 && (
+      {multiSelectedIds.length === 1 && (
         <div className="absolute bottom-4 right-4 z-30 rounded-lg border border-border/40 bg-card/80 px-3 py-2 backdrop-blur-lg">
           <p className="font-mono text-[10px] text-muted-foreground">
-            Shift+click another node to compare subtrees
+            Shift+click another node to select range · Ctrl+click to add individually
           </p>
         </div>
       )}

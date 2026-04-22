@@ -22,6 +22,7 @@ const yggdrasilSearchSchema = z.object({
   panY: fallback(z.number(), 0).default(0),
   selected: fallback(z.string(), "").default(""),
   descendants: fallback(z.boolean(), false).default(false),
+  compare: fallback(z.array(z.string()), []).default([]),
 });
 
 export const Route = createFileRoute("/yggdrasil")({
@@ -54,24 +55,28 @@ function collectDescendantIds(node: TreeNode): Set<string> {
   return ids;
 }
 
-/** Collect all descendants (nodes) recursively */
-function collectDescendants(node: TreeNode): TreeNode[] {
-  const result: TreeNode[] = [];
-  function walk(n: TreeNode) {
-    for (const child of n.children) {
-      result.push(child);
-      walk(child);
-    }
-  }
-  walk(node);
-  return result;
-}
-
 /** Find sibling nodes of a node, including itself */
 function findSiblings(node: TreeNode, allNodes: TreeNode[]): TreeNode[] {
   if (!node.parentId) return [node];
   const parent = allNodes.find((n) => n.id === node.parentId);
   return parent ? parent.children : [node];
+}
+
+/**
+ * Given two nodes that share a parent, return all sibling IDs between them (inclusive).
+ * Falls back to just the two IDs if they don't share a parent.
+ */
+function getSiblingRange(a: TreeNode, b: TreeNode, allNodes: TreeNode[]): string[] {
+  if (a.parentId !== b.parentId || !a.parentId) return [a.id, b.id];
+  const parent = allNodes.find((n) => n.id === a.parentId);
+  if (!parent) return [a.id, b.id];
+  const siblings = parent.children;
+  const idxA = siblings.findIndex((s) => s.id === a.id);
+  const idxB = siblings.findIndex((s) => s.id === b.id);
+  if (idxA === -1 || idxB === -1) return [a.id, b.id];
+  const lo = Math.min(idxA, idxB);
+  const hi = Math.max(idxA, idxB);
+  return siblings.slice(lo, hi + 1).map((s) => s.id);
 }
 
 function YggdrasilPage() {
@@ -80,31 +85,35 @@ function YggdrasilPage() {
   const navigate = useNavigate({ from: "/yggdrasil" });
   const search = Route.useSearch();
 
-  // Derive state from URL search params
-  const activeFilters = search.filters as StatusFilter[];
+  // Derive committed state from URL search params
+  const committedFilters = search.filters as StatusFilter[];
+  const committedDescendant = search.descendants;
+  const committedCompare = search.compare;
   const zoom = search.zoom;
   const pan = useMemo(() => ({ x: search.panX, y: search.panY }), [search.panX, search.panY]);
-  const descendantFilterEnabled = search.descendants;
 
   const [searchQuery, setSearchQuery] = useState("");
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Staged filters for preview-before-apply
-  const [stagedFilters, setStagedFilters] = useState<StatusFilter[]>(activeFilters);
-  const [stagedDescendant, setStagedDescendant] = useState(descendantFilterEnabled);
+  // Staged state — only written to URL on Apply
+  const [stagedFilters, setStagedFilters] = useState<StatusFilter[]>(committedFilters);
+  const [stagedDescendant, setStagedDescendant] = useState(committedDescendant);
+  const [stagedCompare, setStagedCompare] = useState<string[]>(committedCompare);
   const [hasUncommittedChanges, setHasUncommittedChanges] = useState(false);
+
+  // Track the last Shift-clicked node for range selection
+  const lastShiftAnchorRef = useRef<string | null>(null);
 
   // Sync staged state when URL params change externally
   useEffect(() => {
-    setStagedFilters(activeFilters);
-    setStagedDescendant(descendantFilterEnabled);
+    setStagedFilters(committedFilters);
+    setStagedDescendant(committedDescendant);
+    setStagedCompare(committedCompare);
     setHasUncommittedChanges(false);
-  }, [activeFilters, descendantFilterEnabled]);
+  }, [committedFilters, committedDescendant, committedCompare]);
 
-  /** Reference to tree container dimensions for centering calculations */
   const treeDimensionsRef = useRef({ width: 1000, height: 700 });
-  /** Exposed node positions from the layout */
   const layoutNodesRef = useRef<TreeNode[]>([]);
 
   const fetchHealthFn = useServerFn(fetchFleetHealth);
@@ -115,21 +124,22 @@ function YggdrasilPage() {
     return layoutNodesRef.current.find((n) => n.id === search.selected) ?? null;
   }, [search.selected, layoutNodesRef.current]);
 
+  // Use committed filters for the actual tree filtering
   const filteredClones = useMemo(() => {
     let result = clones;
 
-    if (activeFilters.length > 0) {
-      result = result.filter((c) => activeFilters.includes(c.sync_status as StatusFilter));
+    if (committedFilters.length > 0) {
+      result = result.filter((c) => committedFilters.includes(c.sync_status as StatusFilter));
     }
 
-    if (descendantFilterEnabled && selectedNode && selectedNode.id !== "__trunk__") {
+    if (committedDescendant && selectedNode && selectedNode.id !== "__trunk__") {
       const descendantIds = collectDescendantIds(selectedNode);
       descendantIds.add(selectedNode.id);
       result = result.filter((c) => descendantIds.has(c.id));
     }
 
     return result;
-  }, [clones, activeFilters, descendantFilterEnabled, selectedNode]);
+  }, [clones, committedFilters, committedDescendant, selectedNode]);
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
@@ -145,7 +155,7 @@ function YggdrasilPage() {
       .map((c) => ({ id: c.id, name: c.name, repo: `${c.github_owner}/${c.github_repo}` }));
   }, [clones, searchQuery]);
 
-  // Helper to update search params
+  // Helper to update search params (for non-staged things like zoom/pan/selected)
   const updateSearch = useCallback(
     (updates: Partial<z.infer<typeof yggdrasilSearchSchema>>) => {
       navigate({ search: (prev: z.infer<typeof yggdrasilSearchSchema>) => ({ ...prev, ...updates }), replace: true });
@@ -153,25 +163,12 @@ function YggdrasilPage() {
     [navigate],
   );
 
-  const setActiveFilters = useCallback(
-    (filters: StatusFilter[]) => updateSearch({ filters }),
-    [updateSearch],
-  );
   const setZoom = useCallback((z: number) => updateSearch({ zoom: z }), [updateSearch]);
   const setPan = useCallback(
     (p: { x: number; y: number }) => updateSearch({ panX: p.x, panY: p.y }),
     [updateSearch],
   );
-  const setSelectedNodeId = useCallback(
-    (id: string) => updateSearch({ selected: id }),
-    [updateSearch],
-  );
-  const setDescendantFilterEnabled = useCallback(
-    (val: boolean) => updateSearch({ descendants: val }),
-    [updateSearch],
-  );
 
-  /** Auto-pan & zoom to center the selected node */
   const handleSearchSelect = useCallback(
     (id: string) => {
       setHighlightId(id);
@@ -215,6 +212,15 @@ function YggdrasilPage() {
     [updateSearch],
   );
 
+  // Multi-select handler — called from tree component
+  const handleMultiSelectChange = useCallback(
+    (ids: string[]) => {
+      setStagedCompare(ids);
+      setHasUncommittedChanges(true);
+    },
+    [],
+  );
+
   // Staged filter handlers
   const handleStagedFiltersChange = useCallback((filters: StatusFilter[]) => {
     setStagedFilters(filters);
@@ -226,21 +232,26 @@ function YggdrasilPage() {
     setHasUncommittedChanges(true);
   }, []);
 
+  // Apply persists staged filters, descendants, AND multi-select to URL
   const handleApplyFilters = useCallback(() => {
-    updateSearch({ filters: stagedFilters, descendants: stagedDescendant });
+    updateSearch({
+      filters: stagedFilters,
+      descendants: stagedDescendant,
+      compare: stagedCompare,
+    });
     setHasUncommittedChanges(false);
-  }, [stagedFilters, stagedDescendant, updateSearch]);
+  }, [stagedFilters, stagedDescendant, stagedCompare, updateSearch]);
 
   const handleClearFilters = useCallback(() => {
     setStagedFilters([]);
     setStagedDescendant(false);
+    setStagedCompare([]);
     setHasUncommittedChanges(true);
   }, []);
 
   // Keyboard navigation
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      // Don't capture if user is typing in an input
       if ((e.target as HTMLElement).closest("input, textarea, [contenteditable]")) return;
 
       const nodes = layoutNodesRef.current;
@@ -252,13 +263,17 @@ function YggdrasilPage() {
       if (e.key === "Escape") {
         e.preventDefault();
         handleNodeSelect(null);
+        // Also clear staged multi-select
+        if (stagedCompare.length > 0) {
+          setStagedCompare([]);
+          setHasUncommittedChanges(true);
+        }
         return;
       }
 
       if (e.key === "ArrowDown") {
         e.preventDefault();
         if (!currentNode) {
-          // Select trunk's first child
           const trunk = nodes.find((n) => n.id === "__trunk__");
           if (trunk && trunk.children.length > 0) {
             handleNodeSelect(trunk.children[0]);
@@ -266,7 +281,6 @@ function YggdrasilPage() {
           }
           return;
         }
-        // Navigate to first child
         if (currentNode.children.length > 0) {
           handleNodeSelect(currentNode.children[0]);
           centerOnNode(currentNode.children[0]);
@@ -277,7 +291,6 @@ function YggdrasilPage() {
       if (e.key === "ArrowUp") {
         e.preventDefault();
         if (!currentNode) return;
-        // Navigate to parent
         if (currentNode.parentId) {
           const parent = nodes.find((n) => n.id === currentNode.parentId);
           if (parent && parent.id !== "__trunk__") {
@@ -309,7 +322,7 @@ function YggdrasilPage() {
 
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [search.selected, handleNodeSelect]);
+  }, [search.selected, handleNodeSelect, stagedCompare]);
 
   const centerOnNode = useCallback(
     (node: TreeNode) => {
@@ -370,6 +383,7 @@ function YggdrasilPage() {
         hasUncommittedChanges={hasUncommittedChanges}
         onApplyFilters={handleApplyFilters}
         onClearFilters={handleClearFilters}
+        multiSelectCount={stagedCompare.length}
       />
 
       {loading ? (
@@ -395,6 +409,8 @@ function YggdrasilPage() {
           }}
           onNodeSelect={handleNodeSelect}
           selectedNodeId={search.selected || null}
+          multiSelectedIds={stagedCompare}
+          onMultiSelectChange={handleMultiSelectChange}
         />
       )}
     </div>

@@ -32,6 +32,7 @@ interface Props {
   hasUncommittedChanges?: boolean;
   onApplyFilters?: () => void;
   onClearFilters?: () => void;
+  multiSelectCount?: number;
 }
 
 const STATUS_OPTIONS: {
@@ -92,6 +93,7 @@ export function YggdrasilToolbar({
   hasUncommittedChanges,
   onApplyFilters,
   onClearFilters,
+  multiSelectCount,
 }: Props) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [legendHovered, setLegendHovered] = useState<StatusFilter | null>(null);
@@ -204,6 +206,15 @@ export function YggdrasilToolbar({
             onCheckedChange={(val) => onDescendantFilterToggle?.(val)}
             className="h-4 w-7 [&>span]:h-3 [&>span]:w-3"
           />
+        </div>
+      )}
+
+      {/* Multi-select badge */}
+      {(multiSelectCount ?? 0) > 0 && (
+        <div className="flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1">
+          <span className="font-mono text-[10px] font-medium text-primary">
+            {multiSelectCount} comparing
+          </span>
         </div>
       )}
 
