@@ -29,9 +29,7 @@ export const Route = createFileRoute("/yggdrasil")({
   validateSearch: zodValidator(yggdrasilSearchSchema),
   component: () => (
     <ProtectedRoute>
-      <AppShell>
-        <YggdrasilPage />
-      </AppShell>
+      <YggdrasilPage />
     </ProtectedRoute>
   ),
   head: () => ({
