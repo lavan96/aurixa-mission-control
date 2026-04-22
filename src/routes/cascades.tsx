@@ -290,6 +290,8 @@ function CascadesPage() {
         </CardContent>
       </Card>
 
+      <BulkCascadeCard />
+
       <CascadeDryRunCard />
 
       <CascadeTemplatesCard
