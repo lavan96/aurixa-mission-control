@@ -3,16 +3,28 @@ import { useServerFn } from "@tanstack/react-start";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Github, RefreshCw, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+import {
+  Github,
+  RefreshCw,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  Copy,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getGitHubStatus, type GitHubStatus } from "@/server/github-status.functions";
+import { getGitHubStatus, type GitHubStatus, type RepoReachability } from "@/server/github-status.functions";
 import { useAuth } from "@/lib/auth";
+import { toast } from "sonner";
 
 export function GitHubStatusCard() {
   const fn = useServerFn(getGitHubStatus);
   const { session, loading: authLoading } = useAuth();
   const [status, setStatus] = useState<GitHubStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [expandedRepoId, setExpandedRepoId] = useState<string | null>(null);
 
   const refresh = async () => {
     setLoading(true);
@@ -20,8 +32,6 @@ export function GitHubStatusCard() {
       const res = await fn();
       setStatus(res);
     } catch (e) {
-      // The auth middleware throws raw Response objects on 401 — unwrap so
-      // we don't render "[object Response]" or crash the error boundary.
       let message = "Unknown error";
       if (e instanceof Response) {
         try {
@@ -32,20 +42,13 @@ export function GitHubStatusCard() {
       } else if (e instanceof Error) {
         message = e.message;
       }
-      setStatus({
-        ok: false,
-        configured: false,
-        error: message,
-        repos: [],
-      });
+      setStatus({ ok: false, configured: false, error: message, repos: [] });
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    // Wait for auth to resolve before firing — calling unauthenticated yields
-    // a 401 Response throw that crashes the page.
     if (authLoading) return;
     if (!session) {
       setStatus({
@@ -64,6 +67,7 @@ export function GitHubStatusCard() {
   const reachableCount = status?.repos.filter((r) => r.ok).length ?? 0;
   const totalCount = status?.repos.length ?? 0;
   const allReachable = totalCount > 0 && reachableCount === totalCount;
+  const failedRepos = status?.repos.filter((r) => !r.ok) ?? [];
 
   return (
     <Card>
@@ -100,7 +104,11 @@ export function GitHubStatusCard() {
         ) : (
           <>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Tile label="App" value={status.app?.name ?? "—"} sub={status.app ? `id ${status.app.app_id}` : undefined} />
+              <Tile
+                label="App"
+                value={status.app?.name ?? "—"}
+                sub={status.app ? `id ${status.app.app_id}` : undefined}
+              />
               <Tile
                 label="Installation"
                 value={status.installation?.account ?? "—"}
@@ -129,6 +137,20 @@ export function GitHubStatusCard() {
                   {reachableCount}/{totalCount} reachable
                 </Badge>
               </div>
+
+              {/* Failed repos summary */}
+              {failedRepos.length > 0 && (
+                <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 space-y-2">
+                  <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-destructive">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    {failedRepos.length} repo{failedRepos.length > 1 ? "s" : ""} failed authorization
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Click on a failed repo below to see the exact GitHub API error and remediation steps.
+                  </div>
+                </div>
+              )}
+
               {status.repos.length === 0 ? (
                 <div className="rounded-md border border-border bg-surface p-3 text-sm text-muted-foreground">
                   No prime or clones configured yet.
@@ -136,29 +158,14 @@ export function GitHubStatusCard() {
               ) : (
                 <ul className="space-y-1.5">
                   {status.repos.map((r) => (
-                    <li
+                    <RepoRow
                       key={r.id}
-                      className="flex items-center gap-3 rounded-md border border-border bg-surface px-3 py-2 text-sm"
-                    >
-                      {r.ok ? (
-                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success" />
-                      ) : (
-                        <XCircle className="h-3.5 w-3.5 shrink-0 text-destructive" />
-                      )}
-                      <div className="flex-1 truncate">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs">{r.owner}/{r.repo}</span>
-                          <Badge variant="outline" className="text-[9px] uppercase">
-                            {r.role}
-                          </Badge>
-                        </div>
-                        <div className="font-mono text-[10px] text-muted-foreground">
-                          {r.branch}
-                          {r.ok && r.default_branch_sha && <> · {r.default_branch_sha}</>}
-                          {!r.ok && r.error && <> · {r.error}</>}
-                        </div>
-                      </div>
-                    </li>
+                      repo={r}
+                      expanded={expandedRepoId === r.id}
+                      onToggle={() =>
+                        setExpandedRepoId(expandedRepoId === r.id ? null : r.id)
+                      }
+                    />
                   ))}
                 </ul>
               )}
@@ -167,6 +174,154 @@ export function GitHubStatusCard() {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function RepoRow({
+  repo: r,
+  expanded,
+  onToggle,
+}: {
+  repo: RepoReachability;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const copyError = () => {
+    if (r.error) {
+      navigator.clipboard.writeText(r.error);
+      toast.success("Error copied to clipboard");
+    }
+  };
+
+  return (
+    <li className="rounded-md border border-border bg-surface text-sm">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-muted/30"
+      >
+        {r.ok ? (
+          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success" />
+        ) : (
+          <XCircle className="h-3.5 w-3.5 shrink-0 text-destructive" />
+        )}
+        <div className="flex-1 truncate">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-xs">
+              {r.owner}/{r.repo}
+            </span>
+            <Badge variant="outline" className="text-[9px] uppercase">
+              {r.role}
+            </Badge>
+          </div>
+          <div className="font-mono text-[10px] text-muted-foreground">
+            {r.branch}
+            {r.ok && r.default_branch_sha && <> · {r.default_branch_sha}</>}
+            {!r.ok && r.error && <> · {r.error}</>}
+          </div>
+        </div>
+        {!r.ok && (
+          expanded ? (
+            <ChevronUp className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          )
+        )}
+      </button>
+
+      {/* Drilldown panel */}
+      {expanded && !r.ok && (
+        <div className="border-t border-border bg-muted/10 px-3 py-3 space-y-3">
+          <div className="space-y-1.5">
+            <div className="font-mono text-[10px] uppercase tracking-wider text-destructive">
+              GitHub API Error
+            </div>
+            <pre className="whitespace-pre-wrap break-words rounded-md border border-destructive/20 bg-destructive/5 p-2 font-mono text-[11px] text-destructive">
+              {r.error || "Unknown error"}
+            </pre>
+            <Button variant="ghost" size="sm" onClick={copyError} className="h-6 text-[10px]">
+              <Copy className="mr-1 h-3 w-3" /> Copy error
+            </Button>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              Possible causes
+            </div>
+            <ul className="space-y-1 text-xs text-muted-foreground">
+              {r.error?.includes("404") || r.error?.includes("Not installed") ? (
+                <>
+                  <li className="flex items-start gap-1.5">
+                    <span className="mt-0.5 text-warning">•</span>
+                    GitHub App is not installed on the <code className="rounded bg-muted px-1">{r.owner}</code> organization/account.
+                  </li>
+                  <li className="flex items-start gap-1.5">
+                    <span className="mt-0.5 text-warning">•</span>
+                    Repository <code className="rounded bg-muted px-1">{r.repo}</code> is not included in the app's repository access list.
+                  </li>
+                  <li className="flex items-start gap-1.5">
+                    <span className="mt-0.5 text-warning">•</span>
+                    Branch <code className="rounded bg-muted px-1">{r.branch}</code> does not exist in the repository.
+                  </li>
+                </>
+              ) : r.error?.includes("401") || r.error?.includes("Bad credentials") ? (
+                <>
+                  <li className="flex items-start gap-1.5">
+                    <span className="mt-0.5 text-destructive">•</span>
+                    Private key does not match the GitHub App ID — regenerate the key in app settings.
+                  </li>
+                  <li className="flex items-start gap-1.5">
+                    <span className="mt-0.5 text-destructive">•</span>
+                    Installation ID is incorrect or belongs to a different app.
+                  </li>
+                </>
+              ) : r.error?.includes("403") ? (
+                <>
+                  <li className="flex items-start gap-1.5">
+                    <span className="mt-0.5 text-destructive">•</span>
+                    Insufficient permissions — check the app's permission scopes in GitHub settings.
+                  </li>
+                  <li className="flex items-start gap-1.5">
+                    <span className="mt-0.5 text-destructive">•</span>
+                    Repository may be archived or restricted.
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li className="flex items-start gap-1.5">
+                    <span className="mt-0.5 text-warning">•</span>
+                    Network timeout or GitHub API rate limit exceeded.
+                  </li>
+                  <li className="flex items-start gap-1.5">
+                    <span className="mt-0.5 text-warning">•</span>
+                    Try re-checking in a few seconds.
+                  </li>
+                </>
+              )}
+            </ul>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <a
+              href={`https://github.com/${r.owner}/${r.repo}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ExternalLink className="h-3 w-3" /> View on GitHub
+            </a>
+            <a
+              href={`https://github.com/settings/installations`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ExternalLink className="h-3 w-3" /> GitHub App settings
+            </a>
+          </div>
+        </div>
+      )}
+    </li>
   );
 }
 
