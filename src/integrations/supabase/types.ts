@@ -306,6 +306,60 @@ export type Database = {
         }
         Relationships: []
       }
+      clone_backends: {
+        Row: {
+          admin_email: string | null
+          anon_key: string | null
+          clone_id: string
+          created_at: string
+          db_pass: string | null
+          error_message: string | null
+          id: string
+          migration_version: string | null
+          region: string
+          service_role_key: string | null
+          status: Database["public"]["Enums"]["clone_backend_status"]
+          status_detail: string | null
+          supabase_project_ref: string | null
+          supabase_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          admin_email?: string | null
+          anon_key?: string | null
+          clone_id: string
+          created_at?: string
+          db_pass?: string | null
+          error_message?: string | null
+          id?: string
+          migration_version?: string | null
+          region?: string
+          service_role_key?: string | null
+          status?: Database["public"]["Enums"]["clone_backend_status"]
+          status_detail?: string | null
+          supabase_project_ref?: string | null
+          supabase_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          admin_email?: string | null
+          anon_key?: string | null
+          clone_id?: string
+          created_at?: string
+          db_pass?: string | null
+          error_message?: string | null
+          id?: string
+          migration_version?: string | null
+          region?: string
+          service_role_key?: string | null
+          status?: Database["public"]["Enums"]["clone_backend_status"]
+          status_detail?: string | null
+          supabase_project_ref?: string | null
+          supabase_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       clone_drift_policies: {
         Row: {
           auto_apply_severity: Database["public"]["Enums"]["drift_severity"]
@@ -837,6 +891,14 @@ export type Database = {
         | "skipped"
       cascade_schedule_kind: "fleet_cascade" | "module_sync"
       cascade_trigger: "manual" | "commit" | "scheduled"
+      clone_backend_status:
+        | "pending"
+        | "provisioning"
+        | "migrating"
+        | "seeding_admin"
+        | "ready"
+        | "failed"
+        | "suspended"
       drift_severity: "low" | "medium" | "high"
       module_status: "proposed" | "approved" | "archived"
       notification_kind:
@@ -1002,6 +1064,15 @@ export const Constants = {
       ],
       cascade_schedule_kind: ["fleet_cascade", "module_sync"],
       cascade_trigger: ["manual", "commit", "scheduled"],
+      clone_backend_status: [
+        "pending",
+        "provisioning",
+        "migrating",
+        "seeding_admin",
+        "ready",
+        "failed",
+        "suspended",
+      ],
       drift_severity: ["low", "medium", "high"],
       module_status: ["proposed", "approved", "archived"],
       notification_kind: [
