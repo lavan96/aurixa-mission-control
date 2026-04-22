@@ -1,10 +1,10 @@
 /**
- * YggdrasilToolbar — filters, search, legend, descendant toggle, and refresh controls.
+ * YggdrasilToolbar — filters (staged), search, legend, descendant toggle, and refresh controls.
  */
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Filter, RefreshCw, X, ZoomIn, ZoomOut, Maximize, Info, GitFork } from "lucide-react";
+import { Search, Filter, RefreshCw, X, ZoomIn, ZoomOut, Maximize, Info, GitFork, Check, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -29,6 +29,9 @@ interface Props {
   selectedNode?: TreeNode | null;
   descendantFilterEnabled?: boolean;
   onDescendantFilterToggle?: (enabled: boolean) => void;
+  hasUncommittedChanges?: boolean;
+  onApplyFilters?: () => void;
+  onClearFilters?: () => void;
 }
 
 const STATUS_OPTIONS: {
@@ -57,6 +60,19 @@ const STATUS_OPTIONS: {
   },
 ];
 
+/** Count descendants recursively by status */
+function countDescendantsByStatus(node: TreeNode): Record<string, number> {
+  const counts: Record<string, number> = {};
+  function walk(n: TreeNode) {
+    for (const child of n.children) {
+      counts[child.syncStatus] = (counts[child.syncStatus] ?? 0) + 1;
+      walk(child);
+    }
+  }
+  walk(node);
+  return counts;
+}
+
 export function YggdrasilToolbar({
   activeFilters,
   onFiltersChange,
@@ -73,6 +89,9 @@ export function YggdrasilToolbar({
   selectedNode,
   descendantFilterEnabled,
   onDescendantFilterToggle,
+  hasUncommittedChanges,
+  onApplyFilters,
+  onClearFilters,
 }: Props) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [legendHovered, setLegendHovered] = useState<StatusFilter | null>(null);
@@ -98,6 +117,11 @@ export function YggdrasilToolbar({
 
   const showDescendantToggle =
     selectedNode && selectedNode.id !== "__trunk__" && selectedNode.children.length > 0;
+
+  // Count descendants by status for contextual tooltip
+  const descendantCounts = selectedNode && selectedNode.id !== "__trunk__"
+    ? countDescendantsByStatus(selectedNode)
+    : null;
 
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -146,14 +170,11 @@ export function YggdrasilToolbar({
                     <p className="text-[11px] leading-relaxed text-muted-foreground">
                       {opt.description}
                     </p>
-                    {/* Contextual count when selection is active */}
-                    {selectedNode && selectedNode.id !== "__trunk__" && (
+                    {descendantCounts && selectedNode && (
                       <p className="mt-1.5 border-t border-border/40 pt-1.5 font-mono text-[10px] text-muted-foreground/70">
-                        {selectedNode.children.filter((c) => c.syncStatus === opt.value).length} in{" "}
-                        {selectedNode.name}'s subtree
+                        {descendantCounts[opt.value] ?? 0} in {selectedNode.name}'s subtree
                       </p>
                     )}
-                    {/* Arrow */}
                     <div className="absolute -top-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 border-l border-t border-border/60 bg-popover" />
                   </motion.div>
                 )}
@@ -161,7 +182,7 @@ export function YggdrasilToolbar({
             </div>
           );
         })}
-        {activeFilters.length > 0 && (
+        {activeFilters.length > 0 && !hasUncommittedChanges && (
           <button
             onClick={() => onFiltersChange([])}
             className="ml-1 text-muted-foreground hover:text-foreground"
@@ -185,6 +206,36 @@ export function YggdrasilToolbar({
           />
         </div>
       )}
+
+      {/* Clear & Apply buttons for staged filters */}
+      <AnimatePresence>
+        {hasUncommittedChanges && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="flex items-center gap-1.5"
+          >
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClearFilters}
+              className="h-7 font-mono text-[10px] text-muted-foreground"
+            >
+              <RotateCcw className="mr-1 h-3 w-3" />
+              Clear
+            </Button>
+            <Button
+              size="sm"
+              onClick={onApplyFilters}
+              className="h-7 font-mono text-[10px]"
+            >
+              <Check className="mr-1 h-3 w-3" />
+              Apply
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Search */}
       <div ref={searchRef} className="relative">

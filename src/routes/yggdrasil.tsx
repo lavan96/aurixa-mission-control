@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
+import { z } from "zod";
 import { ProtectedRoute } from "@/components/protected-route";
 import { AppShell } from "@/components/app-shell";
 import { useClones, usePrimeConfig } from "@/lib/queries";
@@ -8,11 +10,22 @@ import { TreeStats } from "@/components/yggdrasil/tree-stats";
 import { YggdrasilToolbar, type StatusFilter } from "@/components/yggdrasil/yggdrasil-toolbar";
 import { TreePine } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
+import { useNavigate } from "@tanstack/react-router";
 import { fetchFleetHealth } from "@/server/fleet-health.functions";
 import { toast } from "sonner";
 import type { TreeNode } from "@/components/yggdrasil/use-tree-layout";
 
+const yggdrasilSearchSchema = z.object({
+  filters: fallback(z.array(z.enum(["in_sync", "behind", "failed"])), []).default([]),
+  zoom: fallback(z.number(), 1).default(1),
+  panX: fallback(z.number(), 0).default(0),
+  panY: fallback(z.number(), 0).default(0),
+  selected: fallback(z.string(), "").default(""),
+  descendants: fallback(z.boolean(), false).default(false),
+});
+
 export const Route = createFileRoute("/yggdrasil")({
+  validateSearch: zodValidator(yggdrasilSearchSchema),
   component: () => (
     <ProtectedRoute>
       <AppShell>
@@ -41,18 +54,53 @@ function collectDescendantIds(node: TreeNode): Set<string> {
   return ids;
 }
 
+/** Collect all descendants (nodes) recursively */
+function collectDescendants(node: TreeNode): TreeNode[] {
+  const result: TreeNode[] = [];
+  function walk(n: TreeNode) {
+    for (const child of n.children) {
+      result.push(child);
+      walk(child);
+    }
+  }
+  walk(node);
+  return result;
+}
+
+/** Find sibling nodes of a node, including itself */
+function findSiblings(node: TreeNode, allNodes: TreeNode[]): TreeNode[] {
+  if (!node.parentId) return [node];
+  const parent = allNodes.find((n) => n.id === node.parentId);
+  return parent ? parent.children : [node];
+}
+
 function YggdrasilPage() {
   const { data: clones, loading, refresh: refreshClones } = useClones();
   const { data: prime } = usePrimeConfig();
+  const navigate = useNavigate({ from: "/yggdrasil" });
+  const search = Route.useSearch();
 
-  const [activeFilters, setActiveFilters] = useState<StatusFilter[]>([]);
+  // Derive state from URL search params
+  const activeFilters = search.filters as StatusFilter[];
+  const zoom = search.zoom;
+  const pan = useMemo(() => ({ x: search.panX, y: search.panY }), [search.panX, search.panY]);
+  const descendantFilterEnabled = search.descendants;
+
   const [searchQuery, setSearchQuery] = useState("");
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
-  const [descendantFilterEnabled, setDescendantFilterEnabled] = useState(false);
+
+  // Staged filters for preview-before-apply
+  const [stagedFilters, setStagedFilters] = useState<StatusFilter[]>(activeFilters);
+  const [stagedDescendant, setStagedDescendant] = useState(descendantFilterEnabled);
+  const [hasUncommittedChanges, setHasUncommittedChanges] = useState(false);
+
+  // Sync staged state when URL params change externally
+  useEffect(() => {
+    setStagedFilters(activeFilters);
+    setStagedDescendant(descendantFilterEnabled);
+    setHasUncommittedChanges(false);
+  }, [activeFilters, descendantFilterEnabled]);
 
   /** Reference to tree container dimensions for centering calculations */
   const treeDimensionsRef = useRef({ width: 1000, height: 700 });
@@ -61,15 +109,19 @@ function YggdrasilPage() {
 
   const fetchHealthFn = useServerFn(fetchFleetHealth);
 
+  // Resolve selected node from URL param
+  const selectedNode = useMemo(() => {
+    if (!search.selected) return null;
+    return layoutNodesRef.current.find((n) => n.id === search.selected) ?? null;
+  }, [search.selected, layoutNodesRef.current]);
+
   const filteredClones = useMemo(() => {
     let result = clones;
 
-    // Status filters
     if (activeFilters.length > 0) {
       result = result.filter((c) => activeFilters.includes(c.sync_status as StatusFilter));
     }
 
-    // Descendant filter — when enabled and a node is selected, only show descendants
     if (descendantFilterEnabled && selectedNode && selectedNode.id !== "__trunk__") {
       const descendantIds = collectDescendantIds(selectedNode);
       descendantIds.add(selectedNode.id);
@@ -93,25 +145,51 @@ function YggdrasilPage() {
       .map((c) => ({ id: c.id, name: c.name, repo: `${c.github_owner}/${c.github_repo}` }));
   }, [clones, searchQuery]);
 
+  // Helper to update search params
+  const updateSearch = useCallback(
+    (updates: Partial<z.infer<typeof yggdrasilSearchSchema>>) => {
+      navigate({ search: (prev) => ({ ...prev, ...updates }), replace: true });
+    },
+    [navigate],
+  );
+
+  const setActiveFilters = useCallback(
+    (filters: StatusFilter[]) => updateSearch({ filters }),
+    [updateSearch],
+  );
+  const setZoom = useCallback((z: number) => updateSearch({ zoom: z }), [updateSearch]);
+  const setPan = useCallback(
+    (p: { x: number; y: number }) => updateSearch({ panX: p.x, panY: p.y }),
+    [updateSearch],
+  );
+  const setSelectedNodeId = useCallback(
+    (id: string) => updateSearch({ selected: id }),
+    [updateSearch],
+  );
+  const setDescendantFilterEnabled = useCallback(
+    (val: boolean) => updateSearch({ descendants: val }),
+    [updateSearch],
+  );
+
   /** Auto-pan & zoom to center the selected node */
-  const handleSearchSelect = useCallback((id: string) => {
-    setHighlightId(id);
-    setSearchQuery("");
+  const handleSearchSelect = useCallback(
+    (id: string) => {
+      setHighlightId(id);
+      setSearchQuery("");
 
-    // Find the node in the layout to get its coordinates
-    const targetNode = layoutNodesRef.current.find((n) => n.id === id);
-    if (targetNode) {
-      const dims = treeDimensionsRef.current;
-      const targetZoom = 1.5;
-      // Center the node in the viewport
-      const panX = dims.width / 2 - targetNode.x * targetZoom;
-      const panY = dims.height / 2 - targetNode.y * targetZoom;
-      setZoom(targetZoom);
-      setPan({ x: panX, y: panY });
-    }
+      const targetNode = layoutNodesRef.current.find((n) => n.id === id);
+      if (targetNode) {
+        const dims = treeDimensionsRef.current;
+        const targetZoom = 1.5;
+        const panX = dims.width / 2 - targetNode.x * targetZoom;
+        const panY = dims.height / 2 - targetNode.y * targetZoom;
+        updateSearch({ zoom: targetZoom, panX, panY, selected: id });
+      }
 
-    setTimeout(() => setHighlightId(null), 4000);
-  }, []);
+      setTimeout(() => setHighlightId(null), 4000);
+    },
+    [updateSearch],
+  );
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -126,9 +204,123 @@ function YggdrasilPage() {
     }
   }, [fetchHealthFn, refreshClones]);
 
-  const handleZoomIn = () => setZoom((z) => Math.min(3, z + 0.2));
-  const handleZoomOut = () => setZoom((z) => Math.max(0.3, z - 0.2));
-  const handleZoomReset = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
+  const handleZoomIn = () => setZoom(Math.min(3, zoom + 0.2));
+  const handleZoomOut = () => setZoom(Math.max(0.3, zoom - 0.2));
+  const handleZoomReset = () => updateSearch({ zoom: 1, panX: 0, panY: 0 });
+
+  const handleNodeSelect = useCallback(
+    (node: TreeNode | null) => {
+      updateSearch({ selected: node?.id ?? "" });
+    },
+    [updateSearch],
+  );
+
+  // Staged filter handlers
+  const handleStagedFiltersChange = useCallback((filters: StatusFilter[]) => {
+    setStagedFilters(filters);
+    setHasUncommittedChanges(true);
+  }, []);
+
+  const handleStagedDescendantToggle = useCallback((val: boolean) => {
+    setStagedDescendant(val);
+    setHasUncommittedChanges(true);
+  }, []);
+
+  const handleApplyFilters = useCallback(() => {
+    updateSearch({ filters: stagedFilters, descendants: stagedDescendant });
+    setHasUncommittedChanges(false);
+  }, [stagedFilters, stagedDescendant, updateSearch]);
+
+  const handleClearFilters = useCallback(() => {
+    setStagedFilters([]);
+    setStagedDescendant(false);
+    setHasUncommittedChanges(true);
+  }, []);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Don't capture if user is typing in an input
+      if ((e.target as HTMLElement).closest("input, textarea, [contenteditable]")) return;
+
+      const nodes = layoutNodesRef.current;
+      if (nodes.length === 0) return;
+
+      const currentId = search.selected;
+      const currentNode = currentId ? nodes.find((n) => n.id === currentId) : null;
+
+      if (e.key === "Escape") {
+        e.preventDefault();
+        handleNodeSelect(null);
+        return;
+      }
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (!currentNode) {
+          // Select trunk's first child
+          const trunk = nodes.find((n) => n.id === "__trunk__");
+          if (trunk && trunk.children.length > 0) {
+            handleNodeSelect(trunk.children[0]);
+            centerOnNode(trunk.children[0]);
+          }
+          return;
+        }
+        // Navigate to first child
+        if (currentNode.children.length > 0) {
+          handleNodeSelect(currentNode.children[0]);
+          centerOnNode(currentNode.children[0]);
+        }
+        return;
+      }
+
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (!currentNode) return;
+        // Navigate to parent
+        if (currentNode.parentId) {
+          const parent = nodes.find((n) => n.id === currentNode.parentId);
+          if (parent && parent.id !== "__trunk__") {
+            handleNodeSelect(parent);
+            centerOnNode(parent);
+          } else if (parent?.id === "__trunk__") {
+            handleNodeSelect(null);
+          }
+        }
+        return;
+      }
+
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        e.preventDefault();
+        if (!currentNode) return;
+        const siblings = findSiblings(currentNode, nodes);
+        const idx = siblings.findIndex((s) => s.id === currentNode.id);
+        const next =
+          e.key === "ArrowLeft"
+            ? siblings[(idx - 1 + siblings.length) % siblings.length]
+            : siblings[(idx + 1) % siblings.length];
+        if (next && next.id !== currentNode.id) {
+          handleNodeSelect(next);
+          centerOnNode(next);
+        }
+        return;
+      }
+    };
+
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [search.selected, handleNodeSelect]);
+
+  const centerOnNode = useCallback(
+    (node: TreeNode) => {
+      const dims = treeDimensionsRef.current;
+      const targetZoom = Math.max(zoom, 1.2);
+      const panX = dims.width / 2 - node.x * targetZoom;
+      const panY = dims.height / 2 - node.y * targetZoom;
+      updateSearch({ zoom: targetZoom, panX, panY });
+    },
+    [zoom, updateSearch],
+  );
 
   const primeName = prime ? `${prime.github_owner}/${prime.github_repo}` : undefined;
 
@@ -160,8 +352,8 @@ function YggdrasilPage() {
       <TreeStats clones={clones} />
 
       <YggdrasilToolbar
-        activeFilters={activeFilters}
-        onFiltersChange={setActiveFilters}
+        activeFilters={stagedFilters}
+        onFiltersChange={handleStagedFiltersChange}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         searchResults={searchResults}
@@ -173,8 +365,11 @@ function YggdrasilPage() {
         onZoomOut={handleZoomOut}
         onZoomReset={handleZoomReset}
         selectedNode={selectedNode}
-        descendantFilterEnabled={descendantFilterEnabled}
-        onDescendantFilterToggle={setDescendantFilterEnabled}
+        descendantFilterEnabled={stagedDescendant}
+        onDescendantFilterToggle={handleStagedDescendantToggle}
+        hasUncommittedChanges={hasUncommittedChanges}
+        onApplyFilters={handleApplyFilters}
+        onClearFilters={handleClearFilters}
       />
 
       {loading ? (
@@ -198,7 +393,8 @@ function YggdrasilPage() {
             layoutNodesRef.current = nodes;
             treeDimensionsRef.current = dims;
           }}
-          onNodeSelect={setSelectedNode}
+          onNodeSelect={handleNodeSelect}
+          selectedNodeId={search.selected || null}
         />
       )}
     </div>
