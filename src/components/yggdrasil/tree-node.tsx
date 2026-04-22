@@ -1,6 +1,7 @@
 /**
  * TreeNodeCircle — a glowing node representing a clone/fork on the tree.
  * Includes tooltip on hover showing clone details.
+ * Supports multi-select via Shift/Ctrl-click.
  */
 
 import { motion } from "framer-motion";
@@ -12,7 +13,8 @@ interface Props {
   index: number;
   highlighted?: boolean;
   selected?: boolean;
-  onSelect?: (node: TreeNode) => void;
+  multiSelected?: boolean;
+  onSelect?: (node: TreeNode, event: React.MouseEvent) => void;
 }
 
 const STATUS_COLORS: Record<string, { fill: string; glow: string }> = {
@@ -22,13 +24,13 @@ const STATUS_COLORS: Record<string, { fill: string; glow: string }> = {
   unknown: { fill: "oklch(0.60 0.10 250)", glow: "oklch(0.70 0.14 250)" },
 };
 
-export function TreeNodeCircle({ node, index, highlighted, selected, onSelect }: Props) {
+export function TreeNodeCircle({ node, index, highlighted, selected, multiSelected, onSelect }: Props) {
   const [hovered, setHovered] = useState(false);
 
   const isTrunk = node.id === "__trunk__";
   const radius = isTrunk ? 18 : Math.max(8, 14 - node.depth * 2);
   const colors = STATUS_COLORS[node.syncStatus] ?? STATUS_COLORS.unknown;
-  const isActive = hovered || highlighted || selected;
+  const isActive = hovered || highlighted || selected || multiSelected;
 
   const delay = 0.5 + index * 0.06;
 
@@ -36,7 +38,7 @@ export function TreeNodeCircle({ node, index, highlighted, selected, onSelect }:
     <g
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={() => onSelect?.(node)}
+      onClick={(e) => onSelect?.(node, e)}
       style={{ cursor: isTrunk ? "default" : "pointer" }}
     >
       {/* Pulse ring for trunk */}
@@ -66,6 +68,22 @@ export function TreeNodeCircle({ node, index, highlighted, selected, onSelect }:
           initial={{ r: radius, opacity: 0.8 }}
           animate={{ r: radius + 20, opacity: 0 }}
           transition={{ duration: 1.5, repeat: Infinity, ease: "easeOut" }}
+        />
+      )}
+
+      {/* Multi-select ring indicator */}
+      {multiSelected && !isTrunk && (
+        <motion.circle
+          cx={node.x}
+          cy={node.y}
+          r={radius + 5}
+          fill="none"
+          stroke="oklch(0.80 0.18 260)"
+          strokeWidth={2}
+          strokeDasharray="4 3"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.8 }}
+          transition={{ duration: 0.3 }}
         />
       )}
 

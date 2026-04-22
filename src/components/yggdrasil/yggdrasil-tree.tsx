@@ -2,6 +2,7 @@
  * YggdrasilTree — the main SVG canvas that renders the entire
  * world tree visualization with all its layers.
  * Supports pan & zoom via mouse drag + wheel.
+ * Supports multi-select via Shift/Ctrl-click.
  */
 
 import { useRef, useState, useEffect, useCallback } from "react";
@@ -15,6 +16,7 @@ import { RunicInscription } from "./runic-inscription";
 import { YGGDRASIL_FILTER_DEFS } from "./tree-filters";
 import { YggdrasilNodePanel } from "./node-detail-panel";
 import { SubtreeStatsPanel } from "./subtree-stats-panel";
+import { MultiSelectComparisonPanel } from "./multi-select-comparison";
 
 interface Props {
   clones: Clone[];
@@ -33,6 +35,7 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
   const [dimensions, setDimensions] = useState({ width: 1000, height: 700 });
   const [dragging, setDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+  const [multiSelectedIds, setMultiSelectedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const el = containerRef.current;
@@ -54,15 +57,52 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
     ? layout.nodes.find((n) => n.id === selectedNodeId) ?? null
     : null;
 
+  // Resolve multi-selected nodes
+  const multiSelectedNodes = layout.nodes.filter((n) => multiSelectedIds.has(n.id));
+
   // Expose layout nodes to parent for auto-pan on search
   useEffect(() => {
     onLayoutReady?.(layout.nodes, dimensions);
   }, [layout.nodes, dimensions, onLayoutReady]);
 
-  const handleNodeSelect = useCallback((n: TreeNode) => {
-    const node = n.id === "__trunk__" ? null : n;
-    onNodeSelect?.(node);
+  const handleNodeSelect = useCallback((n: TreeNode, event: React.MouseEvent) => {
+    const isTrunk = n.id === "__trunk__";
+    if (isTrunk) {
+      onNodeSelect?.(null);
+      setMultiSelectedIds(new Set());
+      return;
+    }
+
+    // Multi-select: Shift or Ctrl/Cmd
+    if (event.shiftKey || event.ctrlKey || event.metaKey) {
+      setMultiSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(n.id)) {
+          next.delete(n.id);
+        } else {
+          next.add(n.id);
+        }
+        return next;
+      });
+      return;
+    }
+
+    // Normal click — single select, clear multi-select
+    setMultiSelectedIds(new Set());
+    onNodeSelect?.(n);
   }, [onNodeSelect]);
+
+  const handleRemoveFromMultiSelect = useCallback((id: string) => {
+    setMultiSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
+  const handleCloseComparison = useCallback(() => {
+    setMultiSelectedIds(new Set());
+  }, []);
 
   // Pan handlers
   const onPointerDown = useCallback(
@@ -92,6 +132,10 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
     },
     [],
   );
+
+  // Show single-select panel only when no multi-select is active
+  const showSinglePanel = selectedNode && multiSelectedIds.size === 0;
+  const showComparisonPanel = multiSelectedNodes.length >= 2;
 
   return (
     <div
@@ -206,6 +250,7 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
               index={i}
               highlighted={highlightId === node.id}
               selected={selectedNodeId === node.id}
+              multiSelected={multiSelectedIds.has(node.id)}
               onSelect={handleNodeSelect}
             />
           ))}
@@ -251,14 +296,14 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
 
       {/* Subtree stats panel — small floating panel next to selected node */}
       <AnimatePresence>
-        {selectedNode && selectedNode.children.length > 0 && (
+        {showSinglePanel && selectedNode.children.length > 0 && (
           <SubtreeStatsPanel node={selectedNode} zoom={zoom} pan={pan} dimensions={dimensions} />
         )}
       </AnimatePresence>
 
-      {/* Node detail panel */}
+      {/* Single node detail panel */}
       <AnimatePresence>
-        {selectedNode && (
+        {showSinglePanel && (
           <YggdrasilNodePanel
             node={selectedNode}
             allNodes={layout.nodes}
@@ -266,6 +311,26 @@ export function YggdrasilTree({ clones, primeName, highlightId, zoom, pan, onPan
           />
         )}
       </AnimatePresence>
+
+      {/* Multi-select comparison panel */}
+      <AnimatePresence>
+        {showComparisonPanel && (
+          <MultiSelectComparisonPanel
+            nodes={multiSelectedNodes}
+            onClose={handleCloseComparison}
+            onRemoveNode={handleRemoveFromMultiSelect}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Multi-select hint */}
+      {multiSelectedIds.size === 1 && (
+        <div className="absolute bottom-4 right-4 z-30 rounded-lg border border-border/40 bg-card/80 px-3 py-2 backdrop-blur-lg">
+          <p className="font-mono text-[10px] text-muted-foreground">
+            Shift+click another node to compare subtrees
+          </p>
+        </div>
+      )}
     </div>
   );
 }
