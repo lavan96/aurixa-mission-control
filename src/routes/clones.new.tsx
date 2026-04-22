@@ -9,12 +9,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { useModules, usePrimeConfig } from "@/lib/queries";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { GitFork, Copy, Layers, Info, Shield, Check } from "lucide-react";
+import { GitFork, Copy, Layers, Info, Shield, Check, Database } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useServerFn } from "@tanstack/react-start";
 import { provisionClone } from "@/server/clone-provisioning.functions";
+import { provisionBackend } from "@/server/backend-provisioning.functions";
 
 export const Route = createFileRoute("/clones/new")({
   component: () => (
@@ -77,6 +78,11 @@ function NewClone() {
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
+  const [dedicatedBackend, setDedicatedBackend] = useState(true);
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [backendRegion, setBackendRegion] = useState("us-east-1");
+  const provisionBackendFn = useServerFn(provisionBackend);
 
   // Default the org field to the prime's default_clone_org once it loads
   useEffect(() => {
