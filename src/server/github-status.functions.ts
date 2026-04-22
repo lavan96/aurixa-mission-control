@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { getAppOctokit } from "./github-app.server";
+import { getAppOctokit, clearAppOctokitCache } from "./github-app.server";
 
 // Diagnostics for the Aurixa GitHub App installation. Used by the
 // "GitHub App connection" card on /settings to surface whether the
@@ -42,6 +42,8 @@ export const getGitHubStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<GitHubStatus> => {
     const { supabase } = context;
+    // Clear cache so re-checks pick up rotated secrets / converted keys
+    clearAppOctokitCache();
     let octokit;
     try {
       octokit = getAppOctokit();
