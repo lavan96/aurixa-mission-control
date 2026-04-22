@@ -175,6 +175,17 @@ export function GitHubSetupWizard() {
                     )}
                     <div className="space-y-0.5">
                       <div className="font-mono text-xs font-medium">{s.name}</div>
+                      {s.name === "GITHUB_APP_ID" && (
+                        <div className="text-[11px] italic text-muted-foreground/70">
+                          Your App's numeric ID — found in <strong>GitHub App → General → App ID</strong> (e.g. 123456).
+                        </div>
+                      )}
+                      {s.name === "GITHUB_APP_INSTALLATION_ID" && (
+                        <div className="text-[11px] italic text-muted-foreground/70">
+                          The number at the end of the URL when you click <em>Configure</em> on the installed app
+                          (<code className="rounded bg-muted px-0.5">…/installations/<strong>{"<ID>"}</strong></code>).
+                        </div>
+                      )}
                       {s.hint && (
                         <div className="text-xs text-muted-foreground">{s.hint}</div>
                       )}

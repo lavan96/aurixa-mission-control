@@ -96,8 +96,13 @@ export function GitHubStatusCard() {
             <div className="space-y-1 text-sm">
               <div className="font-medium text-destructive">Not configured</div>
               <div className="text-muted-foreground">{status.error}</div>
-              <div className="text-xs text-muted-foreground">
-                Set GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY, and GITHUB_APP_INSTALLATION_ID secrets.
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p>Set <strong>GITHUB_APP_ID</strong>, <strong>GITHUB_APP_PRIVATE_KEY</strong>, and <strong>GITHUB_APP_INSTALLATION_ID</strong> secrets.</p>
+                <p className="text-[11px] italic text-muted-foreground/70">
+                  <strong>App ID</strong> — found in your GitHub App's General settings (numeric, e.g. 123456).{" "}
+                  <strong>Installation ID</strong> — the number at the end of the URL when you click <em>Configure</em> on the installed app
+                  (<code className="rounded bg-muted px-1">github.com/settings/installations/<strong>{"<ID>"}</strong></code>).
+                </p>
               </div>
             </div>
           </div>
