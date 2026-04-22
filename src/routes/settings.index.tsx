@@ -73,16 +73,20 @@ function SettingsGeneralPage() {
       if (lookupErr) throw lookupErr;
 
       if (existing) {
-        const { error } = await supabase
+        const { data: updated, error } = await supabase
           .from("prime_config")
           .update(payload)
-          .eq("id", existing.id);
+          .eq("id", existing.id)
+          .select()
+          .maybeSingle();
         if (error) throw error;
+        if (!updated) throw new Error("Update returned no rows — check permissions");
       } else {
         const { error } = await supabase.from("prime_config").insert(payload);
         if (error) throw error;
       }
       toast.success("Prime config saved");
+      setHydrated(false);          // allow re-hydration from refreshed data
       await refresh();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to save prime config";
