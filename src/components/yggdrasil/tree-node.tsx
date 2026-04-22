@@ -53,6 +53,21 @@ export function TreeNodeCircle({ node, index, highlighted, onSelect }: Props) {
         />
       )}
 
+      {/* Highlight pulse ring for search */}
+      {highlighted && !isTrunk && (
+        <motion.circle
+          cx={node.x}
+          cy={node.y}
+          r={radius + 12}
+          fill="none"
+          stroke="oklch(0.85 0.20 200)"
+          strokeWidth={2}
+          initial={{ r: radius, opacity: 0.8 }}
+          animate={{ r: radius + 20, opacity: 0 }}
+          transition={{ duration: 1.5, repeat: Infinity, ease: "easeOut" }}
+        />
+      )}
+
       {/* Outer glow */}
       <motion.circle
         cx={node.x}
