@@ -1,12 +1,12 @@
 /**
  * YggdrasilNodePanel — a slide-in panel showing details about a
- * selected clone node on the tree, with lineage breadcrumb.
+ * selected clone node on the tree, with visual lineage breadcrumb.
  */
 
 import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { Link } from "@tanstack/react-router";
-import { X, GitBranch, ExternalLink, Github, ChevronRight, TreePine } from "lucide-react";
+import { X, GitBranch, ExternalLink, Github, TreePine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatusPill } from "@/components/status-pill";
@@ -17,6 +17,14 @@ interface Props {
   allNodes: TreeNode[];
   onClose: () => void;
 }
+
+const STATUS_COLORS: Record<string, string> = {
+  in_sync: "oklch(0.78 0.18 150)",
+  behind: "oklch(0.82 0.17 80)",
+  failed: "oklch(0.66 0.24 25)",
+  unknown: "oklch(0.60 0.10 250)",
+  cascading: "oklch(0.70 0.18 220)",
+};
 
 /** Walk from node up to trunk, building a breadcrumb path */
 function buildLineage(node: TreeNode, allNodes: TreeNode[]): TreeNode[] {
@@ -30,6 +38,11 @@ function buildLineage(node: TreeNode, allNodes: TreeNode[]): TreeNode[] {
     current = parent;
   }
   return path;
+}
+
+/** Generate a hue-based branch color from the node's hue */
+function branchColor(hue: number): string {
+  return `oklch(0.72 0.16 ${hue})`;
 }
 
 export function YggdrasilNodePanel({ node, allNodes, onClose }: Props) {
@@ -55,26 +68,89 @@ export function YggdrasilNodePanel({ node, allNodes, onClose }: Props) {
         </Button>
       </div>
 
-      {/* Lineage breadcrumb */}
-      <div className="mt-3 flex items-center gap-1 overflow-x-auto rounded-md bg-muted/40 px-2 py-1.5">
-        {lineage.map((n, i) => (
-          <span key={n.id} className="flex shrink-0 items-center gap-1">
-            {i > 0 && <ChevronRight className="h-3 w-3 text-muted-foreground/50" />}
-            {n.id === "__trunk__" ? (
-              <span className="flex items-center gap-1 font-mono text-[10px] font-semibold text-primary">
-                <TreePine className="h-3 w-3" /> PRIME
-              </span>
-            ) : (
-              <span
-                className={`font-mono text-[10px] ${
-                  n.id === node.id ? "font-semibold text-foreground" : "text-muted-foreground"
-                }`}
-              >
-                {n.name}
-              </span>
-            )}
-          </span>
-        ))}
+      {/* Visual lineage breadcrumb — tree branch path */}
+      <div className="mt-3 rounded-lg bg-muted/30 border border-border/30 p-3 overflow-x-auto">
+        <div className="flex flex-col gap-0">
+          {lineage.map((n, i) => {
+            const isCurrent = n.id === node.id;
+            const isTrunk = n.id === "__trunk__";
+            const statusColor = STATUS_COLORS[n.syncStatus] ?? STATUS_COLORS.unknown;
+            const bColor = branchColor(n.hue);
+            const isLast = i === lineage.length - 1;
+
+            return (
+              <div key={n.id} className="flex items-stretch gap-0">
+                {/* Vertical branch connector */}
+                <div className="flex flex-col items-center w-5 shrink-0">
+                  {/* Node dot */}
+                  <div
+                    className="relative z-10 shrink-0 rounded-full border-2"
+                    style={{
+                      width: isTrunk ? 14 : isCurrent ? 12 : 8,
+                      height: isTrunk ? 14 : isCurrent ? 12 : 8,
+                      background: isTrunk ? "oklch(0.78 0.16 200)" : statusColor,
+                      borderColor: isTrunk ? "oklch(0.85 0.18 195)" : bColor,
+                      boxShadow: isCurrent ? `0 0 8px ${statusColor}` : "none",
+                    }}
+                  />
+                  {/* Vertical line to next node */}
+                  {!isLast && (
+                    <div
+                      className="w-0.5 flex-1 min-h-3"
+                      style={{
+                        background: `linear-gradient(to bottom, ${bColor}, ${branchColor(lineage[i + 1].hue)})`,
+                        opacity: 0.6,
+                      }}
+                    />
+                  )}
+                </div>
+
+                {/* Label and repo info */}
+                <div className={`pl-2 ${isLast ? "pb-0" : "pb-2"}`}>
+                  {isTrunk ? (
+                    <div className="flex items-center gap-1">
+                      <TreePine className="h-3 w-3 text-primary" />
+                      <span className="font-mono text-[10px] font-bold text-primary tracking-wider">
+                        PRIME TRUNK
+                      </span>
+                    </div>
+                  ) : (
+                    <>
+                      <span
+                        className={`font-mono text-[10px] leading-tight ${
+                          isCurrent
+                            ? "font-bold text-foreground"
+                            : "font-medium text-muted-foreground"
+                        }`}
+                      >
+                        {n.name}
+                      </span>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="font-mono text-[8px] text-muted-foreground/60">
+                          {n.githubOwner}/{n.githubRepo}
+                        </span>
+                        {/* Branch indicator — which direction in the tree */}
+                        <span
+                          className="inline-block h-1 w-4 rounded-full"
+                          style={{
+                            background: bColor,
+                            opacity: 0.5,
+                          }}
+                        />
+                        <span
+                          className="font-mono text-[7px] uppercase tracking-wider"
+                          style={{ color: statusColor, opacity: 0.8 }}
+                        >
+                          {n.syncStatus.replace("_", " ")}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div className="mt-4 space-y-3">
