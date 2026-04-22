@@ -148,6 +148,7 @@ export type Database = {
           files_changed: number
           id: string
           pr_url: string | null
+          previous_sha: string | null
           started_at: string | null
           status: Database["public"]["Enums"]["cascade_result_status"]
           updated_at: string
@@ -163,6 +164,7 @@ export type Database = {
           files_changed?: number
           id?: string
           pr_url?: string | null
+          previous_sha?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["cascade_result_status"]
           updated_at?: string
@@ -178,6 +180,7 @@ export type Database = {
           files_changed?: number
           id?: string
           pr_url?: string | null
+          previous_sha?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["cascade_result_status"]
           updated_at?: string
