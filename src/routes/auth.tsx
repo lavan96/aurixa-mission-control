@@ -94,6 +94,8 @@ function AuthPage() {
           </Tabs>
         </CardContent>
       </Card>
+      <PemKeyHelper />
+      </div>
     </div>
   );
 }
