@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Github, Cloud, Sparkles, Zap } from "lucide-react";
 import { GitHubStatusCard } from "@/components/github-status-card";
+import { GitHubSetupWizard } from "@/components/github-setup-wizard";
 import { WebhookDeliveriesPanel } from "@/components/webhook-deliveries-panel";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -163,6 +164,8 @@ function SettingsGeneralPage() {
           </div>
         </CardContent>
       </Card>
+
+      <GitHubSetupWizard />
 
       <GitHubStatusCard />
 
