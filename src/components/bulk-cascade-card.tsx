@@ -1,10 +1,20 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 import {
   Waves,
   Loader2,
@@ -18,6 +28,7 @@ import {
   Undo2,
   Filter,
   Search,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useClones, type Clone } from "@/lib/queries";
@@ -38,6 +49,57 @@ type CloneProgress = {
 
 type SyncFilter = "all" | "synced" | "behind" | "diverged" | "unknown";
 type TimeFilter = "all" | "24h" | "7d" | "30d";
+type ErrorTypeFilter = "all" | "auth" | "conflict" | "timeout" | "network" | "other";
+
+const STORAGE_KEY = "aurixa:bulk-cascade-filters";
+
+function classifyError(err?: string): ErrorTypeFilter {
+  if (!err) return "other";
+  const lower = err.toLowerCase();
+  if (lower.includes("401") || lower.includes("403") || lower.includes("auth") || lower.includes("permission") || lower.includes("token"))
+    return "auth";
+  if (lower.includes("conflict") || lower.includes("merge") || lower.includes("422"))
+    return "conflict";
+  if (lower.includes("timeout") || lower.includes("timed out") || lower.includes("deadline"))
+    return "timeout";
+  if (lower.includes("network") || lower.includes("fetch") || lower.includes("econnrefused") || lower.includes("dns"))
+    return "network";
+  return "other";
+}
+
+const ERROR_TYPE_LABELS: Record<ErrorTypeFilter, string> = {
+  all: "All errors",
+  auth: "Auth / permission",
+  conflict: "Merge conflict",
+  timeout: "Timeout",
+  network: "Network",
+  other: "Other",
+};
+
+type SavedFilters = {
+  nameFilter: string;
+  statusFilter: SyncFilter;
+  timeFilter: TimeFilter;
+  errorTypeFilter: ErrorTypeFilter;
+};
+
+function loadSavedFilters(): SavedFilters | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as SavedFilters;
+  } catch {
+    return null;
+  }
+}
+
+function saveFilters(f: SavedFilters) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(f));
+  } catch {
+    // ignore
+  }
+}
 
 export function BulkCascadeCard() {
   const { data: clones } = useClones();
@@ -49,10 +111,21 @@ export function BulkCascadeCard() {
   const [dryRun, setDryRun] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Filters
-  const [nameFilter, setNameFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState<SyncFilter>("all");
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
+  // Rollback confirmation
+  const [rollbackTarget, setRollbackTarget] = useState<{ clone_id: string; name: string; previous_sha: string } | null>(null);
+  const [rollbackConfirmText, setRollbackConfirmText] = useState("");
+
+  // Filters — initialise from localStorage
+  const saved = useMemo(() => loadSavedFilters(), []);
+  const [nameFilter, setNameFilter] = useState(saved?.nameFilter ?? "");
+  const [statusFilter, setStatusFilter] = useState<SyncFilter>(saved?.statusFilter ?? "all");
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>(saved?.timeFilter ?? "all");
+  const [errorTypeFilter, setErrorTypeFilter] = useState<ErrorTypeFilter>(saved?.errorTypeFilter ?? "all");
+
+  // Persist filters on change
+  useEffect(() => {
+    saveFilters({ nameFilter, statusFilter, timeFilter, errorTypeFilter });
+  }, [nameFilter, statusFilter, timeFilter, errorTypeFilter]);
 
   const filteredClones = useMemo(() => {
     let result = clones;
@@ -83,6 +156,15 @@ export function BulkCascadeCard() {
     return result;
   }, [clones, nameFilter, statusFilter, timeFilter]);
 
+  // Filter progress rows by error type (for retry targeting)
+  const filteredProgress = useMemo(() => {
+    if (errorTypeFilter === "all") return progress;
+    return progress.filter((p) => {
+      if (p.status !== "failed") return true; // show non-failed rows always
+      return classifyError(p.error) === errorTypeFilter;
+    });
+  }, [progress, errorTypeFilter]);
+
   const completed = progress.filter(
     (p) => p.status === "succeeded" || p.status === "failed" || p.status === "skipped",
   ).length;
@@ -91,6 +173,17 @@ export function BulkCascadeCard() {
   const succeeded = progress.filter((p) => p.status === "succeeded").length;
   const failed = progress.filter((p) => p.status === "failed").length;
   const failedClones = progress.filter((p) => p.status === "failed");
+
+  // Error type breakdown for the filter dropdown
+  const errorBreakdown = useMemo(() => {
+    const counts: Record<ErrorTypeFilter, number> = { all: 0, auth: 0, conflict: 0, timeout: 0, network: 0, other: 0 };
+    for (const p of failedClones) {
+      const t = classifyError(p.error);
+      counts[t]++;
+      counts.all++;
+    }
+    return counts;
+  }, [failedClones]);
 
   // Realtime subscription
   useEffect(() => {
@@ -146,7 +239,6 @@ export function BulkCascadeCard() {
       } = await supabase.auth.getUser();
 
       if (dryRun) {
-        // Dry-run: just show preview without executing
         const initialProgress: CloneProgress[] = targets.map((c) => ({
           clone_id: c.id,
           name: c.name,
@@ -214,7 +306,6 @@ export function BulkCascadeCard() {
         );
       }
 
-      // Refresh progress from DB
       const { data: results } = await supabase
         .from("cascade_results")
         .select("clone_id, status, error_message, pr_url, previous_sha")
@@ -244,23 +335,28 @@ export function BulkCascadeCard() {
 
   const retryFailed = async () => {
     if (!eventId || failedClones.length === 0) return;
-    const failedCloneData = clones.filter((c) =>
-      failedClones.some((f) => f.clone_id === c.id),
-    );
-    // Reset failed statuses to queued in UI
+    // If error-type filter is active, only retry matching failures
+    const toRetry =
+      errorTypeFilter === "all"
+        ? failedClones
+        : failedClones.filter((p) => classifyError(p.error) === errorTypeFilter);
+    if (toRetry.length === 0) return toast.error("No failures match the selected error type");
+
     setProgress((prev) =>
-      prev.map((p) => (p.status === "failed" ? { ...p, status: "queued", error: undefined } : p)),
+      prev.map((p) =>
+        toRetry.some((r) => r.clone_id === p.clone_id)
+          ? { ...p, status: "queued", error: undefined }
+          : p,
+      ),
     );
-    // Update DB rows to queued
-    for (const fc of failedClones) {
+    for (const fc of toRetry) {
       await supabase
         .from("cascade_results")
         .update({ status: "queued", error_message: null })
         .eq("cascade_event_id", eventId)
         .eq("clone_id", fc.clone_id);
     }
-    toast.info(`Retrying ${failedCloneData.length} failed clones…`);
-    // Re-run cascade engine (it will pick up queued rows)
+    toast.info(`Retrying ${toRetry.length} failed clone${toRetry.length > 1 ? "s" : ""}…`);
     try {
       const res = await runCascadeFn({ data: { cascadeEventId: eventId } });
       if (!res.ok) toast.error(res.error);
@@ -268,7 +364,6 @@ export function BulkCascadeCard() {
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Retry failed");
     }
-    // Refresh
     const { data: results } = await supabase
       .from("cascade_results")
       .select("clone_id, status, error_message, pr_url, previous_sha")
@@ -290,9 +385,10 @@ export function BulkCascadeCard() {
     }
   };
 
-  const rollbackClone = async (cloneId: string, previousSha: string) => {
+  const executeRollback = async () => {
+    if (!rollbackTarget) return;
+    const { clone_id: cloneId, previous_sha: previousSha } = rollbackTarget;
     toast.info("Rolling back clone…");
-    // Record rollback intent in audit_log
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -303,7 +399,6 @@ export function BulkCascadeCard() {
       actor_user_id: user?.id,
       metadata: { previous_sha: previousSha, cascade_event_id: eventId },
     });
-    // Update the clone's last_synced_sha back to previous
     await supabase
       .from("clones")
       .update({ last_synced_sha: previousSha })
@@ -313,256 +408,376 @@ export function BulkCascadeCard() {
         p.clone_id === cloneId ? { ...p, status: "skipped", error: "Rolled back" } : p,
       ),
     );
+    setRollbackTarget(null);
+    setRollbackConfirmText("");
     toast.success("Clone rolled back to previous version");
   };
 
+  const hasActiveFilters = nameFilter || statusFilter !== "all" || timeFilter !== "all";
+
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Rocket className="h-4 w-4" /> Bulk cascade
-            </CardTitle>
-            <CardDescription>
-              Push prime codebase upgrades to filtered clones. Track per-clone progress and failures
-              in real time.
-            </CardDescription>
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Rocket className="h-4 w-4" /> Bulk cascade
+              </CardTitle>
+              <CardDescription>
+                Push prime codebase upgrades to filtered clones. Track per-clone progress and failures
+                in real time.
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowFilters(!showFilters)}
+                className={cn(showFilters && "bg-muted")}
+              >
+                <Filter className="mr-1.5 h-3.5 w-3.5" />
+                Filters
+                {hasActiveFilters && (
+                  <span className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[9px] text-primary-foreground">
+                    ●
+                  </span>
+                )}
+              </Button>
+              <Button
+                variant={dryRun ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setDryRun(!dryRun)}
+              >
+                <Eye className="mr-1.5 h-3.5 w-3.5" />
+                {dryRun ? "Dry-run ON" : "Dry-run"}
+              </Button>
+              <div className="flex items-center gap-2">
+                {/* Live selection summary */}
+                <span className="hidden sm:inline font-mono text-[11px] text-muted-foreground whitespace-nowrap">
+                  {filteredClones.length === clones.length
+                    ? `${filteredClones.length} clones`
+                    : `${filteredClones.length} of ${clones.length} selected`}
+                </span>
+                <Button onClick={() => fireBulk()} disabled={running || filteredClones.length === 0} size="sm">
+                  {running ? (
+                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Waves className="mr-2 h-3.5 w-3.5" />
+                  )}
+                  {running
+                    ? "Running…"
+                    : dryRun
+                      ? `Preview (${filteredClones.length})`
+                      : `Cascade (${filteredClones.length})`}
+                </Button>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+        </CardHeader>
+
+        {/* Filters */}
+        {showFilters && (
+          <CardContent className="border-t border-border pt-4 pb-0">
+            <div className="grid gap-3 md:grid-cols-4">
+              <div>
+                <label className="mb-1 block font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Clone name
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search clones…"
+                    value={nameFilter}
+                    onChange={(e) => setNameFilter(e.target.value)}
+                    className="pl-8 h-9 text-sm"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Sync status
+                </label>
+                <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as SyncFilter)}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="synced">Synced</SelectItem>
+                    <SelectItem value="behind">Behind</SelectItem>
+                    <SelectItem value="diverged">Diverged</SelectItem>
+                    <SelectItem value="unknown">Unknown</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="mb-1 block font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Last updated
+                </label>
+                <Select value={timeFilter} onValueChange={(v) => setTimeFilter(v as TimeFilter)}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Any time</SelectItem>
+                    <SelectItem value="24h">Last 24 hours</SelectItem>
+                    <SelectItem value="7d">Last 7 days</SelectItem>
+                    <SelectItem value="30d">Last 30 days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="mb-1 block font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Error type
+                </label>
+                <Select value={errorTypeFilter} onValueChange={(v) => setErrorTypeFilter(v as ErrorTypeFilter)}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(ERROR_TYPE_LABELS) as ErrorTypeFilter[]).map((k) => (
+                      <SelectItem key={k} value={k} disabled={k !== "all" && errorBreakdown[k] === 0}>
+                        {ERROR_TYPE_LABELS[k]}
+                        {k !== "all" && errorBreakdown[k] > 0 && (
+                          <span className="ml-1 text-muted-foreground">({errorBreakdown[k]})</span>
+                        )}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="mt-2 mb-3 flex items-center justify-between">
+              <span className="font-mono text-[10px] text-muted-foreground">
+                {filteredClones.length} of {clones.length} clones match
+              </span>
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNameFilter("");
+                    setStatusFilter("all");
+                    setTimeFilter("all");
+                    setErrorTypeFilter("all");
+                  }}
+                  className="font-mono text-[10px] text-primary hover:underline"
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
+          </CardContent>
+        )}
+
+        {/* Dry-run preview */}
+        {dryRun && progress.length > 0 && !running && (
+          <CardContent className="border-t border-border pt-4">
+            <div className="rounded-md border border-info/30 bg-info/5 p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Eye className="h-4 w-4 text-info" />
+                <span className="font-mono text-xs font-semibold uppercase tracking-wider text-info">
+                  Dry-run preview
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mb-2">
+                These {progress.length} clones would be updated. Disable dry-run and click Cascade to
+                execute.
+              </p>
+              <ul className="space-y-1">
+                {progress.map((p) => (
+                  <li
+                    key={p.clone_id}
+                    className="flex items-center gap-2 rounded border border-border px-2 py-1.5 text-xs"
+                  >
+                    <div className="h-2 w-2 rounded-full bg-info" />
+                    <span className="font-mono">{p.name}</span>
+                    <Badge variant="outline" className="ml-auto text-[9px]">
+                      will update
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </CardContent>
+        )}
+
+        {progress.length > 0 && !dryRun && (
+          <CardContent className="space-y-4">
+            {/* Progress bar */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                  Progress
+                </div>
+                <div className="flex items-center gap-3 font-mono text-[11px]">
+                  <span className="text-success">{succeeded} ok</span>
+                  {failed > 0 && <span className="text-destructive">{failed} failed</span>}
+                  <span className="text-muted-foreground">
+                    {completed}/{total}
+                  </span>
+                </div>
+              </div>
+              <Progress value={pct} className="h-2" />
+            </div>
+
+            {/* Retry failed */}
+            {failed > 0 && !running && (
+              <div className="flex items-center justify-between rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2">
+                <span className="font-mono text-xs text-destructive">
+                  {errorTypeFilter !== "all"
+                    ? `${errorBreakdown[errorTypeFilter]} ${ERROR_TYPE_LABELS[errorTypeFilter].toLowerCase()} failure${errorBreakdown[errorTypeFilter] !== 1 ? "s" : ""}`
+                    : `${failed} clone${failed > 1 ? "s" : ""} failed`}
+                </span>
+                <Button variant="destructive" size="sm" onClick={retryFailed}>
+                  <RotateCcw className="mr-1.5 h-3 w-3" />
+                  {errorTypeFilter !== "all"
+                    ? `Retry ${ERROR_TYPE_LABELS[errorTypeFilter].toLowerCase()} (${errorBreakdown[errorTypeFilter]})`
+                    : `Retry failed (${failed})`}
+                </Button>
+              </div>
+            )}
+
+            {/* Toggle details */}
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setShowFilters(!showFilters)}
-              className={cn(showFilters && "bg-muted")}
+              onClick={() => setExpanded(!expanded)}
+              className="w-full"
             >
-              <Filter className="mr-1.5 h-3.5 w-3.5" />
-              Filters
-            </Button>
-            <Button
-              variant={dryRun ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setDryRun(!dryRun)}
-            >
-              <Eye className="mr-1.5 h-3.5 w-3.5" />
-              {dryRun ? "Dry-run ON" : "Dry-run"}
-            </Button>
-            <Button onClick={() => fireBulk()} disabled={running || filteredClones.length === 0} size="sm">
-              {running ? (
-                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+              {expanded ? (
+                <ChevronUp className="mr-2 h-3.5 w-3.5" />
               ) : (
-                <Waves className="mr-2 h-3.5 w-3.5" />
+                <ChevronDown className="mr-2 h-3.5 w-3.5" />
               )}
-              {running
-                ? "Running…"
-                : dryRun
-                  ? `Preview (${filteredClones.length})`
-                  : `Cascade (${filteredClones.length})`}
+              {expanded ? "Hide details" : "Show per-clone details"}
             </Button>
-          </div>
-        </div>
-      </CardHeader>
 
-      {/* Filters */}
-      {showFilters && (
-        <CardContent className="border-t border-border pt-4 pb-0">
-          <div className="grid gap-3 md:grid-cols-3">
-            <div>
-              <label className="mb-1 block font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                Clone name
-              </label>
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+            {/* Per-clone rows */}
+            {expanded && (
+              <ul className="space-y-1">
+                {filteredProgress.map((p) => (
+                  <li
+                    key={p.clone_id}
+                    className="flex items-center gap-3 rounded-md border border-border bg-surface px-3 py-2 text-sm"
+                  >
+                    <StatusIcon status={p.status} />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-mono text-xs font-medium truncate">{p.name}</div>
+                      {p.error && (
+                        <div className="flex items-center gap-1.5">
+                          <div className="font-mono text-[10px] text-destructive truncate">
+                            {p.error}
+                          </div>
+                          {p.status === "failed" && (
+                            <Badge variant="outline" className="text-[8px] uppercase shrink-0 border-destructive/30 text-destructive">
+                              {classifyError(p.error)}
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+                      {p.pr_url && (
+                        <a
+                          href={p.pr_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-mono text-[10px] text-primary hover:underline"
+                        >
+                          View PR →
+                        </a>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {(p.status === "failed" || p.status === "succeeded") &&
+                        p.previous_sha &&
+                        p.error !== "Rolled back" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-[10px]"
+                            onClick={() =>
+                              setRollbackTarget({
+                                clone_id: p.clone_id,
+                                name: p.name,
+                                previous_sha: p.previous_sha!,
+                              })
+                            }
+                          >
+                            <Undo2 className="mr-1 h-3 w-3" />
+                            Rollback
+                          </Button>
+                        )}
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[9px] uppercase",
+                          p.status === "succeeded" && "border-success/40 text-success",
+                          p.status === "failed" && "border-destructive/40 text-destructive",
+                          p.status === "running" && "border-info/40 text-info animate-pulse",
+                          (p.status === "queued" || p.status === "skipped") &&
+                            "border-muted text-muted-foreground",
+                        )}
+                      >
+                        {p.status}
+                      </Badge>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Rollback confirmation dialog */}
+      <AlertDialog
+        open={!!rollbackTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRollbackTarget(null);
+            setRollbackConfirmText("");
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-warning" />
+              Confirm rollback
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  This will revert <strong className="text-foreground">{rollbackTarget?.name}</strong> to
+                  SHA <code className="rounded bg-muted px-1 py-0.5 text-[11px]">{rollbackTarget?.previous_sha?.slice(0, 12)}</code>.
+                </p>
+                <p>
+                  Type the clone name below to confirm:
+                </p>
                 <Input
-                  placeholder="Search clones…"
-                  value={nameFilter}
-                  onChange={(e) => setNameFilter(e.target.value)}
-                  className="pl-8 h-9 text-sm"
+                  placeholder={rollbackTarget?.name ?? ""}
+                  value={rollbackConfirmText}
+                  onChange={(e) => setRollbackConfirmText(e.target.value)}
+                  className="font-mono text-sm"
+                  autoFocus
                 />
               </div>
-            </div>
-            <div>
-              <label className="mb-1 block font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                Sync status
-              </label>
-              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as SyncFilter)}>
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="synced">Synced</SelectItem>
-                  <SelectItem value="behind">Behind</SelectItem>
-                  <SelectItem value="diverged">Diverged</SelectItem>
-                  <SelectItem value="unknown">Unknown</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="mb-1 block font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                Last updated
-              </label>
-              <Select value={timeFilter} onValueChange={(v) => setTimeFilter(v as TimeFilter)}>
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Any time</SelectItem>
-                  <SelectItem value="24h">Last 24 hours</SelectItem>
-                  <SelectItem value="7d">Last 7 days</SelectItem>
-                  <SelectItem value="30d">Last 30 days</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="mt-2 mb-3 font-mono text-[10px] text-muted-foreground">
-            {filteredClones.length} of {clones.length} clones match
-          </div>
-        </CardContent>
-      )}
-
-      {/* Dry-run preview */}
-      {dryRun && progress.length > 0 && !running && (
-        <CardContent className="border-t border-border pt-4">
-          <div className="rounded-md border border-info/30 bg-info/5 p-3">
-            <div className="flex items-center gap-2 mb-2">
-              <Eye className="h-4 w-4 text-info" />
-              <span className="font-mono text-xs font-semibold uppercase tracking-wider text-info">
-                Dry-run preview
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground mb-2">
-              These {progress.length} clones would be updated. Disable dry-run and click Cascade to
-              execute.
-            </p>
-            <ul className="space-y-1">
-              {progress.map((p) => (
-                <li
-                  key={p.clone_id}
-                  className="flex items-center gap-2 rounded border border-border px-2 py-1.5 text-xs"
-                >
-                  <div className="h-2 w-2 rounded-full bg-info" />
-                  <span className="font-mono">{p.name}</span>
-                  <Badge variant="outline" className="ml-auto text-[9px]">
-                    will update
-                  </Badge>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </CardContent>
-      )}
-
-      {progress.length > 0 && !dryRun && (
-        <CardContent className="space-y-4">
-          {/* Progress bar */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                Progress
-              </div>
-              <div className="flex items-center gap-3 font-mono text-[11px]">
-                <span className="text-success">{succeeded} ok</span>
-                {failed > 0 && <span className="text-destructive">{failed} failed</span>}
-                <span className="text-muted-foreground">
-                  {completed}/{total}
-                </span>
-              </div>
-            </div>
-            <Progress value={pct} className="h-2" />
-          </div>
-
-          {/* Retry failed */}
-          {failed > 0 && !running && (
-            <div className="flex items-center justify-between rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2">
-              <span className="font-mono text-xs text-destructive">
-                {failed} clone{failed > 1 ? "s" : ""} failed
-              </span>
-              <Button variant="destructive" size="sm" onClick={retryFailed}>
-                <RotateCcw className="mr-1.5 h-3 w-3" />
-                Retry failed
-              </Button>
-            </div>
-          )}
-
-          {/* Toggle details */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setExpanded(!expanded)}
-            className="w-full"
-          >
-            {expanded ? (
-              <ChevronUp className="mr-2 h-3.5 w-3.5" />
-            ) : (
-              <ChevronDown className="mr-2 h-3.5 w-3.5" />
-            )}
-            {expanded ? "Hide details" : "Show per-clone details"}
-          </Button>
-
-          {/* Per-clone rows */}
-          {expanded && (
-            <ul className="space-y-1">
-              {progress.map((p) => (
-                <li
-                  key={p.clone_id}
-                  className="flex items-center gap-3 rounded-md border border-border bg-surface px-3 py-2 text-sm"
-                >
-                  <StatusIcon status={p.status} />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-mono text-xs font-medium truncate">{p.name}</div>
-                    {p.error && (
-                      <div className="font-mono text-[10px] text-destructive truncate">
-                        {p.error}
-                      </div>
-                    )}
-                    {p.pr_url && (
-                      <a
-                        href={p.pr_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-mono text-[10px] text-primary hover:underline"
-                      >
-                        View PR →
-                      </a>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {/* Rollback button for failed/succeeded clones with previous_sha */}
-                    {(p.status === "failed" || p.status === "succeeded") &&
-                      p.previous_sha &&
-                      p.error !== "Rolled back" && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-2 text-[10px]"
-                          onClick={() => rollbackClone(p.clone_id, p.previous_sha!)}
-                        >
-                          <Undo2 className="mr-1 h-3 w-3" />
-                          Rollback
-                        </Button>
-                      )}
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "text-[9px] uppercase",
-                        p.status === "succeeded" && "border-success/40 text-success",
-                        p.status === "failed" && "border-destructive/40 text-destructive",
-                        p.status === "running" && "border-info/40 text-info animate-pulse",
-                        (p.status === "queued" || p.status === "skipped") &&
-                          "border-muted text-muted-foreground",
-                      )}
-                    >
-                      {p.status}
-                    </Badge>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      )}
-    </Card>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={rollbackConfirmText !== rollbackTarget?.name}
+              onClick={executeRollback}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              <Undo2 className="mr-1.5 h-3.5 w-3.5" />
+              Roll back
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
