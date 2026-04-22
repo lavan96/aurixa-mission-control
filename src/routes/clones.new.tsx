@@ -102,6 +102,14 @@ function NewClone() {
       toast.error("Name is required");
       return;
     }
+    if (dedicatedBackend && !adminEmail.trim()) {
+      toast.error("Admin email is required for dedicated backend");
+      return;
+    }
+    if (dedicatedBackend && adminPassword.length < 8) {
+      toast.error("Admin password must be at least 8 characters");
+      return;
+    }
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     const targetOwner =
       ownerMode === "transfer"
@@ -137,11 +145,35 @@ function NewClone() {
         setBusy(false);
         return;
       }
+
       toast.success(
         method === "clone"
           ? "Clone registered (independent — wire up the repo manually)"
           : `Clone provisioned${result.githubUrl ? " on GitHub" : ""}`,
       );
+
+      // Kick off backend provisioning if enabled (non-blocking)
+      if (dedicatedBackend) {
+        toast.info("Backend provisioning started — this may take 1-2 minutes");
+        provisionBackendFn({
+          data: {
+            cloneId: result.cloneId,
+            cloneName: name,
+            region: backendRegion,
+            adminEmail,
+            adminPassword,
+          },
+        }).then((backendResult) => {
+          if ("ok" in backendResult && backendResult.ok) {
+            toast.success("Dedicated backend is ready!");
+          } else if ("error" in backendResult) {
+            toast.error(`Backend provisioning failed: ${backendResult.error}`);
+          }
+        }).catch(() => {
+          toast.error("Backend provisioning encountered an error");
+        });
+      }
+
       setBusy(false);
       nav({ to: "/clones/$cloneId", params: { cloneId: result.cloneId } });
     } catch (e) {
