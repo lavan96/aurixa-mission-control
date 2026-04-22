@@ -33,6 +33,7 @@ interface Props {
   onApplyFilters?: () => void;
   onClearFilters?: () => void;
   multiSelectCount?: number;
+  onClearSelection?: () => void;
 }
 
 const STATUS_OPTIONS: {
@@ -94,6 +95,7 @@ export function YggdrasilToolbar({
   onApplyFilters,
   onClearFilters,
   multiSelectCount,
+  onClearSelection,
 }: Props) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [legendHovered, setLegendHovered] = useState<StatusFilter | null>(null);
@@ -215,6 +217,13 @@ export function YggdrasilToolbar({
           <span className="font-mono text-[10px] font-medium text-primary">
             {multiSelectCount} comparing
           </span>
+          <button
+            onClick={onClearSelection}
+            className="ml-0.5 rounded-full p-0.5 text-primary/70 hover:bg-primary/20 hover:text-primary transition-colors"
+            title="Clear selection"
+          >
+            <X className="h-3 w-3" />
+          </button>
         </div>
       )}
 
