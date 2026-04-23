@@ -167,16 +167,17 @@ export const approveAndDeploy = createServerFn({ method: "POST" })
     if (modErr) return { ok: false as const, error: modErr.message };
 
     // Create cascade event
+    const insertRow: Database["public"]["Tables"]["cascade_events"]["Insert"] = {
+      trigger: "manual",
+      mode: (data.cascadeMode ?? "pr") as "pr" | "direct",
+      status: "pending",
+      initiated_by: context.userId,
+      scope_filter: { module_ids: data.moduleIds },
+      summary: `Module approval deploy: ${data.moduleIds.length} module(s) → ${data.cloneIds.length} clone(s)`,
+    };
     const { data: event, error: evtErr } = await context.supabase
       .from("cascade_events")
-      .insert({
-        trigger: "manual" as const,
-        mode: ((data.cascadeMode ?? "pr") as "pr" | "direct"),
-        status: "pending" as const,
-        initiated_by: context.userId,
-        scope_filter: { module_ids: data.moduleIds },
-        summary: `Module approval deploy: ${data.moduleIds.length} module(s) → ${data.cloneIds.length} clone(s)`,
-      })
+      .insert(insertRow)
       .select("id")
       .single();
     if (evtErr) return { ok: false as const, error: evtErr.message };
