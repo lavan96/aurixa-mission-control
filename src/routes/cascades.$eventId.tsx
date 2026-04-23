@@ -782,6 +782,17 @@ function ResultRow({
               />
             </div>
           )}
+          {clone && result.previous_sha && result.commit_sha && (
+            <div className="mt-2">
+              <RichDiffViewer
+                cloneOwner={clone.github_owner}
+                cloneRepo={clone.github_repo}
+                baseSha={result.previous_sha}
+                headSha={result.commit_sha}
+                filesChanged={result.files_changed}
+              />
+            </div>
+          )}
           {result.error_message && (
             <div className="mt-1 font-mono text-xs text-destructive">{result.error_message}</div>
           )}
