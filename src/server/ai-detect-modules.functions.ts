@@ -169,7 +169,7 @@ export const approveAndDeploy = createServerFn({ method: "POST" })
     // Create cascade event
     const insertRow: Database["public"]["Tables"]["cascade_events"]["Insert"] = {
       trigger: "manual",
-      mode: (data.cascadeMode ?? "pr") as "pr" | "direct",
+      mode: (data.cascadeMode === "auto_merge" ? "auto_merge" : "pr") as Database["public"]["Enums"]["cascade_mode"],
       status: "pending",
       initiated_by: context.userId,
       scope_filter: { module_ids: data.moduleIds },
