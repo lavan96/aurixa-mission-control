@@ -32,7 +32,7 @@ function SettingsLayout() {
         <h1 className="mt-1 text-3xl font-semibold tracking-tight">Settings</h1>
       </header>
 
-      <nav className="flex gap-1 rounded-md border border-border bg-surface p-1">
+      <nav className="flex gap-1 overflow-x-auto rounded-md border border-border bg-surface p-1">
         {TABS.map((t) => {
           const active = t.exact
             ? loc.pathname === t.to
