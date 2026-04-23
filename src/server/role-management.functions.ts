@@ -90,13 +90,23 @@ export const assignRole = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    // Check can_assign_role
+    // Server-side hierarchy check: assigner's level must strictly exceed target role level
     const { data: canAssign } = await supabase.rpc("can_assign_role", {
       _assigner_id: userId,
       _target_role: data.role,
     });
     if (!canAssign) {
       return { ok: false as const, error: "You don't have sufficient privileges to assign this role" };
+    }
+
+    // Double-check: nobody can assign super_admin via this endpoint
+    if (data.role === "super_admin") {
+      return { ok: false as const, error: "super_admin can only be assigned by the system seed process" };
+    }
+
+    // Prevent assigning to self
+    if (data.targetUserId === userId) {
+      return { ok: false as const, error: "You cannot assign roles to yourself" };
     }
 
     const { error } = await supabase.from("user_roles").insert({
@@ -146,6 +156,35 @@ export const revokeRole = createServerFn({ method: "POST" })
     });
     if (!canManage) {
       return { ok: false as const, error: "You don't have sufficient privileges to manage this user" };
+    }
+
+    // Server-side guardrail: prevent revoking the last super_admin
+    if (data.role === "super_admin") {
+      const { data: saCount } = await supabase
+        .from("user_roles")
+        .select("id", { count: "exact", head: true })
+        .eq("role", "super_admin");
+      const count = (saCount as unknown as number) ?? 0;
+      // Use a direct count query for accuracy
+      const { count: exactCount } = await supabase
+        .from("user_roles")
+        .select("*", { count: "exact", head: true })
+        .eq("role", "super_admin");
+      if ((exactCount ?? 0) <= 1) {
+        return { ok: false as const, error: "Cannot revoke the last super_admin — the system must always have at least one" };
+      }
+    }
+
+    // Server-side guardrail: verify assigner outranks the target role
+    const { data: assignerLevel } = await supabase.rpc("highest_role_level", {
+      _user_id: userId,
+    });
+    const roleLevels: Record<string, number> = {
+      super_admin: 100, admin: 80, operator: 50, user: 10,
+    };
+    const targetRoleLevel = roleLevels[data.role] ?? 0;
+    if ((assignerLevel ?? 0) <= targetRoleLevel) {
+      return { ok: false as const, error: `Insufficient privileges: your level (${assignerLevel}) must exceed the role level (${targetRoleLevel})` };
     }
 
     const { error } = await supabase
