@@ -509,7 +509,7 @@ function DetectionRunRow({ run: r }: { run: Record<string, unknown> }) {
           {r.error_message && (
             <div className="flex items-start gap-2 rounded-md border border-destructive/20 bg-destructive/5 p-2 text-xs text-destructive">
               <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
-              {r.error_message as string}
+              {String(r.error_message)}
             </div>
           )}
           {passes.length > 0 && (
@@ -604,9 +604,9 @@ function DriftAlertsPanel() {
                     <code className="truncate font-mono text-[10px]">{a.file_path as string}</code>
                   </div>
                   <div className="mt-1 text-muted-foreground">
-                    {a.reasoning as string}
+                    {String(a.reasoning ?? "")}
                     {a.suggested_module_slug && (
-                      <span> → <code className="font-mono text-primary">{a.suggested_module_slug as string}</code></span>
+                      <span> → <code className="font-mono text-primary">{String(a.suggested_module_slug)}</code></span>
                     )}
                   </div>
                 </div>
