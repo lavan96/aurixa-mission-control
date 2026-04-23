@@ -169,9 +169,9 @@ export const approveAndDeploy = createServerFn({ method: "POST" })
     const { data: event, error: evtErr } = await context.supabase
       .from("cascade_events")
       .insert({
-        trigger: "manual",
-        mode: (data.cascadeMode as "pr" | "direct") ?? "pr",
-        status: "pending",
+        trigger: "manual" as const,
+        mode: ((data.cascadeMode ?? "pr") as "pr" | "direct"),
+        status: "pending" as const,
         initiated_by: context.userId,
         scope_filter: { module_ids: data.moduleIds },
         summary: `Module approval deploy: ${data.moduleIds.length} module(s) → ${data.cloneIds.length} clone(s)`,
