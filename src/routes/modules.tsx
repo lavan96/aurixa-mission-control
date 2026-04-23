@@ -8,7 +8,8 @@ import {
   Boxes, Sparkles, Check, X, Pencil, History, Settings2, Zap,
   AlertTriangle, Search, ChevronDown, BarChart3, GitBranch,
   FileWarning, CheckCircle2, Archive, Brain, Layers, Target,
-  Rocket, XCircle, Loader2, ExternalLink,
+  Rocket, XCircle, Loader2, ExternalLink, Library, BookOpen,
+  FileCode, Upload, Trash2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -29,6 +30,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   detectModules, getDetectionRuns, getDriftAlerts, batchUpdateModuleStatus,
   resolveDriftAlert, getModuleIntelligence, approveAndDeploy, getModuleCascadeJobs,
+  publishToLibrary, getModuleLibrary, removeFromLibrary,
 } from "@/server/ai-detect-modules.functions";
 import { ModuleGridSkeleton } from "@/components/list-skeletons";
 import { EmptyState } from "@/components/empty-state";
@@ -68,10 +70,12 @@ function ModulesPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [searchQ, setSearchQ] = useState("");
 
+  const [activeTab, setActiveTab] = useState<"modules" | "library">("modules");
+
   const [config, setConfig] = useState<DetectionConfig>({
-    strategy: "hybrid",
-    maxModules: 12,
-    minModules: 3,
+    strategy: "route-first",
+    maxModules: 30,
+    minModules: 1,
     sampleFileContent: true,
     analyzeImports: true,
     deltaMode: false,
@@ -168,8 +172,16 @@ function ModulesPage() {
           </p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight">Modules</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            AI-detected slices of the prime codebase with import graph analysis, multi-pass refinement, and drift monitoring.
+            Route-first detection: each page and its full import tree = one module. Shared files grouped automatically.
           </p>
+          <div className="mt-3 flex gap-1">
+            <Button size="sm" variant={activeTab === "modules" ? "default" : "ghost"} onClick={() => setActiveTab("modules")}>
+              <Boxes className="mr-1.5 h-3.5 w-3.5" /> Modules
+            </Button>
+            <Button size="sm" variant={activeTab === "library" ? "default" : "ghost"} onClick={() => setActiveTab("library")}>
+              <BookOpen className="mr-1.5 h-3.5 w-3.5" /> Library
+            </Button>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link to="/modules/builder">
@@ -231,103 +243,113 @@ function ModulesPage() {
       {/* Module Intelligence */}
       {showIntel && <ModuleIntelligencePanel />}
 
-      {/* Stats strip */}
-      {modules.length > 0 && (
-        <div className="grid gap-3 md:grid-cols-4">
-          <StatTile label="total" value={counts.total} />
-          <StatTile label="proposed" value={counts.proposed} tone="warning" />
-          <StatTile label="approved" value={counts.approved} tone="success" />
-          <StatTile label="archived" value={counts.archived} />
-        </div>
-      )}
-
-      {/* Filters + batch actions */}
-      {modules.length > 0 && (
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchQ}
-                onChange={(e) => setSearchQ(e.target.value)}
-                placeholder="Search modules…"
-                className="h-8 w-56 pl-9 font-mono text-xs"
-              />
-            </div>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="h-8 w-36 font-mono text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="proposed">Proposed</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="archived">Archived</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {selectedIds.size > 0 && (
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="font-mono text-[10px]">
-                {selectedIds.size} selected
-              </Badge>
-              <ApproveAndDeployButton
-                moduleIds={Array.from(selectedIds)}
-                onDone={() => { setSelectedIds(new Set()); refresh(); }}
-              />
-              <Button size="sm" variant="outline" onClick={() => batchAction("approved")}>
-                <Check className="mr-1 h-3 w-3" /> Approve
-              </Button>
-              <BatchRejectButton onReject={(reason) => batchAction("rejected", reason)} />
-              <Button size="sm" variant="ghost" onClick={() => batchAction("archived")}>
-                <Archive className="mr-1 h-3 w-3" /> Archive
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
-                Clear
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {loading ? (
-        <ModuleGridSkeleton count={4} />
-      ) : modules.length === 0 ? (
-        <EmptyState
-          icon={<Brain />}
-          title="Catalog is empty"
-          description="Run multi-pass AI detection to scan your prime repo. The engine fetches the real file tree, analyzes import graphs, and proposes module boundaries with reasoning."
-          action={
-            <Button onClick={runDetection} disabled={scanning}>
-              <Brain className="mr-2 h-4 w-4" />
-              {scanning ? "Detecting…" : "Run AI Detection"}
-            </Button>
-          }
-        />
+      {activeTab === "library" ? (
+        <ModuleLibraryPanel />
       ) : (
         <>
-          <div className="grid gap-3 md:grid-cols-2">
-            {filteredModules.map((m) => (
-              <ModuleRow
-                key={m.id}
-                module={m}
-                selected={selectedIds.has(m.id)}
-                onToggleSelect={() => toggleSelect(m.id)}
-                onApprove={() => setStatus(m.id, "approved")}
-                onReject={(reason) => setStatus(m.id, "rejected", reason)}
-                onArchive={() => setStatus(m.id, "archived")}
-                onEdited={refresh}
-              />
-            ))}
-          </div>
-          {filteredModules.length === 0 && (
-            <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-              No modules match your filters.
+          {/* Stats strip */}
+          {modules.length > 0 && (
+            <div className="grid gap-3 md:grid-cols-4">
+              <StatTile label="total" value={counts.total} />
+              <StatTile label="proposed" value={counts.proposed} tone="warning" />
+              <StatTile label="approved" value={counts.approved} tone="success" />
+              <StatTile label="archived" value={counts.archived} />
             </div>
           )}
-          <FleetModuleSyncCard />
-        </>
+
+          {/* Filters + batch actions */}
+          {modules.length > 0 && (
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={searchQ}
+                    onChange={(e) => setSearchQ(e.target.value)}
+                    placeholder="Search modules…"
+                    className="h-8 w-56 pl-9 font-mono text-xs"
+                  />
+                </div>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="h-8 w-36 font-mono text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="proposed">Proposed</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
+                    <SelectItem value="archived">Archived</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {selectedIds.size > 0 && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="secondary" className="font-mono text-[10px]">
+                    {selectedIds.size} selected
+                  </Badge>
+                  <ApproveAndDeployButton
+                    moduleIds={Array.from(selectedIds)}
+                    onDone={() => { setSelectedIds(new Set()); refresh(); }}
+                  />
+                  <PublishToLibraryButton moduleIds={Array.from(selectedIds)} />
+                  <Button size="sm" variant="outline" onClick={() => batchAction("approved")}>
+                    <Check className="mr-1 h-3 w-3" /> Approve
+                  </Button>
+                  <BatchRejectButton onReject={(reason) => batchAction("rejected", reason)} />
+                  <Button size="sm" variant="ghost" onClick={() => batchAction("archived")}>
+                    <Archive className="mr-1 h-3 w-3" /> Archive
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
+                    Clear
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {loading ? (
+            <ModuleGridSkeleton count={4} />
+          ) : modules.length === 0 ? (
+            <EmptyState
+              icon={<FileCode />}
+              title="No modules detected"
+              description="Run route-first detection to scan your prime repo. The engine finds each route file, traces its full import tree, and creates one module per page."
+              action={
+                <Button onClick={runDetection} disabled={scanning}>
+                  <FileCode className="mr-2 h-4 w-4" />
+                  {scanning ? "Scanning…" : "Scan Routes"}
+                </Button>
+              }
+            />
+          ) : (
+            <>
+              <div className="grid gap-3 md:grid-cols-2">
+                {filteredModules.map((m) => (
+                  <ModuleRow
+                    key={m.id}
+                    module={m}
+                    selected={selectedIds.has(m.id)}
+                    onToggleSelect={() => toggleSelect(m.id)}
+                    onApprove={() => setStatus(m.id, "approved")}
+                    onReject={(reason) => setStatus(m.id, "rejected", reason)}
+                    onArchive={() => setStatus(m.id, "archived")}
+                    onEdited={refresh}
+                  />
+                ))}
+              </div>
+              {filteredModules.length === 0 && (
+                <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+                  No modules match your filters.
+                </div>
+              )}
+              <FleetModuleSyncCard />
+            </>
+          )}
       )}
+    </div>
+  );
+}
     </div>
   );
 }

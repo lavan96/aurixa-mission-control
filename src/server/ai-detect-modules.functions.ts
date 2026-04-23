@@ -246,3 +246,116 @@ export const getModuleIntelligence = createServerFn({ method: "POST" })
       return { ok: false as const, error: e instanceof Error ? e.message : String(e), coInstallation: [], healthScores: [] };
     }
   });
+
+// ─── Module Library ─────────────────────────────────────────────────
+
+// Publish approved modules to the library
+export const publishToLibrary = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data: { moduleIds: string[]; tags?: string[] }) => {
+      if (!Array.isArray(data?.moduleIds) || data.moduleIds.length === 0) throw new Error("moduleIds required");
+      return data;
+    },
+  )
+  .handler(async ({ data, context }) => {
+    // Fetch the modules
+    const { data: modules, error: fetchErr } = await context.supabase
+      .from("modules")
+      .select("*")
+      .in("id", data.moduleIds);
+    if (fetchErr || !modules) return { ok: false as const, error: fetchErr?.message ?? "Failed to fetch modules" };
+
+    let published = 0;
+    for (const m of modules) {
+      // Mark previous versions as not latest
+      await context.supabase
+        .from("module_library")
+        .update({ is_latest: false })
+        .eq("slug", m.slug)
+        .eq("is_latest", true);
+
+      // Get next version
+      const { data: prevVersions } = await context.supabase
+        .from("module_library")
+        .select("version")
+        .eq("slug", m.slug)
+        .order("version", { ascending: false })
+        .limit(1);
+      const nextVersion = ((prevVersions?.[0]?.version as number) ?? 0) + 1;
+
+      const { error: insertErr } = await context.supabase
+        .from("module_library")
+        .insert({
+          name: m.name,
+          slug: m.slug,
+          description: m.description,
+          route_path: (m.routes as string[])?.[0] ?? null,
+          entry_file: m.route_entry_file ?? m.slug,
+          file_paths: m.resolved_files ?? m.file_globs ?? [],
+          file_count: (m.resolved_files as string[])?.length ?? (m.file_globs as string[])?.length ?? 0,
+          version: nextVersion,
+          source_detection_run_id: m.detection_run_id,
+          source_module_id: m.id,
+          published_by: context.userId,
+          is_latest: true,
+          tags: data.tags ?? [],
+          metadata: {
+            cohesion_score: m.cohesion_score,
+            coupling_score: m.coupling_score,
+            ai_confidence: m.ai_confidence,
+            ai_reasoning: m.ai_reasoning,
+            shared_by_modules: m.shared_by_modules,
+          },
+        });
+      if (!insertErr) published++;
+    }
+
+    await context.supabase.from("audit_log").insert({
+      action: "module.publish_to_library",
+      entity_type: "module_library",
+      actor_user_id: context.userId,
+      metadata: { module_ids: data.moduleIds, published, tags: data.tags },
+    });
+
+    return { ok: true as const, published };
+  });
+
+// Get library entries
+export const getModuleLibrary = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data?: { latestOnly?: boolean; slug?: string }) => data ?? {},
+  )
+  .handler(async ({ data, context }) => {
+    let query = context.supabase
+      .from("module_library")
+      .select("*")
+      .order("name", { ascending: true })
+      .order("version", { ascending: false });
+
+    if (data.latestOnly !== false) query = query.eq("is_latest", true);
+    if (data.slug) query = query.eq("slug", data.slug);
+
+    const { data: entries, error } = await query.limit(200);
+    if (error) return { ok: false as const, error: error.message, entries: [] };
+    return { ok: true as const, entries: entries ?? [] };
+  });
+
+// Remove library entry
+export const removeFromLibrary = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data: { entryId: string }) => {
+      if (!data?.entryId) throw new Error("entryId required");
+      return data;
+    },
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("module_library")
+      .delete()
+      .eq("id", data.entryId);
+    if (error) return { ok: false as const, error: error.message };
+    return { ok: true as const };
+  });
