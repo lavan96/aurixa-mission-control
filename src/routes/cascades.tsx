@@ -178,8 +178,11 @@ function CascadesPage() {
     };
   }, [refresh]);
 
+  // Effective target list based on scope
+  const targets = scope === "tagged" && selectedTags.length > 0 ? tagFilteredClones : clones;
+
   // Live blast-radius preview based on current scope/mode + clone count.
-  const blast = assessBlastRadius(mode, clones.length);
+  const blast = assessBlastRadius(mode, targets.length);
 
   const fire = async () => {
     setBusy(true);
@@ -190,7 +193,10 @@ function CascadesPage() {
         trigger: "manual",
         mode,
         status: "pending",
-        scope_filter: { scope },
+        scope_filter: {
+          scope,
+          ...(scope === "tagged" ? { tags: selectedTags } : {}),
+        },
         initiated_by: user?.id,
         requires_approval: blast.requiresApproval,
       })
@@ -201,7 +207,6 @@ function CascadesPage() {
       setBusy(false);
       return;
     }
-    const targets = clones;
     if (targets.length > 0) {
       await supabase.from("cascade_results").insert(
         targets.map((c) => ({
