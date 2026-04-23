@@ -9,12 +9,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { useModules, usePrimeConfig } from "@/lib/queries";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { GitFork, Copy, Layers, Info, Shield, Check } from "lucide-react";
+import { GitFork, Copy, Layers, Info, Shield, Check, Database } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useServerFn } from "@tanstack/react-start";
 import { provisionClone } from "@/server/clone-provisioning.functions";
+import { provisionBackend } from "@/server/backend-provisioning.functions";
 
 export const Route = createFileRoute("/clones/new")({
   component: () => (
@@ -77,6 +78,11 @@ function NewClone() {
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
+  const [dedicatedBackend, setDedicatedBackend] = useState(true);
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [backendRegion, setBackendRegion] = useState("us-east-1");
+  const provisionBackendFn = useServerFn(provisionBackend);
 
   // Default the org field to the prime's default_clone_org once it loads
   useEffect(() => {
@@ -94,6 +100,14 @@ function NewClone() {
   const submit = async () => {
     if (!name.trim()) {
       toast.error("Name is required");
+      return;
+    }
+    if (dedicatedBackend && !adminEmail.trim()) {
+      toast.error("Admin email is required for dedicated backend");
+      return;
+    }
+    if (dedicatedBackend && adminPassword.length < 8) {
+      toast.error("Admin password must be at least 8 characters");
       return;
     }
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -131,11 +145,35 @@ function NewClone() {
         setBusy(false);
         return;
       }
+
       toast.success(
         method === "clone"
           ? "Clone registered (independent — wire up the repo manually)"
           : `Clone provisioned${result.githubUrl ? " on GitHub" : ""}`,
       );
+
+      // Kick off backend provisioning if enabled (non-blocking)
+      if (dedicatedBackend) {
+        toast.info("Backend provisioning started — this may take 1-2 minutes");
+        provisionBackendFn({
+          data: {
+            cloneId: result.cloneId,
+            cloneName: name,
+            region: backendRegion,
+            adminEmail,
+            adminPassword,
+          },
+        }).then((backendResult) => {
+          if ("ok" in backendResult && backendResult.ok) {
+            toast.success("Dedicated backend is ready!");
+          } else if ("error" in backendResult) {
+            toast.error(`Backend provisioning failed: ${backendResult.error}`);
+          }
+        }).catch(() => {
+          toast.error("Backend provisioning encountered an error");
+        });
+      }
+
       setBusy(false);
       nav({ to: "/clones/$cloneId", params: { cloneId: result.cloneId } });
     } catch (e) {
@@ -322,7 +360,64 @@ function NewClone() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <Shield className="h-4 w-4 text-info" /> 5 · Cloudflare wrapper (optional)
+            <Database className="h-4 w-4 text-primary" /> 5 · Dedicated backend
+          </CardTitle>
+          <CardDescription>
+            Provision an isolated database and auth system for this clone. The admin user
+            will be auto-created with full access.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <label className="flex cursor-pointer items-center gap-3">
+            <Checkbox checked={dedicatedBackend} onCheckedChange={(v) => setDedicatedBackend(!!v)} />
+            <span className="text-sm">Provision a dedicated backend for this clone</span>
+          </label>
+          {dedicatedBackend && (
+            <div className="grid gap-4 md:grid-cols-2 rounded-md border border-border p-4">
+              <div className="space-y-2">
+                <Label>Admin email</Label>
+                <Input
+                  type="email"
+                  value={adminEmail}
+                  onChange={(e) => setAdminEmail(e.target.value)}
+                  placeholder="admin@client.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Admin password</Label>
+                <Input
+                  type="password"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  placeholder="Min 8 characters"
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label>Region</Label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={backendRegion}
+                  onChange={(e) => setBackendRegion(e.target.value)}
+                >
+                  <option value="us-east-1">US East (Virginia)</option>
+                  <option value="us-west-1">US West (Oregon)</option>
+                  <option value="eu-west-1">EU West (Ireland)</option>
+                  <option value="eu-west-2">EU West (London)</option>
+                  <option value="eu-central-1">EU Central (Frankfurt)</option>
+                  <option value="ap-southeast-1">Asia Pacific (Singapore)</option>
+                  <option value="ap-southeast-2">Asia Pacific (Sydney)</option>
+                  <option value="ap-northeast-1">Asia Pacific (Tokyo)</option>
+                </select>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Shield className="h-4 w-4 text-info" /> 6 · Cloudflare wrapper (optional)
           </CardTitle>
           <CardDescription>
             Wrap the front-end with Cloudflare for WAF, rate limiting, and DDoS protection. You'll
