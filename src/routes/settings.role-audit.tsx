@@ -183,7 +183,7 @@ function RoleAuditRow({ entry }: { entry: AuditEntry }) {
               <span className="italic">system</span>
             )}
 
-            {(isAssign || isRevoke) && meta?.target_user_id && (
+            {(isAssign || isRevoke) && !!meta?.target_user_id && (
               <>
                 <ArrowRight className="h-3 w-3" />
                 <span className="font-medium text-foreground">
@@ -193,10 +193,10 @@ function RoleAuditRow({ entry }: { entry: AuditEntry }) {
               </>
             )}
 
-            {isCloneCreated && meta?.method && (
+            {isCloneCreated && !!meta?.method && (
               <span>
                 provisioned via <strong>{String(meta.method)}</strong>
-                {meta?.github_url && (
+                {!!meta?.github_url && (
                   <>
                     {" → "}
                     <span className="font-mono">{String(meta.github_url)}</span>
@@ -217,7 +217,7 @@ function RoleAuditRow({ entry }: { entry: AuditEntry }) {
               <span className="font-mono">
                 {new Date(entry.created_at).toISOString()}
               </span>
-              {meta?.role_id && (
+              {!!meta?.role_id && (
                 <>
                   <span className="text-muted-foreground">role_id</span>
                   <span className="font-mono">
