@@ -441,10 +441,10 @@ export async function seedAdminUser(
   const user = await createRes.json();
   const userId = user.id;
 
-  // Insert admin role via SQL
+  // Insert super_admin role via SQL (system-seeded, assigned_by = NULL)
   await runSqlOnProject(
     projectRef,
-    `INSERT INTO public.user_roles (user_id, role) VALUES ('${userId}', 'admin') ON CONFLICT DO NOTHING;`
+    `INSERT INTO public.user_roles (user_id, role) VALUES ('${userId}', 'super_admin') ON CONFLICT DO NOTHING;`
   );
 
   return { userId };
