@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/protected-route";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/lib/auth";
 import {
@@ -50,6 +50,8 @@ import {
   Trash2,
   RefreshCw,
   AlertTriangle,
+  Search,
+  Filter,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "@/lib/format";
@@ -88,6 +90,10 @@ function RolesPage() {
   const [myLevel, setMyLevel] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  // ── Search & filter state ──
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<AppRole | "all">("all");
+
   const assignRoleFn = useServerFn(assignRole);
   const revokeRoleFn = useServerFn(revokeRole);
 
@@ -110,6 +116,25 @@ function RolesPage() {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  // ── Filtered users ──
+  const filteredUsers = useMemo(() => {
+    let result = users;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      result = result.filter(
+        (u) =>
+          u.display_name?.toLowerCase().includes(q) ||
+          u.user_id.toLowerCase().includes(q)
+      );
+    }
+    if (roleFilter !== "all") {
+      result = result.filter((u) =>
+        u.roles.some((r) => r.role === roleFilter)
+      );
+    }
+    return result;
+  }, [users, searchQuery, roleFilter]);
 
   const assignableRoles = ALL_ROLES.filter(
     (r) => ROLE_META[r].level < myLevel
@@ -216,11 +241,60 @@ function RolesPage() {
         </CardContent>
       </Card>
 
+      {/* Search & Filters */}
+      <Card>
+        <CardContent className="pt-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name or user ID…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select
+                value={roleFilter}
+                onValueChange={(v) => setRoleFilter(v as AppRole | "all")}
+              >
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="Filter by role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All roles</SelectItem>
+                  {ALL_ROLES.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {ROLE_META[r].label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {(searchQuery || roleFilter !== "all") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSearchQuery("");
+                  setRoleFilter("all");
+                }}
+              >
+                Clear filters
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* User list */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm">
-            Users ({users.length})
+            Users ({filteredUsers.length}
+            {filteredUsers.length !== users.length && ` of ${users.length}`})
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -228,13 +302,15 @@ function RolesPage() {
             <div className="p-8 text-center text-sm text-muted-foreground">
               Loading users…
             </div>
-          ) : users.length === 0 ? (
+          ) : filteredUsers.length === 0 ? (
             <div className="p-8 text-center text-sm text-muted-foreground">
-              No users found.
+              {users.length === 0
+                ? "No users found."
+                : "No users match your search or filter."}
             </div>
           ) : (
             <div className="divide-y divide-border/60">
-              {users.map((u) => (
+              {filteredUsers.map((u) => (
                 <UserRow
                   key={u.user_id}
                   user={u}
