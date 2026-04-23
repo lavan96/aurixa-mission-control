@@ -294,14 +294,75 @@ function CascadesPage() {
             <div className="mb-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
               scope
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant={scope === "all" ? "default" : "outline"} onClick={() => setScope("all")}>
                 All clones ({clones.length})
               </Button>
+              <Button variant={scope === "tagged" ? "default" : "outline"} onClick={() => setScope("tagged")}>
+                <Tag className="mr-1.5 h-3.5 w-3.5" /> By tag
+                {scope === "tagged" && selectedTags.length > 0 && (
+                  <Badge variant="secondary" className="ml-1.5 text-[10px]">
+                    {tagFilteredClones.length}
+                  </Badge>
+                )}
+              </Button>
               <Button variant={scope === "selected" ? "default" : "outline"} onClick={() => setScope("selected")}>
-                Tagged group
+                Manual select
               </Button>
             </div>
+            {scope === "tagged" && (
+              <div className="mt-3 space-y-2">
+                {allTags.length === 0 ? (
+                  <div className="rounded-md border border-dashed p-3 text-center font-mono text-[11px] text-muted-foreground">
+                    No tags found. Tag your clones first from the fleet overview.
+                  </div>
+                ) : (
+                  <>
+                    <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                      select tags · {selectedTags.length} active → {tagFilteredClones.length} clone{tagFilteredClones.length === 1 ? "" : "s"}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {allTags.map((tag) => {
+                        const active = selectedTags.includes(tag);
+                        const count = clones.filter((c) => (c.tags ?? []).includes(tag)).length;
+                        return (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => toggleTag(tag)}
+                            className={cn(
+                              "inline-flex items-center gap-1 rounded-md border px-2 py-1 font-mono text-[11px] transition-colors",
+                              active
+                                ? "border-primary/50 bg-primary/10 text-primary"
+                                : "border-border bg-surface text-muted-foreground hover:border-primary/30 hover:text-foreground",
+                            )}
+                          >
+                            <Tag className="h-3 w-3" />
+                            #{tag}
+                            <span className={cn(
+                              "ml-0.5 rounded-full px-1 text-[9px]",
+                              active ? "bg-primary/20" : "bg-muted",
+                            )}>
+                              {count}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {selectedTags.length > 0 && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 text-[10px] text-muted-foreground"
+                        onClick={() => setTags([])}
+                      >
+                        Clear all tags
+                      </Button>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
           {blast.requiresApproval && (
             <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/5 p-3 text-xs text-warning">
