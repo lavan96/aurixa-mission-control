@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/protected-route";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -11,6 +12,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Crown,
   Shield,
   Wrench,
@@ -19,11 +25,14 @@ import {
   X,
   Minus,
   Grid3x3,
+  Info,
+  Database,
+  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database as DbTypes } from "@/integrations/supabase/types";
 
-type AppRole = Database["public"]["Enums"]["app_role"];
+type AppRole = DbTypes["public"]["Enums"]["app_role"];
 
 const ROLES: Array<{
   role: AppRole;
@@ -38,16 +47,18 @@ const ROLES: Array<{
   { role: "user", label: "User", level: 10, icon: User, color: "text-muted-foreground" },
 ];
 
-type Capability =
-  | "full" // ✓
-  | "limited" // ◦
-  | "none"; // ✗
+type Capability = "full" | "limited" | "none";
 
 type PermissionRow = {
   category: string;
   capability: string;
   description: string;
   access: Record<AppRole, Capability>;
+  enforcement: {
+    type: "rls" | "function" | "trigger" | "server" | "system";
+    label: string;
+    detail: string;
+  };
 };
 
 const PERMISSIONS: PermissionRow[] = [
@@ -57,36 +68,66 @@ const PERMISSIONS: PermissionRow[] = [
     capability: "Assign super_admin",
     description: "No one can assign super_admin — it's system-seeded only",
     access: { super_admin: "none", admin: "none", operator: "none", user: "none" },
+    enforcement: {
+      type: "server",
+      label: "Server guardrail + DB trigger",
+      detail: "assignRole() server function explicitly blocks role='super_admin'. DB trigger enforce_role_hierarchy() also validates via can_assign_role() — since no role has level > 100, assignment is impossible at both layers.",
+    },
   },
   {
     category: "Role Management",
     capability: "Assign admin",
     description: "Only super_admin (level 100 > 80)",
     access: { super_admin: "full", admin: "none", operator: "none", user: "none" },
+    enforcement: {
+      type: "function",
+      label: "can_assign_role(_assigner, 'admin')",
+      detail: "RLS INSERT policy on user_roles: WITH CHECK (can_assign_role(auth.uid(), role) AND assigned_by = auth.uid()). The function checks highest_role_level(assigner) > role_level('admin'=80). Only level 100 (super_admin) passes.",
+    },
   },
   {
     category: "Role Management",
     capability: "Assign operator",
     description: "Admin+ can assign operator (level 80+ > 50)",
     access: { super_admin: "full", admin: "full", operator: "none", user: "none" },
+    enforcement: {
+      type: "function",
+      label: "can_assign_role(_assigner, 'operator')",
+      detail: "Same RLS INSERT policy. highest_role_level(assigner) must exceed role_level('operator'=50). Levels 80 (admin) and 100 (super_admin) qualify.",
+    },
   },
   {
     category: "Role Management",
     capability: "Assign user",
     description: "Operator+ can assign user (level 50+ > 10)",
     access: { super_admin: "full", admin: "full", operator: "full", user: "none" },
+    enforcement: {
+      type: "function",
+      label: "can_assign_role(_assigner, 'user')",
+      detail: "highest_role_level(assigner) must exceed role_level('user'=10). Levels 50+ qualify. The 'user' role itself at level 10 cannot self-assign.",
+    },
   },
   {
     category: "Role Management",
     capability: "Revoke roles",
     description: "Can only revoke from users with lower role level",
     access: { super_admin: "full", admin: "limited", operator: "limited", user: "none" },
+    enforcement: {
+      type: "rls",
+      label: "RLS DELETE + guard_last_super_admin trigger",
+      detail: "RLS DELETE policy: USING can_manage_user(auth.uid(), user_id) — checks highest_role_level(manager) > highest_role_level(target). Server function revokeRole() additionally counts remaining super_admins before delete. DB trigger guard_last_super_admin() raises exception if the last super_admin row would be removed.",
+    },
   },
   {
     category: "Role Management",
     capability: "View all roles",
     description: "Admin+ can see all users' roles",
     access: { super_admin: "full", admin: "full", operator: "none", user: "none" },
+    enforcement: {
+      type: "rls",
+      label: "RLS SELECT on user_roles",
+      detail: "Policy 'Admins and super_admins can read all roles': USING (has_role(auth.uid(), 'admin') OR has_role(auth.uid(), 'super_admin')). Separate policy allows users to read their own roles: USING (auth.uid() = user_id).",
+    },
   },
   // ── Fleet Management ──
   {
@@ -94,24 +135,44 @@ const PERMISSIONS: PermissionRow[] = [
     capability: "View clones",
     description: "Read access to all clones",
     access: { super_admin: "full", admin: "full", operator: "full", user: "none" },
+    enforcement: {
+      type: "rls",
+      label: "RLS SELECT on clones",
+      detail: "Policy 'Operators can read clones': USING is_operator(auth.uid()). The is_operator() function checks for super_admin, admin, or operator roles.",
+    },
   },
   {
     category: "Fleet Management",
     capability: "Create clones",
     description: "Provision new clone repos",
     access: { super_admin: "full", admin: "full", operator: "full", user: "none" },
+    enforcement: {
+      type: "rls",
+      label: "RLS INSERT on clones",
+      detail: "Policy 'Operators can insert clones': WITH CHECK is_operator(auth.uid()). Requires super_admin, admin, or operator role.",
+    },
   },
   {
     category: "Fleet Management",
     capability: "Delete clones",
     description: "Permanently remove clones (admin+ only)",
     access: { super_admin: "full", admin: "full", operator: "none", user: "none" },
+    enforcement: {
+      type: "rls",
+      label: "RLS DELETE on clones",
+      detail: "Policy 'Admins can delete clones': USING has_role(auth.uid(), 'admin'). Only admin and super_admin (who also has admin-level access) can delete.",
+    },
   },
   {
     category: "Fleet Management",
     capability: "Manage backends",
     description: "Provision / retry clone dedicated backends",
     access: { super_admin: "full", admin: "full", operator: "none", user: "none" },
+    enforcement: {
+      type: "rls",
+      label: "RLS ALL on clone_backends",
+      detail: "Policy 'Admins can write clone_backends': USING/WITH CHECK has_role(auth.uid(), 'admin'). Full CRUD restricted to admin+ roles.",
+    },
   },
   // ── Cascades ──
   {
@@ -119,18 +180,33 @@ const PERMISSIONS: PermissionRow[] = [
     capability: "View cascades",
     description: "Read cascade events and results",
     access: { super_admin: "full", admin: "full", operator: "full", user: "none" },
+    enforcement: {
+      type: "rls",
+      label: "RLS SELECT on cascade_events/results",
+      detail: "Policies 'Operators can read cascade_events/results': USING is_operator(auth.uid()). Any operator-level user or above can view.",
+    },
   },
   {
     category: "Cascades",
     capability: "Execute cascades",
     description: "Trigger cascade operations",
     access: { super_admin: "full", admin: "full", operator: "full", user: "none" },
+    enforcement: {
+      type: "rls",
+      label: "RLS ALL on cascade_events",
+      detail: "Policy 'Operators can write cascade_events': USING/WITH CHECK is_operator(auth.uid()). Operators can create and update cascade events.",
+    },
   },
   {
     category: "Cascades",
     capability: "Approve cascades",
     description: "Second-operator approval for high-blast-radius cascades",
     access: { super_admin: "full", admin: "full", operator: "full", user: "none" },
+    enforcement: {
+      type: "rls",
+      label: "RLS INSERT on cascade_approvals",
+      detail: "Policy 'Operators insert cascade_approvals (not self)': WITH CHECK (is_operator AND approver = auth.uid() AND initiator ≠ auth.uid()). Prevents self-approval.",
+    },
   },
   // ── Modules ──
   {
@@ -138,18 +214,33 @@ const PERMISSIONS: PermissionRow[] = [
     capability: "View modules",
     description: "Browse the module catalog",
     access: { super_admin: "full", admin: "full", operator: "full", user: "none" },
+    enforcement: {
+      type: "rls",
+      label: "RLS SELECT on modules",
+      detail: "Policy 'Operators can read modules': USING is_operator(auth.uid()).",
+    },
   },
   {
     category: "Modules",
     capability: "Install / remove modules",
     description: "Modify clone module sets",
     access: { super_admin: "full", admin: "full", operator: "full", user: "none" },
+    enforcement: {
+      type: "rls",
+      label: "RLS ALL on clone_modules",
+      detail: "Policy 'Operators can write clone_modules': USING/WITH CHECK is_operator(auth.uid()). Any operator+ can install or remove modules from clones.",
+    },
   },
   {
     category: "Modules",
     capability: "Detect modules (AI)",
     description: "Run AI module detection on prime",
     access: { super_admin: "full", admin: "full", operator: "full", user: "none" },
+    enforcement: {
+      type: "server",
+      label: "Server function auth middleware",
+      detail: "Server function requireSupabaseAuth middleware validates the session. The AI detection endpoint additionally checks is_operator via RPC before proceeding.",
+    },
   },
   // ── Settings ──
   {
@@ -157,18 +248,33 @@ const PERMISSIONS: PermissionRow[] = [
     capability: "Edit prime config",
     description: "Change prime repo, default branch, cascade mode",
     access: { super_admin: "full", admin: "full", operator: "none", user: "none" },
+    enforcement: {
+      type: "rls",
+      label: "RLS ALL on prime_config",
+      detail: "Policy 'Admins can write prime config': USING/WITH CHECK has_role(auth.uid(), 'admin'). Only admin+ can modify prime configuration.",
+    },
   },
   {
     category: "Settings",
     capability: "Manage GitHub App",
     description: "Configure App secrets and webhook",
     access: { super_admin: "full", admin: "full", operator: "none", user: "none" },
+    enforcement: {
+      type: "server",
+      label: "Server function + admin check",
+      detail: "GitHub App configuration server functions validate has_role(auth.uid(), 'admin') via RPC before accepting changes to secrets or webhook configuration.",
+    },
   },
   {
     category: "Settings",
     capability: "View audit log",
     description: "Read operational audit trail",
     access: { super_admin: "full", admin: "full", operator: "full", user: "none" },
+    enforcement: {
+      type: "rls",
+      label: "RLS SELECT on audit_log",
+      detail: "Policy 'Operators can read audit_log': USING is_operator(auth.uid()). Append-only — no UPDATE or DELETE policies exist on audit_log.",
+    },
   },
   // ── Notifications ──
   {
@@ -176,32 +282,99 @@ const PERMISSIONS: PermissionRow[] = [
     capability: "Manage own push",
     description: "Enable/disable push notifications on own devices",
     access: { super_admin: "full", admin: "full", operator: "full", user: "full" },
+    enforcement: {
+      type: "rls",
+      label: "RLS on push_subscriptions (own rows)",
+      detail: "Multiple policies: 'Users manage own push subscriptions insert/select/update/delete' all use USING/WITH CHECK (auth.uid() = user_id). Every authenticated user can manage their own device subscriptions.",
+    },
   },
   {
     category: "Notifications",
     capability: "View all subscriptions",
     description: "See all push device subscriptions",
     access: { super_admin: "full", admin: "full", operator: "full", user: "none" },
+    enforcement: {
+      type: "rls",
+      label: "RLS SELECT on push_subscriptions (all)",
+      detail: "Policy 'Operators read all push subscriptions': USING is_operator(auth.uid()). Operators can see all device subscriptions for monitoring purposes.",
+    },
   },
 ];
 
-function CapCell({ cap }: { cap: Capability }) {
-  if (cap === "full")
-    return (
-      <div className="flex justify-center">
-        <Check className="h-4 w-4 text-success" />
+const ENFORCEMENT_ICONS: Record<string, typeof Lock> = {
+  rls: Database,
+  function: Lock,
+  trigger: Shield,
+  server: Lock,
+  system: Crown,
+};
+
+const ENFORCEMENT_COLORS: Record<string, string> = {
+  rls: "text-primary",
+  function: "text-accent",
+  trigger: "text-warning",
+  server: "text-info",
+  system: "text-warning",
+};
+
+function CapCell({
+  cap,
+  enforcement,
+  role,
+  capability,
+}: {
+  cap: Capability;
+  enforcement: PermissionRow["enforcement"];
+  role: AppRole;
+  capability: string;
+}) {
+  const EnfIcon = ENFORCEMENT_ICONS[enforcement.type] ?? Lock;
+  const enfColor = ENFORCEMENT_COLORS[enforcement.type] ?? "text-muted-foreground";
+
+  const content = (
+    <div className="space-y-2 max-w-xs">
+      <div className="flex items-center gap-2">
+        <EnfIcon className={cn("h-3.5 w-3.5 shrink-0", enfColor)} />
+        <span className="font-mono text-[11px] font-semibold">{enforcement.label}</span>
       </div>
-    );
-  if (cap === "limited")
-    return (
-      <div className="flex justify-center">
-        <Minus className="h-4 w-4 text-warning" />
+      <p className="text-[11px] leading-relaxed text-muted-foreground">
+        {enforcement.detail}
+      </p>
+      <div className="flex items-center gap-1.5 pt-1 border-t border-border/40">
+        <Badge variant="outline" className="text-[9px] font-mono">
+          {enforcement.type.toUpperCase()}
+        </Badge>
+        <span className="text-[10px] text-muted-foreground">
+          {cap === "full" ? "Granted" : cap === "limited" ? "Conditionally granted" : "Blocked"} for {ROLES.find((r) => r.role === role)?.label}
+        </span>
       </div>
-    );
-  return (
-    <div className="flex justify-center">
-      <X className="h-4 w-4 text-muted-foreground/40" />
     </div>
+  );
+
+  const icon =
+    cap === "full" ? (
+      <Check className="h-4 w-4 text-success" />
+    ) : cap === "limited" ? (
+      <Minus className="h-4 w-4 text-warning" />
+    ) : (
+      <X className="h-4 w-4 text-muted-foreground/40" />
+    );
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="group relative flex justify-center w-full py-1 rounded hover:bg-muted/50 transition-colors cursor-pointer"
+        >
+          {icon}
+          <Info className="absolute top-0 right-0 h-2.5 w-2.5 text-muted-foreground/30 opacity-0 group-hover:opacity-100 transition-opacity" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent side="top" align="center" className="w-80">
+        {content}
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -217,7 +390,6 @@ export const Route = createFileRoute("/settings/permission-matrix")({
 });
 
 function PermissionMatrixPage() {
-  // Group permissions by category
   const categories = Array.from(new Set(PERMISSIONS.map((p) => p.category)));
 
   return (
@@ -234,8 +406,8 @@ function PermissionMatrixPage() {
             Permission Matrix
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            What each role can do inside the dashboard. Role levels enforce
-            strict hierarchy — you can never act above your own level.
+            What each role can do inside the dashboard. Click any cell to see the
+            exact backend rule that grants or blocks access.
           </p>
         </div>
       </header>
@@ -244,16 +416,16 @@ function PermissionMatrixPage() {
       <Card>
         <CardContent className="flex flex-wrap items-center gap-4 pt-4">
           <div className="flex items-center gap-1.5 text-sm">
-            <Check className="h-4 w-4 text-success" />{" "}
-            <span>Full access</span>
+            <Check className="h-4 w-4 text-success" /> <span>Full access</span>
           </div>
           <div className="flex items-center gap-1.5 text-sm">
-            <Minus className="h-4 w-4 text-warning" />{" "}
-            <span>Limited (hierarchy-scoped)</span>
+            <Minus className="h-4 w-4 text-warning" /> <span>Limited (hierarchy-scoped)</span>
           </div>
           <div className="flex items-center gap-1.5 text-sm">
-            <X className="h-4 w-4 text-muted-foreground/40" />{" "}
-            <span>No access</span>
+            <X className="h-4 w-4 text-muted-foreground/40" /> <span>No access</span>
+          </div>
+          <div className="ml-auto flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <Info className="h-3.5 w-3.5" /> Click any cell to see enforcement details
           </div>
         </CardContent>
       </Card>
@@ -274,19 +446,17 @@ function PermissionMatrixPage() {
                       <TableHead key={r.role} className="text-center w-[100px]">
                         <div className="flex flex-col items-center gap-1">
                           <Icon className={cn("h-4 w-4", r.color)} />
-                          <span className="text-[10px] font-mono">
-                            {r.label}
-                          </span>
-                          <Badge
-                            variant="outline"
-                            className="text-[9px] font-mono"
-                          >
+                          <span className="text-[10px] font-mono">{r.label}</span>
+                          <Badge variant="outline" className="text-[9px] font-mono">
                             {r.level}
                           </Badge>
                         </div>
                       </TableHead>
                     );
                   })}
+                  <TableHead className="w-[40px] text-center">
+                    <Info className="h-3.5 w-3.5 text-muted-foreground mx-auto" />
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -294,19 +464,53 @@ function PermissionMatrixPage() {
                   <TableRow key={perm.capability}>
                     <TableCell>
                       <div>
-                        <div className="text-sm font-medium">
-                          {perm.capability}
-                        </div>
+                        <div className="text-sm font-medium">{perm.capability}</div>
                         <div className="text-[11px] text-muted-foreground">
                           {perm.description}
                         </div>
                       </div>
                     </TableCell>
                     {ROLES.map((r) => (
-                      <TableCell key={r.role} className="text-center">
-                        <CapCell cap={perm.access[r.role]} />
+                      <TableCell key={r.role} className="text-center p-1">
+                        <CapCell
+                          cap={perm.access[r.role]}
+                          enforcement={perm.enforcement}
+                          role={r.role}
+                          capability={perm.capability}
+                        />
                       </TableCell>
                     ))}
+                    <TableCell className="text-center">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button type="button" className="p-1 rounded hover:bg-muted/50 transition-colors">
+                            {(() => {
+                              const EnfIcon = ENFORCEMENT_ICONS[perm.enforcement.type] ?? Lock;
+                              const enfColor = ENFORCEMENT_COLORS[perm.enforcement.type] ?? "text-muted-foreground";
+                              return <EnfIcon className={cn("h-3.5 w-3.5", enfColor)} />;
+                            })()}
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent side="left" align="center" className="w-80">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              {(() => {
+                                const EnfIcon = ENFORCEMENT_ICONS[perm.enforcement.type] ?? Lock;
+                                const enfColor = ENFORCEMENT_COLORS[perm.enforcement.type] ?? "text-muted-foreground";
+                                return <EnfIcon className={cn("h-4 w-4", enfColor)} />;
+                              })()}
+                              <span className="font-mono text-xs font-semibold">{perm.enforcement.label}</span>
+                            </div>
+                            <p className="text-xs leading-relaxed text-muted-foreground">
+                              {perm.enforcement.detail}
+                            </p>
+                            <Badge variant="outline" className="text-[9px] font-mono">
+                              {perm.enforcement.type.toUpperCase()}
+                            </Badge>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
