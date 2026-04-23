@@ -840,18 +840,24 @@ export type Database = {
       }
       user_roles: {
         Row: {
+          assigned_at: string
+          assigned_by: string | null
           created_at: string
           id: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
           created_at?: string
           id?: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
+          assigned_at?: string
+          assigned_by?: string | null
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
@@ -874,7 +880,7 @@ export type Database = {
       is_operator: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "operator"
+      app_role: "super_admin" | "admin" | "operator"
       cascade_event_status:
         | "pending"
         | "running"
@@ -1045,7 +1051,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "operator"],
+      app_role: ["super_admin", "admin", "operator"],
       cascade_event_status: [
         "pending",
         "running",
