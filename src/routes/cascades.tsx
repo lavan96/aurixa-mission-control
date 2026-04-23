@@ -24,11 +24,12 @@ import { assessBlastRadius } from "@/lib/blast-radius";
 import { ShieldAlert } from "lucide-react";
 
 const MODE_VALUES = ["pr", "auto_merge", "notify"] as const;
-const SCOPE_VALUES = ["all", "selected"] as const;
+const SCOPE_VALUES = ["all", "tagged", "selected"] as const;
 
 const searchSchema = z.object({
   mode: fallback(z.enum(MODE_VALUES), "pr").default("pr"),
   scope: fallback(z.enum(SCOPE_VALUES), "all").default("all"),
+  tags: fallback(z.string(), "").default(""),
   schedule_id: fallback(z.string().uuid().optional(), undefined).optional(),
 });
 
@@ -52,6 +53,22 @@ function CascadesPage() {
   const mode = search.mode;
   const scope = search.scope;
   const scheduleId = search.schedule_id;
+  const selectedTags = (search.tags ?? "").split(",").filter(Boolean);
+
+  // Collect all unique tags from the fleet
+  const allTags = useMemo(() => {
+    const set = new Set<string>();
+    for (const c of clones) for (const t of c.tags ?? []) set.add(t);
+    return Array.from(set).sort();
+  }, [clones]);
+
+  // Filter clones by selected tags
+  const tagFilteredClones = useMemo(() => {
+    if (scope !== "tagged" || selectedTags.length === 0) return clones;
+    return clones.filter((c) =>
+      selectedTags.some((t) => (c.tags ?? []).includes(t)),
+    );
+  }, [clones, scope, selectedTags]);
 
   type SearchState = typeof search;
   const setMode = useCallback(
@@ -69,6 +86,23 @@ function CascadesPage() {
         replace: true,
       }),
     [navigate],
+  );
+  const setTags = useCallback(
+    (tags: string[]) =>
+      void navigate({
+        search: (prev: SearchState) => ({ ...prev, tags: tags.join(",") }),
+        replace: true,
+      }),
+    [navigate],
+  );
+  const toggleTag = useCallback(
+    (tag: string) => {
+      const set = new Set(selectedTags);
+      if (set.has(tag)) set.delete(tag);
+      else set.add(tag);
+      setTags(Array.from(set));
+    },
+    [selectedTags, setTags],
   );
   const clearScheduleFilter = useCallback(
     () =>
