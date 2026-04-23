@@ -26,6 +26,12 @@ import {
   Package,
   GitFork,
   History,
+  GitMerge,
+  Send,
+  Zap,
+  Tag,
+  Search,
+  TreePine,
 } from "lucide-react";
 import { useClones, useModules, useCascadeEvents } from "@/lib/queries";
 import { formatDistanceToNow } from "@/lib/format";
@@ -43,6 +49,7 @@ type Action = {
  * Global ⌘K / Ctrl+K command palette.
  * - Quick navigation to any clone, module, or cascade.
  * - Common actions (new clone, fire cascade, open audit log, …).
+ * - Quick-fire cascade in specific modes.
  * Mounted once in AppShell so it's available on every authenticated page.
  */
 export function CommandPalette() {
@@ -73,6 +80,13 @@ export function CommandPalette() {
     [],
   );
 
+  // Collect all unique tags from fleet
+  const allTags = (() => {
+    const set = new Set<string>();
+    for (const c of clones) for (const t of c.tags ?? []) set.add(t);
+    return Array.from(set).sort();
+  })();
+
   const actions: Action[] = [
     {
       id: "new-clone",
@@ -83,20 +97,39 @@ export function CommandPalette() {
       keywords: "create provision fork template",
     },
     {
-      id: "fire-cascade",
-      label: "Fire cascade",
-      hint: "Push prime updates downstream",
-      icon: <Waves className="h-4 w-4" />,
-      onSelect: () => run(() => navigate({ to: "/cascades" })),
-      keywords: "waterfall push update",
+      id: "fire-cascade-pr",
+      label: "Fire cascade → PR mode",
+      hint: "Open PRs on all clones",
+      icon: <GitMerge className="h-4 w-4" />,
+      onSelect: () =>
+        run(() => navigate({ to: "/cascades", search: { mode: "pr", scope: "all", tags: "" } })),
+      keywords: "cascade push update pull request",
+    },
+    {
+      id: "fire-cascade-merge",
+      label: "Fire cascade → Auto-merge",
+      hint: "Push & merge automatically",
+      icon: <Send className="h-4 w-4" />,
+      onSelect: () =>
+        run(() => navigate({ to: "/cascades", search: { mode: "auto_merge", scope: "all", tags: "" } })),
+      keywords: "cascade push auto merge",
+    },
+    {
+      id: "fire-cascade-notify",
+      label: "Fire cascade → Notify only",
+      hint: "Flag drift without commits",
+      icon: <Bell className="h-4 w-4" />,
+      onSelect: () =>
+        run(() => navigate({ to: "/cascades", search: { mode: "notify", scope: "all", tags: "" } })),
+      keywords: "cascade notify drift",
     },
     {
       id: "drift",
-      label: "Open drift dashboard",
+      label: "Run drift scan",
       hint: "Fleet-wide drift suggestions",
       icon: <Sparkles className="h-4 w-4" />,
       onSelect: () => run(() => navigate({ to: "/drift" })),
-      keywords: "ai suggestions drift",
+      keywords: "ai suggestions drift scan",
     },
     {
       id: "schedules",
@@ -121,6 +154,14 @@ export function CommandPalette() {
       onSelect: () => run(() => navigate({ to: "/fleet-manager" })),
     },
     {
+      id: "yggdrasil",
+      label: "Yggdrasil tree",
+      hint: "Visual fleet hierarchy",
+      icon: <TreePine className="h-4 w-4" />,
+      onSelect: () => run(() => navigate({ to: "/yggdrasil" })),
+      keywords: "tree visualization graph",
+    },
+    {
       id: "notifications",
       label: "Notifications",
       icon: <Bell className="h-4 w-4" />,
@@ -131,6 +172,13 @@ export function CommandPalette() {
       label: "Cloudflare",
       icon: <Shield className="h-4 w-4" />,
       onSelect: () => run(() => navigate({ to: "/cloudflare" })),
+    },
+    {
+      id: "health",
+      label: "Fleet health",
+      icon: <Zap className="h-4 w-4" />,
+      onSelect: () => run(() => navigate({ to: "/health" })),
+      keywords: "health uptime status",
     },
     {
       id: "settings",
@@ -169,6 +217,38 @@ export function CommandPalette() {
             </CommandItem>
           ))}
         </CommandGroup>
+
+        {/* Quick tag-scoped cascade */}
+        {allTags.length > 0 && (
+          <>
+            <CommandSeparator />
+            <CommandGroup heading="Cascade by tag">
+              {allTags.slice(0, 15).map((tag) => {
+                const count = clones.filter((c) => (c.tags ?? []).includes(tag)).length;
+                return (
+                  <CommandItem
+                    key={`tag-${tag}`}
+                    value={`tag cascade ${tag}`}
+                    onSelect={() =>
+                      run(() =>
+                        navigate({
+                          to: "/cascades",
+                          search: { mode: "pr", scope: "tagged", tags: tag },
+                        }),
+                      )
+                    }
+                  >
+                    <Tag className="h-4 w-4 text-muted-foreground" />
+                    <span>Cascade tag: #{tag}</span>
+                    <span className="ml-auto font-mono text-[10px] text-muted-foreground">
+                      {count} clone{count === 1 ? "" : "s"} · PR
+                    </span>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </>
+        )}
 
         {clones.length > 0 && (
           <>
@@ -259,7 +339,7 @@ export function CommandPalette() {
           <CommandItem disabled value="tip2">
             <GitFork className="h-4 w-4 text-muted-foreground" />
             <span className="text-xs text-muted-foreground">
-              Type to filter — clones, modules, cascades, and actions all match.
+              Type to filter — clones, modules, cascades, tags, and actions all match.
             </span>
           </CommandItem>
         </CommandGroup>
