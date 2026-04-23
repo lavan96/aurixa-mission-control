@@ -13,6 +13,7 @@ import { Github, Cloud, Sparkles, Zap } from "lucide-react";
 import { GitHubStatusCard } from "@/components/github-status-card";
 import { GitHubSetupWizard } from "@/components/github-setup-wizard";
 import { WebhookDeliveriesPanel } from "@/components/webhook-deliveries-panel";
+import { PemKeyHelper } from "@/components/pem-key-helper";
 import type { Database } from "@/integrations/supabase/types";
 
 type CascadeMode = Database["public"]["Enums"]["cascade_mode"];
@@ -185,6 +186,8 @@ function SettingsGeneralPage() {
       <GitHubSetupWizard />
 
       <GitHubStatusCard />
+
+      <PemKeyHelper />
 
       <WebhookDeliveriesPanel />
 
