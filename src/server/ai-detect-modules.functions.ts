@@ -116,20 +116,14 @@ export const batchUpdateModuleStatus = createServerFn({ method: "POST" })
     },
   )
   .handler(async ({ data, context }) => {
-    const updatePayload: Record<string, unknown> = { status: data.status };
-    if (data.status === "approved") {
-      updatePayload.approved_by = context.userId;
-      updatePayload.approved_at = new Date().toISOString();
-      updatePayload.rejection_reason = null;
-    } else if (data.status === "rejected") {
-      updatePayload.rejection_reason = data.rejectionReason ?? null;
-      updatePayload.approved_by = null;
-      updatePayload.approved_at = null;
-    }
-
     const { error } = await context.supabase
       .from("modules")
-      .update(updatePayload)
+      .update({
+        status: data.status,
+        approved_by: data.status === "approved" ? context.userId : null,
+        approved_at: data.status === "approved" ? new Date().toISOString() : null,
+        rejection_reason: data.status === "rejected" ? (data.rejectionReason ?? null) : null,
+      })
       .in("id", data.moduleIds);
     if (error) return { ok: false as const, error: error.message };
 
