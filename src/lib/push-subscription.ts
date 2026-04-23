@@ -5,8 +5,16 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { getVapidPublicKey } from "@/server/push-config.functions";
 
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+let _vapidKeyCache: string | null = null;
+
+async function getVapidKey(): Promise<string | null> {
+  if (_vapidKeyCache) return _vapidKeyCache;
+  const { vapidPublicKey } = await getVapidPublicKey();
+  _vapidKeyCache = vapidPublicKey;
+  return vapidPublicKey;
+}
 
 /**
  * Convert a base64url string to a Uint8Array for applicationServerKey.
@@ -26,8 +34,7 @@ export function isPushSupported(): boolean {
   return (
     typeof window !== "undefined" &&
     "serviceWorker" in navigator &&
-    "PushManager" in window &&
-    !!VAPID_PUBLIC_KEY
+    "PushManager" in window
   );
 }
 
@@ -58,9 +65,11 @@ export async function subscribeToPush(userId: string): Promise<PushSubscription 
   let subscription = await reg.pushManager.getSubscription();
 
   if (!subscription) {
+    const vapidKey = await getVapidKey();
+    if (!vapidKey) throw new Error("VAPID public key not available");
     subscription = await reg.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY).buffer as ArrayBuffer,
+      applicationServerKey: urlBase64ToUint8Array(vapidKey).buffer as ArrayBuffer,
     });
   }
 
