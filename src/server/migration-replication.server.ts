@@ -181,6 +181,12 @@ const MIGRATION_REGISTRY: Omit<MigrationEntry, "sql">[] = [
     description: "Admin hierarchy: role_level, guardrail triggers, hierarchy-aware RLS policies",
     cloneApplicable: false, // Clone bootstrap SQL already includes the full schema
   },
+  {
+    id: "20260423052527",
+    filename: "20260423052527_d6d2a61a-6c72-4c6a-9ac6-e70207114e2a.sql",
+    description: "Add user value to app_role enum",
+    cloneApplicable: false, // Clone bootstrap SQL already includes user in enum
+  },
 ];
 
 // ─── Migration Loader ────────────────────────────────────────────────

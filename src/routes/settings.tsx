@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/protected-route";
 import { cn } from "@/lib/utils";
-import { Cog, BellRing } from "lucide-react";
+import { Cog, BellRing, Shield, Eye, ScrollText, Grid3x3 } from "lucide-react";
 
 export const Route = createFileRoute("/settings")({
   component: () => (
@@ -15,6 +15,10 @@ export const Route = createFileRoute("/settings")({
 const TABS = [
   { to: "/settings", label: "General", icon: Cog, exact: true },
   { to: "/settings/notifications", label: "Notifications", icon: BellRing, exact: false },
+  { to: "/settings/roles", label: "Roles", icon: Shield, exact: false },
+  { to: "/settings/role-audit", label: "Role Audit", icon: ScrollText, exact: false },
+  { to: "/settings/provisioning-preview", label: "Provisioning", icon: Eye, exact: false },
+  { to: "/settings/permission-matrix", label: "Matrix", icon: Grid3x3, exact: false },
 ] as const;
 
 function SettingsLayout() {
@@ -28,7 +32,7 @@ function SettingsLayout() {
         <h1 className="mt-1 text-3xl font-semibold tracking-tight">Settings</h1>
       </header>
 
-      <nav className="flex gap-1 rounded-md border border-border bg-surface p-1">
+      <nav className="flex gap-1 overflow-x-auto rounded-md border border-border bg-surface p-1">
         {TABS.map((t) => {
           const active = t.exact
             ? loc.pathname === t.to
