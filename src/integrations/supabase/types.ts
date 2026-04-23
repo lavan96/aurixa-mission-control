@@ -818,6 +818,69 @@ export type Database = {
           },
         ]
       }
+      module_library: {
+        Row: {
+          created_at: string
+          description: string | null
+          entry_file: string
+          file_count: number
+          file_paths: string[]
+          id: string
+          is_latest: boolean
+          metadata: Json
+          name: string
+          published_at: string
+          published_by: string | null
+          route_path: string | null
+          slug: string
+          source_detection_run_id: string | null
+          source_module_id: string | null
+          tags: string[]
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          entry_file: string
+          file_count?: number
+          file_paths?: string[]
+          id?: string
+          is_latest?: boolean
+          metadata?: Json
+          name: string
+          published_at?: string
+          published_by?: string | null
+          route_path?: string | null
+          slug: string
+          source_detection_run_id?: string | null
+          source_module_id?: string | null
+          tags?: string[]
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          entry_file?: string
+          file_count?: number
+          file_paths?: string[]
+          id?: string
+          is_latest?: boolean
+          metadata?: Json
+          name?: string
+          published_at?: string
+          published_by?: string | null
+          route_path?: string | null
+          slug?: string
+          source_detection_run_id?: string | null
+          source_module_id?: string | null
+          tags?: string[]
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
       modules: {
         Row: {
           ai_confidence: number | null
@@ -838,7 +901,10 @@ export type Database = {
           orphan_file_count: number | null
           rejection_reason: string | null
           requires: string[]
+          resolved_files: string[]
+          route_entry_file: string | null
           routes: string[]
+          shared_by_modules: string[]
           slug: string
           status: Database["public"]["Enums"]["module_status"]
           tree_snapshot_hash: string | null
@@ -863,7 +929,10 @@ export type Database = {
           orphan_file_count?: number | null
           rejection_reason?: string | null
           requires?: string[]
+          resolved_files?: string[]
+          route_entry_file?: string | null
           routes?: string[]
+          shared_by_modules?: string[]
           slug: string
           status?: Database["public"]["Enums"]["module_status"]
           tree_snapshot_hash?: string | null
@@ -888,7 +957,10 @@ export type Database = {
           orphan_file_count?: number | null
           rejection_reason?: string | null
           requires?: string[]
+          resolved_files?: string[]
+          route_entry_file?: string | null
           routes?: string[]
+          shared_by_modules?: string[]
           slug?: string
           status?: Database["public"]["Enums"]["module_status"]
           tree_snapshot_hash?: string | null
