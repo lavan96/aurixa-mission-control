@@ -100,15 +100,23 @@ function ModulesPage() {
     }
   };
 
-  const setStatus = async (id: string, status: "approved" | "archived") => {
-    await supabase.from("modules").update({ status }).eq("id", id);
-    refresh();
+  const setStatus = async (id: string, status: "approved" | "archived" | "rejected", rejectionReason?: string) => {
+    try {
+      const res = await batchStatusFn({ data: { moduleIds: [id], status, rejectionReason } });
+      if (!res.ok) toast.error(res.error);
+      else {
+        toast.success(`Module ${status}`);
+        refresh();
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Update failed");
+    }
   };
 
-  const batchAction = async (status: "approved" | "archived") => {
+  const batchAction = async (status: "approved" | "archived" | "rejected", rejectionReason?: string) => {
     if (selectedIds.size === 0) return;
     try {
-      const res = await batchStatusFn({ data: { moduleIds: Array.from(selectedIds), status } });
+      const res = await batchStatusFn({ data: { moduleIds: Array.from(selectedIds), status, rejectionReason } });
       if (!res.ok) toast.error(res.error);
       else {
         toast.success(`${res.count} module(s) ${status}`);
