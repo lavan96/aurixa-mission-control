@@ -55,6 +55,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { runCascade } from "@/server/cascade-engine.functions";
 import { CascadeLineagePanel } from "@/components/cascade-lineage-panel";
 import { InlineDiffSummary } from "@/components/inline-diff-summary";
+import { RichDiffViewer } from "@/components/rich-diff-viewer";
 import { CascadeApprovalBanner } from "@/components/cascade-approval-banner";
 import { CascadeTriageCard } from "@/components/cascade-triage-card";
 import { assessBlastRadius } from "@/lib/blast-radius";
@@ -777,6 +778,17 @@ function ResultRow({
             <div className="mt-2">
               <InlineDiffSummary
                 summary={result.diff_summary}
+                filesChanged={result.files_changed}
+              />
+            </div>
+          )}
+          {clone && result.previous_sha && result.commit_sha && (
+            <div className="mt-2">
+              <RichDiffViewer
+                cloneOwner={clone.github_owner}
+                cloneRepo={clone.github_repo}
+                baseSha={result.previous_sha}
+                headSha={result.commit_sha}
                 filesChanged={result.files_changed}
               />
             </div>

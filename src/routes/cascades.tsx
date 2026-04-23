@@ -6,9 +6,9 @@ import { useCascadeEvents, useClones } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Waves, GitMerge, Send, Bell, ChevronRight, Package, Bot, X, CalendarClock } from "lucide-react";
+import { Waves, GitMerge, Send, Bell, ChevronRight, Package, Bot, X, CalendarClock, Tag } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "@/lib/format";
@@ -24,11 +24,12 @@ import { assessBlastRadius } from "@/lib/blast-radius";
 import { ShieldAlert } from "lucide-react";
 
 const MODE_VALUES = ["pr", "auto_merge", "notify"] as const;
-const SCOPE_VALUES = ["all", "selected"] as const;
+const SCOPE_VALUES = ["all", "tagged", "selected"] as const;
 
 const searchSchema = z.object({
   mode: fallback(z.enum(MODE_VALUES), "pr").default("pr"),
   scope: fallback(z.enum(SCOPE_VALUES), "all").default("all"),
+  tags: fallback(z.string(), "").default(""),
   schedule_id: fallback(z.string().uuid().optional(), undefined).optional(),
 });
 
@@ -52,6 +53,22 @@ function CascadesPage() {
   const mode = search.mode;
   const scope = search.scope;
   const scheduleId = search.schedule_id;
+  const selectedTags = (search.tags ?? "").split(",").filter(Boolean);
+
+  // Collect all unique tags from the fleet
+  const allTags = useMemo(() => {
+    const set = new Set<string>();
+    for (const c of clones) for (const t of c.tags ?? []) set.add(t);
+    return Array.from(set).sort();
+  }, [clones]);
+
+  // Filter clones by selected tags
+  const tagFilteredClones = useMemo(() => {
+    if (scope !== "tagged" || selectedTags.length === 0) return clones;
+    return clones.filter((c) =>
+      selectedTags.some((t: string) => (c.tags ?? []).includes(t)),
+    );
+  }, [clones, scope, selectedTags]);
 
   type SearchState = typeof search;
   const setMode = useCallback(
@@ -69,6 +86,23 @@ function CascadesPage() {
         replace: true,
       }),
     [navigate],
+  );
+  const setTags = useCallback(
+    (tags: string[]) =>
+      void navigate({
+        search: (prev: SearchState) => ({ ...prev, tags: tags.join(",") }),
+        replace: true,
+      }),
+    [navigate],
+  );
+  const toggleTag = useCallback(
+    (tag: string) => {
+      const set = new Set(selectedTags);
+      if (set.has(tag)) set.delete(tag);
+      else set.add(tag);
+      setTags(Array.from(set) as string[]);
+    },
+    [selectedTags, setTags],
   );
   const clearScheduleFilter = useCallback(
     () =>
@@ -144,8 +178,11 @@ function CascadesPage() {
     };
   }, [refresh]);
 
+  // Effective target list based on scope
+  const targets = scope === "tagged" && selectedTags.length > 0 ? tagFilteredClones : clones;
+
   // Live blast-radius preview based on current scope/mode + clone count.
-  const blast = assessBlastRadius(mode, clones.length);
+  const blast = assessBlastRadius(mode, targets.length);
 
   const fire = async () => {
     setBusy(true);
@@ -156,7 +193,10 @@ function CascadesPage() {
         trigger: "manual",
         mode,
         status: "pending",
-        scope_filter: { scope },
+        scope_filter: {
+          scope,
+          ...(scope === "tagged" ? { tags: selectedTags } : {}),
+        },
         initiated_by: user?.id,
         requires_approval: blast.requiresApproval,
       })
@@ -167,7 +207,6 @@ function CascadesPage() {
       setBusy(false);
       return;
     }
-    const targets = clones;
     if (targets.length > 0) {
       await supabase.from("cascade_results").insert(
         targets.map((c) => ({
@@ -255,14 +294,75 @@ function CascadesPage() {
             <div className="mb-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
               scope
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant={scope === "all" ? "default" : "outline"} onClick={() => setScope("all")}>
                 All clones ({clones.length})
               </Button>
+              <Button variant={scope === "tagged" ? "default" : "outline"} onClick={() => setScope("tagged")}>
+                <Tag className="mr-1.5 h-3.5 w-3.5" /> By tag
+                {scope === "tagged" && selectedTags.length > 0 && (
+                  <Badge variant="secondary" className="ml-1.5 text-[10px]">
+                    {tagFilteredClones.length}
+                  </Badge>
+                )}
+              </Button>
               <Button variant={scope === "selected" ? "default" : "outline"} onClick={() => setScope("selected")}>
-                Tagged group
+                Manual select
               </Button>
             </div>
+            {scope === "tagged" && (
+              <div className="mt-3 space-y-2">
+                {allTags.length === 0 ? (
+                  <div className="rounded-md border border-dashed p-3 text-center font-mono text-[11px] text-muted-foreground">
+                    No tags found. Tag your clones first from the fleet overview.
+                  </div>
+                ) : (
+                  <>
+                    <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                      select tags · {selectedTags.length} active → {tagFilteredClones.length} clone{tagFilteredClones.length === 1 ? "" : "s"}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {allTags.map((tag) => {
+                        const active = selectedTags.includes(tag);
+                        const count = clones.filter((c) => (c.tags ?? []).includes(tag)).length;
+                        return (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => toggleTag(tag)}
+                            className={cn(
+                              "inline-flex items-center gap-1 rounded-md border px-2 py-1 font-mono text-[11px] transition-colors",
+                              active
+                                ? "border-primary/50 bg-primary/10 text-primary"
+                                : "border-border bg-surface text-muted-foreground hover:border-primary/30 hover:text-foreground",
+                            )}
+                          >
+                            <Tag className="h-3 w-3" />
+                            #{tag}
+                            <span className={cn(
+                              "ml-0.5 rounded-full px-1 text-[9px]",
+                              active ? "bg-primary/20" : "bg-muted",
+                            )}>
+                              {count}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {selectedTags.length > 0 && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 text-[10px] text-muted-foreground"
+                        onClick={() => setTags([])}
+                      >
+                        Clear all tags
+                      </Button>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
           {blast.requiresApproval && (
             <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/5 p-3 text-xs text-warning">
@@ -277,14 +377,22 @@ function CascadesPage() {
               </div>
             </div>
           )}
-          <div className="flex justify-end">
-            <Button onClick={fire} disabled={busy || clones.length === 0}>
+          <div className="flex items-center justify-between">
+            <div className="font-mono text-[11px] text-muted-foreground">
+              {scope === "tagged" && selectedTags.length > 0
+                ? `${tagFilteredClones.length} clone${tagFilteredClones.length === 1 ? "" : "s"} matching tags`
+                : `${clones.length} clone${clones.length === 1 ? "" : "s"} in fleet`}
+            </div>
+            <Button
+              onClick={fire}
+              disabled={busy || targets.length === 0}
+            >
               <Waves className="mr-2 h-4 w-4" />
               {busy
                 ? "Queueing…"
                 : blast.requiresApproval
-                  ? "Queue for approval"
-                  : "Fire cascade"}
+                  ? `Queue for approval (${targets.length})`
+                  : `Fire cascade (${targets.length})`}
             </Button>
           </div>
         </CardContent>
@@ -295,11 +403,12 @@ function CascadesPage() {
       <CascadeDryRunCard />
 
       <CascadeTemplatesCard
-        current={{ mode, scope, tags: [], cloneIds: [] }}
+        current={{ mode, scope: scope as "all" | "tagged" | "selected", tags: selectedTags, cloneIds: [] }}
         onApply={(v: CascadeTemplateValue) => {
           setMode(v.mode);
-          if (v.scope === "all" || v.scope === "selected") setScope(v.scope);
+          if (v.scope === "all" || v.scope === "tagged" || v.scope === "selected") setScope(v.scope as (typeof SCOPE_VALUES)[number]);
           else setScope("selected");
+          if (v.tags.length > 0) setTags(v.tags);
         }}
       />
 
