@@ -896,7 +896,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "super_admin" | "admin" | "operator"
+      app_role: "super_admin" | "admin" | "operator" | "user"
       cascade_event_status:
         | "pending"
         | "running"
@@ -1067,7 +1067,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["super_admin", "admin", "operator"],
+      app_role: ["super_admin", "admin", "operator", "user"],
       cascade_event_status: [
         "pending",
         "running",
