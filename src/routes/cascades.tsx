@@ -66,7 +66,7 @@ function CascadesPage() {
   const tagFilteredClones = useMemo(() => {
     if (scope !== "tagged" || selectedTags.length === 0) return clones;
     return clones.filter((c) =>
-      selectedTags.some((t) => (c.tags ?? []).includes(t)),
+      selectedTags.some((t: string) => (c.tags ?? []).includes(t)),
     );
   }, [clones, scope, selectedTags]);
 
@@ -100,7 +100,7 @@ function CascadesPage() {
       const set = new Set(selectedTags);
       if (set.has(tag)) set.delete(tag);
       else set.add(tag);
-      setTags(Array.from(set));
+      setTags(Array.from(set) as string[]);
     },
     [selectedTags, setTags],
   );
