@@ -163,6 +163,24 @@ const MIGRATION_REGISTRY: Omit<MigrationEntry, "sql">[] = [
     description: "Clone backends table and status enum",
     cloneApplicable: false, // Prime-only infrastructure
   },
+  {
+    id: "20260423014944",
+    filename: "20260423014944_819f43b9-9083-40e2-a72b-4e2cc49d02fa.sql",
+    description: "Push notifications trigger via pg_net",
+    cloneApplicable: true,
+  },
+  {
+    id: "20260423051802",
+    filename: "20260423051802_48003d58-33a4-438c-89d0-11aca0fbdfe2.sql",
+    description: "Add super_admin enum value and assigned_by/assigned_at columns to user_roles",
+    cloneApplicable: false, // Clone bootstrap SQL already includes the full schema
+  },
+  {
+    id: "20260423051923",
+    filename: "20260423051923_e4dc3ff5-dcc7-4c0a-984f-2bcc1662fe61.sql",
+    description: "Admin hierarchy: role_level, guardrail triggers, hierarchy-aware RLS policies",
+    cloneApplicable: false, // Clone bootstrap SQL already includes the full schema
+  },
 ];
 
 // ─── Migration Loader ────────────────────────────────────────────────

@@ -840,18 +840,24 @@ export type Database = {
       }
       user_roles: {
         Row: {
+          assigned_at: string
+          assigned_by: string | null
           created_at: string
           id: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
           created_at?: string
           id?: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
+          assigned_at?: string
+          assigned_by?: string | null
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
@@ -864,6 +870,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_assign_role: {
+        Args: {
+          _assigner_id: string
+          _target_role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: boolean
+      }
+      can_manage_user: {
+        Args: { _manager_id: string; _target_user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -871,10 +888,15 @@ export type Database = {
         }
         Returns: boolean
       }
+      highest_role_level: { Args: { _user_id: string }; Returns: number }
       is_operator: { Args: { _user_id: string }; Returns: boolean }
+      role_level: {
+        Args: { _role: Database["public"]["Enums"]["app_role"] }
+        Returns: number
+      }
     }
     Enums: {
-      app_role: "admin" | "operator"
+      app_role: "super_admin" | "admin" | "operator"
       cascade_event_status:
         | "pending"
         | "running"
@@ -1045,7 +1067,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "operator"],
+      app_role: ["super_admin", "admin", "operator"],
       cascade_event_status: [
         "pending",
         "running",
