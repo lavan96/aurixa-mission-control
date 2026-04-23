@@ -8,7 +8,8 @@ import {
   Boxes, Sparkles, Check, X, Pencil, History, Settings2, Zap,
   AlertTriangle, Search, ChevronDown, BarChart3, GitBranch,
   FileWarning, CheckCircle2, Archive, Brain, Layers, Target,
-  Rocket, XCircle, Loader2, ExternalLink,
+  Rocket, XCircle, Loader2, ExternalLink, Library, BookOpen,
+  FileCode, Upload, Trash2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
