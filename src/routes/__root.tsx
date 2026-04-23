@@ -1,4 +1,5 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { useEffect } from "react";
 
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
@@ -7,6 +8,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { RealtimeNotifications } from "@/lib/realtime-notifications";
 import { BrowserPushNotifications } from "@/lib/browser-notifications";
 import { NotificationPreferencesSync } from "@/components/notification-preferences-sync";
+import { registerServiceWorker } from "@/lib/push-subscription";
 
 function NotFoundComponent() {
   return (
@@ -68,6 +70,10 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
+  useEffect(() => {
+    void registerServiceWorker();
+  }, []);
+
   return (
     <AuthProvider>
       <TooltipProvider delayDuration={150}>

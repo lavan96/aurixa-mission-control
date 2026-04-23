@@ -22,6 +22,9 @@ import {
   GitFork,
   Trash2,
   Boxes,
+  Smartphone,
+  Monitor,
+  Loader2,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -30,6 +33,18 @@ import {
   type NotificationSeverity,
 } from "@/lib/notification-preferences";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
+import { useState, useEffect, useCallback } from "react";
+import {
+  isPushSupported,
+  registerServiceWorker,
+  subscribeToPush,
+  unsubscribeFromPush,
+  getUserSubscriptions,
+  removeSubscriptionById,
+  getExistingSubscription,
+} from "@/lib/push-subscription";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/settings/notifications")({
   component: SettingsNotificationsPage,
@@ -136,9 +151,18 @@ const SEVERITIES: {
   { value: "error", label: "Error", className: "text-destructive", icon: XCircle },
 ];
 
+type DeviceSub = {
+  id: string;
+  endpoint: string;
+  user_agent: string | null;
+  created_at: string;
+  last_used_at: string;
+};
+
 function SettingsNotificationsPage() {
   const { prefs, loading, toggleKind, toggleSeverity, setToggle } =
     useNotificationPreferences();
+  const { session } = useAuth();
 
   const handleToast = (next: boolean) => void setToggle("mute_toasts", next);
   const handlePush = (next: boolean) => void setToggle("mute_browser_push", next);
@@ -174,6 +198,9 @@ function SettingsNotificationsPage() {
           />
         </CardContent>
       </Card>
+
+      {/* Web Push subscription management */}
+      {session && <WebPushCard userId={session.user.id} />}
 
       <Card>
         <CardHeader>
@@ -267,6 +294,186 @@ function SettingsNotificationsPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/* ─── Web Push Card ────────────────────────────────────── */
+
+function WebPushCard({ userId }: { userId: string }) {
+  const supported = isPushSupported();
+  const [subscribed, setSubscribed] = useState(false);
+  const [devices, setDevices] = useState<DeviceSub[]>([]);
+  const [loadingDevices, setLoadingDevices] = useState(true);
+  const [subscribing, setSubscribing] = useState(false);
+
+  const refresh = useCallback(async () => {
+    setLoadingDevices(true);
+    try {
+      const subs = await getUserSubscriptions(userId);
+      setDevices(subs);
+
+      // Check if THIS browser is subscribed
+      const existing = await getExistingSubscription();
+      setSubscribed(!!existing);
+    } catch {
+      // ignore
+    } finally {
+      setLoadingDevices(false);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    void registerServiceWorker();
+    void refresh();
+  }, [refresh]);
+
+  const handleSubscribe = async () => {
+    setSubscribing(true);
+    try {
+      await subscribeToPush(userId);
+      setSubscribed(true);
+      toast.success("Push notifications enabled for this device");
+      await refresh();
+    } catch (err) {
+      toast.error("Failed to enable push notifications");
+      console.error(err);
+    } finally {
+      setSubscribing(false);
+    }
+  };
+
+  const handleUnsubscribe = async () => {
+    setSubscribing(true);
+    try {
+      await unsubscribeFromPush(userId);
+      setSubscribed(false);
+      toast.success("Push notifications disabled for this device");
+      await refresh();
+    } catch (err) {
+      toast.error("Failed to disable push notifications");
+      console.error(err);
+    } finally {
+      setSubscribing(false);
+    }
+  };
+
+  const handleRemoveDevice = async (id: string) => {
+    try {
+      await removeSubscriptionById(id);
+      toast.success("Device removed");
+      await refresh();
+    } catch {
+      toast.error("Failed to remove device");
+    }
+  };
+
+  const parseDeviceType = (ua: string | null): { icon: LucideIcon; label: string } => {
+    if (!ua) return { icon: Monitor, label: "Unknown device" };
+    if (/mobile|android|iphone|ipad/i.test(ua)) return { icon: Smartphone, label: "Mobile" };
+    return { icon: Monitor, label: "Desktop" };
+  };
+
+  const parseBrowser = (ua: string | null): string => {
+    if (!ua) return "Unknown browser";
+    if (/firefox/i.test(ua)) return "Firefox";
+    if (/edg/i.test(ua)) return "Edge";
+    if (/chrome/i.test(ua)) return "Chrome";
+    if (/safari/i.test(ua)) return "Safari";
+    return "Browser";
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Smartphone className="h-4 w-4 text-primary" /> Web Push (closed-tab)
+        </CardTitle>
+        <CardDescription>
+          Receive notifications even when the dashboard tab is closed.
+          {!supported && (
+            <span className="mt-1 block text-xs text-destructive">
+              Web Push is not supported in this browser.
+            </span>
+          )}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Subscribe/Unsubscribe this device */}
+        <div className="flex items-center justify-between rounded-md border border-border/60 bg-surface p-3">
+          <div className="min-w-0">
+            <Label className="font-mono text-sm">This device</Label>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {subscribed
+                ? "Push notifications are active on this browser."
+                : "Enable push to get alerts when the tab is closed."}
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant={subscribed ? "outline" : "default"}
+            disabled={!supported || subscribing}
+            onClick={subscribed ? handleUnsubscribe : handleSubscribe}
+          >
+            {subscribing && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
+            {subscribed ? "Disable" : "Enable"}
+          </Button>
+        </div>
+
+        {/* Device list */}
+        {loadingDevices ? (
+          <div className="flex items-center justify-center py-4 text-xs text-muted-foreground">
+            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+            Loading devices…
+          </div>
+        ) : devices.length > 0 ? (
+          <div className="space-y-2">
+            <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+              Subscribed devices ({devices.length})
+            </p>
+            {devices.map((d) => {
+              const { icon: DevIcon, label: deviceLabel } = parseDeviceType(d.user_agent);
+              const browser = parseBrowser(d.user_agent);
+              return (
+                <div
+                  key={d.id}
+                  className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-surface p-3"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <DevIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0">
+                      <div className="font-mono text-sm">
+                        {browser} · {deviceLabel}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">
+                        Last used{" "}
+                        {new Date(d.last_used_at).toLocaleDateString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="shrink-0 text-destructive hover:text-destructive"
+                    onClick={() => handleRemoveDevice(d.id)}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-center text-xs text-muted-foreground py-2">
+            No devices subscribed to push notifications yet.
+          </p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
