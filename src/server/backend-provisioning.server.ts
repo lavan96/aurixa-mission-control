@@ -388,10 +388,19 @@ export async function provisionCloneBackend(
 
   const projectUrl = getProjectUrl(project.id);
 
-  // Step 4: Run bootstrap migrations
-  await onStatusUpdate?.("migrating", "Applying schema migrations...");
+  // Step 4: Run bootstrap migrations (hardcoded base schema)
+  await onStatusUpdate?.("migrating", "Applying base schema...");
   const sql = getCloneBootstrapSql();
   await runSqlOnProject(project.id, sql);
+
+  // Step 4b: Apply clone-applicable migrations from registry
+  await onStatusUpdate?.("migrating", "Applying clone-applicable migrations...");
+  const { applyPendingMigrations, getLatestCloneMigrationId } = await import("./migration-replication.server");
+  const { results: migResults } = await applyPendingMigrations(project.id, null);
+  const migFailures = migResults.filter((r) => !r.success);
+  if (migFailures.length > 0) {
+    console.warn(`Migration warnings during provisioning: ${migFailures.map((f) => f.migrationId).join(", ")}`);
+  }
 
   // Step 5: Seed admin
   await onStatusUpdate?.("seeding_admin", "Creating admin user...");

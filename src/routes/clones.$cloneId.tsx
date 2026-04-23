@@ -15,6 +15,7 @@ import { CloneActivityHistory } from "@/components/clone-activity-history";
 import { CloneDriftSuggestionsCard } from "@/components/clone-drift-suggestions-card";
 import { CloneDriftPolicyCard } from "@/components/clone-drift-policy-card";
 import { CloneHealthCard } from "@/components/clone-health-card";
+import { CloneBackendCard } from "@/components/clone-backend-card";
 import { bulkSyncModuleFn } from "@/server/module-sync.functions";
 import type { DriftSuggestion } from "@/server/drift-suggestions.functions";
 
@@ -194,6 +195,8 @@ function CloneDetail() {
       </div>
 
       <CloneHealthCard cloneId={cloneId} />
+
+      <CloneBackendCard cloneId={cloneId} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">

@@ -20,6 +20,7 @@ import { triggerFleetDriftScan } from "@/server/fleet-drift.functions";
 import { refreshFleetDrift } from "@/server/drift-refresh.functions";
 import { runCascade } from "@/server/cascade-engine.functions";
 import { DriftListSkeleton } from "@/components/list-skeletons";
+import { FleetMigrationSyncCard } from "@/components/fleet-migration-sync-card";
 import { EmptyState } from "@/components/empty-state";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -329,6 +330,8 @@ function FleetManager() {
           tone="success"
         />
       </div>
+
+      <FleetMigrationSyncCard />
 
       <Card>
         <CardHeader>
