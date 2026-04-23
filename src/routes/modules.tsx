@@ -172,8 +172,16 @@ function ModulesPage() {
           </p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight">Modules</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            AI-detected slices of the prime codebase with import graph analysis, multi-pass refinement, and drift monitoring.
+            Route-first detection: each page and its full import tree = one module. Shared files grouped automatically.
           </p>
+          <div className="mt-3 flex gap-1">
+            <Button size="sm" variant={activeTab === "modules" ? "default" : "ghost"} onClick={() => setActiveTab("modules")}>
+              <Boxes className="mr-1.5 h-3.5 w-3.5" /> Modules
+            </Button>
+            <Button size="sm" variant={activeTab === "library" ? "default" : "ghost"} onClick={() => setActiveTab("library")}>
+              <BookOpen className="mr-1.5 h-3.5 w-3.5" /> Library
+            </Button>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link to="/modules/builder">
