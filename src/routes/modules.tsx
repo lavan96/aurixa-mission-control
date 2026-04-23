@@ -506,10 +506,10 @@ function DetectionRunRow({ run: r }: { run: Record<string, unknown> }) {
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="ml-8 mt-2 space-y-2 border-l-2 border-border pl-4">
-          {r.error_message && (
+          {typeof r.error_message === "string" && r.error_message && (
             <div className="flex items-start gap-2 rounded-md border border-destructive/20 bg-destructive/5 p-2 text-xs text-destructive">
               <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
-              {String(r.error_message)}
+              <span>{r.error_message}</span>
             </div>
           )}
           {passes.length > 0 && (
@@ -599,14 +599,14 @@ function DriftAlertsPanel() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className="text-[9px] uppercase text-warning border-warning/30">
-                      {a.alert_type as string}
+                      {String(a.alert_type)}
                     </Badge>
-                    <code className="truncate font-mono text-[10px]">{a.file_path as string}</code>
+                    <code className="truncate font-mono text-[10px]">{String(a.file_path)}</code>
                   </div>
                   <div className="mt-1 text-muted-foreground">
-                    {String(a.reasoning ?? "")}
-                    {a.suggested_module_slug && (
-                      <span> → <code className="font-mono text-primary">{String(a.suggested_module_slug)}</code></span>
+                    <span>{String(a.reasoning ?? "")}</span>
+                    {typeof a.suggested_module_slug === "string" && a.suggested_module_slug && (
+                      <span> → <code className="font-mono text-primary">{a.suggested_module_slug}</code></span>
                     )}
                   </div>
                 </div>
