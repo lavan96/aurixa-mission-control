@@ -69,10 +69,12 @@ function ModulesPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [searchQ, setSearchQ] = useState("");
 
+  const [activeTab, setActiveTab] = useState<"modules" | "library">("modules");
+
   const [config, setConfig] = useState<DetectionConfig>({
-    strategy: "hybrid",
-    maxModules: 12,
-    minModules: 3,
+    strategy: "route-first",
+    maxModules: 30,
+    minModules: 1,
     sampleFileContent: true,
     analyzeImports: true,
     deltaMode: false,
