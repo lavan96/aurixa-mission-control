@@ -377,14 +377,22 @@ function CascadesPage() {
               </div>
             </div>
           )}
-          <div className="flex justify-end">
-            <Button onClick={fire} disabled={busy || clones.length === 0}>
+          <div className="flex items-center justify-between">
+            <div className="font-mono text-[11px] text-muted-foreground">
+              {scope === "tagged" && selectedTags.length > 0
+                ? `${tagFilteredClones.length} clone${tagFilteredClones.length === 1 ? "" : "s"} matching tags`
+                : `${clones.length} clone${clones.length === 1 ? "" : "s"} in fleet`}
+            </div>
+            <Button
+              onClick={fire}
+              disabled={busy || targets.length === 0}
+            >
               <Waves className="mr-2 h-4 w-4" />
               {busy
                 ? "Queueing…"
                 : blast.requiresApproval
-                  ? "Queue for approval"
-                  : "Fire cascade"}
+                  ? `Queue for approval (${targets.length})`
+                  : `Fire cascade (${targets.length})`}
             </Button>
           </div>
         </CardContent>
