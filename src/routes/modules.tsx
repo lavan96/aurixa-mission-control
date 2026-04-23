@@ -781,6 +781,7 @@ function ModuleRow({
   selected,
   onToggleSelect,
   onApprove,
+  onReject,
   onArchive,
   onEdited,
 }: {
@@ -788,6 +789,7 @@ function ModuleRow({
   selected: boolean;
   onToggleSelect: () => void;
   onApprove: () => void;
+  onReject: (reason?: string) => void;
   onArchive: () => void;
   onEdited: () => void;
 }) {
