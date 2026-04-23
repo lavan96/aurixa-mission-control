@@ -169,7 +169,7 @@ export function getCloneBootstrapSql(): string {
   return `
 -- Core enums
 DO $$ BEGIN
-  CREATE TYPE public.app_role AS ENUM ('admin', 'operator', 'user');
+  CREATE TYPE public.app_role AS ENUM ('super_admin', 'admin', 'operator', 'user');
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -196,12 +196,60 @@ CREATE TABLE IF NOT EXISTS public.user_roles (
   id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id uuid NOT NULL,
   role public.app_role NOT NULL,
+  assigned_by uuid,
+  assigned_at timestamptz NOT NULL DEFAULT now(),
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (user_id, role)
 );
 ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
 
--- Security definer functions
+-- ── Hierarchy helper functions ──
+
+CREATE OR REPLACE FUNCTION public.role_level(_role public.app_role)
+RETURNS integer
+LANGUAGE plpgsql IMMUTABLE SET search_path = public
+AS $fn$
+BEGIN
+  RETURN CASE _role::text
+    WHEN 'super_admin' THEN 100
+    WHEN 'admin'       THEN 80
+    WHEN 'operator'    THEN 50
+    WHEN 'user'        THEN 10
+    ELSE 0
+  END;
+END;
+$fn$;
+
+CREATE OR REPLACE FUNCTION public.highest_role_level(_user_id uuid)
+RETURNS integer
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public
+AS $fn$
+DECLARE _level integer;
+BEGIN
+  SELECT COALESCE(MAX(public.role_level(role)), 0) INTO _level
+  FROM public.user_roles WHERE user_id = _user_id;
+  RETURN _level;
+END;
+$fn$;
+
+CREATE OR REPLACE FUNCTION public.can_assign_role(_assigner_id uuid, _target_role public.app_role)
+RETURNS boolean
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public
+AS $fn$
+BEGIN
+  RETURN public.highest_role_level(_assigner_id) > public.role_level(_target_role);
+END;
+$fn$;
+
+CREATE OR REPLACE FUNCTION public.can_manage_user(_manager_id uuid, _target_user_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public
+AS $fn$
+BEGIN
+  RETURN public.highest_role_level(_manager_id) > public.highest_role_level(_target_user_id);
+END;
+$fn$;
+
 CREATE OR REPLACE FUNCTION public.has_role(_user_id uuid, _role app_role)
 RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
@@ -216,7 +264,7 @@ RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
 AS $fn$
   SELECT EXISTS (
-    SELECT 1 FROM public.user_roles WHERE user_id = _user_id AND role IN ('admin', 'operator')
+    SELECT 1 FROM public.user_roles WHERE user_id = _user_id AND role IN ('super_admin', 'admin', 'operator')
   )
 $fn$;
 
@@ -232,14 +280,14 @@ BEGIN
 END;
 $fn$;
 
--- Bootstrap first admin trigger
+-- Bootstrap first admin trigger (grants super_admin to first user)
 CREATE OR REPLACE FUNCTION public.bootstrap_first_admin()
 RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $fn$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM public.user_roles WHERE role = 'admin') THEN
-    INSERT INTO public.user_roles (user_id, role) VALUES (NEW.id, 'admin');
+  IF NOT EXISTS (SELECT 1 FROM public.user_roles WHERE role = 'super_admin') THEN
+    INSERT INTO public.user_roles (user_id, role) VALUES (NEW.id, 'super_admin');
   END IF;
   RETURN NEW;
 END;
@@ -256,7 +304,38 @@ BEGIN
 END;
 $fn$;
 
--- Attach triggers (safe if they already exist)
+-- ── Guardrail triggers ──
+
+CREATE OR REPLACE FUNCTION public.guard_last_super_admin()
+RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
+AS $fn$
+BEGIN
+  IF OLD.role = 'super_admin' THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM public.user_roles WHERE role = 'super_admin' AND id <> OLD.id
+    ) THEN
+      RAISE EXCEPTION 'Cannot remove the last super_admin from the system';
+    END IF;
+  END IF;
+  RETURN OLD;
+END;
+$fn$;
+
+CREATE OR REPLACE FUNCTION public.enforce_role_hierarchy()
+RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
+AS $fn$
+BEGIN
+  IF NEW.assigned_by IS NULL THEN RETURN NEW; END IF;
+  IF NOT public.can_assign_role(NEW.assigned_by, NEW.role) THEN
+    RAISE EXCEPTION 'Insufficient privileges: cannot assign role %', NEW.role;
+  END IF;
+  RETURN NEW;
+END;
+$fn$;
+
+-- Attach triggers
 DO $$ BEGIN
   CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
@@ -271,17 +350,51 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
--- User roles RLS
+DO $$ BEGIN
+  CREATE TRIGGER guard_last_super_admin_delete
+    BEFORE DELETE ON public.user_roles
+    FOR EACH ROW EXECUTE FUNCTION public.guard_last_super_admin();
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TRIGGER guard_last_super_admin_update
+    BEFORE UPDATE ON public.user_roles
+    FOR EACH ROW
+    WHEN (OLD.role = 'super_admin' AND NEW.role <> 'super_admin')
+    EXECUTE FUNCTION public.guard_last_super_admin();
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TRIGGER enforce_role_hierarchy_insert
+    BEFORE INSERT ON public.user_roles
+    FOR EACH ROW EXECUTE FUNCTION public.enforce_role_hierarchy();
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TRIGGER enforce_role_hierarchy_update
+    BEFORE UPDATE ON public.user_roles
+    FOR EACH ROW EXECUTE FUNCTION public.enforce_role_hierarchy();
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- User roles RLS (hierarchy-aware)
 CREATE POLICY IF NOT EXISTS "Users can read own roles"
   ON public.user_roles FOR SELECT TO authenticated USING (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Admins can read all roles"
-  ON public.user_roles FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'admin'));
-CREATE POLICY IF NOT EXISTS "Admins can insert roles"
-  ON public.user_roles FOR INSERT TO authenticated WITH CHECK (public.has_role(auth.uid(), 'admin'));
-CREATE POLICY IF NOT EXISTS "Admins can update roles"
-  ON public.user_roles FOR UPDATE TO authenticated USING (public.has_role(auth.uid(), 'admin'));
-CREATE POLICY IF NOT EXISTS "Admins can delete roles"
-  ON public.user_roles FOR DELETE TO authenticated USING (public.has_role(auth.uid(), 'admin'));
+CREATE POLICY IF NOT EXISTS "Admins and super_admins can read all roles"
+  ON public.user_roles FOR SELECT TO authenticated
+  USING (public.has_role(auth.uid(), 'admin') OR public.has_role(auth.uid(), 'super_admin'));
+CREATE POLICY IF NOT EXISTS "Hierarchy-enforced role assignment"
+  ON public.user_roles FOR INSERT TO authenticated
+  WITH CHECK (public.can_assign_role(auth.uid(), role) AND assigned_by = auth.uid());
+CREATE POLICY IF NOT EXISTS "Hierarchy-enforced role update"
+  ON public.user_roles FOR UPDATE TO authenticated
+  USING (public.can_manage_user(auth.uid(), user_id));
+CREATE POLICY IF NOT EXISTS "Hierarchy-enforced role deletion"
+  ON public.user_roles FOR DELETE TO authenticated
+  USING (public.can_manage_user(auth.uid(), user_id));
 
 -- Timestamp triggers
 DO $$ BEGIN
