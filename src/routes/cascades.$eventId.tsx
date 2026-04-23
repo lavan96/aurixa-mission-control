@@ -55,6 +55,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { runCascade } from "@/server/cascade-engine.functions";
 import { CascadeLineagePanel } from "@/components/cascade-lineage-panel";
 import { InlineDiffSummary } from "@/components/inline-diff-summary";
+import { RichDiffViewer } from "@/components/rich-diff-viewer";
 import { CascadeApprovalBanner } from "@/components/cascade-approval-banner";
 import { CascadeTriageCard } from "@/components/cascade-triage-card";
 import { assessBlastRadius } from "@/lib/blast-radius";

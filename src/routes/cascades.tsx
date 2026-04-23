@@ -403,11 +403,12 @@ function CascadesPage() {
       <CascadeDryRunCard />
 
       <CascadeTemplatesCard
-        current={{ mode, scope, tags: [], cloneIds: [] }}
+        current={{ mode, scope: scope as "all" | "tagged" | "selected", tags: selectedTags, cloneIds: [] }}
         onApply={(v: CascadeTemplateValue) => {
           setMode(v.mode);
-          if (v.scope === "all" || v.scope === "selected") setScope(v.scope);
+          if (v.scope === "all" || v.scope === "tagged" || v.scope === "selected") setScope(v.scope as (typeof SCOPE_VALUES)[number]);
           else setScope("selected");
+          if (v.tags.length > 0) setTags(v.tags);
         }}
       />
 
