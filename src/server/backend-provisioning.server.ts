@@ -10,14 +10,14 @@
 const MGMT_API = "https://api.supabase.com/v1";
 
 function getMgmtToken(): string {
-  const token = process.env.SUPABASE_MGMT_API_TOKEN;
-  if (!token) throw new Error("SUPABASE_MGMT_API_TOKEN secret is not configured");
+  const token = process.env.SB_MGMT_API_TOKEN;
+  if (!token) throw new Error("SB_MGMT_API_TOKEN secret is not configured");
   return token;
 }
 
 function getOrgId(): string {
-  const orgId = process.env.SUPABASE_ORG_ID;
-  if (!orgId) throw new Error("SUPABASE_ORG_ID secret is not configured");
+  const orgId = process.env.SB_ORG_ID;
+  if (!orgId) throw new Error("SB_ORG_ID secret is not configured");
   return orgId;
 }
 
