@@ -755,7 +755,7 @@ export async function runDetection(args: {
       previous_run_id: previousRunId,
       initiated_by: userId,
       started_at: new Date().toISOString(),
-      parameters: config as unknown as Record<string, unknown>,
+      parameters: JSON.parse(JSON.stringify(config)),
     })
     .select()
     .single();
@@ -925,7 +925,7 @@ export async function runDetection(args: {
       sampled_file_count: samples.size,
       dependency_count: importEdges.length,
       pass_count: passes.length,
-      passes: passes as unknown as Record<string, unknown>,
+      passes: JSON.parse(JSON.stringify(passes)),
       proposed_modules: finalModules.length,
       inserted_modules: inserted,
       updated_modules: updated,
