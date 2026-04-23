@@ -314,6 +314,7 @@ function ModulesPage() {
                 selected={selectedIds.has(m.id)}
                 onToggleSelect={() => toggleSelect(m.id)}
                 onApprove={() => setStatus(m.id, "approved")}
+                onReject={(reason) => setStatus(m.id, "rejected", reason)}
                 onArchive={() => setStatus(m.id, "archived")}
                 onEdited={refresh}
               />
