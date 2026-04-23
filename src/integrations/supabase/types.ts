@@ -598,56 +598,260 @@ export type Database = {
         }
         Relationships: []
       }
+      module_detection_runs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          delta_mode: boolean | null
+          dependency_count: number | null
+          error_message: string | null
+          file_count: number | null
+          id: string
+          initiated_by: string | null
+          inserted_modules: number | null
+          orphan_files_found: number | null
+          parameters: Json | null
+          pass_count: number | null
+          passes: Json | null
+          previous_run_id: string | null
+          proposed_modules: number | null
+          sampled_file_count: number | null
+          started_at: string | null
+          status: string
+          strategy: string
+          tree_hash: string | null
+          updated_at: string
+          updated_modules: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          delta_mode?: boolean | null
+          dependency_count?: number | null
+          error_message?: string | null
+          file_count?: number | null
+          id?: string
+          initiated_by?: string | null
+          inserted_modules?: number | null
+          orphan_files_found?: number | null
+          parameters?: Json | null
+          pass_count?: number | null
+          passes?: Json | null
+          previous_run_id?: string | null
+          proposed_modules?: number | null
+          sampled_file_count?: number | null
+          started_at?: string | null
+          status?: string
+          strategy?: string
+          tree_hash?: string | null
+          updated_at?: string
+          updated_modules?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          delta_mode?: boolean | null
+          dependency_count?: number | null
+          error_message?: string | null
+          file_count?: number | null
+          id?: string
+          initiated_by?: string | null
+          inserted_modules?: number | null
+          orphan_files_found?: number | null
+          parameters?: Json | null
+          pass_count?: number | null
+          passes?: Json | null
+          previous_run_id?: string | null
+          proposed_modules?: number | null
+          sampled_file_count?: number | null
+          started_at?: string | null
+          status?: string
+          strategy?: string
+          tree_hash?: string | null
+          updated_at?: string
+          updated_modules?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "module_detection_runs_previous_run_id_fkey"
+            columns: ["previous_run_id"]
+            isOneToOne: false
+            referencedRelation: "module_detection_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      module_drift_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          detection_run_id: string | null
+          file_path: string | null
+          id: string
+          module_id: string | null
+          reasoning: string | null
+          resolved: boolean
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          suggested_module_slug: string | null
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string
+          detection_run_id?: string | null
+          file_path?: string | null
+          id?: string
+          module_id?: string | null
+          reasoning?: string | null
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          suggested_module_slug?: string | null
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          detection_run_id?: string | null
+          file_path?: string | null
+          id?: string
+          module_id?: string | null
+          reasoning?: string | null
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          suggested_module_slug?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "module_drift_alerts_detection_run_id_fkey"
+            columns: ["detection_run_id"]
+            isOneToOne: false
+            referencedRelation: "module_detection_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "module_drift_alerts_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      module_import_edges: {
+        Row: {
+          created_at: string
+          detection_run_id: string
+          id: string
+          import_type: string
+          source_file: string
+          target_file: string
+        }
+        Insert: {
+          created_at?: string
+          detection_run_id: string
+          id?: string
+          import_type?: string
+          source_file: string
+          target_file: string
+        }
+        Update: {
+          created_at?: string
+          detection_run_id?: string
+          id?: string
+          import_type?: string
+          source_file?: string
+          target_file?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "module_import_edges_detection_run_id_fkey"
+            columns: ["detection_run_id"]
+            isOneToOne: false
+            referencedRelation: "module_detection_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       modules: {
         Row: {
           ai_confidence: number | null
+          ai_reasoning: string | null
+          cohesion_score: number | null
+          coupling_score: number | null
           created_at: string
           dependencies: string[]
           description: string | null
           detected_by_ai: boolean
+          detection_run_id: string | null
           file_globs: string[]
           id: string
           incompatible_with: string[]
           name: string
+          orphan_file_count: number | null
           requires: string[]
           routes: string[]
           slug: string
           status: Database["public"]["Enums"]["module_status"]
+          tree_snapshot_hash: string | null
           updated_at: string
         }
         Insert: {
           ai_confidence?: number | null
+          ai_reasoning?: string | null
+          cohesion_score?: number | null
+          coupling_score?: number | null
           created_at?: string
           dependencies?: string[]
           description?: string | null
           detected_by_ai?: boolean
+          detection_run_id?: string | null
           file_globs?: string[]
           id?: string
           incompatible_with?: string[]
           name: string
+          orphan_file_count?: number | null
           requires?: string[]
           routes?: string[]
           slug: string
           status?: Database["public"]["Enums"]["module_status"]
+          tree_snapshot_hash?: string | null
           updated_at?: string
         }
         Update: {
           ai_confidence?: number | null
+          ai_reasoning?: string | null
+          cohesion_score?: number | null
+          coupling_score?: number | null
           created_at?: string
           dependencies?: string[]
           description?: string | null
           detected_by_ai?: boolean
+          detection_run_id?: string | null
           file_globs?: string[]
           id?: string
           incompatible_with?: string[]
           name?: string
+          orphan_file_count?: number | null
           requires?: string[]
           routes?: string[]
           slug?: string
           status?: Database["public"]["Enums"]["module_status"]
+          tree_snapshot_hash?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "modules_detection_run_id_fkey"
+            columns: ["detection_run_id"]
+            isOneToOne: false
+            referencedRelation: "module_detection_runs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notification_preferences: {
         Row: {
