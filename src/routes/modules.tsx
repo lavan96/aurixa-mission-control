@@ -271,11 +271,16 @@ function ModulesPage() {
               <Badge variant="secondary" className="font-mono text-[10px]">
                 {selectedIds.size} selected
               </Badge>
+              <ApproveAndDeployButton
+                moduleIds={Array.from(selectedIds)}
+                onDone={() => { setSelectedIds(new Set()); refresh(); }}
+              />
               <Button size="sm" variant="outline" onClick={() => batchAction("approved")}>
-                <Check className="mr-1 h-3 w-3" /> Approve all
+                <Check className="mr-1 h-3 w-3" /> Approve
               </Button>
+              <BatchRejectButton onReject={(reason) => batchAction("rejected", reason)} />
               <Button size="sm" variant="ghost" onClick={() => batchAction("archived")}>
-                <Archive className="mr-1 h-3 w-3" /> Archive all
+                <Archive className="mr-1 h-3 w-3" /> Archive
               </Button>
               <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
                 Clear
