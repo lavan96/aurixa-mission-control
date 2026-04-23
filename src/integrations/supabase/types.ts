@@ -568,6 +568,48 @@ export type Database = {
         }
         Relationships: []
       }
+      module_cascade_jobs: {
+        Row: {
+          cascade_event_id: string | null
+          clone_ids: string[]
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          initiated_by: string | null
+          metadata: Json
+          module_ids: string[]
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          cascade_event_id?: string | null
+          clone_ids?: string[]
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          initiated_by?: string | null
+          metadata?: Json
+          module_ids?: string[]
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          cascade_event_id?: string | null
+          clone_ids?: string[]
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          initiated_by?: string | null
+          metadata?: Json
+          module_ids?: string[]
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       module_config_snapshots: {
         Row: {
           clone_id: string
@@ -780,6 +822,8 @@ export type Database = {
         Row: {
           ai_confidence: number | null
           ai_reasoning: string | null
+          approved_at: string | null
+          approved_by: string | null
           cohesion_score: number | null
           coupling_score: number | null
           created_at: string
@@ -792,6 +836,7 @@ export type Database = {
           incompatible_with: string[]
           name: string
           orphan_file_count: number | null
+          rejection_reason: string | null
           requires: string[]
           routes: string[]
           slug: string
@@ -802,6 +847,8 @@ export type Database = {
         Insert: {
           ai_confidence?: number | null
           ai_reasoning?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           cohesion_score?: number | null
           coupling_score?: number | null
           created_at?: string
@@ -814,6 +861,7 @@ export type Database = {
           incompatible_with?: string[]
           name: string
           orphan_file_count?: number | null
+          rejection_reason?: string | null
           requires?: string[]
           routes?: string[]
           slug: string
@@ -824,6 +872,8 @@ export type Database = {
         Update: {
           ai_confidence?: number | null
           ai_reasoning?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           cohesion_score?: number | null
           coupling_score?: number | null
           created_at?: string
@@ -836,6 +886,7 @@ export type Database = {
           incompatible_with?: string[]
           name?: string
           orphan_file_count?: number | null
+          rejection_reason?: string | null
           requires?: string[]
           routes?: string[]
           slug?: string
@@ -1126,7 +1177,7 @@ export type Database = {
         | "failed"
         | "suspended"
       drift_severity: "low" | "medium" | "high"
-      module_status: "proposed" | "approved" | "archived"
+      module_status: "proposed" | "approved" | "archived" | "rejected"
       notification_kind:
         | "cascade_completed"
         | "cascade_failed"
@@ -1300,7 +1351,7 @@ export const Constants = {
         "suspended",
       ],
       drift_severity: ["low", "medium", "high"],
-      module_status: ["proposed", "approved", "archived"],
+      module_status: ["proposed", "approved", "archived", "rejected"],
       notification_kind: [
         "cascade_completed",
         "cascade_failed",

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/protected-route";
-import { useModules, usePrimeConfig } from "@/lib/queries";
+import { useModules, useClones, usePrimeConfig } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,7 @@ import {
   Boxes, Sparkles, Check, X, Pencil, History, Settings2, Zap,
   AlertTriangle, Search, ChevronDown, BarChart3, GitBranch,
   FileWarning, CheckCircle2, Archive, Brain, Layers, Target,
+  Rocket, XCircle, Loader2, ExternalLink,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -21,10 +22,13 @@ import {
 import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
+} from "@/components/ui/dialog";
 import { useServerFn } from "@tanstack/react-start";
 import {
   detectModules, getDetectionRuns, getDriftAlerts, batchUpdateModuleStatus,
-  resolveDriftAlert, getModuleIntelligence,
+  resolveDriftAlert, getModuleIntelligence, approveAndDeploy, getModuleCascadeJobs,
 } from "@/server/ai-detect-modules.functions";
 import { ModuleGridSkeleton } from "@/components/list-skeletons";
 import { EmptyState } from "@/components/empty-state";
@@ -96,15 +100,23 @@ function ModulesPage() {
     }
   };
 
-  const setStatus = async (id: string, status: "approved" | "archived") => {
-    await supabase.from("modules").update({ status }).eq("id", id);
-    refresh();
+  const setStatus = async (id: string, status: "approved" | "archived" | "rejected", rejectionReason?: string) => {
+    try {
+      const res = await batchStatusFn({ data: { moduleIds: [id], status, rejectionReason } });
+      if (!res.ok) toast.error(res.error);
+      else {
+        toast.success(`Module ${status}`);
+        refresh();
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Update failed");
+    }
   };
 
-  const batchAction = async (status: "approved" | "archived") => {
+  const batchAction = async (status: "approved" | "archived" | "rejected", rejectionReason?: string) => {
     if (selectedIds.size === 0) return;
     try {
-      const res = await batchStatusFn({ data: { moduleIds: Array.from(selectedIds), status } });
+      const res = await batchStatusFn({ data: { moduleIds: Array.from(selectedIds), status, rejectionReason } });
       if (!res.ok) toast.error(res.error);
       else {
         toast.success(`${res.count} module(s) ${status}`);
@@ -259,11 +271,16 @@ function ModulesPage() {
               <Badge variant="secondary" className="font-mono text-[10px]">
                 {selectedIds.size} selected
               </Badge>
+              <ApproveAndDeployButton
+                moduleIds={Array.from(selectedIds)}
+                onDone={() => { setSelectedIds(new Set()); refresh(); }}
+              />
               <Button size="sm" variant="outline" onClick={() => batchAction("approved")}>
-                <Check className="mr-1 h-3 w-3" /> Approve all
+                <Check className="mr-1 h-3 w-3" /> Approve
               </Button>
+              <BatchRejectButton onReject={(reason) => batchAction("rejected", reason)} />
               <Button size="sm" variant="ghost" onClick={() => batchAction("archived")}>
-                <Archive className="mr-1 h-3 w-3" /> Archive all
+                <Archive className="mr-1 h-3 w-3" /> Archive
               </Button>
               <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
                 Clear
@@ -297,6 +314,7 @@ function ModulesPage() {
                 selected={selectedIds.has(m.id)}
                 onToggleSelect={() => toggleSelect(m.id)}
                 onApprove={() => setStatus(m.id, "approved")}
+                onReject={(reason) => setStatus(m.id, "rejected", reason)}
                 onArchive={() => setStatus(m.id, "archived")}
                 onEdited={refresh}
               />
@@ -763,6 +781,7 @@ function ModuleRow({
   selected,
   onToggleSelect,
   onApprove,
+  onReject,
   onArchive,
   onEdited,
 }: {
@@ -770,6 +789,7 @@ function ModuleRow({
   selected: boolean;
   onToggleSelect: () => void;
   onApprove: () => void;
+  onReject: (reason?: string) => void;
   onArchive: () => void;
   onEdited: () => void;
 }) {
@@ -905,7 +925,7 @@ function ModuleRow({
           </div>
         )}
 
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex flex-wrap justify-end gap-2 pt-2">
           {edit ? (
             <>
               <Button size="sm" variant="ghost" onClick={() => setEdit(false)}>Cancel</Button>
@@ -916,14 +936,22 @@ function ModuleRow({
               <Button size="sm" variant="ghost" onClick={() => setEdit(true)}>
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
+              {m.status === "rejected" && (
+                <Badge variant="outline" className="text-[9px] border-destructive/30 text-destructive self-center">
+                  rejected{(m as Record<string, unknown>).rejection_reason ? `: ${(m as Record<string, unknown>).rejection_reason}` : ""}
+                </Badge>
+              )}
               {m.status !== "approved" && (
-                <Button size="sm" variant="outline" onClick={onApprove}>
+                <Button size="sm" variant="outline" onClick={onApprove} className="border-success/40 text-success hover:bg-success/10">
                   <Check className="mr-1 h-3.5 w-3.5" /> Approve
                 </Button>
               )}
+              {m.status !== "rejected" && m.status !== "archived" && (
+                <RejectButton onReject={onReject} />
+              )}
               {m.status !== "archived" && (
                 <Button size="sm" variant="ghost" onClick={onArchive}>
-                  <X className="mr-1 h-3.5 w-3.5" /> Archive
+                  <Archive className="mr-1 h-3.5 w-3.5" /> Archive
                 </Button>
               )}
             </>
@@ -931,5 +959,210 @@ function ModuleRow({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+// ─── Reject Button with reason dialog ───────────────────────────────
+
+function RejectButton({ onReject }: { onReject: (reason?: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="ghost" className="text-destructive hover:bg-destructive/10">
+          <XCircle className="mr-1 h-3.5 w-3.5" /> Reject
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Reject Module</DialogTitle>
+          <DialogDescription>Optionally provide a reason for rejecting this module boundary.</DialogDescription>
+        </DialogHeader>
+        <Textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="e.g. Too broad, overlaps with auth module…"
+          rows={3}
+          className="font-mono text-xs"
+        />
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button
+            variant="destructive"
+            onClick={() => { onReject(reason || undefined); setOpen(false); setReason(""); }}
+          >
+            Reject
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function BatchRejectButton({ onReject }: { onReject: (reason?: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="ghost" className="text-destructive">
+          <XCircle className="mr-1 h-3 w-3" /> Reject
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Reject Selected Modules</DialogTitle>
+          <DialogDescription>Optionally provide a reason.</DialogDescription>
+        </DialogHeader>
+        <Textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="Rejection reason…"
+          rows={2}
+          className="font-mono text-xs"
+        />
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button variant="destructive" onClick={() => { onReject(reason || undefined); setOpen(false); setReason(""); }}>
+            Reject All
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Approve & Deploy Button ────────────────────────────────────────
+
+function ApproveAndDeployButton({
+  moduleIds,
+  onDone,
+}: {
+  moduleIds: string[];
+  onDone: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [deploying, setDeploying] = useState(false);
+  const [cascadeMode, setCascadeMode] = useState("pr");
+  const { data: clones } = useClones();
+  const [selectedCloneIds, setSelectedCloneIds] = useState<Set<string>>(new Set());
+  const deployFn = useServerFn(approveAndDeploy);
+
+  const toggleClone = (id: string) => {
+    setSelectedCloneIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    if (selectedCloneIds.size === clones.length) setSelectedCloneIds(new Set());
+    else setSelectedCloneIds(new Set(clones.map((c) => c.id)));
+  };
+
+  const run = async () => {
+    if (selectedCloneIds.size === 0) return toast.error("Select at least one clone");
+    setDeploying(true);
+    try {
+      const res = await deployFn({
+        data: {
+          moduleIds,
+          cloneIds: Array.from(selectedCloneIds),
+          cascadeMode,
+        },
+      });
+      if (!res.ok) {
+        toast.error(res.error);
+      } else {
+        toast.success(`Approved ${res.count} module(s) & queued cascade deploy`);
+        setOpen(false);
+        onDone();
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Deploy failed");
+    } finally {
+      setDeploying(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" className="bg-primary">
+          <Rocket className="mr-1 h-3 w-3" /> Approve & Deploy
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Rocket className="h-4 w-4" /> Approve & Cascade Deploy
+          </DialogTitle>
+          <DialogDescription>
+            Approve {moduleIds.length} module(s) and trigger a cascade deploy to selected clones.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                Target clones
+              </label>
+              <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={selectAll}>
+                {selectedCloneIds.size === clones.length ? "Deselect all" : "Select all"}
+              </Button>
+            </div>
+            <div className="max-h-48 overflow-y-auto space-y-1 rounded-md border border-border p-2">
+              {clones.length === 0 ? (
+                <div className="text-xs text-muted-foreground p-2">No clones available</div>
+              ) : (
+                clones.map((c) => (
+                  <label key={c.id} className="flex items-center gap-2 rounded px-2 py-1.5 text-xs hover:bg-muted/40 cursor-pointer">
+                    <Checkbox
+                      checked={selectedCloneIds.has(c.id)}
+                      onCheckedChange={() => toggleClone(c.id)}
+                    />
+                    <span className="font-mono font-medium">{c.name}</span>
+                    <span className="text-muted-foreground">{c.slug}</span>
+                    <Badge variant="outline" className="ml-auto text-[9px]">{c.sync_status}</Badge>
+                  </label>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              Cascade mode
+            </label>
+            <Select value={cascadeMode} onValueChange={setCascadeMode}>
+              <SelectTrigger className="h-8 font-mono text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pr">Pull Request</SelectItem>
+                <SelectItem value="auto_merge">Auto-merge</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button onClick={run} disabled={deploying || selectedCloneIds.size === 0}>
+            {deploying ? (
+              <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> Deploying…</>
+            ) : (
+              <><Rocket className="mr-1 h-3.5 w-3.5" /> Approve & Deploy ({selectedCloneIds.size})</>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
