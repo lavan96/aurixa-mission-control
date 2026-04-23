@@ -360,7 +360,64 @@ function NewClone() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <Shield className="h-4 w-4 text-info" /> 5 · Cloudflare wrapper (optional)
+            <Database className="h-4 w-4 text-primary" /> 5 · Dedicated backend
+          </CardTitle>
+          <CardDescription>
+            Provision an isolated database and auth system for this clone. The admin user
+            will be auto-created with full access.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <label className="flex cursor-pointer items-center gap-3">
+            <Checkbox checked={dedicatedBackend} onCheckedChange={(v) => setDedicatedBackend(!!v)} />
+            <span className="text-sm">Provision a dedicated backend for this clone</span>
+          </label>
+          {dedicatedBackend && (
+            <div className="grid gap-4 md:grid-cols-2 rounded-md border border-border p-4">
+              <div className="space-y-2">
+                <Label>Admin email</Label>
+                <Input
+                  type="email"
+                  value={adminEmail}
+                  onChange={(e) => setAdminEmail(e.target.value)}
+                  placeholder="admin@client.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Admin password</Label>
+                <Input
+                  type="password"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  placeholder="Min 8 characters"
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label>Region</Label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={backendRegion}
+                  onChange={(e) => setBackendRegion(e.target.value)}
+                >
+                  <option value="us-east-1">US East (Virginia)</option>
+                  <option value="us-west-1">US West (Oregon)</option>
+                  <option value="eu-west-1">EU West (Ireland)</option>
+                  <option value="eu-west-2">EU West (London)</option>
+                  <option value="eu-central-1">EU Central (Frankfurt)</option>
+                  <option value="ap-southeast-1">Asia Pacific (Singapore)</option>
+                  <option value="ap-southeast-2">Asia Pacific (Sydney)</option>
+                  <option value="ap-northeast-1">Asia Pacific (Tokyo)</option>
+                </select>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Shield className="h-4 w-4 text-info" /> 6 · Cloudflare wrapper (optional)
           </CardTitle>
           <CardDescription>
             Wrap the front-end with Cloudflare for WAF, rate limiting, and DDoS protection. You'll
