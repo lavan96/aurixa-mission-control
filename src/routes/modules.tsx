@@ -4,18 +4,35 @@ import { useModules, usePrimeConfig } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Boxes, Sparkles, Check, X, Pencil } from "lucide-react";
+import {
+  Boxes, Sparkles, Check, X, Pencil, History, Settings2, Zap,
+  AlertTriangle, Search, ChevronDown, BarChart3, GitBranch,
+  FileWarning, CheckCircle2, Archive, Brain, Layers, Target,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+  Collapsible, CollapsibleContent, CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useServerFn } from "@tanstack/react-start";
-import { detectModules } from "@/server/ai-detect-modules.functions";
+import {
+  detectModules, getDetectionRuns, getDriftAlerts, batchUpdateModuleStatus,
+  resolveDriftAlert, getModuleIntelligence,
+} from "@/server/ai-detect-modules.functions";
 import { ModuleGridSkeleton } from "@/components/list-skeletons";
 import { EmptyState } from "@/components/empty-state";
 import { FleetModuleSyncCard } from "@/components/fleet-module-sync-card";
 import { ModuleCoverageStrip } from "@/components/module-coverage-strip";
+import { cn } from "@/lib/utils";
+import { formatDistanceToNow } from "@/lib/format";
+import type { DetectionStrategy } from "@/server/module-detection.server";
 
 export const Route = createFileRoute("/modules")({
   component: () => (
@@ -26,22 +43,49 @@ export const Route = createFileRoute("/modules")({
   head: () => ({ meta: [{ title: "Modules — Aurixa Systems Mission Control" }] }),
 });
 
+type DetectionConfig = {
+  strategy: DetectionStrategy;
+  maxModules: number;
+  minModules: number;
+  sampleFileContent: boolean;
+  analyzeImports: boolean;
+  deltaMode: boolean;
+};
+
 function ModulesPage() {
   const { data: modules, loading, refresh } = useModules();
   const { data: prime } = usePrimeConfig();
   const [scanning, setScanning] = useState(false);
+  const [showConfig, setShowConfig] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showDrift, setShowDrift] = useState(false);
+  const [showIntel, setShowIntel] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [searchQ, setSearchQ] = useState("");
+
+  const [config, setConfig] = useState<DetectionConfig>({
+    strategy: "hybrid",
+    maxModules: 12,
+    minModules: 3,
+    sampleFileContent: true,
+    analyzeImports: true,
+    deltaMode: false,
+  });
+
   const detectFn = useServerFn(detectModules);
+  const batchStatusFn = useServerFn(batchUpdateModuleStatus);
 
   const runDetection = async () => {
     if (!prime) return toast.error("Configure prime repo in Settings first");
     setScanning(true);
     try {
-      const res = await detectFn();
+      const res = await detectFn({ data: config });
       if (!res.ok) {
         toast.error(res.error);
       } else {
         toast.success(
-          `AI proposed ${res.proposed} module(s) — ${res.inserted} new added to catalog`,
+          `Detection complete — ${res.proposed} proposed, ${res.inserted} new, ${res.updated} updated, ${res.orphanAlerts} drift alerts`,
         );
         refresh();
       }
@@ -57,6 +101,52 @@ function ModulesPage() {
     refresh();
   };
 
+  const batchAction = async (status: "approved" | "archived") => {
+    if (selectedIds.size === 0) return;
+    try {
+      const res = await batchStatusFn({ data: { moduleIds: Array.from(selectedIds), status } });
+      if (!res.ok) toast.error(res.error);
+      else {
+        toast.success(`${res.count} module(s) ${status}`);
+        setSelectedIds(new Set());
+        refresh();
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Batch update failed");
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const filteredModules = useMemo(() => {
+    let list = modules;
+    if (filterStatus !== "all") list = list.filter((m) => m.status === filterStatus);
+    if (searchQ) {
+      const q = searchQ.toLowerCase();
+      list = list.filter(
+        (m) =>
+          m.name.toLowerCase().includes(q) ||
+          m.slug.toLowerCase().includes(q) ||
+          m.description?.toLowerCase().includes(q),
+      );
+    }
+    return list;
+  }, [modules, filterStatus, searchQ]);
+
+  const counts = useMemo(() => ({
+    total: modules.length,
+    proposed: modules.filter((m) => m.status === "proposed").length,
+    approved: modules.filter((m) => m.status === "approved").length,
+    archived: modules.filter((m) => m.status === "archived").length,
+  }), [modules]);
+
   return (
     <div className="space-y-6">
       <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
@@ -66,50 +156,157 @@ function ModulesPage() {
           </p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight">Modules</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            AI-detected slices of the prime codebase. Approve or edit before injecting into clones.
+            AI-detected slices of the prime codebase with import graph analysis, multi-pass refinement, and drift monitoring.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link to="/modules/builder">
-            <Button variant="outline">
-              <Boxes className="mr-2 h-4 w-4" />
-              Module Builder
+            <Button variant="outline" size="sm">
+              <Boxes className="mr-2 h-3.5 w-3.5" />
+              Builder
             </Button>
           </Link>
-          <Button onClick={runDetection} disabled={scanning}>
-            <Sparkles className="mr-2 h-4 w-4" />
-            {scanning ? "Scanning prime…" : "Run AI detection"}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowHistory(!showHistory)}
+          >
+            <History className="mr-2 h-3.5 w-3.5" />
+            History
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowDrift(!showDrift)}
+          >
+            <FileWarning className="mr-2 h-3.5 w-3.5" />
+            Drift
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowIntel(!showIntel)}
+          >
+            <BarChart3 className="mr-2 h-3.5 w-3.5" />
+            Intelligence
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowConfig(!showConfig)}
+          >
+            <Settings2 className="mr-2 h-3.5 w-3.5" />
+            Config
+          </Button>
+          <Button onClick={runDetection} disabled={scanning} size="sm">
+            <Brain className="mr-2 h-3.5 w-3.5" />
+            {scanning ? "Detecting…" : "Run AI Detection"}
           </Button>
         </div>
       </header>
+
+      {/* Detection Config Panel */}
+      {showConfig && (
+        <DetectionConfigPanel config={config} onChange={setConfig} />
+      )}
+
+      {/* Detection History */}
+      {showHistory && <DetectionHistoryPanel />}
+
+      {/* Drift Alerts */}
+      {showDrift && <DriftAlertsPanel />}
+
+      {/* Module Intelligence */}
+      {showIntel && <ModuleIntelligencePanel />}
+
+      {/* Stats strip */}
+      {modules.length > 0 && (
+        <div className="grid gap-3 md:grid-cols-4">
+          <StatTile label="total" value={counts.total} />
+          <StatTile label="proposed" value={counts.proposed} tone="warning" />
+          <StatTile label="approved" value={counts.approved} tone="success" />
+          <StatTile label="archived" value={counts.archived} />
+        </div>
+      )}
+
+      {/* Filters + batch actions */}
+      {modules.length > 0 && (
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={searchQ}
+                onChange={(e) => setSearchQ(e.target.value)}
+                placeholder="Search modules…"
+                className="h-8 w-56 pl-9 font-mono text-xs"
+              />
+            </div>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="h-8 w-36 font-mono text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="proposed">Proposed</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="archived">Archived</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="font-mono text-[10px]">
+                {selectedIds.size} selected
+              </Badge>
+              <Button size="sm" variant="outline" onClick={() => batchAction("approved")}>
+                <Check className="mr-1 h-3 w-3" /> Approve all
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => batchAction("archived")}>
+                <Archive className="mr-1 h-3 w-3" /> Archive all
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
+                Clear
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
       {loading ? (
         <ModuleGridSkeleton count={4} />
       ) : modules.length === 0 ? (
         <EmptyState
-          icon={<Boxes />}
+          icon={<Brain />}
           title="Catalog is empty"
-          description="Run AI detection to scan your prime repo and propose module boundaries by folders, routes, and import graphs."
+          description="Run multi-pass AI detection to scan your prime repo. The engine fetches the real file tree, analyzes import graphs, and proposes module boundaries with reasoning."
           action={
             <Button onClick={runDetection} disabled={scanning}>
-              <Sparkles className="mr-2 h-4 w-4" />
-              {scanning ? "Scanning prime…" : "Run AI detection"}
+              <Brain className="mr-2 h-4 w-4" />
+              {scanning ? "Detecting…" : "Run AI Detection"}
             </Button>
           }
         />
       ) : (
         <>
           <div className="grid gap-3 md:grid-cols-2">
-            {modules.map((m) => (
+            {filteredModules.map((m) => (
               <ModuleRow
                 key={m.id}
                 module={m}
+                selected={selectedIds.has(m.id)}
+                onToggleSelect={() => toggleSelect(m.id)}
                 onApprove={() => setStatus(m.id, "approved")}
                 onArchive={() => setStatus(m.id, "archived")}
                 onEdited={refresh}
               />
             ))}
           </div>
+          {filteredModules.length === 0 && (
+            <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+              No modules match your filters.
+            </div>
+          )}
           <FleetModuleSyncCard />
         </>
       )}
@@ -117,13 +314,461 @@ function ModulesPage() {
   );
 }
 
+// ─── Detection Config Panel ─────────────────────────────────────────
+
+function DetectionConfigPanel({
+  config,
+  onChange,
+}: {
+  config: DetectionConfig;
+  onChange: (c: DetectionConfig) => void;
+}) {
+  return (
+    <Card className="border-primary/20 bg-primary/5">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Settings2 className="h-4 w-4" /> Detection Configuration
+        </CardTitle>
+        <CardDescription className="text-xs">
+          Fine-tune how the AI analyzes your prime repo for module boundaries.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="space-y-1.5">
+            <label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              Strategy
+            </label>
+            <Select
+              value={config.strategy}
+              onValueChange={(v) => onChange({ ...config, strategy: v as DetectionStrategy })}
+            >
+              <SelectTrigger className="h-8 font-mono text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="hybrid">
+                  <span className="flex items-center gap-1.5">
+                    <Layers className="h-3 w-3" /> Hybrid (recommended)
+                  </span>
+                </SelectItem>
+                <SelectItem value="feature-first">
+                  <span className="flex items-center gap-1.5">
+                    <Target className="h-3 w-3" /> Feature-first
+                  </span>
+                </SelectItem>
+                <SelectItem value="layer-first">
+                  <span className="flex items-center gap-1.5">
+                    <GitBranch className="h-3 w-3" /> Layer-first
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-muted-foreground">
+              {config.strategy === "hybrid"
+                ? "Features as primary, shared infra as utility modules"
+                : config.strategy === "feature-first"
+                  ? "Group by user-facing features (vertical slices)"
+                  : "Group by architectural layers (horizontal slices)"}
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              Module count range
+            </label>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={1}
+                max={20}
+                value={config.minModules}
+                onChange={(e) => onChange({ ...config, minModules: Number(e.target.value) })}
+                className="h-8 w-16 font-mono text-xs"
+              />
+              <span className="text-xs text-muted-foreground">to</span>
+              <Input
+                type="number"
+                min={1}
+                max={30}
+                value={config.maxModules}
+                onChange={(e) => onChange({ ...config, maxModules: Number(e.target.value) })}
+                className="h-8 w-16 font-mono text-xs"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              Analysis features
+            </label>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-xs">
+                <Checkbox
+                  checked={config.sampleFileContent}
+                  onCheckedChange={(v) => onChange({ ...config, sampleFileContent: Boolean(v) })}
+                />
+                Sample file contents (richer AI context)
+              </label>
+              <label className="flex items-center gap-2 text-xs">
+                <Checkbox
+                  checked={config.analyzeImports}
+                  onCheckedChange={(v) => onChange({ ...config, analyzeImports: Boolean(v) })}
+                />
+                Import graph analysis (cohesion/coupling)
+              </label>
+              <label className="flex items-center gap-2 text-xs">
+                <Checkbox
+                  checked={config.deltaMode}
+                  onCheckedChange={(v) => onChange({ ...config, deltaMode: Boolean(v) })}
+                />
+                Delta mode (skip if unchanged)
+              </label>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Detection History Panel ────────────────────────────────────────
+
+function DetectionHistoryPanel() {
+  const [runs, setRuns] = useState<Array<Record<string, unknown>>>([]);
+  const [loadingRuns, setLoadingRuns] = useState(true);
+  const getRunsFn = useServerFn(getDetectionRuns);
+
+  useEffect(() => {
+    (async () => {
+      const res = await getRunsFn();
+      if (res.ok) setRuns(res.runs as Array<Record<string, unknown>>);
+      setLoadingRuns(false);
+    })();
+  }, []);
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <History className="h-4 w-4" /> Detection History
+        </CardTitle>
+        <CardDescription className="text-xs">
+          Past AI detection runs with parameters, pass details, and results.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loadingRuns ? (
+          <div className="text-xs text-muted-foreground">Loading…</div>
+        ) : runs.length === 0 ? (
+          <div className="rounded-md border border-dashed p-4 text-center text-xs text-muted-foreground">
+            No detection runs yet.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {runs.map((r) => (
+              <DetectionRunRow key={r.id as string} run={r} />
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function DetectionRunRow({ run: r }: { run: Record<string, unknown> }) {
+  const [open, setOpen] = useState(false);
+  const status = r.status as string;
+  const passes = (r.passes ?? []) as Array<{ pass: number; name: string; model: string; duration_ms: number; modules_proposed: number; summary: string }>;
+
+  const statusCls = status === "completed"
+    ? "text-success border-success/40"
+    : status === "failed"
+      ? "text-destructive border-destructive/40"
+      : "text-warning border-warning/40";
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger asChild>
+        <div className="flex cursor-pointer items-center gap-3 rounded-md border border-border px-3 py-2 transition-colors hover:bg-muted/40">
+          <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", open && "rotate-180")} />
+          <Badge variant="outline" className={cn("text-[9px] uppercase", statusCls)}>
+            {status}
+          </Badge>
+          <span className="font-mono text-xs">{r.strategy as string}</span>
+          <span className="text-[10px] text-muted-foreground">
+            {r.file_count as number} files · {r.proposed_modules as number} proposed · {r.inserted_modules as number} new · {r.updated_modules as number} updated
+          </span>
+          <span className="ml-auto text-[10px] text-muted-foreground">
+            {r.created_at ? formatDistanceToNow(r.created_at as string) : ""}
+          </span>
+        </div>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="ml-8 mt-2 space-y-2 border-l-2 border-border pl-4">
+          {typeof r.error_message === "string" && r.error_message && (
+            <div className="flex items-start gap-2 rounded-md border border-destructive/20 bg-destructive/5 p-2 text-xs text-destructive">
+              <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+              <span>{r.error_message}</span>
+            </div>
+          )}
+          {passes.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                AI passes
+              </div>
+              {passes.map((p) => (
+                <div key={p.pass} className="rounded-md border border-border bg-card p-2 text-xs">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="font-mono text-[9px]">Pass {p.pass}</Badge>
+                    <span className="font-medium">{p.name}</span>
+                    <span className="text-muted-foreground">({p.model})</span>
+                    <span className="ml-auto text-muted-foreground">{(p.duration_ms / 1000).toFixed(1)}s</span>
+                  </div>
+                  <div className="mt-1 text-muted-foreground">{p.summary}</div>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="grid grid-cols-3 gap-2 text-xs">
+            <div><span className="text-muted-foreground">Sampled files:</span> {r.sampled_file_count as number}</div>
+            <div><span className="text-muted-foreground">Import edges:</span> {r.dependency_count as number}</div>
+            <div><span className="text-muted-foreground">Orphan alerts:</span> {r.orphan_files_found as number}</div>
+            <div><span className="text-muted-foreground">Delta mode:</span> {(r.delta_mode as boolean) ? "Yes" : "No"}</div>
+            <div><span className="text-muted-foreground">Tree hash:</span> <code className="font-mono text-[10px]">{(r.tree_hash as string)?.slice(0, 8) ?? "—"}</code></div>
+          </div>
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+// ─── Drift Alerts Panel ─────────────────────────────────────────────
+
+function DriftAlertsPanel() {
+  const [alerts, setAlerts] = useState<Array<Record<string, unknown>>>([]);
+  const [loadingAlerts, setLoadingAlerts] = useState(true);
+  const getAlertsFn = useServerFn(getDriftAlerts);
+  const resolveFn = useServerFn(resolveDriftAlert);
+
+  const loadAlerts = useCallback(async () => {
+    setLoadingAlerts(true);
+    const res = await getAlertsFn({ data: { resolved: false } });
+    if (res.ok) setAlerts(res.alerts as Array<Record<string, unknown>>);
+    setLoadingAlerts(false);
+  }, []);
+
+  useEffect(() => { loadAlerts(); }, [loadAlerts]);
+
+  const resolve = async (id: string) => {
+    const res = await resolveFn({ data: { alertId: id } });
+    if (res.ok) {
+      toast.success("Alert resolved");
+      loadAlerts();
+    } else {
+      toast.error(res.error);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <FileWarning className="h-4 w-4 text-warning" /> Drift Alerts
+        </CardTitle>
+        <CardDescription className="text-xs">
+          Orphan files, boundary expansions, and module drift detected during scans.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loadingAlerts ? (
+          <div className="text-xs text-muted-foreground">Loading…</div>
+        ) : alerts.length === 0 ? (
+          <div className="rounded-md border border-dashed p-4 text-center text-xs text-muted-foreground">
+            <CheckCircle2 className="mx-auto mb-1 h-4 w-4 text-success" />
+            No unresolved drift alerts.
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            {alerts.map((a) => (
+              <div
+                key={a.id as string}
+                className="flex items-start gap-3 rounded-md border border-warning/20 bg-warning/5 px-3 py-2 text-xs"
+              >
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-[9px] uppercase text-warning border-warning/30">
+                      {String(a.alert_type)}
+                    </Badge>
+                    <code className="truncate font-mono text-[10px]">{String(a.file_path)}</code>
+                  </div>
+                  <div className="mt-1 text-muted-foreground">
+                    <span>{String(a.reasoning ?? "")}</span>
+                    {typeof a.suggested_module_slug === "string" && a.suggested_module_slug && (
+                      <span> → <code className="font-mono text-primary">{a.suggested_module_slug}</code></span>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 px-2 text-[10px]"
+                  onClick={() => resolve(a.id as string)}
+                >
+                  <Check className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Module Intelligence Panel ──────────────────────────────────────
+
+function ModuleIntelligencePanel() {
+  const [data, setData] = useState<{
+    coInstallation: Array<{ module_a: string; module_b: string; coInstallRate: number }>;
+    healthScores: Array<{ moduleId: string; moduleName: string; score: number; breakdown: Record<string, number> }>;
+  } | null>(null);
+  const [loadingIntel, setLoadingIntel] = useState(true);
+  const getIntelFn = useServerFn(getModuleIntelligence);
+
+  useEffect(() => {
+    (async () => {
+      const res = await getIntelFn();
+      if (res.ok) setData({ coInstallation: res.coInstallation, healthScores: res.healthScores });
+      setLoadingIntel(false);
+    })();
+  }, []);
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <BarChart3 className="h-4 w-4 text-primary" /> Cross-Clone Intelligence
+        </CardTitle>
+        <CardDescription className="text-xs">
+          Co-installation patterns, health scoring, and fleet-wide module analytics.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loadingIntel ? (
+          <div className="text-xs text-muted-foreground">Analyzing fleet data…</div>
+        ) : !data ? (
+          <div className="text-xs text-muted-foreground">No data available.</div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Health Scores */}
+            <div className="space-y-2">
+              <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                Module health scores
+              </div>
+              {data.healthScores.length === 0 ? (
+                <div className="text-xs text-muted-foreground">No modules scored yet.</div>
+              ) : (
+                <div className="space-y-1.5">
+                  {data.healthScores.map((h) => (
+                    <div key={h.moduleId} className="rounded-md border border-border px-3 py-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs font-medium">{h.moduleName}</span>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "font-mono text-[10px]",
+                            h.score >= 70 ? "text-success border-success/40" :
+                            h.score >= 40 ? "text-warning border-warning/40" :
+                            "text-destructive border-destructive/40",
+                          )}
+                        >
+                          {h.score}/100
+                        </Badge>
+                      </div>
+                      <div className="mt-1.5 flex h-1.5 w-full overflow-hidden rounded-full bg-muted/40">
+                        <div
+                          className={cn(
+                            "h-full transition-all",
+                            h.score >= 70 ? "bg-success" : h.score >= 40 ? "bg-warning" : "bg-destructive",
+                          )}
+                          style={{ width: `${h.score}%` }}
+                        />
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0 font-mono text-[9px] text-muted-foreground">
+                        <span>sync {h.breakdown.sync_rate}%</span>
+                        <span>cohesion {h.breakdown.cohesion}%</span>
+                        <span>coupling {h.breakdown.coupling}%</span>
+                        <span>{h.breakdown.clone_count} clones</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Co-installation */}
+            <div className="space-y-2">
+              <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                Co-installation patterns
+              </div>
+              {data.coInstallation.length === 0 ? (
+                <div className="text-xs text-muted-foreground">
+                  Not enough fleet data for co-installation analysis.
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {data.coInstallation.map((p, i) => (
+                    <div key={i} className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs">
+                      <code className="font-mono text-[10px]">{p.module_a}</code>
+                      <span className="text-muted-foreground">×</span>
+                      <code className="font-mono text-[10px]">{p.module_b}</code>
+                      <Badge variant="outline" className="ml-auto font-mono text-[9px]">
+                        {Math.round(p.coInstallRate * 100)}%
+                      </Badge>
+                    </div>
+                  ))}
+                  <p className="text-[10px] text-muted-foreground">
+                    Modules installed together &gt;30% of the time. Consider merging pairs above 90%.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Stat Tile ──────────────────────────────────────────────────────
+
+function StatTile({ label, value, tone }: { label: string; value: number; tone?: "success" | "warning" | "destructive" }) {
+  const toneCls = tone === "success" ? "text-success" : tone === "warning" ? "text-warning" : tone === "destructive" ? "text-destructive" : "text-foreground";
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+        <div className={`mt-1 text-2xl font-semibold ${toneCls}`}>{value}</div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Module Row ─────────────────────────────────────────────────────
+
 function ModuleRow({
   module: m,
+  selected,
+  onToggleSelect,
   onApprove,
   onArchive,
   onEdited,
 }: {
   module: ReturnType<typeof useModules>["data"][number];
+  selected: boolean;
+  onToggleSelect: () => void;
   onApprove: () => void;
   onArchive: () => void;
   onEdited: () => void;
@@ -131,6 +776,7 @@ function ModuleRow({
   const [edit, setEdit] = useState(false);
   const [name, setName] = useState(m.name);
   const [desc, setDesc] = useState(m.description ?? "");
+  const [showReasoning, setShowReasoning] = useState(false);
 
   const save = async () => {
     await supabase.from("modules").update({ name, description: desc }).eq("id", m.id);
@@ -146,31 +792,50 @@ function ModuleRow({
         ? "border-muted text-muted-foreground"
         : "border-warning/40 text-warning";
 
+  const cohesion = Number(m.cohesion_score) || 0;
+  const coupling = Number(m.coupling_score) || 0;
+  const reasoning = (m as Record<string, unknown>).ai_reasoning as string | null;
+
   return (
-    <Card className="border-border/80">
+    <Card className={cn("border-border/80 transition-colors", selected && "border-primary/60 bg-primary/5")}>
       <CardHeader className="flex flex-row items-start justify-between space-y-0">
-        <div className="flex-1">
-          {edit ? (
-            <Input value={name} onChange={(e) => setName(e.target.value)} />
-          ) : (
-            <Link
-              to="/modules/$slug"
-              params={{ slug: m.slug }}
-              className="hover:underline"
-            >
-              <CardTitle className="text-base font-mono">{m.name}</CardTitle>
-            </Link>
-          )}
-          <CardDescription className="mt-1 font-mono text-[11px]">{m.slug}</CardDescription>
+        <div className="flex items-start gap-2.5">
+          <Checkbox
+            checked={selected}
+            onCheckedChange={onToggleSelect}
+            className="mt-1"
+          />
+          <div className="flex-1">
+            {edit ? (
+              <Input value={name} onChange={(e) => setName(e.target.value)} />
+            ) : (
+              <Link to="/modules/$slug" params={{ slug: m.slug }} className="hover:underline">
+                <CardTitle className="text-base font-mono">{m.name}</CardTitle>
+              </Link>
+            )}
+            <CardDescription className="mt-1 font-mono text-[11px]">{m.slug}</CardDescription>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <Badge variant="outline" className={`text-[10px] uppercase ${tone}`}>
-            {m.status}
-          </Badge>
-          {m.ai_confidence != null && (
-            <Badge variant="outline" className="font-mono text-[10px]">
-              {Math.round(Number(m.ai_confidence) * 100)}%
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex items-center gap-1.5">
+            <Badge variant="outline" className={`text-[10px] uppercase ${tone}`}>
+              {m.status}
             </Badge>
+            {m.ai_confidence != null && (
+              <Badge variant="outline" className="font-mono text-[10px]">
+                {Math.round(Number(m.ai_confidence) * 100)}%
+              </Badge>
+            )}
+          </div>
+          {(cohesion > 0 || coupling > 0) && (
+            <div className="flex items-center gap-2 font-mono text-[9px] text-muted-foreground">
+              <span className={cn(cohesion >= 0.7 ? "text-success" : cohesion >= 0.4 ? "text-warning" : "text-destructive")}>
+                coh {Math.round(cohesion * 100)}%
+              </span>
+              <span className={cn(coupling <= 0.3 ? "text-success" : coupling <= 0.6 ? "text-warning" : "text-destructive")}>
+                cpl {Math.round(coupling * 100)}%
+              </span>
+            </div>
           )}
         </div>
       </CardHeader>
@@ -180,42 +845,70 @@ function ModuleRow({
         ) : (
           <p className="text-sm text-muted-foreground">{m.description || "—"}</p>
         )}
+
+        {/* AI Reasoning */}
+        {reasoning && (
+          <Collapsible open={showReasoning} onOpenChange={setShowReasoning}>
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-primary hover:underline"
+              >
+                <Brain className="h-3 w-3" />
+                AI reasoning
+                <ChevronDown className={cn("h-3 w-3 transition-transform", showReasoning && "rotate-180")} />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="mt-1.5 rounded-md border border-primary/20 bg-primary/5 p-2.5 text-xs text-muted-foreground">
+                {reasoning}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
         <ModuleCoverageStrip moduleId={m.id} moduleSlug={m.slug} />
+
         <div className="space-y-1">
-          <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-            routes
-          </div>
+          <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">routes</div>
           <div className="flex flex-wrap gap-1">
             {(m.routes ?? []).map((r) => (
-              <code key={r} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px]">
-                {r}
-              </code>
+              <code key={r} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px]">{r}</code>
             ))}
           </div>
         </div>
         <div className="space-y-1">
-          <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-            files
-          </div>
+          <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">files</div>
           <div className="flex flex-wrap gap-1">
             {(m.file_globs ?? []).slice(0, 3).map((f) => (
-              <code key={f} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px]">
-                {f}
-              </code>
+              <code key={f} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px]">{f}</code>
             ))}
             {(m.file_globs ?? []).length > 3 && (
-              <span className="text-[11px] text-muted-foreground">
-                +{(m.file_globs ?? []).length - 3} more
-              </span>
+              <span className="text-[11px] text-muted-foreground">+{(m.file_globs ?? []).length - 3} more</span>
             )}
           </div>
         </div>
+
+        {/* Dependencies */}
+        {(m.requires?.length > 0 || m.incompatible_with?.length > 0) && (
+          <div className="flex flex-wrap gap-2">
+            {m.requires?.map((r) => (
+              <Badge key={r} variant="outline" className="text-[9px] border-primary/30 text-primary">
+                requires: {r}
+              </Badge>
+            ))}
+            {m.incompatible_with?.map((r) => (
+              <Badge key={r} variant="outline" className="text-[9px] border-destructive/30 text-destructive">
+                conflicts: {r}
+              </Badge>
+            ))}
+          </div>
+        )}
+
         <div className="flex justify-end gap-2 pt-2">
           {edit ? (
             <>
-              <Button size="sm" variant="ghost" onClick={() => setEdit(false)}>
-                Cancel
-              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setEdit(false)}>Cancel</Button>
               <Button size="sm" onClick={save}>Save</Button>
             </>
           ) : (

@@ -1,202 +1,149 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import {
+  runDetection,
+  analyzeModuleIntelligence,
+  DEFAULT_CONFIG,
+  type DetectionStrategy,
+  type DetectionRunConfig,
+} from "./module-detection.server";
 
-// AI-powered module detection from a (mocked) prime repo file tree.
-// Calls Lovable AI Gateway with reasoning: high to propose module boundaries.
-// Wire real GitHub tree fetch later — for now uses a representative tree
-// derived from prime_config so the AI output is grounded.
-
-type Proposed = {
-  name: string;
-  slug: string;
-  description: string;
-  file_globs: string[];
-  routes: string[];
-  ai_confidence: number;
-};
-
-const FALLBACK_TREE = [
-  "src/routes/index.tsx",
-  "src/routes/auth.tsx",
-  "src/routes/dashboard.tsx",
-  "src/routes/settings.tsx",
-  "src/routes/billing.tsx",
-  "src/routes/about.tsx",
-  "src/routes/pricing.tsx",
-  "src/routes/contact.tsx",
-  "src/routes/blog.index.tsx",
-  "src/routes/blog.$slug.tsx",
-  "src/components/app-shell.tsx",
-  "src/components/protected-route.tsx",
-  "src/lib/auth.tsx",
-  "src/lib/queries.ts",
-  "src/integrations/supabase/client.ts",
-  "supabase/functions/stripe-webhook/index.ts",
-  "supabase/functions/send-email/index.ts",
-];
-
+// Enhanced multi-pass AI module detection
 export const detectModules = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data?: {
+      strategy?: DetectionStrategy;
+      maxModules?: number;
+      minModules?: number;
+      sampleFileContent?: boolean;
+      analyzeImports?: boolean;
+      deltaMode?: boolean;
+    }) => data ?? {},
+  )
+  .handler(async ({ data, context }) => {
+    const config: DetectionRunConfig = {
+      strategy: data.strategy ?? DEFAULT_CONFIG.strategy,
+      maxModules: data.maxModules ?? DEFAULT_CONFIG.maxModules,
+      minModules: data.minModules ?? DEFAULT_CONFIG.minModules,
+      sampleFileContent: data.sampleFileContent ?? DEFAULT_CONFIG.sampleFileContent,
+      analyzeImports: data.analyzeImports ?? DEFAULT_CONFIG.analyzeImports,
+      deltaMode: data.deltaMode ?? DEFAULT_CONFIG.deltaMode,
+    };
+
+    return runDetection({
+      supabase: context.supabase,
+      userId: context.userId,
+      config,
+    });
+  });
+
+// Fetch detection run history
+export const getDetectionRuns = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase } = context;
-    const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
-    if (!LOVABLE_API_KEY) {
-      return { ok: false as const, error: "LOVABLE_API_KEY not configured" };
-    }
-
-    // Pull prime config for grounding context
-    const { data: prime } = await supabase
-      .from("prime_config")
+    const { data, error } = await context.supabase
+      .from("module_detection_runs")
       .select("*")
-      .limit(1)
-      .maybeSingle();
-    if (!prime) {
-      return { ok: false as const, error: "Configure prime repo first" };
-    }
+      .order("created_at", { ascending: false })
+      .limit(20);
+    if (error) return { ok: false as const, error: error.message, runs: [] };
+    return { ok: true as const, runs: data ?? [] };
+  });
 
-    // TODO: replace FALLBACK_TREE with real GitHub tree fetch via GitHub App.
-    const tree = FALLBACK_TREE;
+// Fetch import graph for a detection run
+export const getImportGraph = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { runId: string }) => {
+    if (!data?.runId) throw new Error("runId required");
+    return data;
+  })
+  .handler(async ({ data, context }) => {
+    const { data: edges, error } = await context.supabase
+      .from("module_import_edges")
+      .select("*")
+      .eq("detection_run_id", data.runId)
+      .limit(500);
+    if (error) return { ok: false as const, error: error.message, edges: [] };
+    return { ok: true as const, edges: edges ?? [] };
+  });
 
-    const systemPrompt = `You are a senior software architect specializing in modular monorepo decomposition.
-Given a file tree of a TanStack Start + Supabase project, identify cohesive MODULES — slices that can be independently injected into clone codebases.
+// Fetch drift alerts
+export const getDriftAlerts = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data?: { runId?: string; resolved?: boolean }) => data ?? {})
+  .handler(async ({ data, context }) => {
+    let query = context.supabase
+      .from("module_drift_alerts")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (data.runId) query = query.eq("detection_run_id", data.runId);
+    if (data.resolved !== undefined) query = query.eq("resolved", data.resolved);
+    const { data: alerts, error } = await query;
+    if (error) return { ok: false as const, error: error.message, alerts: [] };
+    return { ok: true as const, alerts: alerts ?? [] };
+  });
 
-A module is:
-- A bounded feature (auth, billing, marketing, dashboard, blog, admin, etc.)
-- Defined by file_globs (paths or glob patterns) and routes (URL paths)
-- Has a clear single responsibility
-- Should have 3-12 modules total — not too granular, not too broad
+// Resolve a drift alert
+export const resolveDriftAlert = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { alertId: string }) => {
+    if (!data?.alertId) throw new Error("alertId required");
+    return data;
+  })
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("module_drift_alerts")
+      .update({
+        resolved: true,
+        resolved_at: new Date().toISOString(),
+        resolved_by: context.userId,
+      })
+      .eq("id", data.alertId);
+    if (error) return { ok: false as const, error: error.message };
+    return { ok: true as const };
+  });
 
-Return ONLY via the propose_modules tool call. No prose.`;
+// Batch approve/reject modules
+export const batchUpdateModuleStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data: { moduleIds: string[]; status: "approved" | "archived" }) => {
+      if (!Array.isArray(data?.moduleIds) || data.moduleIds.length === 0) throw new Error("moduleIds required");
+      if (data.status !== "approved" && data.status !== "archived") throw new Error("status must be approved or archived");
+      return data;
+    },
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("modules")
+      .update({ status: data.status })
+      .in("id", data.moduleIds);
+    if (error) return { ok: false as const, error: error.message };
 
-    const userPrompt = `Prime repo: ${prime.github_owner}/${prime.github_repo} (branch: ${prime.default_branch})
-
-File tree (${tree.length} files):
-${tree.map((f) => `- ${f}`).join("\n")}
-
-Propose 3-8 modules. Each module's ai_confidence is 0..1 reflecting how cleanly it separates from the rest.`;
-
-    const body = {
-      model: "google/gemini-3-flash-preview",
-      reasoning: { effort: "high" },
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      tools: [
-        {
-          type: "function",
-          function: {
-            name: "propose_modules",
-            description: "Return a list of proposed modules.",
-            parameters: {
-              type: "object",
-              properties: {
-                modules: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      name: { type: "string" },
-                      slug: {
-                        type: "string",
-                        description: "kebab-case unique identifier",
-                      },
-                      description: { type: "string" },
-                      file_globs: { type: "array", items: { type: "string" } },
-                      routes: { type: "array", items: { type: "string" } },
-                      ai_confidence: { type: "number", minimum: 0, maximum: 1 },
-                    },
-                    required: [
-                      "name",
-                      "slug",
-                      "description",
-                      "file_globs",
-                      "routes",
-                      "ai_confidence",
-                    ],
-                    additionalProperties: false,
-                  },
-                },
-              },
-              required: ["modules"],
-              additionalProperties: false,
-            },
-          },
-        },
-      ],
-      tool_choice: {
-        type: "function",
-        function: { name: "propose_modules" },
+    await context.supabase.from("audit_log").insert({
+      action: `module.batch_${data.status}`,
+      entity_type: "module",
+      actor_user_id: context.userId,
+      metadata: {
+        module_ids: data.moduleIds,
+        count: data.moduleIds.length,
+        status: data.status,
       },
-    };
+    });
 
-    const res = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      },
-    );
+    return { ok: true as const, count: data.moduleIds.length };
+  });
 
-    if (!res.ok) {
-      const t = await res.text();
-      console.error("AI gateway error:", res.status, t);
-      if (res.status === 429)
-        return { ok: false as const, error: "Rate limited — try again shortly." };
-      if (res.status === 402)
-        return {
-          ok: false as const,
-          error: "AI credits exhausted. Add funds in Settings → Workspace → Usage.",
-        };
-      return { ok: false as const, error: `AI error ${res.status}` };
-    }
-
-    const json = await res.json();
-    const toolCall = json.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall?.function?.arguments) {
-      return { ok: false as const, error: "Model returned no tool call" };
-    }
-
-    let parsed: { modules: Proposed[] };
+// Cross-clone module intelligence
+export const getModuleIntelligence = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
     try {
-      parsed = JSON.parse(toolCall.function.arguments);
-    } catch {
-      return { ok: false as const, error: "Failed to parse model output" };
+      const result = await analyzeModuleIntelligence(context.supabase);
+      return { ok: true as const, ...result };
+    } catch (e) {
+      return { ok: false as const, error: e instanceof Error ? e.message : String(e), coInstallation: [], healthScores: [] };
     }
-
-    const modules = parsed.modules ?? [];
-    if (modules.length === 0)
-      return { ok: false as const, error: "Model proposed no modules" };
-
-    // Upsert as proposed (don't clobber approved/archived)
-    let inserted = 0;
-    for (const m of modules) {
-      const { data: existing } = await supabase
-        .from("modules")
-        .select("id, status")
-        .eq("slug", m.slug)
-        .maybeSingle();
-      if (existing) continue;
-      const { error } = await supabase.from("modules").insert({
-        name: m.name,
-        slug: m.slug,
-        description: m.description,
-        file_globs: m.file_globs,
-        routes: m.routes,
-        ai_confidence: m.ai_confidence,
-        status: "proposed",
-        detected_by_ai: true,
-      });
-      if (!error) inserted++;
-    }
-
-    return {
-      ok: true as const,
-      proposed: modules.length,
-      inserted,
-    };
   });
