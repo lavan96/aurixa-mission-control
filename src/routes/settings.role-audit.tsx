@@ -188,18 +188,18 @@ function RoleAuditRow({ entry }: { entry: AuditEntry }) {
                 <ArrowRight className="h-3 w-3" />
                 <span className="font-medium text-foreground">
                   {entry.target_name ??
-                    (meta.target_user_id as string).slice(0, 8)}
+                    String(meta.target_user_id).slice(0, 8)}
                 </span>
               </>
             )}
 
             {isCloneCreated && meta?.method && (
               <span>
-                provisioned via <strong>{meta.method as string}</strong>
+                provisioned via <strong>{String(meta.method)}</strong>
                 {meta?.github_url && (
                   <>
                     {" → "}
-                    <span className="font-mono">{meta.github_url as string}</span>
+                    <span className="font-mono">{String(meta.github_url)}</span>
                   </>
                 )}
               </span>
@@ -221,7 +221,7 @@ function RoleAuditRow({ entry }: { entry: AuditEntry }) {
                 <>
                   <span className="text-muted-foreground">role_id</span>
                   <span className="font-mono">
-                    {(meta.role_id as string).slice(0, 12)}…
+                    {String(meta.role_id).slice(0, 12)}…
                   </span>
                 </>
               )}
