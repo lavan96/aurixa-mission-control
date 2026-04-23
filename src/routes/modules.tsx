@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/protected-route";
-import { useModules, usePrimeConfig } from "@/lib/queries";
+import { useModules, useClones, usePrimeConfig } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,7 @@ import {
   Boxes, Sparkles, Check, X, Pencil, History, Settings2, Zap,
   AlertTriangle, Search, ChevronDown, BarChart3, GitBranch,
   FileWarning, CheckCircle2, Archive, Brain, Layers, Target,
+  Rocket, XCircle, Loader2, ExternalLink,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -21,10 +22,13 @@ import {
 import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
+} from "@/components/ui/dialog";
 import { useServerFn } from "@tanstack/react-start";
 import {
   detectModules, getDetectionRuns, getDriftAlerts, batchUpdateModuleStatus,
-  resolveDriftAlert, getModuleIntelligence,
+  resolveDriftAlert, getModuleIntelligence, approveAndDeploy, getModuleCascadeJobs,
 } from "@/server/ai-detect-modules.functions";
 import { ModuleGridSkeleton } from "@/components/list-skeletons";
 import { EmptyState } from "@/components/empty-state";
