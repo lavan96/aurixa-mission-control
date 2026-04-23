@@ -870,6 +870,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_assign_role: {
+        Args: {
+          _assigner_id: string
+          _target_role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: boolean
+      }
+      can_manage_user: {
+        Args: { _manager_id: string; _target_user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -877,7 +888,12 @@ export type Database = {
         }
         Returns: boolean
       }
+      highest_role_level: { Args: { _user_id: string }; Returns: number }
       is_operator: { Args: { _user_id: string }; Returns: boolean }
+      role_level: {
+        Args: { _role: Database["public"]["Enums"]["app_role"] }
+        Returns: number
+      }
     }
     Enums: {
       app_role: "super_admin" | "admin" | "operator"
