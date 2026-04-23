@@ -29,6 +29,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   detectModules, getDetectionRuns, getDriftAlerts, batchUpdateModuleStatus,
   resolveDriftAlert, getModuleIntelligence, approveAndDeploy, getModuleCascadeJobs,
+  publishToLibrary, getModuleLibrary, removeFromLibrary,
 } from "@/server/ai-detect-modules.functions";
 import { ModuleGridSkeleton } from "@/components/list-skeletons";
 import { EmptyState } from "@/components/empty-state";
