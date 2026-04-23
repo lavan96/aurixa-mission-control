@@ -24,6 +24,10 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuditLogRouteImport } from './routes/audit-log'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
+import { Route as SettingsRolesRouteImport } from './routes/settings.roles'
+import { Route as SettingsRoleAuditRouteImport } from './routes/settings.role-audit'
+import { Route as SettingsProvisioningPreviewRouteImport } from './routes/settings.provisioning-preview'
+import { Route as SettingsPermissionMatrixRouteImport } from './routes/settings.permission-matrix'
 import { Route as SettingsNotificationsRouteImport } from './routes/settings.notifications'
 import { Route as ModulesBuilderRouteImport } from './routes/modules.builder'
 import { Route as ModulesSlugRouteImport } from './routes/modules.$slug'
@@ -111,6 +115,28 @@ const SettingsIndexRoute = SettingsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsRolesRoute = SettingsRolesRouteImport.update({
+  id: '/roles',
+  path: '/roles',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsRoleAuditRoute = SettingsRoleAuditRouteImport.update({
+  id: '/role-audit',
+  path: '/role-audit',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsProvisioningPreviewRoute =
+  SettingsProvisioningPreviewRouteImport.update({
+    id: '/provisioning-preview',
+    path: '/provisioning-preview',
+    getParentRoute: () => SettingsRoute,
+  } as any)
+const SettingsPermissionMatrixRoute =
+  SettingsPermissionMatrixRouteImport.update({
+    id: '/permission-matrix',
+    path: '/permission-matrix',
+    getParentRoute: () => SettingsRoute,
+  } as any)
 const SettingsNotificationsRoute = SettingsNotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
@@ -193,6 +219,10 @@ export interface FileRoutesByFullPath {
   '/modules/$slug': typeof ModulesSlugRoute
   '/modules/builder': typeof ModulesBuilderRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
+  '/settings/permission-matrix': typeof SettingsPermissionMatrixRoute
+  '/settings/provisioning-preview': typeof SettingsProvisioningPreviewRoute
+  '/settings/role-audit': typeof SettingsRoleAuditRoute
+  '/settings/roles': typeof SettingsRolesRoute
   '/settings/': typeof SettingsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -220,6 +250,10 @@ export interface FileRoutesByTo {
   '/modules/$slug': typeof ModulesSlugRoute
   '/modules/builder': typeof ModulesBuilderRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
+  '/settings/permission-matrix': typeof SettingsPermissionMatrixRoute
+  '/settings/provisioning-preview': typeof SettingsProvisioningPreviewRoute
+  '/settings/role-audit': typeof SettingsRoleAuditRoute
+  '/settings/roles': typeof SettingsRolesRoute
   '/settings': typeof SettingsIndexRoute
 }
 export interface FileRoutesById {
@@ -249,6 +283,10 @@ export interface FileRoutesById {
   '/modules/$slug': typeof ModulesSlugRoute
   '/modules/builder': typeof ModulesBuilderRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
+  '/settings/permission-matrix': typeof SettingsPermissionMatrixRoute
+  '/settings/provisioning-preview': typeof SettingsProvisioningPreviewRoute
+  '/settings/role-audit': typeof SettingsRoleAuditRoute
+  '/settings/roles': typeof SettingsRolesRoute
   '/settings/': typeof SettingsIndexRoute
 }
 export interface FileRouteTypes {
@@ -279,6 +317,10 @@ export interface FileRouteTypes {
     | '/modules/$slug'
     | '/modules/builder'
     | '/settings/notifications'
+    | '/settings/permission-matrix'
+    | '/settings/provisioning-preview'
+    | '/settings/role-audit'
+    | '/settings/roles'
     | '/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -306,6 +348,10 @@ export interface FileRouteTypes {
     | '/modules/$slug'
     | '/modules/builder'
     | '/settings/notifications'
+    | '/settings/permission-matrix'
+    | '/settings/provisioning-preview'
+    | '/settings/role-audit'
+    | '/settings/roles'
     | '/settings'
   id:
     | '__root__'
@@ -334,6 +380,10 @@ export interface FileRouteTypes {
     | '/modules/$slug'
     | '/modules/builder'
     | '/settings/notifications'
+    | '/settings/permission-matrix'
+    | '/settings/provisioning-preview'
+    | '/settings/role-audit'
+    | '/settings/roles'
     | '/settings/'
   fileRoutesById: FileRoutesById
 }
@@ -468,6 +518,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsIndexRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/roles': {
+      id: '/settings/roles'
+      path: '/roles'
+      fullPath: '/settings/roles'
+      preLoaderRoute: typeof SettingsRolesRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/role-audit': {
+      id: '/settings/role-audit'
+      path: '/role-audit'
+      fullPath: '/settings/role-audit'
+      preLoaderRoute: typeof SettingsRoleAuditRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/provisioning-preview': {
+      id: '/settings/provisioning-preview'
+      path: '/provisioning-preview'
+      fullPath: '/settings/provisioning-preview'
+      preLoaderRoute: typeof SettingsProvisioningPreviewRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/permission-matrix': {
+      id: '/settings/permission-matrix'
+      path: '/permission-matrix'
+      fullPath: '/settings/permission-matrix'
+      preLoaderRoute: typeof SettingsPermissionMatrixRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/notifications': {
       id: '/settings/notifications'
       path: '/notifications'
@@ -575,11 +653,19 @@ const ModulesRouteWithChildren =
 
 interface SettingsRouteChildren {
   SettingsNotificationsRoute: typeof SettingsNotificationsRoute
+  SettingsPermissionMatrixRoute: typeof SettingsPermissionMatrixRoute
+  SettingsProvisioningPreviewRoute: typeof SettingsProvisioningPreviewRoute
+  SettingsRoleAuditRoute: typeof SettingsRoleAuditRoute
+  SettingsRolesRoute: typeof SettingsRolesRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
 
 const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsNotificationsRoute: SettingsNotificationsRoute,
+  SettingsPermissionMatrixRoute: SettingsPermissionMatrixRoute,
+  SettingsProvisioningPreviewRoute: SettingsProvisioningPreviewRoute,
+  SettingsRoleAuditRoute: SettingsRoleAuditRoute,
+  SettingsRolesRoute: SettingsRolesRoute,
   SettingsIndexRoute: SettingsIndexRoute,
 }
 
