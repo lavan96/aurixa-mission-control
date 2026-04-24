@@ -346,10 +346,8 @@ function ModulesPage() {
               <FleetModuleSyncCard />
             </>
           )}
+        </>
       )}
-    </div>
-  );
-}
     </div>
   );
 }
