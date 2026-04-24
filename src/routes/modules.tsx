@@ -1186,3 +1186,152 @@ function ApproveAndDeployButton({
     </Dialog>
   );
 }
+
+// ─── Publish to Library Button ──────────────────────────────────────
+
+function PublishToLibraryButton({ moduleIds }: { moduleIds: string[] }) {
+  const [open, setOpen] = useState(false);
+  const [tags, setTags] = useState("");
+  const [busy, setBusy] = useState(false);
+  const publishFn = useServerFn(publishToLibrary);
+
+  const submit = async () => {
+    setBusy(true);
+    try {
+      const tagList = tags.split(",").map((t) => t.trim()).filter(Boolean);
+      const res = await publishFn({ data: { moduleIds, tags: tagList } });
+      if (res.ok) {
+        toast.success(`Published ${res.published} module(s) to library`);
+        setOpen(false);
+        setTags("");
+      } else {
+        toast.error(res.error ?? "Publish failed");
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline">
+          <Upload className="mr-1 h-3 w-3" /> Publish ({moduleIds.length})
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Publish to library</DialogTitle>
+          <DialogDescription>
+            Snapshot {moduleIds.length} module(s) as a versioned library entry.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          <label className="text-xs font-mono text-muted-foreground">Tags (comma-separated)</label>
+          <Input
+            value={tags}
+            onChange={(e) => setTags(e.target.value)}
+            placeholder="core, beta, customer-facing"
+            className="font-mono text-xs"
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)} disabled={busy}>Cancel</Button>
+          <Button onClick={submit} disabled={busy}>
+            {busy ? <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> Publishing…</> : <><Upload className="mr-1 h-3.5 w-3.5" /> Publish</>}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Module Library Panel ───────────────────────────────────────────
+
+function ModuleLibraryPanel() {
+  const [entries, setEntries] = useState<Array<Record<string, unknown>>>([]);
+  const [loading, setLoading] = useState(true);
+  const getLibraryFn = useServerFn(getModuleLibrary);
+  const removeFn = useServerFn(removeFromLibrary);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await getLibraryFn({ data: { latestOnly: true } });
+      if (res.ok) setEntries(res.entries as Array<Record<string, unknown>>);
+    } finally {
+      setLoading(false);
+    }
+  }, [getLibraryFn]);
+
+  useEffect(() => { void refresh(); }, [refresh]);
+
+  const remove = async (id: string) => {
+    const res = await removeFn({ data: { entryId: id } });
+    if (res.ok) {
+      toast.success("Removed from library");
+      refresh();
+    } else {
+      toast.error(res.error ?? "Remove failed");
+    }
+  };
+
+  if (loading) return <ModuleGridSkeleton count={3} />;
+
+  if (entries.length === 0) {
+    return (
+      <EmptyState
+        icon={<Library />}
+        title="Library is empty"
+        description="Approve modules in the Modules tab and use Publish to snapshot them as versioned library entries."
+      />
+    );
+  }
+
+  return (
+    <div className="grid gap-3 md:grid-cols-2">
+      {entries.map((e) => {
+        const tags = (e.tags as string[]) ?? [];
+        const fileCount = (e.file_count as number) ?? 0;
+        return (
+          <Card key={e.id as string}>
+            <CardHeader className="pb-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <CardTitle className="font-mono text-sm flex items-center gap-2">
+                    <BookOpen className="h-3.5 w-3.5 text-primary" />
+                    {e.name as string}
+                    <Badge variant="outline" className="font-mono text-[10px]">v{e.version as number}</Badge>
+                  </CardTitle>
+                  <CardDescription className="mt-1 font-mono text-[11px]">
+                    {(e.entry_file as string) ?? (e.slug as string)}
+                  </CardDescription>
+                </div>
+                <Button size="sm" variant="ghost" onClick={() => remove(e.id as string)}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-2 pt-0">
+              {e.description ? (
+                <p className="text-xs text-muted-foreground line-clamp-2">{e.description as string}</p>
+              ) : null}
+              <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono text-muted-foreground">
+                <Badge variant="secondary" className="font-mono text-[10px]">
+                  <FileCode className="mr-1 h-3 w-3" />
+                  {fileCount} files
+                </Badge>
+                {e.route_path ? (
+                  <Badge variant="outline" className="font-mono text-[10px]">{e.route_path as string}</Badge>
+                ) : null}
+                {tags.map((t) => (
+                  <Badge key={t} variant="outline" className="font-mono text-[10px]">#{t}</Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
