@@ -4,6 +4,7 @@ import {
   getCloneLibraryPins,
   setCloneLibraryPin,
   removeCloneLibraryPin,
+  validateClonePins,
 } from "@/server/library-admin.functions";
 import { getModuleLibrary } from "@/server/ai-detect-modules.functions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { BookOpen, Loader2, Pin, X, CheckCircle2, AlertCircle } from "lucide-react";
+import { BookOpen, Loader2, Pin, X, CheckCircle2, AlertCircle, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
 type LibraryEntry = {
@@ -40,11 +41,14 @@ export function CloneLibraryPinsCard({ cloneId }: { cloneId: string }) {
   const [allEntries, setAllEntries] = useState<LibraryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  const [validating, setValidating] = useState(false);
+  const [issuesBySlug, setIssuesBySlug] = useState<Map<string, string>>(new Map());
 
   const getPinsFn = useServerFn(getCloneLibraryPins);
   const getLibraryFn = useServerFn(getModuleLibrary);
   const setPinFn = useServerFn(setCloneLibraryPin);
   const removePinFn = useServerFn(removeCloneLibraryPin);
+  const validateFn = useServerFn(validateClonePins);
 
   const refresh = useCallback(async () => {
     setLoading(true);
