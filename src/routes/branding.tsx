@@ -454,6 +454,9 @@ function BrandingPage() {
           <TabsTrigger value="history">
             <HistoryIcon className="mr-1 h-3.5 w-3.5" /> History
           </TabsTrigger>
+          <TabsTrigger value="schedules">
+            <Clock className="mr-1 h-3.5 w-3.5" /> Schedules ({schedules.length})
+          </TabsTrigger>
         </TabsList>
 
         {/* Profiles */}
