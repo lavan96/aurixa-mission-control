@@ -37,10 +37,12 @@ export const setLibraryApprovalStatus = createServerFn({ method: "POST" })
       rejection_reason: data.status === "rejected" ? (data.reason ?? null) : null,
     } satisfies Database["public"]["Tables"]["module_library"]["Update"];
 
-    const { error } = await context.supabase
+    const { data: updated, error } = await context.supabase
       .from("module_library")
       .update(update)
-      .eq("id", data.entryId);
+      .eq("id", data.entryId)
+      .select("id, name, slug, version")
+      .maybeSingle();
     if (error) return { ok: false as const, error: error.message };
 
     await context.supabase.from("audit_log").insert({
@@ -50,6 +52,33 @@ export const setLibraryApprovalStatus = createServerFn({ method: "POST" })
       actor_user_id: context.userId,
       metadata: { status: data.status, reason: data.reason },
     });
+
+    // Fan-out notification so the fleet sees approval decisions in the bell.
+    if (data.status === "approved" || data.status === "rejected") {
+      const label = updated
+        ? `${updated.name} v${updated.version}`
+        : "Library entry";
+      await context.supabase.from("notifications").insert({
+        kind: data.status === "approved" ? "library_entry_approved" : "library_entry_rejected",
+        severity: data.status === "approved" ? "success" : "warning",
+        title:
+          data.status === "approved"
+            ? `Library approved · ${label}`
+            : `Library rejected · ${label}`,
+        body:
+          data.status === "rejected" && data.reason
+            ? data.reason
+            : data.status === "approved"
+              ? "Now available for pinning to clones."
+              : "Entry was not approved for fleet use.",
+        url: "/modules",
+        metadata: {
+          library_entry_id: data.entryId,
+          slug: updated?.slug,
+          version: updated?.version,
+        },
+      });
+    }
 
     return { ok: true as const };
   });
