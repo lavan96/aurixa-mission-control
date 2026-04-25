@@ -26,7 +26,7 @@ export const listBrandVersions = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }) => {
     const versions = await listVersionsForProfile(context.supabase, data.profileId);
-    return { ok: true as const, versions };
+    return { ok: true as const, versions: versions as unknown as Array<Record<string, unknown>> };
   });
 
 export const rollbackBrandProfile = createServerFn({ method: "POST" })
