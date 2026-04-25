@@ -400,7 +400,10 @@ export async function applyBrandToClone(
     clone_id: args.cloneId,
     profile_id: args.profileId,
     profile_version: profile.version,
-    config_snapshot: { brand_config: brandConfig, report_contact: reportContact },
+    config_snapshot: {
+      brand_config: brandConfig,
+      report_contact: reportContact,
+    } as unknown as Database["public"]["Tables"]["clone_brand_history"]["Insert"]["config_snapshot"],
     config_hash: finalHash,
     status: "applied",
     pushed_by: args.actorUserId,
