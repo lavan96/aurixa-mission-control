@@ -630,7 +630,127 @@ function BrandingPage() {
             </CardContent>
           </Card>
         </TabsContent>
+        {/* Schedules */}
+        <TabsContent value="schedules" className="mt-4 space-y-3">
+          <div className="flex justify-between items-center">
+            <p className="text-sm text-muted-foreground">
+              Cron-driven brand syncs. Targets drifted clones by default; use "all" to re-cascade every assigned clone.
+            </p>
+            <Button size="sm" onClick={() => setScheduleDialogOpen(true)}>
+              <Plus className="mr-1 h-3.5 w-3.5" /> New schedule
+            </Button>
+          </div>
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Profile</TableHead>
+                    <TableHead>Cron</TableHead>
+                    <TableHead>Target</TableHead>
+                    <TableHead>Last run</TableHead>
+                    <TableHead>Next run</TableHead>
+                    <TableHead>Enabled</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {schedules.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="py-8 text-center text-sm text-muted-foreground">
+                        No brand sync schedules yet.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {schedules.map((s) => {
+                    const profile = s.scope_filter.profile_id
+                      ? profilesById.get(s.scope_filter.profile_id)
+                      : null;
+                    const target = s.scope_filter.clone_ids;
+                    const targetLabel = Array.isArray(target)
+                      ? `${target.length} clone(s)`
+                      : (target ?? "drifted");
+                    return (
+                      <TableRow key={s.id}>
+                        <TableCell className="font-medium">{s.name}</TableCell>
+                        <TableCell className="text-sm">{profile?.name ?? "—"}</TableCell>
+                        <TableCell className="font-mono text-xs">{describeCron(s.cron_expression)}</TableCell>
+                        <TableCell className="text-xs">{targetLabel}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {s.last_run_at ? formatDistanceToNow(s.last_run_at) + " ago" : "Never"}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {s.next_run_at ? formatDistanceToNow(s.next_run_at) : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Switch checked={s.enabled} onCheckedChange={() => handleToggleSchedule(s)} />
+                        </TableCell>
+                        <TableCell className="text-right space-x-1">
+                          <Button size="sm" variant="outline" disabled={busy} onClick={() => handleRunSchedule(s.id)}>
+                            <PlayCircle className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => handleDeleteSchedule(s)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      {/* New schedule dialog */}
+      <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New brand sync schedule</DialogTitle>
+            <DialogDescription>
+              Periodically re-applies a brand profile to its assigned clones.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Name</Label>
+              <Input value={newSchedName} onChange={(e) => setNewSchedName(e.target.value)} placeholder="Daily brand sync" />
+            </div>
+            <div>
+              <Label>Brand profile</Label>
+              <Select value={newSchedProfile} onValueChange={setNewSchedProfile}>
+                <SelectTrigger><SelectValue placeholder="Select profile" /></SelectTrigger>
+                <SelectContent>
+                  {profiles.filter((p) => p.status === "published").map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name} (v{p.version})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Cron expression (UTC)</Label>
+              <Input value={newSchedCron} onChange={(e) => setNewSchedCron(e.target.value)} placeholder="0 */6 * * *" />
+              <p className="mt-1 text-xs text-muted-foreground">{describeCron(newSchedCron)}</p>
+            </div>
+            <div>
+              <Label>Target clones</Label>
+              <Select value={newSchedTarget} onValueChange={(v) => setNewSchedTarget(v as "drifted" | "all")}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="drifted">Drifted only (recommended)</SelectItem>
+                  <SelectItem value="all">All assigned clones</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setScheduleDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreateSchedule}>Create</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Editor */}
       {editorOpen && (
