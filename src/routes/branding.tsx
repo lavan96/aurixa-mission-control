@@ -981,6 +981,12 @@ function ProfileCard({
           <Button size="sm" variant="outline" onClick={onPublishToggle}>
             {profile.status === "published" ? "Archive" : "Publish"}
           </Button>
+          <Button size="sm" variant="outline" onClick={onShowVersions}>
+            <HistoryIcon className="mr-1 h-3 w-3" /> v{profile.version}
+          </Button>
+          <Button size="sm" variant="outline" onClick={onPlayground}>
+            <Sparkles className="mr-1 h-3 w-3" /> Tweak
+          </Button>
           <Button size="sm" onClick={onApply} disabled={profile.status !== "published"}>
             <Rocket className="mr-1 h-3 w-3" /> Apply
           </Button>
