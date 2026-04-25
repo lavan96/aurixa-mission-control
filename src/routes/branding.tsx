@@ -142,6 +142,17 @@ type AssetEntry = {
   public_url?: string;
 };
 
+type BrandSchedule = {
+  id: string;
+  name: string;
+  cron_expression: string;
+  enabled: boolean;
+  scope_filter: { profile_id?: string; clone_ids?: string[] | "drifted" | "all" };
+  last_run_at: string | null;
+  next_run_at: string | null;
+  notes: string | null;
+};
+
 const ASSET_FIELDS = [
   { field: "logo_light_url", label: "Logo (light)", target: "branding/logo-light.png" },
   { field: "logo_dark_url", label: "Logo (dark)", target: "branding/logo-dark.png" },
