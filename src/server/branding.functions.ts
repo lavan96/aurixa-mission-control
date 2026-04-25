@@ -251,26 +251,90 @@ export const applyBrandProfile = createServerFn({ method: "POST" })
       };
     }
 
+    // Create (or reuse) a cascade_events row so brand pushes appear in
+    // /cascades alongside code cascades. Single-clone pushes still create
+    // an event for full auditability.
+    let cascadeEventId = data.cascadeEventId ?? null;
+    if (!cascadeEventId) {
+      const { data: profileRow } = await context.supabase
+        .from("clone_brand_profiles")
+        .select("name, slug, version, config_hash")
+        .eq("id", data.profileId)
+        .maybeSingle();
+      const { data: ev, error: evErr } = await context.supabase
+        .from("cascade_events")
+        .insert({
+          trigger: "manual",
+          mode: "auto_merge",
+          status: "running",
+          requires_approval: false,
+          initiated_by: context.userId,
+          started_at: new Date().toISOString(),
+          source_branch: null,
+          source_sha: profileRow?.config_hash ?? null,
+          summary: `Brand cascade · ${profileRow?.name ?? "profile"} v${profileRow?.version ?? "?"} → ${data.cloneIds.length} clone(s)`,
+          scope_filter: {
+            kind: "brand_sync",
+            profile_id: data.profileId,
+            profile_slug: profileRow?.slug ?? null,
+            clone_ids: data.cloneIds,
+          },
+        })
+        .select("id")
+        .maybeSingle();
+      if (!evErr && ev) cascadeEventId = ev.id;
+    }
+
     const results: ApplyBrandResult[] = [];
     for (const cloneId of data.cloneIds) {
       const r = await applyBrandToClone(context.supabase, {
         cloneId,
         profileId: data.profileId,
         actorUserId: context.userId,
-        cascadeEventId: data.cascadeEventId ?? null,
+        cascadeEventId,
       });
       results.push(r);
+
+      // Mirror per-clone outcome into cascade_results so /cascades/$eventId
+      // renders the breakdown using the same components as code cascades.
+      if (cascadeEventId) {
+        await context.supabase.from("cascade_results").insert({
+          cascade_event_id: cascadeEventId,
+          clone_id: cloneId,
+          status: r.ok ? "succeeded" : "failed",
+          started_at: new Date(Date.now() - r.durationMs).toISOString(),
+          completed_at: new Date().toISOString(),
+          diff_summary: r.ok
+            ? `Brand hash ${r.configHash.slice(0, 8)} · ${r.assetsUploaded} asset(s)`
+            : null,
+          error_message: r.ok ? null : r.error,
+          files_changed: r.ok ? r.assetsUploaded : 0,
+        });
+      }
     }
 
     const succeeded = results.filter((r) => r.ok).length;
     const failed = results.length - succeeded;
+
+    if (cascadeEventId) {
+      const finalStatus =
+        failed === 0 ? "completed" : succeeded === 0 ? "failed" : "partial";
+      await context.supabase
+        .from("cascade_events")
+        .update({
+          status: finalStatus,
+          completed_at: new Date().toISOString(),
+          summary: `Brand cascade · ${succeeded}/${results.length} clones succeeded`,
+        })
+        .eq("id", cascadeEventId);
+    }
 
     await context.supabase.from("audit_log").insert({
       action: "brand.applied",
       entity_type: "clone_brand_profile",
       entity_id: data.profileId,
       actor_user_id: context.userId,
-      metadata: { succeeded, failed, total: results.length },
+      metadata: { succeeded, failed, total: results.length, cascade_event_id: cascadeEventId },
     });
 
     await context.supabase.from("notifications").insert({
@@ -281,11 +345,12 @@ export const applyBrandProfile = createServerFn({ method: "POST" })
         failed === 0
           ? `Brand applied to ${succeeded} clone(s).`
           : `${succeeded} succeeded, ${failed} failed. See branding history for details.`,
-      url: "/branding",
+      url: cascadeEventId ? `/cascades/${cascadeEventId}` : "/branding",
+      cascade_event_id: cascadeEventId,
       metadata: { profile_id: data.profileId, succeeded, failed },
     });
 
-    return { ok: true as const, results, succeeded, failed };
+    return { ok: true as const, results, succeeded, failed, cascadeEventId };
   });
 
 // ─── Drift check: read clones' current hash and compare to assignment ─
