@@ -12,6 +12,8 @@ import { hashBrandBundle } from "./branding/hash";
 import { buildApplySql } from "./branding/sql";
 import { mirrorAssetsToClone } from "./branding/mirror";
 import { runBrandDriftScan } from "./branding/drift";
+import { mergeOverrides, sanitizeOverrides } from "./branding/overrides";
+import { registerAssetVariants } from "./branding/variants";
 import type {
   ApplyBrandResult,
   BrandAsset,
@@ -26,6 +28,20 @@ export { hashBrandBundle } from "./branding/hash";
 export { buildApplySql } from "./branding/sql";
 export { mirrorAssetsToClone } from "./branding/mirror";
 export { runBrandDriftScan } from "./branding/drift";
+export { mergeOverrides, sanitizeOverrides } from "./branding/overrides";
+export type { CloneOverrides, MergedBundle } from "./branding/overrides";
+export {
+  registerAssetVariants,
+  clearAssetVariants,
+  variantsForAsset,
+  buildTransformUrl,
+} from "./branding/variants";
+export type { VariantSpec } from "./branding/variants";
+export {
+  listVersionsForProfile,
+  rollbackProfileToVersion,
+} from "./branding/versions";
+export type { BrandVersion } from "./branding/versions";
 export type {
   ApplyBrandResult,
   BrandAsset,
@@ -57,8 +73,8 @@ export async function applyBrandToClone(
 ): Promise<ApplyBrandResult> {
   const startedAt = Date.now();
 
-  // 1. Load profile + clone backend in parallel
-  const [profileRes, backendRes] = await Promise.all([
+  // 1. Load profile, clone backend, AND existing assignment overrides in parallel
+  const [profileRes, backendRes, assignmentRes] = await Promise.all([
     supabase
       .from("clone_brand_profiles")
       .select("id, version, brand_config, report_contact, asset_manifest, status")
@@ -69,10 +85,16 @@ export async function applyBrandToClone(
       .select("supabase_project_ref, supabase_url, service_role_key, status")
       .eq("clone_id", args.cloneId)
       .maybeSingle(),
+    supabase
+      .from("clone_brand_assignments")
+      .select("overrides, override_keys")
+      .eq("clone_id", args.cloneId)
+      .maybeSingle(),
   ]);
 
   const profile = profileRes.data;
   const backend = backendRes.data;
+  const existingAssignment = assignmentRes.data;
 
   const fail = async (error: string): Promise<ApplyBrandResult> => {
     const durationMs = Date.now() - startedAt;
@@ -127,14 +149,22 @@ export async function applyBrandToClone(
     assets,
   });
 
-  // 3. Rewrite asset URLs in the brand config
-  const brandConfig: BrandConfig = { ...((profile.brand_config as BrandConfig) ?? {}) };
+  // 3. Rewrite asset URLs, then layer per-clone overrides on top.
+  const baseBrandConfig: BrandConfig = { ...((profile.brand_config as BrandConfig) ?? {}) };
   for (const u of mirror.uploaded) {
     if (u.asset.config_field) {
-      brandConfig[u.asset.config_field] = u.public_url;
+      baseBrandConfig[u.asset.config_field] = u.public_url;
     }
   }
-  const reportContact: ReportContact = (profile.report_contact as ReportContact) ?? {};
+  const baseReportContact: ReportContact = (profile.report_contact as ReportContact) ?? {};
+  const overrides = sanitizeOverrides(existingAssignment?.overrides ?? null);
+  const merged = mergeOverrides({
+    brand_config: baseBrandConfig,
+    report_contact: baseReportContact,
+    overrides,
+  });
+  const brandConfig = merged.brand_config;
+  const reportContact = merged.report_contact;
   const finalHash = hashBrandBundle({
     brand_config: brandConfig,
     report_contact: reportContact,
@@ -169,6 +199,7 @@ export async function applyBrandToClone(
         last_drift_check_at: nowIso,
         drift_summary: null,
         error_message: null,
+        override_keys: merged.overrideKeys,
       },
       { onConflict: "clone_id" },
     );
