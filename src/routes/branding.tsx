@@ -52,6 +52,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   Palette,
@@ -68,6 +76,8 @@ import {
   Image as ImageIcon,
   RefreshCw,
   Link2,
+  Clock,
+  PlayCircle,
 } from "lucide-react";
 import { formatDistanceToNow } from "@/lib/format";
 import { cn } from "@/lib/utils";
