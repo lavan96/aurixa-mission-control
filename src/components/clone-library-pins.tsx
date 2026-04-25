@@ -109,16 +109,56 @@ export function CloneLibraryPinsCard({ cloneId }: { cloneId: string }) {
     }
   };
 
+  const handleValidate = async () => {
+    setValidating(true);
+    try {
+      const res = await validateFn({ data: { cloneIds: [cloneId] } });
+      const next = new Map<string, string>();
+      if (res.ok) {
+        for (const i of res.issues as Array<{ slug: string; reason: string }>) {
+          next.set(i.slug, i.reason);
+        }
+        setIssuesBySlug(next);
+        if (next.size === 0) toast.success(`All ${res.checked ?? 0} pin(s) healthy`);
+        else toast.warning(`${next.size} pin issue(s)`);
+      } else {
+        toast.error(res.error ?? "Validation failed");
+      }
+    } finally {
+      setValidating(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <BookOpen className="h-4 w-4 text-primary" /> Library version pins
-        </CardTitle>
-        <CardDescription className="text-xs">
-          Choose which approved library version this clone should install per module slug.
-          Only admin-approved versions are selectable.
-        </CardDescription>
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <BookOpen className="h-4 w-4 text-primary" /> Library version pins
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Choose which approved library version this clone should install per module slug.
+              Only admin-approved versions are selectable.
+            </CardDescription>
+          </div>
+          {pins.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 shrink-0 px-2 text-[10px]"
+              onClick={handleValidate}
+              disabled={validating}
+            >
+              {validating ? (
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              ) : (
+                <ShieldCheck className="mr-1 h-3 w-3" />
+              )}
+              validate
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {loading ? (
