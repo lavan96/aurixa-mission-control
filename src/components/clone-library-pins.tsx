@@ -180,50 +180,64 @@ export function CloneLibraryPinsCard({ cloneId }: { cloneId: string }) {
                 pins.map((p) => {
                   const versions = approvedBySlug.get(p.slug) ?? [];
                   const isStale = versions.length > 0 && versions[0].version > p.version;
+                  const issue = issuesBySlug.get(p.slug);
                   return (
                     <div
                       key={p.id}
-                      className="flex items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-2"
+                      className={`rounded-md border bg-surface px-3 py-2 ${issue ? "border-destructive/50" : "border-border"}`}
                     >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Pin className="h-3 w-3 shrink-0 text-primary" />
-                        <code className="font-mono text-sm truncate">{p.slug}</code>
-                        <Badge variant="outline" className="font-mono text-[10px]">v{p.version}</Badge>
-                        {isStale && (
-                          <Badge variant="outline" className="font-mono text-[9px] border-warning/40 text-warning">
-                            <AlertCircle className="mr-1 h-2.5 w-2.5" /> v{versions[0].version} available
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        {versions.length > 1 && (
-                          <Select
-                            value={String(p.library_entry_id)}
-                            onValueChange={(v) => handleSet(v)}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Pin className="h-3 w-3 shrink-0 text-primary" />
+                          <code className="font-mono text-sm truncate">{p.slug}</code>
+                          <Badge variant="outline" className="font-mono text-[10px]">v{p.version}</Badge>
+                          {isStale && (
+                            <Badge variant="outline" className="font-mono text-[9px] border-warning/40 text-warning">
+                              <AlertCircle className="mr-1 h-2.5 w-2.5" /> v{versions[0].version} available
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {versions.length > 1 && (
+                            <Select
+                              value={String(p.library_entry_id)}
+                              onValueChange={(v) => handleSet(v)}
+                              disabled={busy === p.slug}
+                            >
+                              <SelectTrigger className="h-7 w-32 font-mono text-[10px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {versions.map((v) => (
+                                  <SelectItem key={v.id} value={v.id} className="font-mono text-xs">
+                                    v{v.version} {v.is_latest && "(latest)"}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                            onClick={() => handleRemove(p.slug)}
                             disabled={busy === p.slug}
                           >
-                            <SelectTrigger className="h-7 w-32 font-mono text-[10px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {versions.map((v) => (
-                                <SelectItem key={v.id} value={v.id} className="font-mono text-xs">
-                                  v{v.version} {v.is_latest && "(latest)"}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                          onClick={() => handleRemove(p.slug)}
-                          disabled={busy === p.slug}
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
+                      {issue && (
+                        <div className="mt-1.5 flex items-start gap-1 text-[10px] text-destructive">
+                          <AlertCircle className="mt-0.5 h-2.5 w-2.5 shrink-0" />
+                          <span>{issue}</span>
+                        </div>
+                      )}
+                      {p.notes && (
+                        <div className="mt-1 text-[10px] text-muted-foreground italic truncate">
+                          “{p.notes}”
+                        </div>
+                      )}
                     </div>
                   );
                 })
