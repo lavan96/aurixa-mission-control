@@ -57,12 +57,19 @@ export function BrandVersionTimelineDialog({
     if (!open) return;
     let cancelled = false;
     setLoading(true);
-    listFn({ data: { profileId } }).then((r) => {
-      if (cancelled) return;
-      if (r.ok) setVersions(r.versions as Version[]);
-      else toast.error(r.error ?? "Failed to load versions");
-      setLoading(false);
-    });
+    listFn({ data: { profileId } })
+      .then((r) => {
+        if (cancelled) return;
+        setVersions(r.versions as Version[]);
+        setLoading(false);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        toast.error(
+          err instanceof Error ? err.message : "Failed to load versions",
+        );
+        setLoading(false);
+      });
     return () => {
       cancelled = true;
     };
