@@ -9,7 +9,7 @@ import {
   AlertTriangle, Search, ChevronDown, BarChart3, GitBranch,
   FileWarning, CheckCircle2, Archive, Brain, Layers, Target,
   Rocket, XCircle, Loader2, ExternalLink, Library, BookOpen,
-  FileCode, Upload, Trash2,
+  FileCode, Upload, Trash2, ShieldCheck, ShieldX, Clock,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -32,10 +32,13 @@ import {
   resolveDriftAlert, getModuleIntelligence, approveAndDeploy, getModuleCascadeJobs,
   publishToLibrary, getModuleLibrary, removeFromLibrary,
 } from "@/server/ai-detect-modules.functions";
+import { setLibraryApprovalStatus } from "@/server/library-admin.functions";
 import { ModuleGridSkeleton } from "@/components/list-skeletons";
 import { EmptyState } from "@/components/empty-state";
 import { FleetModuleSyncCard } from "@/components/fleet-module-sync-card";
 import { ModuleCoverageStrip } from "@/components/module-coverage-strip";
+import { ModuleDependencyGraphButton } from "@/components/module-dependency-graph";
+import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "@/lib/format";
 import type { DetectionStrategy } from "@/server/module-detection.server";
