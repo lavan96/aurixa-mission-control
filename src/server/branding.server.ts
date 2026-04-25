@@ -199,6 +199,7 @@ export async function applyBrandToClone(
         last_drift_check_at: nowIso,
         drift_summary: null,
         error_message: null,
+        override_keys: merged.overrideKeys,
       },
       { onConflict: "clone_id" },
     );
