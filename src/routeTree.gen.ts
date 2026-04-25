@@ -20,6 +20,7 @@ import { Route as DriftRouteImport } from './routes/drift'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CloudflareRouteImport } from './routes/cloudflare'
 import { Route as CascadesRouteImport } from './routes/cascades'
+import { Route as BrandingRouteImport } from './routes/branding'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuditLogRouteImport } from './routes/audit-log'
 import { Route as IndexRouteImport } from './routes/index'
@@ -93,6 +94,11 @@ const CloudflareRoute = CloudflareRouteImport.update({
 const CascadesRoute = CascadesRouteImport.update({
   id: '/cascades',
   path: '/cascades',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BrandingRoute = BrandingRouteImport.update({
+  id: '/branding',
+  path: '/branding',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -197,6 +203,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/audit-log': typeof AuditLogRoute
   '/auth': typeof AuthRoute
+  '/branding': typeof BrandingRoute
   '/cascades': typeof CascadesRouteWithChildren
   '/cloudflare': typeof CloudflareRoute
   '/dashboard': typeof DashboardRoute
@@ -229,6 +236,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/audit-log': typeof AuditLogRoute
   '/auth': typeof AuthRoute
+  '/branding': typeof BrandingRoute
   '/cascades': typeof CascadesRouteWithChildren
   '/cloudflare': typeof CloudflareRoute
   '/dashboard': typeof DashboardRoute
@@ -261,6 +269,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/audit-log': typeof AuditLogRoute
   '/auth': typeof AuthRoute
+  '/branding': typeof BrandingRoute
   '/cascades': typeof CascadesRouteWithChildren
   '/cloudflare': typeof CloudflareRoute
   '/dashboard': typeof DashboardRoute
@@ -295,6 +304,7 @@ export interface FileRouteTypes {
     | '/'
     | '/audit-log'
     | '/auth'
+    | '/branding'
     | '/cascades'
     | '/cloudflare'
     | '/dashboard'
@@ -327,6 +337,7 @@ export interface FileRouteTypes {
     | '/'
     | '/audit-log'
     | '/auth'
+    | '/branding'
     | '/cascades'
     | '/cloudflare'
     | '/dashboard'
@@ -358,6 +369,7 @@ export interface FileRouteTypes {
     | '/'
     | '/audit-log'
     | '/auth'
+    | '/branding'
     | '/cascades'
     | '/cloudflare'
     | '/dashboard'
@@ -391,6 +403,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuditLogRoute: typeof AuditLogRoute
   AuthRoute: typeof AuthRoute
+  BrandingRoute: typeof BrandingRoute
   CascadesRoute: typeof CascadesRouteWithChildren
   CloudflareRoute: typeof CloudflareRoute
   DashboardRoute: typeof DashboardRoute
@@ -488,6 +501,13 @@ declare module '@tanstack/react-router' {
       path: '/cascades'
       fullPath: '/cascades'
       preLoaderRoute: typeof CascadesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/branding': {
+      id: '/branding'
+      path: '/branding'
+      fullPath: '/branding'
+      preLoaderRoute: typeof BrandingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -677,6 +697,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuditLogRoute: AuditLogRoute,
   AuthRoute: AuthRoute,
+  BrandingRoute: BrandingRoute,
   CascadesRoute: CascadesRouteWithChildren,
   CloudflareRoute: CloudflareRoute,
   DashboardRoute: DashboardRoute,
