@@ -1,0 +1,255 @@
+import { useCallback, useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  getCloneLibraryPins,
+  setCloneLibraryPin,
+  removeCloneLibraryPin,
+} from "@/server/library-admin.functions";
+import { getModuleLibrary } from "@/server/ai-detect-modules.functions";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { BookOpen, Loader2, Pin, X, CheckCircle2, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
+
+type LibraryEntry = {
+  id: string;
+  slug: string;
+  name: string;
+  version: number;
+  description: string | null;
+  approval_status: string;
+  is_latest: boolean;
+};
+
+type PinRow = {
+  id: string;
+  clone_id: string;
+  library_entry_id: string;
+  slug: string;
+  version: number;
+  pinned_at: string;
+  notes: string | null;
+};
+
+export function CloneLibraryPinsCard({ cloneId }: { cloneId: string }) {
+  const [pins, setPins] = useState<PinRow[]>([]);
+  const [allEntries, setAllEntries] = useState<LibraryEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const getPinsFn = useServerFn(getCloneLibraryPins);
+  const getLibraryFn = useServerFn(getModuleLibrary);
+  const setPinFn = useServerFn(setCloneLibraryPin);
+  const removePinFn = useServerFn(removeCloneLibraryPin);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    const [pinsRes, libRes] = await Promise.all([
+      getPinsFn({ data: { cloneId } }),
+      // Fetch ALL versions, not latestOnly, so users can pin any version
+      getLibraryFn({ data: { latestOnly: false } }),
+    ]);
+    if (pinsRes.ok) setPins(pinsRes.pins as PinRow[]);
+    if (libRes.ok) setAllEntries(libRes.entries as LibraryEntry[]);
+    setLoading(false);
+  }, [cloneId, getPinsFn, getLibraryFn]);
+
+  useEffect(() => { void refresh(); }, [refresh]);
+
+  // Group entries by slug, only approved
+  const approvedBySlug = new Map<string, LibraryEntry[]>();
+  for (const e of allEntries) {
+    if (e.approval_status !== "approved") continue;
+    if (!approvedBySlug.has(e.slug)) approvedBySlug.set(e.slug, []);
+    approvedBySlug.get(e.slug)!.push(e);
+  }
+  // Sort each slug's versions descending
+  for (const list of approvedBySlug.values()) {
+    list.sort((a, b) => b.version - a.version);
+  }
+
+  const pinSlugs = new Set(pins.map((p) => p.slug));
+  const unpinnedSlugs = Array.from(approvedBySlug.keys()).filter((s) => !pinSlugs.has(s));
+
+  const handleSet = async (libraryEntryId: string) => {
+    setBusy(libraryEntryId);
+    try {
+      const res = await setPinFn({ data: { cloneId, libraryEntryId } });
+      if (res.ok) {
+        toast.success("Pinned");
+        await refresh();
+      } else {
+        toast.error(res.error ?? "Pin failed");
+      }
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleRemove = async (slug: string) => {
+    setBusy(slug);
+    try {
+      const res = await removePinFn({ data: { cloneId, slug } });
+      if (res.ok) {
+        toast.success("Unpinned");
+        await refresh();
+      } else {
+        toast.error(res.error ?? "Remove failed");
+      }
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <BookOpen className="h-4 w-4 text-primary" /> Library version pins
+        </CardTitle>
+        <CardDescription className="text-xs">
+          Choose which approved library version this clone should install per module slug.
+          Only admin-approved versions are selectable.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {loading ? (
+          <div className="flex items-center justify-center py-6">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <>
+            {/* Pinned versions */}
+            <div className="space-y-2">
+              <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                pinned ({pins.length})
+              </div>
+              {pins.length === 0 ? (
+                <div className="rounded-md border border-dashed p-3 text-center text-xs text-muted-foreground">
+                  No version pins yet — pick one from the list below.
+                </div>
+              ) : (
+                pins.map((p) => {
+                  const versions = approvedBySlug.get(p.slug) ?? [];
+                  const isStale = versions.length > 0 && versions[0].version > p.version;
+                  return (
+                    <div
+                      key={p.id}
+                      className="flex items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-2"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Pin className="h-3 w-3 shrink-0 text-primary" />
+                        <code className="font-mono text-sm truncate">{p.slug}</code>
+                        <Badge variant="outline" className="font-mono text-[10px]">v{p.version}</Badge>
+                        {isStale && (
+                          <Badge variant="outline" className="font-mono text-[9px] border-warning/40 text-warning">
+                            <AlertCircle className="mr-1 h-2.5 w-2.5" /> v{versions[0].version} available
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {versions.length > 1 && (
+                          <Select
+                            value={String(p.library_entry_id)}
+                            onValueChange={(v) => handleSet(v)}
+                            disabled={busy === p.slug}
+                          >
+                            <SelectTrigger className="h-7 w-32 font-mono text-[10px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {versions.map((v) => (
+                                <SelectItem key={v.id} value={v.id} className="font-mono text-xs">
+                                  v{v.version} {v.is_latest && "(latest)"}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          onClick={() => handleRemove(p.slug)}
+                          disabled={busy === p.slug}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Available to pin */}
+            {unpinnedSlugs.length > 0 && (
+              <div className="space-y-2">
+                <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                  available ({unpinnedSlugs.length})
+                </div>
+                {unpinnedSlugs.map((slug) => {
+                  const versions = approvedBySlug.get(slug) ?? [];
+                  const latest = versions[0];
+                  if (!latest) return null;
+                  return (
+                    <div
+                      key={slug}
+                      className="flex items-center justify-between gap-2 rounded-md border border-border bg-card px-3 py-2"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <code className="font-mono text-sm truncate">{slug}</code>
+                        <Badge variant="outline" className="font-mono text-[10px]">{latest.name}</Badge>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {versions.length > 1 ? (
+                          <Select onValueChange={(v) => handleSet(v)} disabled={busy === slug}>
+                            <SelectTrigger className="h-7 w-32 font-mono text-[10px]">
+                              <SelectValue placeholder="pick version" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {versions.map((v) => (
+                                <SelectItem key={v.id} value={v.id} className="font-mono text-xs">
+                                  v{v.version} {v.is_latest && "(latest)"}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 font-mono text-[10px]"
+                            onClick={() => handleSet(latest.id)}
+                            disabled={busy === slug}
+                          >
+                            {busy === slug ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <><Pin className="mr-1 h-3 w-3" /> pin v{latest.version}</>
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {approvedBySlug.size === 0 && (
+              <div className="rounded-md border border-dashed p-4 text-center text-xs text-muted-foreground">
+                <CheckCircle2 className="mx-auto mb-1 h-4 w-4" />
+                No approved library entries available yet. Publish modules and have an admin approve them first.
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
