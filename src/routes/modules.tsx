@@ -9,7 +9,7 @@ import {
   AlertTriangle, Search, ChevronDown, BarChart3, GitBranch,
   FileWarning, CheckCircle2, Archive, Brain, Layers, Target,
   Rocket, XCircle, Loader2, ExternalLink, Library, BookOpen,
-  FileCode, Upload, Trash2,
+  FileCode, Upload, Trash2, ShieldCheck, ShieldX, Clock,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -32,10 +32,13 @@ import {
   resolveDriftAlert, getModuleIntelligence, approveAndDeploy, getModuleCascadeJobs,
   publishToLibrary, getModuleLibrary, removeFromLibrary,
 } from "@/server/ai-detect-modules.functions";
+import { setLibraryApprovalStatus } from "@/server/library-admin.functions";
 import { ModuleGridSkeleton } from "@/components/list-skeletons";
 import { EmptyState } from "@/components/empty-state";
 import { FleetModuleSyncCard } from "@/components/fleet-module-sync-card";
 import { ModuleCoverageStrip } from "@/components/module-coverage-strip";
+import { ModuleDependencyGraphButton } from "@/components/module-dependency-graph";
+import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "@/lib/format";
 import type { DetectionStrategy } from "@/server/module-detection.server";
@@ -953,6 +956,7 @@ function ModuleRow({
             </>
           ) : (
             <>
+              <ModuleDependencyGraphButton moduleId={m.id} />
               <Button size="sm" variant="ghost" onClick={() => setEdit(true)}>
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
@@ -1246,18 +1250,34 @@ function PublishToLibraryButton({ moduleIds }: { moduleIds: string[] }) {
   );
 }
 
-// ─── Module Library Panel ───────────────────────────────────────────
+// ─── Module Library Panel (with admin approval workflow) ──────────
 
 function ModuleLibraryPanel() {
+  const { user } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
   const [entries, setEntries] = useState<Array<Record<string, unknown>>>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
   const getLibraryFn = useServerFn(getModuleLibrary);
   const removeFn = useServerFn(removeFromLibrary);
+  const setApprovalFn = useServerFn(setLibraryApprovalStatus);
+
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return; }
+    void supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .then(({ data }) => {
+        const roles = (data ?? []).map((r) => r.role as string);
+        setIsAdmin(roles.includes("admin") || roles.includes("super_admin"));
+      });
+  }, [user]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await getLibraryFn({ data: { latestOnly: true } });
+      const res = await getLibraryFn({ data: { latestOnly: false } });
       if (res.ok) setEntries(res.entries as Array<Record<string, unknown>>);
     } finally {
       setLoading(false);
@@ -1268,70 +1288,148 @@ function ModuleLibraryPanel() {
 
   const remove = async (id: string) => {
     const res = await removeFn({ data: { entryId: id } });
-    if (res.ok) {
-      toast.success("Removed from library");
-      refresh();
-    } else {
-      toast.error(res.error ?? "Remove failed");
-    }
+    if (res.ok) { toast.success("Removed from library"); refresh(); }
+    else toast.error(res.error ?? "Remove failed");
+  };
+
+  const decide = async (id: string, status: "approved" | "rejected", reason?: string) => {
+    const res = await setApprovalFn({ data: { entryId: id, status, reason } });
+    if (res.ok) { toast.success(status === "approved" ? "Approved" : "Rejected"); refresh(); }
+    else toast.error(res.error ?? "Action failed");
+  };
+
+  const filtered = entries.filter((e) => {
+    if (filter === "all") return true;
+    return (e.approval_status as string) === filter;
+  });
+
+  const counts = {
+    all: entries.length,
+    pending: entries.filter((e) => e.approval_status === "pending").length,
+    approved: entries.filter((e) => e.approval_status === "approved").length,
+    rejected: entries.filter((e) => e.approval_status === "rejected").length,
   };
 
   if (loading) return <ModuleGridSkeleton count={3} />;
 
-  if (entries.length === 0) {
-    return (
-      <EmptyState
-        icon={<Library />}
-        title="Library is empty"
-        description="Approve modules in the Modules tab and use Publish to snapshot them as versioned library entries."
-      />
-    );
-  }
-
   return (
-    <div className="grid gap-3 md:grid-cols-2">
-      {entries.map((e) => {
-        const tags = (e.tags as string[]) ?? [];
-        const fileCount = (e.file_count as number) ?? 0;
-        return (
-          <Card key={e.id as string}>
-            <CardHeader className="pb-2">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <CardTitle className="font-mono text-sm flex items-center gap-2">
-                    <BookOpen className="h-3.5 w-3.5 text-primary" />
-                    {e.name as string}
-                    <Badge variant="outline" className="font-mono text-[10px]">v{e.version as number}</Badge>
-                  </CardTitle>
-                  <CardDescription className="mt-1 font-mono text-[11px]">
-                    {(e.entry_file as string) ?? (e.slug as string)}
-                  </CardDescription>
-                </div>
-                <Button size="sm" variant="ghost" onClick={() => remove(e.id as string)}>
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-2 pt-0">
-              {e.description ? (
-                <p className="text-xs text-muted-foreground line-clamp-2">{e.description as string}</p>
-              ) : null}
-              <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono text-muted-foreground">
-                <Badge variant="secondary" className="font-mono text-[10px]">
-                  <FileCode className="mr-1 h-3 w-3" />
-                  {fileCount} files
-                </Badge>
-                {e.route_path ? (
-                  <Badge variant="outline" className="font-mono text-[10px]">{e.route_path as string}</Badge>
-                ) : null}
-                {tags.map((t) => (
-                  <Badge key={t} variant="outline" className="font-mono text-[10px]">#{t}</Badge>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        {(["all", "pending", "approved", "rejected"] as const).map((f) => (
+          <Button
+            key={f}
+            size="sm"
+            variant={filter === f ? "default" : "outline"}
+            onClick={() => setFilter(f)}
+            className="font-mono text-[10px] uppercase tracking-wider"
+          >
+            {f} ({counts[f]})
+          </Button>
+        ))}
+        {!isAdmin && (
+          <Badge variant="outline" className="font-mono text-[10px] text-muted-foreground">
+            <ShieldX className="mr-1 h-3 w-3" /> Admin role required to approve entries
+          </Badge>
+        )}
+      </div>
+
+      {filtered.length === 0 ? (
+        <EmptyState
+          icon={<Library />}
+          title={filter === "all" ? "Library is empty" : `No ${filter} entries`}
+          description="Approve modules in the Modules tab and use Publish to snapshot them as versioned library entries. An admin must approve each snapshot before it can be pinned to a clone."
+        />
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2">
+          {filtered.map((e) => {
+            const tags = (e.tags as string[]) ?? [];
+            const fileCount = (e.file_count as number) ?? 0;
+            const status = (e.approval_status as string) ?? "pending";
+            const statusTone =
+              status === "approved" ? "border-success/40 text-success"
+              : status === "rejected" ? "border-destructive/40 text-destructive"
+              : "border-warning/40 text-warning";
+            const statusIcon =
+              status === "approved" ? <CheckCircle2 className="mr-1 h-3 w-3" />
+              : status === "rejected" ? <XCircle className="mr-1 h-3 w-3" />
+              : <Clock className="mr-1 h-3 w-3" />;
+            return (
+              <Card key={e.id as string}>
+                <CardHeader className="pb-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <CardTitle className="font-mono text-sm flex items-center gap-2">
+                        <BookOpen className="h-3.5 w-3.5 text-primary" />
+                        {e.name as string}
+                        <Badge variant="outline" className="font-mono text-[10px]">v{e.version as number}</Badge>
+                        {(e.is_latest as boolean) && (
+                          <Badge variant="secondary" className="font-mono text-[9px]">latest</Badge>
+                        )}
+                      </CardTitle>
+                      <CardDescription className="mt-1 font-mono text-[11px]">
+                        {(e.entry_file as string) ?? (e.slug as string)}
+                      </CardDescription>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge variant="outline" className={cn("font-mono text-[10px] uppercase", statusTone)}>
+                        {statusIcon}{status}
+                      </Badge>
+                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => remove(e.id as string)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-2 pt-0">
+                  {e.description ? (
+                    <p className="text-xs text-muted-foreground line-clamp-2">{e.description as string}</p>
+                  ) : null}
+                  <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono text-muted-foreground">
+                    <Badge variant="secondary" className="font-mono text-[10px]">
+                      <FileCode className="mr-1 h-3 w-3" />
+                      {fileCount} files
+                    </Badge>
+                    {e.route_path ? (
+                      <Badge variant="outline" className="font-mono text-[10px]">{e.route_path as string}</Badge>
+                    ) : null}
+                    {tags.map((t) => (
+                      <Badge key={t} variant="outline" className="font-mono text-[10px]">#{t}</Badge>
+                    ))}
+                  </div>
+                  {status === "rejected" && e.rejection_reason ? (
+                    <p className="text-[11px] text-destructive italic">Reason: {e.rejection_reason as string}</p>
+                  ) : null}
+
+                  {isAdmin && status !== "approved" && (
+                    <div className="flex justify-end gap-1.5 pt-1">
+                      {status === "pending" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const reason = prompt("Reject reason (optional)") ?? undefined;
+                            decide(e.id as string, "rejected", reason);
+                          }}
+                          className="border-destructive/40 text-destructive hover:bg-destructive/10"
+                        >
+                          <ShieldX className="mr-1 h-3 w-3" /> Reject
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        onClick={() => decide(e.id as string, "approved")}
+                        className="bg-success hover:bg-success/90"
+                      >
+                        <ShieldCheck className="mr-1 h-3 w-3" /> Approve
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

@@ -17,6 +17,7 @@ import { CloneDriftPolicyCard } from "@/components/clone-drift-policy-card";
 import { CloneHealthCard } from "@/components/clone-health-card";
 import { CloneBackendCard } from "@/components/clone-backend-card";
 import { bulkSyncModuleFn } from "@/server/module-sync.functions";
+import { CloneLibraryPinsCard } from "@/components/clone-library-pins";
 import type { DriftSuggestion } from "@/server/drift-suggestions.functions";
 
 export const Route = createFileRoute("/clones/$cloneId")({
@@ -327,6 +328,8 @@ function CloneDetail() {
         lastCheckedAt={clone.last_drift_check_at}
         onChange={load}
       />
+
+      <CloneLibraryPinsCard cloneId={cloneId} />
 
       <CloneDriftPolicyCard cloneId={cloneId} />
 
