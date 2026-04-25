@@ -78,9 +78,14 @@ import {
   Link2,
   Clock,
   PlayCircle,
+  Sparkles,
+  Layers,
 } from "lucide-react";
 import { formatDistanceToNow } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { BrandVersionTimelineDialog } from "@/components/branding/brand-version-timeline";
+import { CloneOverrideEditorDialog } from "@/components/branding/clone-override-editor";
+import { BrandPlaygroundDialog } from "@/components/branding/brand-playground";
 
 export const Route = createFileRoute("/branding")({
   component: () => (
@@ -203,6 +208,12 @@ function BrandingPage() {
   const [newSchedCron, setNewSchedCron] = useState("0 */6 * * *");
   const [newSchedProfile, setNewSchedProfile] = useState("");
   const [newSchedTarget, setNewSchedTarget] = useState<"drifted" | "all">("drifted");
+
+  // Phase 6 dialogs
+  const [versionsDialog, setVersionsDialog] = useState<BrandProfile | null>(null);
+  const [overridesDialog, setOverridesDialog] = useState<{ cloneId: string; cloneName: string } | null>(null);
+  const [playgroundOpen, setPlaygroundOpen] = useState(false);
+  const [playgroundProfileId, setPlaygroundProfileId] = useState<string | null>(null);
 
   const refreshSchedules = async () => {
     const { data } = await supabase
@@ -407,6 +418,16 @@ function BrandingPage() {
             <RefreshCw className={cn("mr-2 h-4 w-4", busy && "animate-spin")} />
             Scan drift
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setPlaygroundProfileId(null);
+              setPlaygroundOpen(true);
+            }}
+          >
+            <Sparkles className="mr-2 h-4 w-4" /> Playground
+          </Button>
           <Button variant="outline" size="sm" onClick={() => openBulk()}>
             <Rocket className="mr-2 h-4 w-4" /> Bulk apply
           </Button>
@@ -482,6 +503,11 @@ function BrandingPage() {
                 onPublishToggle={() => handlePublishToggle(p)}
                 onDelete={() => handleDelete(p)}
                 onApply={() => openBulk(p.id)}
+                onShowVersions={() => setVersionsDialog(p)}
+                onPlayground={() => {
+                  setPlaygroundProfileId(p.id);
+                  setPlaygroundOpen(true);
+                }}
               />
             ))}
           </div>
@@ -548,7 +574,24 @@ function BrandingPage() {
                           ? formatDistanceToNow(a.applied_at) + " ago"
                           : "Never"}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right space-x-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            setOverridesDialog({
+                              cloneId: a.clone_id,
+                              cloneName: a.clones?.name ?? a.clone_id.slice(0, 8),
+                            })
+                          }
+                        >
+                          <Layers className="mr-1 h-3 w-3" /> Overrides
+                          {a.clone_brand_profiles && (
+                            <span className="ml-1 text-[10px] text-muted-foreground">
+                              {/* override_keys count rendered if available */}
+                            </span>
+                          )}
+                        </Button>
                         <Button
                           size="sm"
                           variant="outline"
@@ -869,6 +912,37 @@ function BrandingPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Phase 6: Version timeline */}
+      {versionsDialog && (
+        <BrandVersionTimelineDialog
+          open
+          onClose={() => setVersionsDialog(null)}
+          profileId={versionsDialog.id}
+          profileName={versionsDialog.name}
+          currentVersion={versionsDialog.version}
+          onRolledBack={refresh}
+        />
+      )}
+
+      {/* Phase 6: Per-clone overrides */}
+      {overridesDialog && (
+        <CloneOverrideEditorDialog
+          open
+          onClose={() => setOverridesDialog(null)}
+          cloneId={overridesDialog.cloneId}
+          cloneName={overridesDialog.cloneName}
+          onSaved={refresh}
+        />
+      )}
+
+      {/* Phase 6: Theme playground */}
+      <BrandPlaygroundDialog
+        open={playgroundOpen}
+        onClose={() => setPlaygroundOpen(false)}
+        profiles={profiles}
+        initialProfileId={playgroundProfileId}
+      />
     </div>
   );
 }
@@ -882,6 +956,8 @@ function ProfileCard({
   onPublishToggle,
   onDelete,
   onApply,
+  onShowVersions,
+  onPlayground,
 }: {
   profile: BrandProfile;
   assignmentCount: number;
@@ -889,6 +965,8 @@ function ProfileCard({
   onPublishToggle: () => void;
   onDelete: () => void;
   onApply: () => void;
+  onShowVersions: () => void;
+  onPlayground: () => void;
 }) {
   const cfg = profile.brand_config as Record<string, string | null | undefined>;
   return (
@@ -950,6 +1028,12 @@ function ProfileCard({
           </Button>
           <Button size="sm" variant="outline" onClick={onPublishToggle}>
             {profile.status === "published" ? "Archive" : "Publish"}
+          </Button>
+          <Button size="sm" variant="outline" onClick={onShowVersions}>
+            <HistoryIcon className="mr-1 h-3 w-3" /> v{profile.version}
+          </Button>
+          <Button size="sm" variant="outline" onClick={onPlayground}>
+            <Sparkles className="mr-1 h-3 w-3" /> Tweak
           </Button>
           <Button size="sm" onClick={onApply} disabled={profile.status !== "published"}>
             <Rocket className="mr-1 h-3 w-3" /> Apply
