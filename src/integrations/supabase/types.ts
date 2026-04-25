@@ -360,6 +360,167 @@ export type Database = {
         }
         Relationships: []
       }
+      clone_brand_assignments: {
+        Row: {
+          applied_at: string | null
+          applied_by: string | null
+          applied_config_hash: string | null
+          clone_id: string
+          created_at: string
+          drift_summary: string | null
+          error_message: string | null
+          id: string
+          last_drift_check_at: string | null
+          overrides: Json
+          profile_id: string
+          status: Database["public"]["Enums"]["brand_assignment_status"]
+          updated_at: string
+        }
+        Insert: {
+          applied_at?: string | null
+          applied_by?: string | null
+          applied_config_hash?: string | null
+          clone_id: string
+          created_at?: string
+          drift_summary?: string | null
+          error_message?: string | null
+          id?: string
+          last_drift_check_at?: string | null
+          overrides?: Json
+          profile_id: string
+          status?: Database["public"]["Enums"]["brand_assignment_status"]
+          updated_at?: string
+        }
+        Update: {
+          applied_at?: string | null
+          applied_by?: string | null
+          applied_config_hash?: string | null
+          clone_id?: string
+          created_at?: string
+          drift_summary?: string | null
+          error_message?: string | null
+          id?: string
+          last_drift_check_at?: string | null
+          overrides?: Json
+          profile_id?: string
+          status?: Database["public"]["Enums"]["brand_assignment_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clone_brand_assignments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "clone_brand_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clone_brand_history: {
+        Row: {
+          cascade_event_id: string | null
+          clone_id: string
+          config_hash: string | null
+          config_snapshot: Json
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          id: string
+          profile_id: string | null
+          profile_version: number | null
+          pushed_by: string | null
+          status: Database["public"]["Enums"]["brand_assignment_status"]
+        }
+        Insert: {
+          cascade_event_id?: string | null
+          clone_id: string
+          config_hash?: string | null
+          config_snapshot?: Json
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          profile_id?: string | null
+          profile_version?: number | null
+          pushed_by?: string | null
+          status?: Database["public"]["Enums"]["brand_assignment_status"]
+        }
+        Update: {
+          cascade_event_id?: string | null
+          clone_id?: string
+          config_hash?: string | null
+          config_snapshot?: Json
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          profile_id?: string | null
+          profile_version?: number | null
+          pushed_by?: string | null
+          status?: Database["public"]["Enums"]["brand_assignment_status"]
+        }
+        Relationships: []
+      }
+      clone_brand_profiles: {
+        Row: {
+          asset_manifest: Json
+          brand_config: Json
+          config_hash: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_default: boolean
+          name: string
+          published_at: string | null
+          published_by: string | null
+          report_contact: Json
+          slug: string
+          status: Database["public"]["Enums"]["brand_profile_status"]
+          tags: string[]
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          asset_manifest?: Json
+          brand_config?: Json
+          config_hash?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          name: string
+          published_at?: string | null
+          published_by?: string | null
+          report_contact?: Json
+          slug: string
+          status?: Database["public"]["Enums"]["brand_profile_status"]
+          tags?: string[]
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          asset_manifest?: Json
+          brand_config?: Json
+          config_hash?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          name?: string
+          published_at?: string | null
+          published_by?: string | null
+          report_contact?: Json
+          slug?: string
+          status?: Database["public"]["Enums"]["brand_profile_status"]
+          tags?: string[]
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
       clone_drift_policies: {
         Row: {
           auto_apply_severity: Database["public"]["Enums"]["drift_severity"]
@@ -1275,6 +1436,8 @@ export type Database = {
     }
     Enums: {
       app_role: "super_admin" | "admin" | "operator" | "user"
+      brand_assignment_status: "pending" | "applied" | "drifted" | "failed"
+      brand_profile_status: "draft" | "published" | "archived"
       cascade_event_status:
         | "pending"
         | "running"
@@ -1448,6 +1611,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["super_admin", "admin", "operator", "user"],
+      brand_assignment_status: ["pending", "applied", "drifted", "failed"],
+      brand_profile_status: ["draft", "published", "archived"],
       cascade_event_status: [
         "pending",
         "running",
