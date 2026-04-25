@@ -21,6 +21,7 @@ import { refreshFleetDrift } from "@/server/drift-refresh.functions";
 import { runCascade } from "@/server/cascade-engine.functions";
 import { DriftListSkeleton } from "@/components/list-skeletons";
 import { FleetMigrationSyncCard } from "@/components/fleet-migration-sync-card";
+import { BulkLibraryPinsDialog } from "@/components/bulk-library-pins-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -303,6 +304,10 @@ function FleetManager() {
             <span className="mr-1.5 h-1.5 w-1.5 animate-pulse rounded-full bg-success" />
             background sweep active
           </Badge>
+          <BulkLibraryPinsDialog
+            clones={clones}
+            defaultSelected={Array.from(selected)}
+          />
           <Button size="sm" onClick={runScan} disabled={scanning}>
             <RefreshCw className={cn("mr-2 h-3.5 w-3.5", scanning && "animate-spin")} />
             {scanning ? "Scanning…" : "Scan now"}
