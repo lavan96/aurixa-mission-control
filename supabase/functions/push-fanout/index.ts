@@ -207,7 +207,7 @@ async function encryptPayload(
   // Import client's public key
   const clientKey = await crypto.subtle.importKey(
     "raw",
-    clientPublicKey,
+    clientPublicKey as BufferSource,
     { name: "ECDH", namedCurve: "P-256" },
     false,
     []
@@ -249,16 +249,16 @@ async function encryptPayload(
   // Encrypt with AES-128-GCM
   const aesKey = await crypto.subtle.importKey(
     "raw",
-    contentKey,
+    contentKey as BufferSource,
     { name: "AES-GCM" },
     false,
     ["encrypt"]
   );
 
   const encrypted = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv: nonce, tagLength: 128 },
+    { name: "AES-GCM", iv: nonce as BufferSource, tagLength: 128 },
     aesKey,
-    padded
+    padded as BufferSource
   );
 
   // Build aes128gcm header: salt(16) + rs(4) + idlen(1) + keyid(65)
@@ -280,7 +280,7 @@ async function encryptPayload(
 
   const aesKey2 = await crypto.subtle.importKey(
     "raw",
-    contentKey2,
+    contentKey2 as BufferSource,
     { name: "AES-GCM" },
     false,
     ["encrypt"]
@@ -292,9 +292,9 @@ async function encryptPayload(
   recordPadded[plaintextBytes.length] = 2; // delimiter
 
   const encryptedRecord = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv: nonce2, tagLength: 128 },
+    { name: "AES-GCM", iv: nonce2 as BufferSource, tagLength: 128 },
     aesKey2,
-    recordPadded
+    recordPadded as BufferSource
   );
 
   const result = new Uint8Array(header.length + encryptedRecord.byteLength);
@@ -343,16 +343,16 @@ async function hkdf(
 ): Promise<Uint8Array> {
   const key = await crypto.subtle.importKey(
     "raw",
-    salt.length > 0 ? salt : new Uint8Array(32),
+    (salt.length > 0 ? salt : new Uint8Array(32)) as BufferSource,
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]
   );
-  const prk = new Uint8Array(await crypto.subtle.sign("HMAC", key, ikm));
+  const prk = new Uint8Array(await crypto.subtle.sign("HMAC", key, ikm as BufferSource));
 
   const prkKey = await crypto.subtle.importKey(
     "raw",
-    prk,
+    prk as BufferSource,
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]
