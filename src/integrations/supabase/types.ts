@@ -445,6 +445,45 @@ export type Database = {
           },
         ]
       }
+      clone_library_pins: {
+        Row: {
+          clone_id: string
+          created_at: string
+          id: string
+          library_entry_id: string
+          notes: string | null
+          pinned_at: string
+          pinned_by: string | null
+          slug: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          clone_id: string
+          created_at?: string
+          id?: string
+          library_entry_id: string
+          notes?: string | null
+          pinned_at?: string
+          pinned_by?: string | null
+          slug: string
+          updated_at?: string
+          version: number
+        }
+        Update: {
+          clone_id?: string
+          created_at?: string
+          id?: string
+          library_entry_id?: string
+          notes?: string | null
+          pinned_at?: string
+          pinned_by?: string | null
+          slug?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
       clone_modules: {
         Row: {
           clone_id: string
@@ -820,6 +859,9 @@ export type Database = {
       }
       module_library: {
         Row: {
+          approval_status: string
+          approved_at: string | null
+          approved_by: string | null
           created_at: string
           description: string | null
           entry_file: string
@@ -831,6 +873,7 @@ export type Database = {
           name: string
           published_at: string
           published_by: string | null
+          rejection_reason: string | null
           route_path: string | null
           slug: string
           source_detection_run_id: string | null
@@ -840,6 +883,9 @@ export type Database = {
           version: number
         }
         Insert: {
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           description?: string | null
           entry_file: string
@@ -851,6 +897,7 @@ export type Database = {
           name: string
           published_at?: string
           published_by?: string | null
+          rejection_reason?: string | null
           route_path?: string | null
           slug: string
           source_detection_run_id?: string | null
@@ -860,6 +907,9 @@ export type Database = {
           version?: number
         }
         Update: {
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           description?: string | null
           entry_file?: string
@@ -871,6 +921,7 @@ export type Database = {
           name?: string
           published_at?: string
           published_by?: string | null
+          rejection_reason?: string | null
           route_path?: string | null
           slug?: string
           source_detection_run_id?: string | null
