@@ -908,6 +908,8 @@ function ProfileCard({
   onPublishToggle,
   onDelete,
   onApply,
+  onShowVersions,
+  onPlayground,
 }: {
   profile: BrandProfile;
   assignmentCount: number;
@@ -915,6 +917,8 @@ function ProfileCard({
   onPublishToggle: () => void;
   onDelete: () => void;
   onApply: () => void;
+  onShowVersions: () => void;
+  onPlayground: () => void;
 }) {
   const cfg = profile.brand_config as Record<string, string | null | undefined>;
   return (
