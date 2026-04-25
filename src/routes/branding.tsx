@@ -418,6 +418,16 @@ function BrandingPage() {
             <RefreshCw className={cn("mr-2 h-4 w-4", busy && "animate-spin")} />
             Scan drift
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setPlaygroundProfileId(null);
+              setPlaygroundOpen(true);
+            }}
+          >
+            <Sparkles className="mr-2 h-4 w-4" /> Playground
+          </Button>
           <Button variant="outline" size="sm" onClick={() => openBulk()}>
             <Rocket className="mr-2 h-4 w-4" /> Bulk apply
           </Button>
