@@ -574,7 +574,24 @@ function BrandingPage() {
                           ? formatDistanceToNow(a.applied_at) + " ago"
                           : "Never"}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right space-x-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            setOverridesDialog({
+                              cloneId: a.clone_id,
+                              cloneName: a.clones?.name ?? a.clone_id.slice(0, 8),
+                            })
+                          }
+                        >
+                          <Layers className="mr-1 h-3 w-3" /> Overrides
+                          {a.clone_brand_profiles && (
+                            <span className="ml-1 text-[10px] text-muted-foreground">
+                              {/* override_keys count rendered if available */}
+                            </span>
+                          )}
+                        </Button>
                         <Button
                           size="sm"
                           variant="outline"
