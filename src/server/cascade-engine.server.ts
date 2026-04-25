@@ -290,19 +290,30 @@ async function processClone(args: {
     // This lets a fork stay on v3 of "checkout" while the prime is on v5.
     const { data: pins } = await supabase
       .from("clone_library_pins")
-      .select("slug, version, library_entry_id, module_library:library_entry_id(file_paths)")
+      .select("slug, version, library_entry_id")
       .eq("clone_id", clone.id);
 
-    type PinRow = {
+    const pinRows = (pins ?? []) as Array<{
       slug: string;
       version: number;
       library_entry_id: string;
-      module_library: { file_paths: string[] | null } | null;
-    };
+    }>;
+
     const pinMap = new Map<string, { version: number; files: string[] }>();
-    for (const p of (pins ?? []) as PinRow[]) {
-      const files = p.module_library?.file_paths ?? [];
-      if (files.length > 0) pinMap.set(p.slug, { version: p.version, files });
+    if (pinRows.length > 0) {
+      const entryIds = pinRows.map((p) => p.library_entry_id);
+      const { data: entries } = await supabase
+        .from("module_library")
+        .select("id, file_paths")
+        .in("id", entryIds);
+      const fileMap = new Map<string, string[]>();
+      for (const e of (entries ?? []) as Array<{ id: string; file_paths: string[] | null }>) {
+        fileMap.set(e.id, e.file_paths ?? []);
+      }
+      for (const p of pinRows) {
+        const files = fileMap.get(p.library_entry_id) ?? [];
+        if (files.length > 0) pinMap.set(p.slug, { version: p.version, files });
+      }
     }
 
     const honored: string[] = [];
