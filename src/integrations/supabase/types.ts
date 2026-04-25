@@ -1315,6 +1315,8 @@ export type Database = {
         | "cascade_awaiting_approval"
         | "cascade_approved"
         | "cascade_rejected"
+        | "library_entry_approved"
+        | "library_entry_rejected"
       notification_severity: "info" | "success" | "warning" | "error"
       provisioning_method: "fork" | "template" | "clone"
       sync_status: "in_sync" | "behind" | "cascading" | "failed" | "unknown"
@@ -1489,6 +1491,8 @@ export const Constants = {
         "cascade_awaiting_approval",
         "cascade_approved",
         "cascade_rejected",
+        "library_entry_approved",
+        "library_entry_rejected",
       ],
       notification_severity: ["info", "success", "warning", "error"],
       provisioning_method: ["fork", "template", "clone"],
