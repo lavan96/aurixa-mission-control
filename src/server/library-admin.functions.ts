@@ -1,9 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Database } from "@/integrations/supabase/types";
 
 // ─── Library approval workflow (admin-only) ────────────────────────
 
-async function isAdmin(supabase: ReturnType<typeof requireSupabaseAuth> extends never ? never : any, userId: string) {
+async function isAdmin(supabase: SupabaseClient<Database>, userId: string) {
   const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
   if (data === true) return true;
   const { data: sa } = await supabase.rpc("has_role", { _user_id: userId, _role: "super_admin" });
@@ -28,12 +30,12 @@ export const setLibraryApprovalStatus = createServerFn({ method: "POST" })
     const admin = await isAdmin(context.supabase, context.userId);
     if (!admin) return { ok: false as const, error: "Admin role required to approve library entries" };
 
-    const update: Record<string, unknown> = {
+    const update = {
       approval_status: data.status,
       approved_by: data.status === "approved" ? context.userId : null,
       approved_at: data.status === "approved" ? new Date().toISOString() : null,
       rejection_reason: data.status === "rejected" ? (data.reason ?? null) : null,
-    };
+    } satisfies Database["public"]["Tables"]["module_library"]["Update"];
 
     const { error } = await context.supabase
       .from("module_library")
