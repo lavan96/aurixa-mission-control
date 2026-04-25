@@ -209,6 +209,12 @@ function BrandingPage() {
   const [newSchedProfile, setNewSchedProfile] = useState("");
   const [newSchedTarget, setNewSchedTarget] = useState<"drifted" | "all">("drifted");
 
+  // Phase 6 dialogs
+  const [versionsDialog, setVersionsDialog] = useState<BrandProfile | null>(null);
+  const [overridesDialog, setOverridesDialog] = useState<{ cloneId: string; cloneName: string } | null>(null);
+  const [playgroundOpen, setPlaygroundOpen] = useState(false);
+  const [playgroundProfileId, setPlaygroundProfileId] = useState<string | null>(null);
+
   const refreshSchedules = async () => {
     const { data } = await supabase
       .from("cascade_schedules" as never)
