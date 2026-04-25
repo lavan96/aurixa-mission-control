@@ -10,6 +10,7 @@ import {
   type RepoRef,
 } from "./github-app.server";
 import { isBlockedByApproval } from "./cascade-approvals.server";
+import { validateClonePinsServer } from "./library-validation.server";
 
 type CascadeResultUpdate = Database["public"]["Tables"]["cascade_results"]["Update"];
 type SupabaseLike = SupabaseClient<Database>;
@@ -111,7 +112,23 @@ export async function executeCascade(
   let opened = 0;
   let skipped = 0;
 
-  for (const r of queuedRes.data ?? []) {
+  // Pre-flight: validate clone library pins. If any pin references a missing,
+  // unapproved, or empty library entry, fail that clone's queued result early
+  // so the cascade can't push partial/wrong file sets.
+  const queuedRows = queuedRes.data ?? [];
+  const cloneIds = queuedRows
+    .map((r) => (r as { clones: { id: string } | null }).clones?.id)
+    .filter((v): v is string => Boolean(v));
+  const pinCheck = await validateClonePinsServer(supabase, cloneIds);
+  const blockedClones = new Map<string, string[]>();
+  if (pinCheck.ok && pinCheck.issues.length > 0) {
+    for (const issue of pinCheck.issues) {
+      if (issue.severity !== "error") continue;
+      const list = blockedClones.get(issue.cloneId) ?? [];
+      list.push(`${issue.slug}@v${issue.version}: ${issue.reason}`);
+      blockedClones.set(issue.cloneId, list);
+    }
+  }
     const clone = (r as { clones: unknown }).clones as
       | {
           id: string;
