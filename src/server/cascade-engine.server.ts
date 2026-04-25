@@ -276,18 +276,50 @@ async function processClone(args: {
     : null;
 
   let installedGlobs: string[];
+  let pinSummary: string | null = null;
   if (overrideGlobs && overrideGlobs.length > 0) {
     installedGlobs = overrideGlobs;
   } else {
     const { data: cmods } = await supabase
       .from("clone_modules")
-      .select("modules(file_globs)")
+      .select("modules(slug, file_globs)")
       .eq("clone_id", clone.id);
 
+    // Library pins: when a clone pins a specific library version for a module
+    // slug, swap that module's live globs for the pinned entry's file_paths.
+    // This lets a fork stay on v3 of "checkout" while the prime is on v5.
+    const { data: pins } = await supabase
+      .from("clone_library_pins")
+      .select("slug, version, library_entry_id, module_library:library_entry_id(file_paths)")
+      .eq("clone_id", clone.id);
+
+    type PinRow = {
+      slug: string;
+      version: number;
+      library_entry_id: string;
+      module_library: { file_paths: string[] | null } | null;
+    };
+    const pinMap = new Map<string, { version: number; files: string[] }>();
+    for (const p of (pins ?? []) as PinRow[]) {
+      const files = p.module_library?.file_paths ?? [];
+      if (files.length > 0) pinMap.set(p.slug, { version: p.version, files });
+    }
+
+    const honored: string[] = [];
     installedGlobs = (cmods ?? []).flatMap(
-      (cm: { modules: { file_globs: string[] | null } | null }) =>
-        cm.modules?.file_globs ?? [],
+      (cm: { modules: { slug: string | null; file_globs: string[] | null } | null }) => {
+        const slug = cm.modules?.slug ?? null;
+        if (slug && pinMap.has(slug)) {
+          const pin = pinMap.get(slug)!;
+          honored.push(`${slug}@v${pin.version}`);
+          return pin.files;
+        }
+        return cm.modules?.file_globs ?? [];
+      },
     );
+    if (honored.length > 0) {
+      pinSummary = `pins: ${honored.join(", ")}`;
+    }
   }
 
   if (installedGlobs.length === 0) {
