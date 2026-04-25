@@ -12,6 +12,8 @@ import { hashBrandBundle } from "./branding/hash";
 import { buildApplySql } from "./branding/sql";
 import { mirrorAssetsToClone } from "./branding/mirror";
 import { runBrandDriftScan } from "./branding/drift";
+import { mergeOverrides, sanitizeOverrides } from "./branding/overrides";
+import { registerAssetVariants } from "./branding/variants";
 import type {
   ApplyBrandResult,
   BrandAsset,
@@ -26,6 +28,20 @@ export { hashBrandBundle } from "./branding/hash";
 export { buildApplySql } from "./branding/sql";
 export { mirrorAssetsToClone } from "./branding/mirror";
 export { runBrandDriftScan } from "./branding/drift";
+export { mergeOverrides, sanitizeOverrides } from "./branding/overrides";
+export type { CloneOverrides, MergedBundle } from "./branding/overrides";
+export {
+  registerAssetVariants,
+  clearAssetVariants,
+  variantsForAsset,
+  buildTransformUrl,
+} from "./branding/variants";
+export type { VariantSpec } from "./branding/variants";
+export {
+  listVersionsForProfile,
+  rollbackProfileToVersion,
+} from "./branding/versions";
+export type { BrandVersion } from "./branding/versions";
 export type {
   ApplyBrandResult,
   BrandAsset,
