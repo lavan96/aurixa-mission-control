@@ -419,11 +419,13 @@ async function processClone(args: {
     };
   }
 
-  // Build the "diff_summary" — first 5 file paths + count of remainder
+  // Build the "diff_summary" — first 5 file paths + count of remainder.
+  // If any library pins were honored, surface that in the summary too.
   const summaryFiles = treeEntries.slice(0, 5).map((t) => t.path);
   const summarySuffix =
     treeEntries.length > 5 ? ` (+${treeEntries.length - 5} more)` : "";
-  const fileSummary = `${summaryFiles.join(", ")}${summarySuffix}`;
+  const pinSuffix = pinSummary ? ` · ${pinSummary}` : "";
+  const fileSummary = `${summaryFiles.join(", ")}${summarySuffix}${pinSuffix}`;
 
   const { data: cloneCommit } = await octokit.git.getCommit({
     owner: cloneRef.owner,
