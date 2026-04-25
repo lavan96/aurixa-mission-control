@@ -912,6 +912,37 @@ function BrandingPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Phase 6: Version timeline */}
+      {versionsDialog && (
+        <BrandVersionTimelineDialog
+          open
+          onClose={() => setVersionsDialog(null)}
+          profileId={versionsDialog.id}
+          profileName={versionsDialog.name}
+          currentVersion={versionsDialog.version}
+          onRolledBack={refresh}
+        />
+      )}
+
+      {/* Phase 6: Per-clone overrides */}
+      {overridesDialog && (
+        <CloneOverrideEditorDialog
+          open
+          onClose={() => setOverridesDialog(null)}
+          cloneId={overridesDialog.cloneId}
+          cloneName={overridesDialog.cloneName}
+          onSaved={refresh}
+        />
+      )}
+
+      {/* Phase 6: Theme playground */}
+      <BrandPlaygroundDialog
+        open={playgroundOpen}
+        onClose={() => setPlaygroundOpen(false)}
+        profiles={profiles}
+        initialProfileId={playgroundProfileId}
+      />
     </div>
   );
 }
