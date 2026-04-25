@@ -129,6 +129,8 @@ export async function executeCascade(
       blockedClones.set(issue.cloneId, list);
     }
   }
+
+  for (const r of queuedRows) {
     const clone = (r as { clones: unknown }).clones as
       | {
           id: string;
@@ -149,6 +151,21 @@ export async function executeCascade(
         })
         .eq("id", r.id);
       skipped++;
+      continue;
+    }
+
+    const pinErrors = blockedClones.get(clone.id);
+    if (pinErrors && pinErrors.length > 0) {
+      await supabase
+        .from("cascade_results")
+        .update({
+          status: "failed",
+          error_message: `Pin validation failed: ${pinErrors.join("; ")}`,
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", r.id);
+      await supabase.from("clones").update({ sync_status: "failed" }).eq("id", clone.id);
+      failed++;
       continue;
     }
 
