@@ -26,7 +26,19 @@ export const listBrandVersions = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }) => {
     const versions = await listVersionsForProfile(context.supabase, data.profileId);
-    return { ok: true as const, versions: versions as unknown as Array<Record<string, unknown>> };
+    // Round-trip through JSON to satisfy server-fn serialisation contract.
+    return {
+      ok: true as const,
+      versions: JSON.parse(JSON.stringify(versions)) as Array<{
+        id: string;
+        profile_id: string;
+        version: number;
+        config_hash: string | null;
+        notes: string | null;
+        published_by: string | null;
+        published_at: string;
+      }>,
+    };
   });
 
 export const rollbackBrandProfile = createServerFn({ method: "POST" })
