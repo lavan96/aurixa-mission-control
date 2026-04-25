@@ -503,6 +503,11 @@ function BrandingPage() {
                 onPublishToggle={() => handlePublishToggle(p)}
                 onDelete={() => handleDelete(p)}
                 onApply={() => openBulk(p.id)}
+                onShowVersions={() => setVersionsDialog(p)}
+                onPlayground={() => {
+                  setPlaygroundProfileId(p.id);
+                  setPlaygroundOpen(true);
+                }}
               />
             ))}
           </div>
