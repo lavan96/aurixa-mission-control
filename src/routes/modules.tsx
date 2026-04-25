@@ -1253,14 +1253,26 @@ function PublishToLibraryButton({ moduleIds }: { moduleIds: string[] }) {
 // ─── Module Library Panel (with admin approval workflow) ──────────
 
 function ModuleLibraryPanel() {
-  const { roles } = useAuth();
-  const isAdmin = roles.includes("admin") || roles.includes("super_admin");
+  const { user } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
   const [entries, setEntries] = useState<Array<Record<string, unknown>>>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
   const getLibraryFn = useServerFn(getModuleLibrary);
   const removeFn = useServerFn(removeFromLibrary);
   const setApprovalFn = useServerFn(setLibraryApprovalStatus);
+
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return; }
+    void supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .then(({ data }) => {
+        const roles = (data ?? []).map((r) => r.role as string);
+        setIsAdmin(roles.includes("admin") || roles.includes("super_admin"));
+      });
+  }, [user]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
