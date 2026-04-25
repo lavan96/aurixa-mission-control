@@ -6,6 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { executeCascade } from "./cascade-engine.server";
 import { bulkSyncModule } from "./module-sync.server";
+import { applyBrandToClone } from "./branding.server";
 import { nextCronTick } from "./cron";
 import { assessBlastRadius } from "./cascade-approvals.server";
 import { unknownTable, type CascadeScheduleRow } from "./_phase3d-types";
@@ -76,6 +77,8 @@ async function executeOne(
   try {
     if (sched.kind === "fleet_cascade") {
       outcome = await runFleetCascade(supabase, sched, initiatedBy);
+    } else if (sched.kind === "brand_sync") {
+      outcome = await runBrandSyncSchedule(supabase, sched, initiatedBy);
     } else {
       outcome = await runModuleSyncSchedule(supabase, sched, initiatedBy);
     }
