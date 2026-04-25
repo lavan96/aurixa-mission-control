@@ -199,7 +199,7 @@ function BrandingPage() {
 
   const handleScanDrift = async () => {
     setBusy(true);
-    const r = await driftFn({});
+    const r = await driftFn({ data: {} });
     setBusy(false);
     if (r.ok) {
       toast.success(`Scanned ${r.scanned}, found ${r.drifted.length} drifted`);
