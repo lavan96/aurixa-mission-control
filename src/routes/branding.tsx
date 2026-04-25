@@ -181,6 +181,10 @@ function BrandingPage() {
   const applyFn = useServerFn(applyBrandProfile);
   const driftFn = useServerFn(checkBrandDrift);
   const deleteFn = useServerFn(deleteBrandProfile);
+  const createScheduleFn = useServerFn(createSchedule);
+  const updateScheduleFn = useServerFn(updateSchedule);
+  const deleteScheduleFn = useServerFn(deleteSchedule);
+  const runScheduleFn = useServerFn(runScheduleNow);
 
   const { data: clones } = useClones();
   const [profiles, setProfiles] = useState<BrandProfile[]>([]);
@@ -193,6 +197,21 @@ function BrandingPage() {
   const [bulkProfileId, setBulkProfileId] = useState<string>("");
   const [bulkCloneIds, setBulkCloneIds] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
+  const [schedules, setSchedules] = useState<BrandSchedule[]>([]);
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [newSchedName, setNewSchedName] = useState("");
+  const [newSchedCron, setNewSchedCron] = useState("0 */6 * * *");
+  const [newSchedProfile, setNewSchedProfile] = useState("");
+  const [newSchedTarget, setNewSchedTarget] = useState<"drifted" | "all">("drifted");
+
+  const refreshSchedules = async () => {
+    const { data } = await supabase
+      .from("cascade_schedules" as never)
+      .select("id, name, cron_expression, enabled, scope_filter, last_run_at, next_run_at, notes")
+      .eq("kind", "brand_sync")
+      .order("created_at", { ascending: false });
+    setSchedules(((data as unknown) as BrandSchedule[]) ?? []);
+  };
 
   const refresh = async () => {
     setLoading(true);
@@ -209,7 +228,65 @@ function BrandingPage() {
 
   useEffect(() => {
     refresh();
+    refreshSchedules();
   }, []);
+
+  const handleCreateSchedule = async () => {
+    if (!newSchedName.trim() || !newSchedProfile) {
+      toast.error("Name and profile required");
+      return;
+    }
+    const r = await createScheduleFn({
+      data: {
+        name: newSchedName.trim(),
+        kind: "brand_sync",
+        cron_expression: newSchedCron,
+        mode: "auto_merge",
+        scope_filter: { profile_id: newSchedProfile, clone_ids: newSchedTarget },
+        enabled: true,
+      },
+    });
+    if (r.ok) {
+      toast.success("Brand sync schedule created");
+      setScheduleDialogOpen(false);
+      setNewSchedName("");
+      refreshSchedules();
+    } else {
+      toast.error(r.error ?? "Create failed");
+    }
+  };
+
+  const handleRunSchedule = async (id: string) => {
+    setBusy(true);
+    const r = await runScheduleFn({ data: { id } });
+    setBusy(false);
+    if (r.ok) {
+      toast.success(`Ran "${r.name}"`);
+      refresh();
+      refreshSchedules();
+    } else {
+      toast.error(r.error ?? "Run failed");
+    }
+  };
+
+  const handleToggleSchedule = async (s: BrandSchedule) => {
+    const r = await updateScheduleFn({
+      data: { id: s.id, patch: { enabled: !s.enabled } },
+    });
+    if (r.ok) refreshSchedules();
+    else toast.error(r.error ?? "Toggle failed");
+  };
+
+  const handleDeleteSchedule = async (s: BrandSchedule) => {
+    if (!confirm(`Delete schedule "${s.name}"?`)) return;
+    const r = await deleteScheduleFn({ data: { id: s.id } });
+    if (r.ok) {
+      toast.success("Schedule deleted");
+      refreshSchedules();
+    } else {
+      toast.error(r.error ?? "Delete failed");
+    }
+  };
 
   const profilesById = useMemo(
     () => new Map(profiles.map((p) => [p.id, p])),
