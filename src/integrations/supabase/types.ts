@@ -360,6 +360,56 @@ export type Database = {
         }
         Relationships: []
       }
+      clone_brand_asset_variants: {
+        Row: {
+          byte_size: number | null
+          content_type: string
+          generated_at: string
+          height: number | null
+          id: string
+          profile_id: string
+          public_url: string
+          source_path: string
+          variant_kind: string
+          variant_path: string
+          width: number | null
+        }
+        Insert: {
+          byte_size?: number | null
+          content_type: string
+          generated_at?: string
+          height?: number | null
+          id?: string
+          profile_id: string
+          public_url: string
+          source_path: string
+          variant_kind: string
+          variant_path: string
+          width?: number | null
+        }
+        Update: {
+          byte_size?: number | null
+          content_type?: string
+          generated_at?: string
+          height?: number | null
+          id?: string
+          profile_id?: string
+          public_url?: string
+          source_path?: string
+          variant_kind?: string
+          variant_path?: string
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clone_brand_asset_variants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "clone_brand_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clone_brand_assignments: {
         Row: {
           applied_at: string | null
@@ -371,6 +421,7 @@ export type Database = {
           error_message: string | null
           id: string
           last_drift_check_at: string | null
+          override_keys: string[]
           overrides: Json
           profile_id: string
           status: Database["public"]["Enums"]["brand_assignment_status"]
@@ -386,6 +437,7 @@ export type Database = {
           error_message?: string | null
           id?: string
           last_drift_check_at?: string | null
+          override_keys?: string[]
           overrides?: Json
           profile_id: string
           status?: Database["public"]["Enums"]["brand_assignment_status"]
@@ -401,6 +453,7 @@ export type Database = {
           error_message?: string | null
           id?: string
           last_drift_check_at?: string | null
+          override_keys?: string[]
           overrides?: Json
           profile_id?: string
           status?: Database["public"]["Enums"]["brand_assignment_status"]
@@ -474,6 +527,7 @@ export type Database = {
           name: string
           published_at: string | null
           published_by: string | null
+          published_version_id: string | null
           report_contact: Json
           slug: string
           status: Database["public"]["Enums"]["brand_profile_status"]
@@ -493,6 +547,7 @@ export type Database = {
           name: string
           published_at?: string | null
           published_by?: string | null
+          published_version_id?: string | null
           report_contact?: Json
           slug: string
           status?: Database["public"]["Enums"]["brand_profile_status"]
@@ -512,6 +567,7 @@ export type Database = {
           name?: string
           published_at?: string | null
           published_by?: string | null
+          published_version_id?: string | null
           report_contact?: Json
           slug?: string
           status?: Database["public"]["Enums"]["brand_profile_status"]
@@ -519,7 +575,65 @@ export type Database = {
           updated_at?: string
           version?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "clone_brand_profiles_published_version_id_fkey"
+            columns: ["published_version_id"]
+            isOneToOne: false
+            referencedRelation: "clone_brand_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clone_brand_versions: {
+        Row: {
+          asset_manifest: Json
+          brand_config: Json
+          config_hash: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          profile_id: string
+          published_at: string
+          published_by: string | null
+          report_contact: Json
+          version: number
+        }
+        Insert: {
+          asset_manifest?: Json
+          brand_config?: Json
+          config_hash?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          profile_id: string
+          published_at?: string
+          published_by?: string | null
+          report_contact?: Json
+          version: number
+        }
+        Update: {
+          asset_manifest?: Json
+          brand_config?: Json
+          config_hash?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          profile_id?: string
+          published_at?: string
+          published_by?: string | null
+          report_contact?: Json
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clone_brand_versions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "clone_brand_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       clone_drift_policies: {
         Row: {
