@@ -18,6 +18,7 @@ import {
   Activity,
   TreePine,
   Menu,
+  Palette,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "@/components/notifications-bell";
@@ -38,6 +39,7 @@ const NAV = [
   { to: "/cascades", label: "Cascades", icon: Waves },
   { to: "/schedules", label: "Schedules", icon: CalendarClock },
   { to: "/drift", label: "Drift", icon: Sparkles },
+  { to: "/branding", label: "Branding", icon: Palette },
   { to: "/fleet-manager", label: "AI Manager", icon: Bot },
   { to: "/audit-log", label: "Audit Log", icon: ScrollText },
   { to: "/cloudflare", label: "Cloudflare", icon: Shield },
