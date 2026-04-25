@@ -4,6 +4,7 @@ import {
   getCloneLibraryPins,
   setCloneLibraryPin,
   removeCloneLibraryPin,
+  validateClonePins,
 } from "@/server/library-admin.functions";
 import { getModuleLibrary } from "@/server/ai-detect-modules.functions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { BookOpen, Loader2, Pin, X, CheckCircle2, AlertCircle } from "lucide-react";
+import { BookOpen, Loader2, Pin, X, CheckCircle2, AlertCircle, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
 type LibraryEntry = {
@@ -40,11 +41,14 @@ export function CloneLibraryPinsCard({ cloneId }: { cloneId: string }) {
   const [allEntries, setAllEntries] = useState<LibraryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  const [validating, setValidating] = useState(false);
+  const [issuesBySlug, setIssuesBySlug] = useState<Map<string, string>>(new Map());
 
   const getPinsFn = useServerFn(getCloneLibraryPins);
   const getLibraryFn = useServerFn(getModuleLibrary);
   const setPinFn = useServerFn(setCloneLibraryPin);
   const removePinFn = useServerFn(removeCloneLibraryPin);
+  const validateFn = useServerFn(validateClonePins);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -105,16 +109,56 @@ export function CloneLibraryPinsCard({ cloneId }: { cloneId: string }) {
     }
   };
 
+  const handleValidate = async () => {
+    setValidating(true);
+    try {
+      const res = await validateFn({ data: { cloneIds: [cloneId] } });
+      const next = new Map<string, string>();
+      if (res.ok) {
+        for (const i of res.issues as Array<{ slug: string; reason: string }>) {
+          next.set(i.slug, i.reason);
+        }
+        setIssuesBySlug(next);
+        if (next.size === 0) toast.success(`All ${res.checked ?? 0} pin(s) healthy`);
+        else toast.warning(`${next.size} pin issue(s)`);
+      } else {
+        toast.error(res.error ?? "Validation failed");
+      }
+    } finally {
+      setValidating(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <BookOpen className="h-4 w-4 text-primary" /> Library version pins
-        </CardTitle>
-        <CardDescription className="text-xs">
-          Choose which approved library version this clone should install per module slug.
-          Only admin-approved versions are selectable.
-        </CardDescription>
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <BookOpen className="h-4 w-4 text-primary" /> Library version pins
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Choose which approved library version this clone should install per module slug.
+              Only admin-approved versions are selectable.
+            </CardDescription>
+          </div>
+          {pins.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 shrink-0 px-2 text-[10px]"
+              onClick={handleValidate}
+              disabled={validating}
+            >
+              {validating ? (
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              ) : (
+                <ShieldCheck className="mr-1 h-3 w-3" />
+              )}
+              validate
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {loading ? (
@@ -136,50 +180,64 @@ export function CloneLibraryPinsCard({ cloneId }: { cloneId: string }) {
                 pins.map((p) => {
                   const versions = approvedBySlug.get(p.slug) ?? [];
                   const isStale = versions.length > 0 && versions[0].version > p.version;
+                  const issue = issuesBySlug.get(p.slug);
                   return (
                     <div
                       key={p.id}
-                      className="flex items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-2"
+                      className={`rounded-md border bg-surface px-3 py-2 ${issue ? "border-destructive/50" : "border-border"}`}
                     >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Pin className="h-3 w-3 shrink-0 text-primary" />
-                        <code className="font-mono text-sm truncate">{p.slug}</code>
-                        <Badge variant="outline" className="font-mono text-[10px]">v{p.version}</Badge>
-                        {isStale && (
-                          <Badge variant="outline" className="font-mono text-[9px] border-warning/40 text-warning">
-                            <AlertCircle className="mr-1 h-2.5 w-2.5" /> v{versions[0].version} available
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        {versions.length > 1 && (
-                          <Select
-                            value={String(p.library_entry_id)}
-                            onValueChange={(v) => handleSet(v)}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Pin className="h-3 w-3 shrink-0 text-primary" />
+                          <code className="font-mono text-sm truncate">{p.slug}</code>
+                          <Badge variant="outline" className="font-mono text-[10px]">v{p.version}</Badge>
+                          {isStale && (
+                            <Badge variant="outline" className="font-mono text-[9px] border-warning/40 text-warning">
+                              <AlertCircle className="mr-1 h-2.5 w-2.5" /> v{versions[0].version} available
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {versions.length > 1 && (
+                            <Select
+                              value={String(p.library_entry_id)}
+                              onValueChange={(v) => handleSet(v)}
+                              disabled={busy === p.slug}
+                            >
+                              <SelectTrigger className="h-7 w-32 font-mono text-[10px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {versions.map((v) => (
+                                  <SelectItem key={v.id} value={v.id} className="font-mono text-xs">
+                                    v{v.version} {v.is_latest && "(latest)"}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                            onClick={() => handleRemove(p.slug)}
                             disabled={busy === p.slug}
                           >
-                            <SelectTrigger className="h-7 w-32 font-mono text-[10px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {versions.map((v) => (
-                                <SelectItem key={v.id} value={v.id} className="font-mono text-xs">
-                                  v{v.version} {v.is_latest && "(latest)"}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                          onClick={() => handleRemove(p.slug)}
-                          disabled={busy === p.slug}
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
+                      {issue && (
+                        <div className="mt-1.5 flex items-start gap-1 text-[10px] text-destructive">
+                          <AlertCircle className="mt-0.5 h-2.5 w-2.5 shrink-0" />
+                          <span>{issue}</span>
+                        </div>
+                      )}
+                      {p.notes && (
+                        <div className="mt-1 text-[10px] text-muted-foreground italic truncate">
+                          “{p.notes}”
+                        </div>
+                      )}
                     </div>
                   );
                 })
