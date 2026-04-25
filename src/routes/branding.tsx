@@ -78,9 +78,14 @@ import {
   Link2,
   Clock,
   PlayCircle,
+  Sparkles,
+  Layers,
 } from "lucide-react";
 import { formatDistanceToNow } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { BrandVersionTimelineDialog } from "@/components/branding/brand-version-timeline";
+import { CloneOverrideEditorDialog } from "@/components/branding/clone-override-editor";
+import { BrandPlaygroundDialog } from "@/components/branding/brand-playground";
 
 export const Route = createFileRoute("/branding")({
   component: () => (
