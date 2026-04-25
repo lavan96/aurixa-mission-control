@@ -6,6 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { executeCascade } from "./cascade-engine.server";
 import { bulkSyncModule } from "./module-sync.server";
+import { applyBrandToClone } from "./branding.server";
 import { nextCronTick } from "./cron";
 import { assessBlastRadius } from "./cascade-approvals.server";
 import { unknownTable, type CascadeScheduleRow } from "./_phase3d-types";
@@ -76,6 +77,8 @@ async function executeOne(
   try {
     if (sched.kind === "fleet_cascade") {
       outcome = await runFleetCascade(supabase, sched, initiatedBy);
+    } else if (sched.kind === "brand_sync") {
+      outcome = await runBrandSyncSchedule(supabase, sched, initiatedBy);
     } else {
       outcome = await runModuleSyncSchedule(supabase, sched, initiatedBy);
     }
@@ -282,5 +285,175 @@ async function runModuleSyncSchedule(
     ok: res.ok,
     cascade_event_id: res.cascade_event_id,
     error: res.ok ? undefined : res.error,
+  };
+}
+
+/**
+ * brand_sync schedule. scope_filter shape:
+ *   { profile_id?: string, clone_ids?: string[] | "drifted" | "all" }
+ *
+ * Behaviour:
+ *   - profile_id required. Targets a single brand profile.
+ *   - clone_ids "drifted" (default): only clones whose assignment.status is
+ *     'pending', 'drifted', or 'failed'.
+ *   - clone_ids "all": every clone currently assigned to the profile.
+ *   - clone_ids array: explicit list (must already be assigned).
+ *
+ * Re-uses applyBrandToClone so the brand cascade behaves identically to a
+ * manual push from the UI. Honors blast-radius gate via scheduled-fleet
+ * cascade_event when the count is large.
+ */
+async function runBrandSyncSchedule(
+  supabase: SupabaseLike,
+  sched: CascadeScheduleRow,
+  initiatedBy: string | null,
+): Promise<ScheduleRunOutcome> {
+  const sf = (sched.scope_filter ?? {}) as {
+    profile_id?: string;
+    clone_ids?: string[] | "drifted" | "all";
+  };
+
+  if (!sf.profile_id) {
+    return {
+      schedule_id: sched.id,
+      name: sched.name,
+      ok: false,
+      cascade_event_id: null,
+      error: "scope_filter.profile_id missing",
+    };
+  }
+
+  // Resolve target clones from the assignment table.
+  const target = sf.clone_ids ?? "drifted";
+  let cloneIds: string[];
+
+  if (Array.isArray(target)) {
+    cloneIds = target;
+  } else {
+    let q = supabase
+      .from("clone_brand_assignments")
+      .select("clone_id, status")
+      .eq("profile_id", sf.profile_id);
+    if (target === "drifted") {
+      q = q.in("status", ["pending", "drifted", "failed"]);
+    }
+    const { data, error } = await q;
+    if (error) {
+      return {
+        schedule_id: sched.id,
+        name: sched.name,
+        ok: false,
+        cascade_event_id: null,
+        error: error.message,
+      };
+    }
+    cloneIds = (data ?? []).map((r) => r.clone_id);
+  }
+
+  if (cloneIds.length === 0) {
+    return {
+      schedule_id: sched.id,
+      name: sched.name,
+      ok: true,
+      cascade_event_id: null,
+      error: target === "drifted" ? "No drifted clones" : "No clones to sync",
+    };
+  }
+
+  // Brand pushes are irreversible — treat as auto_merge for blast-radius gating.
+  const blast = assessBlastRadius("auto_merge", cloneIds.length);
+  if (blast.requiresApproval) {
+    // Create a tracking event in pending state and notify; operator can
+    // approve from /cascades/$eventId then trigger manually.
+    const { data: ev } = await supabase
+      .from("cascade_events")
+      .insert({
+        trigger: "scheduled",
+        mode: "auto_merge" as CascadeMode,
+        status: "pending",
+        requires_approval: true,
+        scope_filter: {
+          scope: "scheduled_brand_sync",
+          schedule_id: sched.id,
+          schedule_name: sched.name,
+          profile_id: sf.profile_id,
+          clone_ids: cloneIds,
+        },
+        summary: `Scheduled brand sync · ${sched.name}`,
+        initiated_by: initiatedBy,
+      })
+      .select()
+      .single();
+
+    if (ev) {
+      await supabase.from("notifications").insert({
+        kind: "cascade_awaiting_approval",
+        severity: "warning",
+        title: `Approval needed · scheduled brand sync`,
+        body: `${blast.reason ?? ""} Schedule "${sched.name}" targeting ${cloneIds.length} clones.`,
+        cascade_event_id: ev.id,
+        url: `/cascades/${ev.id}`,
+        metadata: {
+          mode: "auto_merge",
+          clone_count: cloneIds.length,
+          schedule_id: sched.id,
+          profile_id: sf.profile_id,
+          trigger: "scheduled_brand_sync",
+        },
+      });
+    }
+
+    return {
+      schedule_id: sched.id,
+      name: sched.name,
+      ok: true,
+      cascade_event_id: ev?.id ?? null,
+      error: blast.reason ?? "Awaiting second-operator approval",
+    };
+  }
+
+  // Run the brand apply pipeline per clone.
+  let succeeded = 0;
+  let failed = 0;
+  const failures: string[] = [];
+  for (const cloneId of cloneIds) {
+    const r = await applyBrandToClone(supabase, {
+      cloneId,
+      profileId: sf.profile_id,
+      actorUserId: initiatedBy,
+      cascadeEventId: null,
+    });
+    if (r.ok) succeeded++;
+    else {
+      failed++;
+      failures.push(`${cloneId}: ${r.error}`);
+    }
+  }
+
+  // One summary notification per scheduled run.
+  await supabase.from("notifications").insert({
+    kind: failed === 0 ? "cascade_completed" : "cascade_partial",
+    severity: failed === 0 ? "success" : "warning",
+    title: `Scheduled brand sync · ${succeeded}/${cloneIds.length} clones`,
+    body:
+      failed === 0
+        ? `Schedule "${sched.name}" applied brand to ${succeeded} clone(s).`
+        : `Schedule "${sched.name}": ${succeeded} succeeded, ${failed} failed.`,
+    url: "/branding",
+    metadata: {
+      schedule_id: sched.id,
+      profile_id: sf.profile_id,
+      succeeded,
+      failed,
+      trigger: "scheduled_brand_sync",
+    },
+  });
+
+  return {
+    schedule_id: sched.id,
+    name: sched.name,
+    ok: failed === 0,
+    cascade_event_id: null,
+    error: failed === 0 ? undefined : failures.slice(0, 5).join(" | "),
   };
 }

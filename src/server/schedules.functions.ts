@@ -9,7 +9,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { unknownTable, type CascadeScheduleRow } from "./_phase3d-types";
 
 type CascadeMode = Database["public"]["Enums"]["cascade_mode"];
-type ScheduleKind = "fleet_cascade" | "module_sync";
+type ScheduleKind = "fleet_cascade" | "module_sync" | "brand_sync";
 
 export type CreateScheduleInput = {
   name: string;
@@ -27,8 +27,12 @@ export const createSchedule = createServerFn({ method: "POST" })
     if (!data?.name || data.name.length < 1 || data.name.length > 120) {
       throw new Error("name required (1-120 chars)");
     }
-    if (data.kind !== "fleet_cascade" && data.kind !== "module_sync") {
-      throw new Error("kind must be fleet_cascade or module_sync");
+    if (
+      data.kind !== "fleet_cascade" &&
+      data.kind !== "module_sync" &&
+      data.kind !== "brand_sync"
+    ) {
+      throw new Error("kind must be fleet_cascade, module_sync, or brand_sync");
     }
     if (!parseCron(data.cron_expression ?? "")) {
       throw new Error("invalid cron expression (expected 5 fields)");

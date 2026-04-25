@@ -1452,7 +1452,7 @@ export type Database = {
         | "failed"
         | "pr_opened"
         | "skipped"
-      cascade_schedule_kind: "fleet_cascade" | "module_sync"
+      cascade_schedule_kind: "fleet_cascade" | "module_sync" | "brand_sync"
       cascade_trigger: "manual" | "commit" | "scheduled"
       clone_backend_status:
         | "pending"
@@ -1629,7 +1629,7 @@ export const Constants = {
         "pr_opened",
         "skipped",
       ],
-      cascade_schedule_kind: ["fleet_cascade", "module_sync"],
+      cascade_schedule_kind: ["fleet_cascade", "module_sync", "brand_sync"],
       cascade_trigger: ["manual", "commit", "scheduled"],
       clone_backend_status: [
         "pending",

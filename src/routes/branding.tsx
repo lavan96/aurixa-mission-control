@@ -15,6 +15,8 @@ import {
   checkBrandDrift,
   deleteBrandProfile,
 } from "@/server/branding.functions";
+import { createSchedule, deleteSchedule, runScheduleNow, updateSchedule } from "@/server/schedules.functions";
+import { describeCron } from "@/server/cron";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,6 +52,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   Palette,
@@ -66,6 +76,8 @@ import {
   Image as ImageIcon,
   RefreshCw,
   Link2,
+  Clock,
+  PlayCircle,
 } from "lucide-react";
 import { formatDistanceToNow } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -130,6 +142,17 @@ type AssetEntry = {
   public_url?: string;
 };
 
+type BrandSchedule = {
+  id: string;
+  name: string;
+  cron_expression: string;
+  enabled: boolean;
+  scope_filter: { profile_id?: string; clone_ids?: string[] | "drifted" | "all" };
+  last_run_at: string | null;
+  next_run_at: string | null;
+  notes: string | null;
+};
+
 const ASSET_FIELDS = [
   { field: "logo_light_url", label: "Logo (light)", target: "branding/logo-light.png" },
   { field: "logo_dark_url", label: "Logo (dark)", target: "branding/logo-dark.png" },
@@ -158,6 +181,10 @@ function BrandingPage() {
   const applyFn = useServerFn(applyBrandProfile);
   const driftFn = useServerFn(checkBrandDrift);
   const deleteFn = useServerFn(deleteBrandProfile);
+  const createScheduleFn = useServerFn(createSchedule);
+  const updateScheduleFn = useServerFn(updateSchedule);
+  const deleteScheduleFn = useServerFn(deleteSchedule);
+  const runScheduleFn = useServerFn(runScheduleNow);
 
   const { data: clones } = useClones();
   const [profiles, setProfiles] = useState<BrandProfile[]>([]);
@@ -170,6 +197,21 @@ function BrandingPage() {
   const [bulkProfileId, setBulkProfileId] = useState<string>("");
   const [bulkCloneIds, setBulkCloneIds] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
+  const [schedules, setSchedules] = useState<BrandSchedule[]>([]);
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [newSchedName, setNewSchedName] = useState("");
+  const [newSchedCron, setNewSchedCron] = useState("0 */6 * * *");
+  const [newSchedProfile, setNewSchedProfile] = useState("");
+  const [newSchedTarget, setNewSchedTarget] = useState<"drifted" | "all">("drifted");
+
+  const refreshSchedules = async () => {
+    const { data } = await supabase
+      .from("cascade_schedules" as never)
+      .select("id, name, cron_expression, enabled, scope_filter, last_run_at, next_run_at, notes")
+      .eq("kind", "brand_sync")
+      .order("created_at", { ascending: false });
+    setSchedules(((data as unknown) as BrandSchedule[]) ?? []);
+  };
 
   const refresh = async () => {
     setLoading(true);
@@ -186,7 +228,65 @@ function BrandingPage() {
 
   useEffect(() => {
     refresh();
+    refreshSchedules();
   }, []);
+
+  const handleCreateSchedule = async () => {
+    if (!newSchedName.trim() || !newSchedProfile) {
+      toast.error("Name and profile required");
+      return;
+    }
+    const r = await createScheduleFn({
+      data: {
+        name: newSchedName.trim(),
+        kind: "brand_sync",
+        cron_expression: newSchedCron,
+        mode: "auto_merge",
+        scope_filter: { profile_id: newSchedProfile, clone_ids: newSchedTarget },
+        enabled: true,
+      },
+    });
+    if (r.ok) {
+      toast.success("Brand sync schedule created");
+      setScheduleDialogOpen(false);
+      setNewSchedName("");
+      refreshSchedules();
+    } else {
+      toast.error(r.error ?? "Create failed");
+    }
+  };
+
+  const handleRunSchedule = async (id: string) => {
+    setBusy(true);
+    const r = await runScheduleFn({ data: { id } });
+    setBusy(false);
+    if (r.ok) {
+      toast.success(`Ran "${r.name}"`);
+      refresh();
+      refreshSchedules();
+    } else {
+      toast.error(r.error ?? "Run failed");
+    }
+  };
+
+  const handleToggleSchedule = async (s: BrandSchedule) => {
+    const r = await updateScheduleFn({
+      data: { id: s.id, patch: { enabled: !s.enabled } },
+    });
+    if (r.ok) refreshSchedules();
+    else toast.error(r.error ?? "Toggle failed");
+  };
+
+  const handleDeleteSchedule = async (s: BrandSchedule) => {
+    if (!confirm(`Delete schedule "${s.name}"?`)) return;
+    const r = await deleteScheduleFn({ data: { id: s.id } });
+    if (r.ok) {
+      toast.success("Schedule deleted");
+      refreshSchedules();
+    } else {
+      toast.error(r.error ?? "Delete failed");
+    }
+  };
 
   const profilesById = useMemo(
     () => new Map(profiles.map((p) => [p.id, p])),
@@ -353,6 +453,9 @@ function BrandingPage() {
           </TabsTrigger>
           <TabsTrigger value="history">
             <HistoryIcon className="mr-1 h-3.5 w-3.5" /> History
+          </TabsTrigger>
+          <TabsTrigger value="schedules">
+            <Clock className="mr-1 h-3.5 w-3.5" /> Schedules ({schedules.length})
           </TabsTrigger>
         </TabsList>
 
@@ -527,7 +630,127 @@ function BrandingPage() {
             </CardContent>
           </Card>
         </TabsContent>
+        {/* Schedules */}
+        <TabsContent value="schedules" className="mt-4 space-y-3">
+          <div className="flex justify-between items-center">
+            <p className="text-sm text-muted-foreground">
+              Cron-driven brand syncs. Targets drifted clones by default; use "all" to re-cascade every assigned clone.
+            </p>
+            <Button size="sm" onClick={() => setScheduleDialogOpen(true)}>
+              <Plus className="mr-1 h-3.5 w-3.5" /> New schedule
+            </Button>
+          </div>
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Profile</TableHead>
+                    <TableHead>Cron</TableHead>
+                    <TableHead>Target</TableHead>
+                    <TableHead>Last run</TableHead>
+                    <TableHead>Next run</TableHead>
+                    <TableHead>Enabled</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {schedules.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="py-8 text-center text-sm text-muted-foreground">
+                        No brand sync schedules yet.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {schedules.map((s) => {
+                    const profile = s.scope_filter.profile_id
+                      ? profilesById.get(s.scope_filter.profile_id)
+                      : null;
+                    const target = s.scope_filter.clone_ids;
+                    const targetLabel = Array.isArray(target)
+                      ? `${target.length} clone(s)`
+                      : (target ?? "drifted");
+                    return (
+                      <TableRow key={s.id}>
+                        <TableCell className="font-medium">{s.name}</TableCell>
+                        <TableCell className="text-sm">{profile?.name ?? "—"}</TableCell>
+                        <TableCell className="font-mono text-xs">{describeCron(s.cron_expression)}</TableCell>
+                        <TableCell className="text-xs">{targetLabel}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {s.last_run_at ? formatDistanceToNow(s.last_run_at) + " ago" : "Never"}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {s.next_run_at ? formatDistanceToNow(s.next_run_at) : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Switch checked={s.enabled} onCheckedChange={() => handleToggleSchedule(s)} />
+                        </TableCell>
+                        <TableCell className="text-right space-x-1">
+                          <Button size="sm" variant="outline" disabled={busy} onClick={() => handleRunSchedule(s.id)}>
+                            <PlayCircle className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => handleDeleteSchedule(s)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      {/* New schedule dialog */}
+      <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New brand sync schedule</DialogTitle>
+            <DialogDescription>
+              Periodically re-applies a brand profile to its assigned clones.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Name</Label>
+              <Input value={newSchedName} onChange={(e) => setNewSchedName(e.target.value)} placeholder="Daily brand sync" />
+            </div>
+            <div>
+              <Label>Brand profile</Label>
+              <Select value={newSchedProfile} onValueChange={setNewSchedProfile}>
+                <SelectTrigger><SelectValue placeholder="Select profile" /></SelectTrigger>
+                <SelectContent>
+                  {profiles.filter((p) => p.status === "published").map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name} (v{p.version})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Cron expression (UTC)</Label>
+              <Input value={newSchedCron} onChange={(e) => setNewSchedCron(e.target.value)} placeholder="0 */6 * * *" />
+              <p className="mt-1 text-xs text-muted-foreground">{describeCron(newSchedCron)}</p>
+            </div>
+            <div>
+              <Label>Target clones</Label>
+              <Select value={newSchedTarget} onValueChange={(v) => setNewSchedTarget(v as "drifted" | "all")}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="drifted">Drifted only (recommended)</SelectItem>
+                  <SelectItem value="all">All assigned clones</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setScheduleDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreateSchedule}>Create</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Editor */}
       {editorOpen && (

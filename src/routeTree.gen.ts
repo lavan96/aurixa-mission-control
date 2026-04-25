@@ -37,6 +37,7 @@ import { Route as HooksRunSchedulesRouteImport } from './routes/hooks.run-schedu
 import { Route as HooksGithubRouteImport } from './routes/hooks.github'
 import { Route as HooksFleetDriftRouteImport } from './routes/hooks.fleet-drift'
 import { Route as HooksDriftRefreshRouteImport } from './routes/hooks.drift-refresh'
+import { Route as HooksBrandDriftRouteImport } from './routes/hooks.brand-drift'
 import { Route as ClonesNewRouteImport } from './routes/clones.new'
 import { Route as ClonesCloneIdRouteImport } from './routes/clones.$cloneId'
 import { Route as CascadesEventIdRouteImport } from './routes/cascades.$eventId'
@@ -183,6 +184,11 @@ const HooksDriftRefreshRoute = HooksDriftRefreshRouteImport.update({
   path: '/hooks/drift-refresh',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HooksBrandDriftRoute = HooksBrandDriftRouteImport.update({
+  id: '/hooks/brand-drift',
+  path: '/hooks/brand-drift',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ClonesNewRoute = ClonesNewRouteImport.update({
   id: '/clones/new',
   path: '/clones/new',
@@ -218,6 +224,7 @@ export interface FileRoutesByFullPath {
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
+  '/hooks/brand-drift': typeof HooksBrandDriftRoute
   '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
   '/hooks/github': typeof HooksGithubRoute
@@ -250,6 +257,7 @@ export interface FileRoutesByTo {
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
+  '/hooks/brand-drift': typeof HooksBrandDriftRoute
   '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
   '/hooks/github': typeof HooksGithubRoute
@@ -284,6 +292,7 @@ export interface FileRoutesById {
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
+  '/hooks/brand-drift': typeof HooksBrandDriftRoute
   '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
   '/hooks/github': typeof HooksGithubRoute
@@ -319,6 +328,7 @@ export interface FileRouteTypes {
     | '/cascades/$eventId'
     | '/clones/$cloneId'
     | '/clones/new'
+    | '/hooks/brand-drift'
     | '/hooks/drift-refresh'
     | '/hooks/fleet-drift'
     | '/hooks/github'
@@ -351,6 +361,7 @@ export interface FileRouteTypes {
     | '/cascades/$eventId'
     | '/clones/$cloneId'
     | '/clones/new'
+    | '/hooks/brand-drift'
     | '/hooks/drift-refresh'
     | '/hooks/fleet-drift'
     | '/hooks/github'
@@ -384,6 +395,7 @@ export interface FileRouteTypes {
     | '/cascades/$eventId'
     | '/clones/$cloneId'
     | '/clones/new'
+    | '/hooks/brand-drift'
     | '/hooks/drift-refresh'
     | '/hooks/fleet-drift'
     | '/hooks/github'
@@ -417,6 +429,7 @@ export interface RootRouteChildren {
   YggdrasilRoute: typeof YggdrasilRoute
   ClonesCloneIdRoute: typeof ClonesCloneIdRoute
   ClonesNewRoute: typeof ClonesNewRoute
+  HooksBrandDriftRoute: typeof HooksBrandDriftRoute
   HooksDriftRefreshRoute: typeof HooksDriftRefreshRoute
   HooksFleetDriftRoute: typeof HooksFleetDriftRoute
   HooksGithubRoute: typeof HooksGithubRoute
@@ -622,6 +635,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HooksDriftRefreshRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/hooks/brand-drift': {
+      id: '/hooks/brand-drift'
+      path: '/hooks/brand-drift'
+      fullPath: '/hooks/brand-drift'
+      preLoaderRoute: typeof HooksBrandDriftRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/clones/new': {
       id: '/clones/new'
       path: '/clones/new'
@@ -711,6 +731,7 @@ const rootRouteChildren: RootRouteChildren = {
   YggdrasilRoute: YggdrasilRoute,
   ClonesCloneIdRoute: ClonesCloneIdRoute,
   ClonesNewRoute: ClonesNewRoute,
+  HooksBrandDriftRoute: HooksBrandDriftRoute,
   HooksDriftRefreshRoute: HooksDriftRefreshRoute,
   HooksFleetDriftRoute: HooksFleetDriftRoute,
   HooksGithubRoute: HooksGithubRoute,

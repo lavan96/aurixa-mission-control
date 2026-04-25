@@ -10,7 +10,7 @@ type CascadeMode = Database["public"]["Enums"]["cascade_mode"];
 
 export type { Json };
 
-export type ScheduleKind = "fleet_cascade" | "module_sync";
+export type ScheduleKind = "fleet_cascade" | "module_sync" | "brand_sync";
 export type DriftSeverity = "low" | "medium" | "high";
 
 export type CascadeScheduleRow = {
