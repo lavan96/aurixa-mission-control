@@ -483,25 +483,97 @@ function DetectionConfigPanel({
 function DetectionHistoryPanel() {
   const [runs, setRuns] = useState<Array<Record<string, unknown>>>([]);
   const [loadingRuns, setLoadingRuns] = useState(true);
+  const [clearing, setClearing] = useState(false);
   const getRunsFn = useServerFn(getDetectionRuns);
+  const clearFn = useServerFn(clearDetectionHistory);
+  const deleteFn = useServerFn(deleteDetectionRun);
 
-  useEffect(() => {
-    (async () => {
-      const res = await getRunsFn();
-      if (res.ok) setRuns(res.runs as Array<Record<string, unknown>>);
-      setLoadingRuns(false);
-    })();
-  }, []);
+  const refresh = useCallback(async () => {
+    setLoadingRuns(true);
+    const res = await getRunsFn();
+    if (res.ok) setRuns(res.runs as Array<Record<string, unknown>>);
+    setLoadingRuns(false);
+  }, [getRunsFn]);
+
+  useEffect(() => { void refresh(); }, [refresh]);
+
+  const handleDelete = async (runId: string) => {
+    const res = await deleteFn({ data: { runId } });
+    if (res.ok) {
+      toast.success("Detection run deleted");
+      void refresh();
+    } else {
+      toast.error(res.error ?? "Delete failed");
+    }
+  };
+
+  const handleClear = async (opts: { keepLatest?: number; onlyFailed?: boolean }) => {
+    setClearing(true);
+    try {
+      const res = await clearFn({ data: opts });
+      if (res.ok) {
+        toast.success(`Cleared ${res.deleted} run(s)`);
+        void refresh();
+      } else {
+        toast.error(res.error ?? "Clear failed");
+      }
+    } finally {
+      setClearing(false);
+    }
+  };
 
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <History className="h-4 w-4" /> Detection History
-        </CardTitle>
-        <CardDescription className="text-xs">
-          Past AI detection runs with parameters, pass details, and results.
-        </CardDescription>
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <History className="h-4 w-4" /> Detection History
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Past AI detection runs with parameters, pass details, and results.
+            </CardDescription>
+          </div>
+          {runs.length > 0 && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" variant="outline" className="h-7 shrink-0 px-2 text-[10px]" disabled={clearing}>
+                  <Trash2 className="mr-1 h-3 w-3" /> clear
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Clear detection history?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Deletes detection runs along with their drift alerts and import edges.
+                    Modules created by these runs are kept (unlinked from history). Pick a scope below.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="flex flex-wrap gap-2 sm:justify-end">
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-warning text-warning-foreground hover:bg-warning/90"
+                    onClick={() => handleClear({ onlyFailed: true })}
+                  >
+                    Failed only
+                  </AlertDialogAction>
+                  <AlertDialogAction
+                    className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                    onClick={() => handleClear({ keepLatest: 5 })}
+                  >
+                    Keep latest 5
+                  </AlertDialogAction>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={() => handleClear({})}
+                  >
+                    Delete all
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         {loadingRuns ? (
@@ -513,7 +585,7 @@ function DetectionHistoryPanel() {
         ) : (
           <div className="space-y-2">
             {runs.map((r) => (
-              <DetectionRunRow key={r.id as string} run={r} />
+              <DetectionRunRow key={r.id as string} run={r} onDelete={handleDelete} />
             ))}
           </div>
         )}
@@ -522,7 +594,13 @@ function DetectionHistoryPanel() {
   );
 }
 
-function DetectionRunRow({ run: r }: { run: Record<string, unknown> }) {
+function DetectionRunRow({
+  run: r,
+  onDelete,
+}: {
+  run: Record<string, unknown>;
+  onDelete: (runId: string) => void | Promise<void>;
+}) {
   const [open, setOpen] = useState(false);
   const status = r.status as string;
   const passes = (r.passes ?? []) as Array<{ pass: number; name: string; model: string; duration_ms: number; modules_proposed: number; summary: string }>;
@@ -535,21 +613,54 @@ function DetectionRunRow({ run: r }: { run: Record<string, unknown> }) {
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger asChild>
-        <div className="flex cursor-pointer items-center gap-3 rounded-md border border-border px-3 py-2 transition-colors hover:bg-muted/40">
-          <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", open && "rotate-180")} />
-          <Badge variant="outline" className={cn("text-[9px] uppercase", statusCls)}>
-            {status}
-          </Badge>
-          <span className="font-mono text-xs">{r.strategy as string}</span>
-          <span className="text-[10px] text-muted-foreground">
-            {r.file_count as number} files · {r.proposed_modules as number} proposed · {r.inserted_modules as number} new · {r.updated_modules as number} updated
-          </span>
-          <span className="ml-auto text-[10px] text-muted-foreground">
-            {r.created_at ? formatDistanceToNow(r.created_at as string) : ""}
-          </span>
-        </div>
-      </CollapsibleTrigger>
+      <div className="flex items-stretch gap-1">
+        <CollapsibleTrigger asChild>
+          <div className="flex flex-1 cursor-pointer items-center gap-3 rounded-md border border-border px-3 py-2 transition-colors hover:bg-muted/40">
+            <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", open && "rotate-180")} />
+            <Badge variant="outline" className={cn("text-[9px] uppercase", statusCls)}>
+              {status}
+            </Badge>
+            <span className="font-mono text-xs">{r.strategy as string}</span>
+            <span className="text-[10px] text-muted-foreground">
+              {r.file_count as number} files · {r.proposed_modules as number} proposed · {r.inserted_modules as number} new · {r.updated_modules as number} updated
+            </span>
+            <span className="ml-auto text-[10px] text-muted-foreground">
+              {r.created_at ? formatDistanceToNow(r.created_at as string) : ""}
+            </span>
+          </div>
+        </CollapsibleTrigger>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-auto w-8 shrink-0 text-muted-foreground hover:text-destructive"
+              onClick={(e) => e.stopPropagation()}
+              aria-label="Delete detection run"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete this detection run?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Removes this run plus its drift alerts and import edges.
+                Modules created by it are preserved (unlinked from history).
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={() => void onDelete(r.id as string)}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
       <CollapsibleContent>
         <div className="ml-8 mt-2 space-y-2 border-l-2 border-border pl-4">
           {typeof r.error_message === "string" && r.error_message && (
