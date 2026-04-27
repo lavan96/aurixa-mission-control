@@ -31,6 +31,7 @@ import {
   detectModules, getDetectionRuns, getDriftAlerts, batchUpdateModuleStatus,
   resolveDriftAlert, getModuleIntelligence, approveAndDeploy, getModuleCascadeJobs,
   publishToLibrary, getModuleLibrary, removeFromLibrary,
+  deleteDetectionRun, clearDetectionHistory,
 } from "@/server/ai-detect-modules.functions";
 import { setLibraryApprovalStatus } from "@/server/library-admin.functions";
 import { ModuleGridSkeleton } from "@/components/list-skeletons";
