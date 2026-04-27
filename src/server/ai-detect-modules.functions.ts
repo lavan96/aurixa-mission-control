@@ -52,6 +52,99 @@ export const getDetectionRuns = createServerFn({ method: "POST" })
     return { ok: true as const, runs: data ?? [] };
   });
 
+// Delete a single detection run + its drift alerts + import edges.
+// Modules created by the run are NOT deleted — they are unlinked
+// (detection_run_id set to null) so curated modules survive history cleanup.
+export const deleteDetectionRun = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { runId: string }) => {
+    if (!data?.runId) throw new Error("runId required");
+    return data;
+  })
+  .handler(async ({ data, context }) => {
+    const supabase = context.supabase;
+
+    // Unlink modules so we don't violate FK constraints.
+    await supabase
+      .from("modules")
+      .update({ detection_run_id: null })
+      .eq("detection_run_id", data.runId);
+
+    // Cascade-style cleanup of dependent rows.
+    await supabase.from("module_drift_alerts").delete().eq("detection_run_id", data.runId);
+    await supabase.from("module_import_edges").delete().eq("detection_run_id", data.runId);
+
+    // Clear back-pointer from any later runs that reference this one.
+    await supabase
+      .from("module_detection_runs")
+      .update({ previous_run_id: null })
+      .eq("previous_run_id", data.runId);
+
+    const { error } = await supabase
+      .from("module_detection_runs")
+      .delete()
+      .eq("id", data.runId);
+    if (error) return { ok: false as const, error: error.message };
+
+    await supabase.from("audit_log").insert({
+      action: "detection_run.delete",
+      actor_user_id: context.userId,
+      entity_type: "module_detection_run",
+      entity_id: data.runId,
+      metadata: {},
+    });
+
+    return { ok: true as const };
+  });
+
+// Bulk-clear detection history. Optionally keep the most recent N runs.
+export const clearDetectionHistory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data?: { keepLatest?: number; onlyFailed?: boolean }) => data ?? {})
+  .handler(async ({ data, context }) => {
+    const supabase = context.supabase;
+    const keepLatest = Math.max(0, data.keepLatest ?? 0);
+    const onlyFailed = data.onlyFailed ?? false;
+
+    let query = supabase
+      .from("module_detection_runs")
+      .select("id, status, created_at")
+      .order("created_at", { ascending: false });
+    if (onlyFailed) query = query.eq("status", "failed");
+
+    const { data: rows, error } = await query;
+    if (error) return { ok: false as const, error: error.message, deleted: 0 };
+
+    const targets = (rows ?? []).slice(keepLatest).map((r) => r.id as string);
+    if (targets.length === 0) return { ok: true as const, deleted: 0 };
+
+    await supabase
+      .from("modules")
+      .update({ detection_run_id: null })
+      .in("detection_run_id", targets);
+    await supabase.from("module_drift_alerts").delete().in("detection_run_id", targets);
+    await supabase.from("module_import_edges").delete().in("detection_run_id", targets);
+    await supabase
+      .from("module_detection_runs")
+      .update({ previous_run_id: null })
+      .in("previous_run_id", targets);
+
+    const { error: delErr } = await supabase
+      .from("module_detection_runs")
+      .delete()
+      .in("id", targets);
+    if (delErr) return { ok: false as const, error: delErr.message, deleted: 0 };
+
+    await supabase.from("audit_log").insert({
+      action: "detection_run.clear",
+      actor_user_id: context.userId,
+      entity_type: "module_detection_run",
+      metadata: { count: targets.length, keep_latest: keepLatest, only_failed: onlyFailed },
+    });
+
+    return { ok: true as const, deleted: targets.length };
+  });
+
 // Fetch import graph for a detection run
 export const getImportGraph = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
