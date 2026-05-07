@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { ProtectedRoute } from "@/components/protected-route";
+import { RouteError } from "@/components/route-error";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BarChart3, Activity, Sparkles, Bell, Bot } from "lucide-react";
@@ -9,6 +10,7 @@ import { getFleetMetrics } from "@/server/metrics.functions";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 
 export const Route = createFileRoute("/metrics")({
+  errorComponent: RouteError,
   component: () => (
     <ProtectedRoute>
       <MetricsPage />

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ProtectedRoute } from "@/components/protected-route";
+import { RouteError } from "@/components/route-error";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useClones } from "@/lib/queries";
@@ -90,6 +91,7 @@ import { CloneOverrideEditorDialog } from "@/components/branding/clone-override-
 import { BrandPlaygroundDialog } from "@/components/branding/brand-playground";
 
 export const Route = createFileRoute("/branding")({
+  errorComponent: RouteError,
   component: () => (
     <ProtectedRoute>
       <BrandingPage />

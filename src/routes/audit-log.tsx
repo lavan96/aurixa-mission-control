@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { ProtectedRoute } from "@/components/protected-route";
+import { RouteError } from "@/components/route-error";
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -59,6 +60,7 @@ const searchSchema = z.object({
 });
 
 export const Route = createFileRoute("/audit-log")({
+  errorComponent: RouteError,
   validateSearch: zodValidator(searchSchema),
   component: () => (
     <ProtectedRoute>

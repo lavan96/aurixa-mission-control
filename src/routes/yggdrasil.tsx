@@ -3,6 +3,7 @@ import { useState, useMemo, useCallback, useRef, useEffect, lazy, Suspense } fro
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { ProtectedRoute } from "@/components/protected-route";
+import { RouteError } from "@/components/route-error";
 
 import { useClones, usePrimeConfig } from "@/lib/queries";
 const YggdrasilTree = lazy(() =>
@@ -28,6 +29,7 @@ const yggdrasilSearchSchema = z.object({
 });
 
 export const Route = createFileRoute("/yggdrasil")({
+  errorComponent: RouteError,
   validateSearch: zodValidator(yggdrasilSearchSchema),
   component: () => (
     <ProtectedRoute>
