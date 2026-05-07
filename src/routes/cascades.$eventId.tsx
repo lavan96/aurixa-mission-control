@@ -52,7 +52,7 @@ import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "@/lib/format";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { runCascade } from "@/server/cascade-engine.functions";
+import { runCascade, cancelCascade } from "@/server/cascade-engine.functions";
 import { CascadeLineagePanel } from "@/components/cascade-lineage-panel";
 import { InlineDiffSummary } from "@/components/inline-diff-summary";
 import { RichDiffViewer } from "@/components/rich-diff-viewer";
@@ -86,7 +86,9 @@ function CascadeDetailPage() {
   const [retrying, setRetrying] = useState(false);
   const [rolling, setRolling] = useState(false);
   const [rollbackOpen, setRollbackOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const runCascadeFn = useServerFn(runCascade);
+  const cancelCascadeFn = useServerFn(cancelCascade);
 
   const refresh = useCallback(async () => {
     const [{ data: ev }, { data: res }, { data: pr }] = await Promise.all([
@@ -419,6 +421,25 @@ function CascadeDetailPage() {
           <Button variant="outline" size="sm" onClick={() => router.invalidate()}>
             <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Refresh
           </Button>
+          {inFlight && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              disabled={cancelling}
+              onClick={async () => {
+                if (!confirm("Cancel this cascade? Queued clones will be skipped.")) return;
+                setCancelling(true);
+                try {
+                  const r = await cancelCascadeFn({ data: { cascadeEventId: eventId } });
+                  if (r.ok) { toast.success("Cascade cancelled"); refresh(); }
+                  else toast.error(r.error);
+                } finally { setCancelling(false); }
+              }}
+            >
+              <XCircle className={cn("mr-1.5 h-3.5 w-3.5", cancelling && "animate-spin")} /> Cancel
+            </Button>
+          )}
           {failedCount > 0 && !inFlight && (
             <Button size="sm" onClick={retryFailed} disabled={retrying}>
               <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", retrying && "animate-spin")} />

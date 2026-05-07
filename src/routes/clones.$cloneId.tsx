@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/status-pill";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Github, ExternalLink, Shield, Trash2, Waves, Plus, RefreshCw, X } from "lucide-react";
+import { ArrowLeft, Github, ExternalLink, Shield, Trash2, Waves, Plus, RefreshCw, X, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "@/lib/format";
 import { CloneActivityHistory } from "@/components/clone-activity-history";
@@ -20,6 +20,7 @@ import { CloneBackendCard } from "@/components/clone-backend-card";
 import { bulkSyncModuleFn } from "@/server/module-sync.functions";
 import { CloneLibraryPinsCard } from "@/components/clone-library-pins";
 import type { DriftSuggestion } from "@/server/drift-suggestions.functions";
+import { CloneEditDialog } from "@/components/clone-edit-dialog";
 
 export const Route = createFileRoute("/clones/$cloneId")({
   component: () => (
@@ -36,6 +37,7 @@ function CloneDetail() {
   const { data: allModules } = useModules();
   const [loading, setLoading] = useState(true);
   const [resyncingId, setResyncingId] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -181,6 +183,9 @@ function CloneDetail() {
           </div>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setEditOpen(true)}>
+            <Pencil className="mr-1.5 h-4 w-4" /> Edit
+          </Button>
           <Button variant="outline">
             <Waves className="mr-1.5 h-4 w-4" /> Cascade now
           </Button>
@@ -189,6 +194,8 @@ function CloneDetail() {
           </Button>
         </div>
       </div>
+
+      <CloneEditDialog clone={clone} open={editOpen} onOpenChange={setEditOpen} onSaved={load} />
 
       <div className="grid gap-3 md:grid-cols-3">
         <InfoTile label="GitHub" value={clone.github_url ?? "—"} icon={<Github className="h-4 w-4" />} link={clone.github_url} />

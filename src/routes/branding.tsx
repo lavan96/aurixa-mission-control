@@ -14,6 +14,7 @@ import {
   applyBrandProfile,
   checkBrandDrift,
   deleteBrandProfile,
+  duplicateBrandProfile,
 } from "@/server/branding.functions";
 import { createSchedule, deleteSchedule, runScheduleNow, updateSchedule } from "@/server/schedules.functions";
 import { describeCron } from "@/server/cron";
@@ -186,6 +187,7 @@ function BrandingPage() {
   const applyFn = useServerFn(applyBrandProfile);
   const driftFn = useServerFn(checkBrandDrift);
   const deleteFn = useServerFn(deleteBrandProfile);
+  const duplicateFn = useServerFn(duplicateBrandProfile);
   const createScheduleFn = useServerFn(createSchedule);
   const updateScheduleFn = useServerFn(updateSchedule);
   const deleteScheduleFn = useServerFn(deleteSchedule);
@@ -507,6 +509,11 @@ function BrandingPage() {
                 onPlayground={() => {
                   setPlaygroundProfileId(p.id);
                   setPlaygroundOpen(true);
+                }}
+                onDuplicate={async () => {
+                  const r = await duplicateFn({ data: { profileId: p.id } });
+                  if (r.ok) { toast.success("Profile duplicated"); refresh(); }
+                  else toast.error(r.error);
                 }}
               />
             ))}
@@ -958,6 +965,7 @@ function ProfileCard({
   onApply,
   onShowVersions,
   onPlayground,
+  onDuplicate,
 }: {
   profile: BrandProfile;
   assignmentCount: number;
@@ -967,6 +975,7 @@ function ProfileCard({
   onApply: () => void;
   onShowVersions: () => void;
   onPlayground: () => void;
+  onDuplicate: () => void;
 }) {
   const cfg = profile.brand_config as Record<string, string | null | undefined>;
   return (
@@ -1034,6 +1043,9 @@ function ProfileCard({
           </Button>
           <Button size="sm" variant="outline" onClick={onPlayground}>
             <Sparkles className="mr-1 h-3 w-3" /> Tweak
+          </Button>
+          <Button size="sm" variant="outline" onClick={onDuplicate}>
+            Duplicate
           </Button>
           <Button size="sm" onClick={onApply} disabled={profile.status !== "published"}>
             <Rocket className="mr-1 h-3 w-3" /> Apply

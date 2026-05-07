@@ -149,6 +149,49 @@ export const upsertBrandProfile = createServerFn({ method: "POST" })
       actor_user_id: context.userId,
       metadata: { slug, hash: config_hash },
     });
+  });
+
+// ─── Duplicate ───────────────────────────────────────────────────────
+export const duplicateBrandProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { profileId: string; newName?: string }) => {
+    if (!d?.profileId) throw new Error("profileId required");
+    return d;
+  })
+  .handler(async ({ data, context }) => {
+    const { data: src, error: e1 } = await context.supabase
+      .from("clone_brand_profiles")
+      .select("*")
+      .eq("id", data.profileId)
+      .maybeSingle();
+    if (e1 || !src) return { ok: false as const, error: e1?.message ?? "Profile not found" };
+    const name = (data.newName?.trim() || `${src.name} (copy)`).slice(0, 80);
+    const slug = `${slugify(name)}-${Date.now().toString(36).slice(-4)}`;
+    const { data: row, error } = await context.supabase
+      .from("clone_brand_profiles")
+      .insert({
+        name,
+        slug,
+        description: src.description,
+        brand_config: src.brand_config,
+        report_contact: src.report_contact,
+        asset_manifest: src.asset_manifest,
+        tags: src.tags,
+        is_default: false,
+        status: "draft",
+        config_hash: src.config_hash,
+        created_by: context.userId,
+      })
+      .select()
+      .maybeSingle();
+    if (error) return { ok: false as const, error: error.message };
+    await context.supabase.from("audit_log").insert({
+      action: "brand.profile_duplicated",
+      entity_type: "clone_brand_profile",
+      entity_id: row?.id ?? null,
+      actor_user_id: context.userId,
+      metadata: { source_id: data.profileId, slug },
+    });
     return { ok: true as const, profile: row };
   });
 

@@ -14,6 +14,7 @@ import { GitHubStatusCard } from "@/components/github-status-card";
 import { GitHubSetupWizard } from "@/components/github-setup-wizard";
 import { WebhookDeliveriesPanel } from "@/components/webhook-deliveries-panel";
 import { PemKeyHelper } from "@/components/pem-key-helper";
+import { ProfileEditorCard } from "@/components/profile-editor-card";
 import type { Database } from "@/integrations/supabase/types";
 
 type CascadeMode = Database["public"]["Enums"]["cascade_mode"];
@@ -115,6 +116,7 @@ function SettingsGeneralPage() {
 
   return (
     <div className="space-y-6">
+      <ProfileEditorCard />
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
