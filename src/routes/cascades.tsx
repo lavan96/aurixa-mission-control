@@ -377,7 +377,12 @@ function CascadesPage() {
                 </div>
               </div>
             </div>
-          )}
+          <AiPreflightSummary
+            scope={scope}
+            mode={mode}
+            cloneCount={targets.length}
+            tags={selectedTags}
+          />
           <div className="flex items-center justify-between">
             <div className="font-mono text-[11px] text-muted-foreground">
               {scope === "tagged" && selectedTags.length > 0
