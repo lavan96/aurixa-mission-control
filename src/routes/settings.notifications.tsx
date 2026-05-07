@@ -160,7 +160,7 @@ type DeviceSub = {
 };
 
 function SettingsNotificationsPage() {
-  const { prefs, loading, toggleKind, toggleSeverity, setToggle } =
+  const { prefs, loading, toggleKind, toggleSeverity, setToggle, setDigestMode } =
     useNotificationPreferences();
   const { session } = useAuth();
 
@@ -196,6 +196,17 @@ function SettingsNotificationsPage() {
             onCheckedChange={(v) => handlePush(!v)}
             disabled={loading}
           />
+          <div className="rounded-md border border-border/60 p-3">
+            <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Digest mode</Label>
+            <div className="mt-2 flex gap-1">
+              {(["realtime", "hourly", "daily"] as const).map((m) => (
+                <Button key={m} size="sm" variant={prefs.digest_mode === m ? "default" : "outline"} disabled={loading} onClick={() => void setDigestMode(m)}>
+                  {m}
+                </Button>
+              ))}
+            </div>
+            <p className="mt-2 text-[11px] text-muted-foreground">Batch non-critical notifications into rolled-up summaries instead of firing them in real time.</p>
+          </div>
         </CardContent>
       </Card>
 

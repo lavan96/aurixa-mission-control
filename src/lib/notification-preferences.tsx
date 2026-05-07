@@ -15,6 +15,7 @@ type LocalCache = {
   muted_severities: NotificationSeverity[];
   mute_toasts: boolean;
   mute_browser_push: boolean;
+  digest_mode: "realtime" | "hourly" | "daily";
 };
 
 const DEFAULTS: LocalCache = {
@@ -22,6 +23,7 @@ const DEFAULTS: LocalCache = {
   muted_severities: [],
   mute_toasts: false,
   mute_browser_push: false,
+  digest_mode: "realtime",
 };
 
 function readCache(): LocalCache {
@@ -35,6 +37,7 @@ function readCache(): LocalCache {
       muted_severities: parsed.muted_severities ?? [],
       mute_toasts: parsed.mute_toasts ?? false,
       mute_browser_push: parsed.mute_browser_push ?? false,
+      digest_mode: parsed.digest_mode ?? "realtime",
     };
   } catch {
     return DEFAULTS;
@@ -109,6 +112,7 @@ export function useNotificationPreferences() {
           muted_severities: data.muted_severities ?? [],
           mute_toasts: data.mute_toasts,
           mute_browser_push: data.mute_browser_push,
+          digest_mode: ((data as { digest_mode?: string }).digest_mode as LocalCache["digest_mode"]) ?? "realtime",
         }
       : DEFAULTS;
     setPrefs(next);
@@ -135,6 +139,7 @@ export function useNotificationPreferences() {
             muted_severities: next.muted_severities,
             mute_toasts: next.mute_toasts,
             mute_browser_push: next.mute_browser_push,
+            digest_mode: next.digest_mode,
           },
           { onConflict: "user_id" },
         );
@@ -170,6 +175,13 @@ export function useNotificationPreferences() {
     [prefs, save],
   );
 
+  const setDigestMode = useCallback(
+    async (mode: LocalCache["digest_mode"]) => {
+      await save({ ...prefs, digest_mode: mode });
+    },
+    [prefs, save],
+  );
+
   const muted = useMemo(
     () =>
       (kind: NotificationKind, severity: NotificationSeverity) =>
@@ -185,6 +197,7 @@ export function useNotificationPreferences() {
     toggleKind,
     toggleSeverity,
     setToggle,
+    setDigestMode,
     muted,
   };
 }

@@ -21,7 +21,8 @@ import { EmptyState } from "@/components/empty-state";
 import { CascadeTemplatesCard, type CascadeTemplateValue } from "@/components/cascade-templates-card";
 import { CascadeDryRunCard } from "@/components/cascade-dryrun-card";
 import { assessBlastRadius } from "@/lib/blast-radius";
-import { ShieldAlert } from "lucide-react";
+import { ShieldAlert, Sparkles, Loader2 } from "lucide-react";
+import { aiCascadeSummary } from "@/server/ai-features.functions";
 
 const MODE_VALUES = ["pr", "auto_merge", "notify"] as const;
 const SCOPE_VALUES = ["all", "tagged", "selected"] as const;
@@ -377,6 +378,12 @@ function CascadesPage() {
               </div>
             </div>
           )}
+          <AiPreflightSummary
+            scope={scope}
+            mode={mode}
+            cloneCount={targets.length}
+            tags={selectedTags}
+          />
           <div className="flex items-center justify-between">
             <div className="font-mono text-[11px] text-muted-foreground">
               {scope === "tagged" && selectedTags.length > 0
@@ -579,5 +586,37 @@ function ModeCard({
       <div className="font-mono text-sm font-semibold">{title}</div>
       <div className="mt-0.5 text-xs text-muted-foreground">{desc}</div>
     </button>
+  );
+}
+
+function AiPreflightSummary({ scope, mode, cloneCount, tags }: { scope: string; mode: string; cloneCount: number; tags: string[] }) {
+  const fn = useServerFn(aiCascadeSummary);
+  const [loading, setLoading] = useState(false);
+  const [summary, setSummary] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const run = async () => {
+    setLoading(true); setError(null); setSummary(null);
+    try {
+      const r = await fn({ data: { scope: tags.length > 0 ? `${scope}:${tags.join(",")}` : scope, mode, cloneCount, affectedModules: [] } });
+      setSummary(r.summary);
+    } catch (e) { setError(e instanceof Error ? e.message : "AI failed"); }
+    finally { setLoading(false); }
+  };
+  return (
+    <div className="rounded-md border border-border/60 bg-surface/50 p-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+          <Sparkles className="h-3.5 w-3.5 text-primary" /> AI pre-flight briefing
+        </div>
+        <Button size="sm" variant="ghost" disabled={loading || cloneCount === 0} onClick={run}>
+          {loading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1.5 h-3.5 w-3.5" />}
+          {summary ? "Re-summarize" : "Summarize"}
+        </Button>
+      </div>
+      {error && <div className="mt-2 text-xs text-destructive">{error}</div>}
+      {summary && (
+        <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-foreground">{summary}</pre>
+      )}
+    </div>
   );
 }

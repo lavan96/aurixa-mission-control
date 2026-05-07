@@ -36,7 +36,14 @@ import { formatDistanceToNow } from "@/lib/format";
 import { CloneGridSkeleton } from "@/components/list-skeletons";
 import { EmptyState } from "@/components/empty-state";
 import { BulkTagDialog } from "@/components/bulk-tag-dialog";
-import { Tag } from "lucide-react";
+import { Tag, Trash2, PauseCircle, RefreshCw } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { bulkDeleteClones, bulkPauseClones, bulkReprovisionBackends } from "@/server/operator-ux.functions";
+import { toast } from "sonner";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const dashboardSearchSchema = z.object({
   q: fallback(z.string(), "").default(""),
@@ -276,9 +283,9 @@ function Dashboard() {
             <Button size="sm" variant="outline" onClick={() => setBulkTagOpen(true)}>
               <Tag className="mr-1.5 h-3.5 w-3.5" /> Edit tags
             </Button>
-            <Button size="sm" variant="outline">
-              <Waves className="mr-1.5 h-3.5 w-3.5" /> Cascade selected
-            </Button>
+            <BulkPauseButton ids={Array.from(selected)} onDone={() => { setSelected(new Set()); refreshClones(); }} />
+            <BulkReprovisionButton ids={Array.from(selected)} onDone={() => { setSelected(new Set()); refreshClones(); }} />
+            <BulkDeleteButton ids={Array.from(selected)} onDone={() => { setSelected(new Set()); refreshClones(); }} />
           </div>
         )}
       </section>
@@ -495,5 +502,76 @@ function DashboardEmpty() {
         </Link>
       }
     />
+  );
+}
+
+function BulkPauseButton({ ids, onDone }: { ids: string[]; onDone: () => void }) {
+  const fn = useServerFn(bulkPauseClones);
+  const [busy, setBusy] = useState(false);
+  return (
+    <Button size="sm" variant="outline" disabled={busy} onClick={async () => {
+      setBusy(true);
+      const r = await fn({ data: { cloneIds: ids, pause: true } });
+      setBusy(false);
+      if (r.ok) { toast.success(`Paused ${r.count} clone${r.count === 1 ? "" : "s"}`); onDone(); }
+      else toast.error("Pause failed");
+    }}>
+      <PauseCircle className="mr-1.5 h-3.5 w-3.5" /> Pause
+    </Button>
+  );
+}
+
+function BulkReprovisionButton({ ids, onDone }: { ids: string[]; onDone: () => void }) {
+  const fn = useServerFn(bulkReprovisionBackends);
+  const [busy, setBusy] = useState(false);
+  return (
+    <Button size="sm" variant="outline" disabled={busy} onClick={async () => {
+      setBusy(true);
+      const r = await fn({ data: { cloneIds: ids } });
+      setBusy(false);
+      if (r.ok) { toast.success(`Re-queued ${r.count} backend${r.count === 1 ? "" : "s"}`); onDone(); }
+      else toast.error(r.error ?? "Reprovision failed");
+    }}>
+      <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Reprovision
+    </Button>
+  );
+}
+
+function BulkDeleteButton({ ids, onDone }: { ids: string[]; onDone: () => void }) {
+  const fn = useServerFn(bulkDeleteClones);
+  const [busy, setBusy] = useState(false);
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button size="sm" variant="destructive" disabled={busy}>
+          <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete {ids.length} clone{ids.length === 1 ? "" : "s"}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This permanently removes the clone records and all related cascade results, drift policies, and brand assignments. The underlying GitHub repos and backends are NOT affected. This cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={async () => {
+              setBusy(true);
+              const r = await fn({ data: { cloneIds: ids } });
+              setBusy(false);
+              if (r.ok) {
+                const okCount = r.results.filter((x) => x.ok).length;
+                toast.success(`Deleted ${okCount}/${ids.length}`);
+                onDone();
+              } else toast.error("Delete failed");
+            }}
+          >
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

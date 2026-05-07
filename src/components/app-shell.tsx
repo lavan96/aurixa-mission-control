@@ -29,6 +29,7 @@ import { NotificationsBell } from "@/components/notifications-bell";
 import { CommandPalette } from "@/components/command-palette";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
+import { GitHubRateLimitMeter } from "@/components/github-rate-limit-meter";
 import {
   Sheet,
   SheetContent,
@@ -190,6 +191,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         {/* Desktop top bar */}
         <header className="hidden md:flex sticky top-0 z-30 h-12 items-center justify-end gap-2 border-b border-border/60 bg-background/80 px-6 backdrop-blur">
+          <GitHubRateLimitMeter />
           <kbd className="hidden lg:inline-flex items-center gap-1 rounded border border-border/60 bg-surface px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
             ⌘K
             <span className="text-muted-foreground/60">command palette</span>

@@ -102,6 +102,60 @@ export const bulkDeleteClones = createServerFn({ method: "POST" })
     return { ok: true as const, results };
   });
 
+// ─── Bulk pause / resume (uses sync_status enum: 'unknown' as paused proxy) ──
+// We track paused state via a metadata note, since the sync_status enum has
+// no dedicated value. The UI shows a "paused" pill when notes contain a tag.
+
+const PAUSE_TAG = "[paused]";
+
+export const bulkPauseClones = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { cloneIds: string[]; pause: boolean }) =>
+    z.object({ cloneIds: z.array(z.string().uuid()).min(1).max(100), pause: z.boolean() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: clones } = await supabase
+      .from("clones")
+      .select("id, notes")
+      .in("id", data.cloneIds);
+    const updates = (clones ?? []).map(async (c) => {
+      const existing = (c.notes ?? "").replace(PAUSE_TAG, "").trim();
+      const next = data.pause ? `${PAUSE_TAG} ${existing}`.trim() : existing;
+      await supabase.from("clones").update({ notes: next || null }).eq("id", c.id);
+    });
+    await Promise.all(updates);
+    await supabase.from("audit_log").insert({
+      action: data.pause ? "clones.bulk_paused" : "clones.bulk_resumed",
+      entity_type: "clone",
+      actor_user_id: userId,
+      metadata: { count: data.cloneIds.length, ids: data.cloneIds },
+    });
+    return { ok: true as const, count: data.cloneIds.length };
+  });
+
+export const bulkReprovisionBackends = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { cloneIds: string[] }) =>
+    z.object({ cloneIds: z.array(z.string().uuid()).min(1).max(50) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { error } = await supabase
+      .from("clone_backends")
+      .update({ status: "pending" as const, error_message: null, status_detail: "Re-queued by bulk reprovision" })
+      .in("clone_id", data.cloneIds)
+      .in("status", ["failed", "ready"] as const);
+    await supabase.from("audit_log").insert({
+      action: "clones.bulk_reprovision_queued",
+      entity_type: "clone_backend",
+      actor_user_id: userId,
+      metadata: { count: data.cloneIds.length, ids: data.cloneIds },
+    });
+    if (error) return { ok: false as const, error: error.message };
+    return { ok: true as const, count: data.cloneIds.length };
+  });
+
 // ─── Audit log export (CSV-friendly batch) ────────────────────────────
 
 export const exportAuditLog = createServerFn({ method: "POST" })
