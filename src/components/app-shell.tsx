@@ -23,6 +23,7 @@ import {
   Newspaper,
   ShieldCheck,
   Target,
+  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "@/components/notifications-bell";
@@ -141,7 +142,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span className="font-mono text-xs font-semibold tracking-wide">MISSION CONTROL</span>
             </div>
           </div>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => window.dispatchEvent(new Event("open-command-palette"))}
+              aria-label="Open command palette"
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+            <ThemeToggle />
             <NotificationsBell />
           </div>
         </header>
