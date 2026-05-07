@@ -179,18 +179,27 @@ function CloudflarePage() {
             <CardTitle className="text-base">Wrapped clones ({attached.length})</CardTitle>
             <CardDescription>Per-zone posture, live</CardDescription>
           </div>
-          {tokenQ.data?.valid && unattachedClones.length > 0 && (
-            <AttachZoneDialog
-              clones={unattachedClones.map((c) => ({ id: c.id, name: c.name }))}
-              zones={zonesQ.data?.zones ?? []}
-              onAttach={(v) => attach.mutate(v)}
-            />
-          )}
+          <div className="flex gap-2">
+            {unattachedClones.length > 0 && (
+              <SeedZoneDialog
+                clones={unattachedClones.map((c) => ({ id: c.id, name: c.name }))}
+                onSeed={(v) => seed.mutate(v)}
+                pending={seed.isPending}
+              />
+            )}
+            {tokenQ.data?.valid && unattachedClones.length > 0 && (
+              <AttachZoneDialog
+                clones={unattachedClones.map((c) => ({ id: c.id, name: c.name }))}
+                zones={zonesQ.data?.zones ?? []}
+                onAttach={(v) => attach.mutate(v)}
+              />
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {attached.length === 0 ? (
             <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-              No clones wrapped yet. Attach a zone to get started.
+              No clones wrapped yet. Attach a zone via API token, or seed one manually — both are optional.
             </div>
           ) : (
             <div className="space-y-2">
