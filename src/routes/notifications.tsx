@@ -355,6 +355,19 @@ function NotificationsPage() {
             <CheckCheck className="mr-1.5 h-3.5 w-3.5" />
             Mark page read
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              if (!confirm("Delete all read notifications older than 30 days?")) return;
+              const { purgeReadNotifications } = await import("@/server/bulk-ops.functions");
+              const r = await purgeReadNotifications({ data: { olderThanDays: 30 } });
+              if (r.ok) { toast.success(`Purged ${r.deleted} read notifications`); refresh(); }
+              else toast.error(r.error);
+            }}
+          >
+            <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Purge old read
+          </Button>
           <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
             <AlertDialogTrigger asChild>
               <Button variant="default" size="sm" disabled={search.read === "read"}>
