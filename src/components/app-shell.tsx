@@ -199,6 +199,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="p-4 md:p-8">{children}</div>
       </main>
       <CommandPalette />
+      <KeyboardShortcuts />
+      <OnboardingWizard />
     </div>
   );
 }
