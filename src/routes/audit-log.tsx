@@ -382,15 +382,6 @@ function summarizeMeta(meta: AuditLog["metadata"]): string {
     .join(" · ");
 }
 
-function entityLink(log: AuditLog):
-  | { to: "/cascades/$eventId"; params: { eventId: string } }
-  | null {
-  if (log.entity_type === "cascade_event" && log.entity_id) {
-    return { to: "/cascades/$eventId", params: { eventId: log.entity_id } };
-  }
-  return null;
-}
-
 function actionTone(action: string): { dot: string; text: string } {
   if (action.startsWith("cascade")) return { dot: "bg-info", text: "text-foreground" };
   if (action.startsWith("fleet")) return { dot: "bg-accent", text: "text-foreground" };
