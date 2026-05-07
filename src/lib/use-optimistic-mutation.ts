@@ -64,7 +64,7 @@ export function useOptimisticMutation<TData = unknown, TVars = void, TSnapshot =
       opts.onError?.(err, vars);
     },
     onSuccess: (data, vars) => {
-      if (opts.successMessage && opts.successMessage !== false) {
+      if (opts.successMessage !== undefined && opts.successMessage !== false) {
         const msg =
           typeof opts.successMessage === "function"
             ? opts.successMessage(data, vars)
