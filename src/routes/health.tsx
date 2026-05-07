@@ -173,41 +173,25 @@ function FleetHealthPage() {
             />
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Per-clone breakdown</CardTitle>
-              <CardDescription>
-                Sorted by risk — down deploys first, then failed cascades, then drift.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {data.rows.length === 0 && (
-                <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-                  No clones in the fleet yet.
-                </div>
-              )}
-              {[...data.rows]
-                .sort((a, b) => riskScore(b) - riskScore(a))
-                .map((r) => (
-                  <FleetRow
-                    key={r.cloneId}
-                    row={r}
-                    onUpdated={(next) =>
-                      setData((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              rows: prev.rows.map((row) =>
-                                row.cloneId === next.cloneId ? next : row,
-                              ),
-                            }
-                          : prev,
-                      )
+          <FilteredBreakdown
+            data={data}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            search={search}
+            setSearch={setSearch}
+            onRowUpdated={(next) =>
+              setData((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      rows: prev.rows.map((row) =>
+                        row.cloneId === next.cloneId ? next : row,
+                      ),
                     }
-                  />
-                ))}
-            </CardContent>
-          </Card>
+                  : prev,
+              )
+            }
+          />
         </>
       )}
     </div>
