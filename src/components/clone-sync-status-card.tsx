@@ -85,12 +85,14 @@ export function CloneSyncStatusCard({ clone }: { clone: Clone }) {
     }
   };
 
+  const isInFlight =
+    latest?.status === "pushing" || latest?.status === "queued";
   const StatusIcon =
     latest?.status === "succeeded" || latest?.status === "pr_opened"
       ? CheckCircle2
       : latest?.status === "failed"
         ? XCircle
-        : latest?.status === "running" || latest?.status === "pushing" || latest?.status === "queued"
+        : isInFlight
           ? Loader2
           : AlertTriangle;
 
@@ -166,10 +168,7 @@ export function CloneSyncStatusCard({ clone }: { clone: Clone }) {
                   className={cn(
                     "mt-0.5 h-4 w-4 shrink-0",
                     statusTone(latest.status),
-                    (latest.status === "running" ||
-                      latest.status === "pushing" ||
-                      latest.status === "queued") &&
-                      "animate-spin",
+                    isInFlight && "animate-spin",
                   )}
                 />
                 <div className="min-w-0">
