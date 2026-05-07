@@ -7,7 +7,10 @@ import type { Database } from "@/integrations/supabase/types";
 import { useServerAction } from "@/lib/use-server-action";
 import { upsertBrandProfile } from "@/server/branding.functions";
 
-type BrandProfile = Database["public"]["Tables"]["clone_brand_profiles"]["Row"];
+type BrandProfile = Pick<
+  Database["public"]["Tables"]["clone_brand_profiles"]["Row"],
+  "name" | "slug" | "description" | "brand_config" | "report_contact" | "asset_manifest" | "tags"
+>;
 
 export function BrandProfileIO({
   profile,
