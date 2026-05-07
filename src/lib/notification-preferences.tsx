@@ -112,6 +112,7 @@ export function useNotificationPreferences() {
           muted_severities: data.muted_severities ?? [],
           mute_toasts: data.mute_toasts,
           mute_browser_push: data.mute_browser_push,
+          digest_mode: ((data as { digest_mode?: string }).digest_mode as LocalCache["digest_mode"]) ?? "realtime",
         }
       : DEFAULTS;
     setPrefs(next);
