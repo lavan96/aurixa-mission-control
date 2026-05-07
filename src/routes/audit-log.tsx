@@ -130,9 +130,36 @@ function AuditLogPage() {
             </p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
-          <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", loading && "animate-spin")} /> Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              const { exportAuditLog } = await import("@/server/operator-ux.functions");
+              const res = await exportAuditLog({ data: { action: search.action, entity: search.entity, limit: 5000 } });
+              if (!res.ok) return;
+              const header = ["created_at", "action", "entity_type", "entity_id", "actor_user_id", "metadata"];
+              const csv = [header.join(",")].concat(
+                res.rows.map((r) =>
+                  [r.created_at, r.action, r.entity_type ?? "", r.entity_id ?? "", r.actor_user_id ?? "", JSON.stringify(r.metadata).replace(/"/g, '""')]
+                    .map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","),
+                ),
+              ).join("\n");
+              const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement("a");
+              link.href = url;
+              link.download = `audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
+              link.click();
+              URL.revokeObjectURL(url);
+            }}
+          >
+            Export CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
+            <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", loading && "animate-spin")} /> Refresh
+          </Button>
+        </div>
       </header>
 
       <Card>

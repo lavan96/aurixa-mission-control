@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as YggdrasilRouteImport } from './routes/yggdrasil'
+import { Route as SloRouteImport } from './routes/slo'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SchedulesRouteImport } from './routes/schedules'
 import { Route as NotificationsRouteImport } from './routes/notifications'
@@ -25,6 +26,7 @@ import { Route as CascadesRouteImport } from './routes/cascades'
 import { Route as BrandingRouteImport } from './routes/branding'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuditLogRouteImport } from './routes/audit-log'
+import { Route as ApprovalsRouteImport } from './routes/approvals'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as SettingsRolesRouteImport } from './routes/settings.roles'
@@ -47,6 +49,11 @@ import { Route as CascadesEventIdRouteImport } from './routes/cascades.$eventId'
 const YggdrasilRoute = YggdrasilRouteImport.update({
   id: '/yggdrasil',
   path: '/yggdrasil',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SloRoute = SloRouteImport.update({
+  id: '/slo',
+  path: '/slo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsRoute = SettingsRouteImport.update({
@@ -122,6 +129,11 @@ const AuthRoute = AuthRouteImport.update({
 const AuditLogRoute = AuditLogRouteImport.update({
   id: '/audit-log',
   path: '/audit-log',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApprovalsRoute = ApprovalsRouteImport.update({
+  id: '/approvals',
+  path: '/approvals',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -219,6 +231,7 @@ const CascadesEventIdRoute = CascadesEventIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/approvals': typeof ApprovalsRoute
   '/audit-log': typeof AuditLogRoute
   '/auth': typeof AuthRoute
   '/branding': typeof BrandingRoute
@@ -234,6 +247,7 @@ export interface FileRoutesByFullPath {
   '/notifications': typeof NotificationsRoute
   '/schedules': typeof SchedulesRoute
   '/settings': typeof SettingsRouteWithChildren
+  '/slo': typeof SloRoute
   '/yggdrasil': typeof YggdrasilRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
@@ -255,6 +269,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/approvals': typeof ApprovalsRoute
   '/audit-log': typeof AuditLogRoute
   '/auth': typeof AuthRoute
   '/branding': typeof BrandingRoute
@@ -269,6 +284,7 @@ export interface FileRoutesByTo {
   '/modules': typeof ModulesRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/schedules': typeof SchedulesRoute
+  '/slo': typeof SloRoute
   '/yggdrasil': typeof YggdrasilRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
@@ -291,6 +307,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/approvals': typeof ApprovalsRoute
   '/audit-log': typeof AuditLogRoute
   '/auth': typeof AuthRoute
   '/branding': typeof BrandingRoute
@@ -306,6 +323,7 @@ export interface FileRoutesById {
   '/notifications': typeof NotificationsRoute
   '/schedules': typeof SchedulesRoute
   '/settings': typeof SettingsRouteWithChildren
+  '/slo': typeof SloRoute
   '/yggdrasil': typeof YggdrasilRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
@@ -329,6 +347,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/approvals'
     | '/audit-log'
     | '/auth'
     | '/branding'
@@ -344,6 +363,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/schedules'
     | '/settings'
+    | '/slo'
     | '/yggdrasil'
     | '/cascades/$eventId'
     | '/clones/$cloneId'
@@ -365,6 +385,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/approvals'
     | '/audit-log'
     | '/auth'
     | '/branding'
@@ -379,6 +400,7 @@ export interface FileRouteTypes {
     | '/modules'
     | '/notifications'
     | '/schedules'
+    | '/slo'
     | '/yggdrasil'
     | '/cascades/$eventId'
     | '/clones/$cloneId'
@@ -400,6 +422,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/approvals'
     | '/audit-log'
     | '/auth'
     | '/branding'
@@ -415,6 +438,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/schedules'
     | '/settings'
+    | '/slo'
     | '/yggdrasil'
     | '/cascades/$eventId'
     | '/clones/$cloneId'
@@ -437,6 +461,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApprovalsRoute: typeof ApprovalsRoute
   AuditLogRoute: typeof AuditLogRoute
   AuthRoute: typeof AuthRoute
   BrandingRoute: typeof BrandingRoute
@@ -452,6 +477,7 @@ export interface RootRouteChildren {
   NotificationsRoute: typeof NotificationsRoute
   SchedulesRoute: typeof SchedulesRoute
   SettingsRoute: typeof SettingsRouteWithChildren
+  SloRoute: typeof SloRoute
   YggdrasilRoute: typeof YggdrasilRoute
   ClonesCloneIdRoute: typeof ClonesCloneIdRoute
   ClonesNewRoute: typeof ClonesNewRoute
@@ -470,6 +496,13 @@ declare module '@tanstack/react-router' {
       path: '/yggdrasil'
       fullPath: '/yggdrasil'
       preLoaderRoute: typeof YggdrasilRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/slo': {
+      id: '/slo'
+      path: '/slo'
+      fullPath: '/slo'
+      preLoaderRoute: typeof SloRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings': {
@@ -575,6 +608,13 @@ declare module '@tanstack/react-router' {
       path: '/audit-log'
       fullPath: '/audit-log'
       preLoaderRoute: typeof AuditLogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/approvals': {
+      id: '/approvals'
+      path: '/approvals'
+      fullPath: '/approvals'
+      preLoaderRoute: typeof ApprovalsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -755,6 +795,7 @@ const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApprovalsRoute: ApprovalsRoute,
   AuditLogRoute: AuditLogRoute,
   AuthRoute: AuthRoute,
   BrandingRoute: BrandingRoute,
@@ -770,6 +811,7 @@ const rootRouteChildren: RootRouteChildren = {
   NotificationsRoute: NotificationsRoute,
   SchedulesRoute: SchedulesRoute,
   SettingsRoute: SettingsRouteWithChildren,
+  SloRoute: SloRoute,
   YggdrasilRoute: YggdrasilRoute,
   ClonesCloneIdRoute: ClonesCloneIdRoute,
   ClonesNewRoute: ClonesNewRoute,
