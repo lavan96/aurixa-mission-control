@@ -24,6 +24,7 @@ import {
   ShieldCheck,
   Target,
   Search,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "@/components/notifications-bell";
@@ -51,6 +52,7 @@ const NAV = [
   { to: "/branding", label: "Branding", icon: Palette },
   { to: "/fleet-manager", label: "AI Manager", icon: Bot },
   { to: "/audit-log", label: "Audit Log", icon: ScrollText },
+  { to: "/route-errors", label: "Route Errors", icon: AlertTriangle },
   { to: "/cloudflare", label: "Cloudflare", icon: Shield },
   { to: "/approvals", label: "Approvals", icon: ShieldCheck },
   { to: "/metrics", label: "Metrics", icon: BarChart3 },
