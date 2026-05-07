@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { ProtectedRoute } from "@/components/protected-route";
+import { RouteError } from "@/components/route-error";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bot, Activity, AlertTriangle, Sparkles, GitCommit, RefreshCw, Zap, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +41,7 @@ const searchSchema = z.object({
 });
 
 export const Route = createFileRoute("/fleet-manager")({
+  errorComponent: RouteError,
   validateSearch: zodValidator(searchSchema),
   component: () => (
     <ProtectedRoute>

@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useRouter, useNavigate } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/protected-route";
+import { RouteError } from "@/components/route-error";
 import { useEffect, useMemo, useState, useCallback, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -69,6 +70,7 @@ type PrimeConfig = Database["public"]["Tables"]["prime_config"]["Row"];
 type ResultWithClone = CascadeResult & { clone?: Clone | null };
 
 export const Route = createFileRoute("/cascades/$eventId")({
+  errorComponent: RouteError,
   component: () => (
     <ProtectedRoute>
       <CascadeDetailPage />

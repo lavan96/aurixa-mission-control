@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { formatDistanceToNow } from "@/lib/format";
 import { ChevronRight, User, Clock } from "lucide-react";
+import { CopyButton } from "@/components/copy-button";
 
 type AuditLog = Database["public"]["Tables"]["audit_log"]["Row"];
 
@@ -81,9 +82,12 @@ export function AuditLogDetailDrawer({
                       {actor?.display_name ?? (log.actor_user_id ? "Unknown user" : "System")}
                     </p>
                     {log.actor_user_id && (
-                      <p className="truncate font-mono text-[10px] text-muted-foreground">
-                        {log.actor_user_id}
-                      </p>
+                      <div className="flex items-center gap-1">
+                        <p className="truncate font-mono text-[10px] text-muted-foreground">
+                          {log.actor_user_id}
+                        </p>
+                        <CopyButton value={log.actor_user_id} label="user id" />
+                      </div>
                     )}
                   </div>
                 </div>
@@ -100,9 +104,12 @@ export function AuditLogDetailDrawer({
                       {log.entity_type}
                     </Badge>
                     {log.entity_id && (
-                      <code className="font-mono text-[11px] text-muted-foreground">
-                        {log.entity_id}
-                      </code>
+                      <>
+                        <code className="font-mono text-[11px] text-muted-foreground">
+                          {log.entity_id}
+                        </code>
+                        <CopyButton value={log.entity_id} label="entity id" />
+                      </>
                     )}
                     {link && (
                       <Link

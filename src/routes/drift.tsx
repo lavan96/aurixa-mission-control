@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/protected-route";
+import { RouteError } from "@/components/route-error";
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "@/lib/format";
 
 export const Route = createFileRoute("/drift")({
+  errorComponent: RouteError,
   component: () => (
     <ProtectedRoute>
       <DriftDashboard />

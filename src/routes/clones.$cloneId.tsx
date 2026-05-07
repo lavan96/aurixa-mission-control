@@ -23,6 +23,8 @@ import { bulkSyncModuleFn } from "@/server/module-sync.functions";
 import { CloneLibraryPinsCard } from "@/components/clone-library-pins";
 import type { DriftSuggestion } from "@/server/drift-suggestions.functions";
 import { CloneEditDialog } from "@/components/clone-edit-dialog";
+import { CopyButton } from "@/components/copy-button";
+import { RouteError } from "@/components/route-error";
 
 export const Route = createFileRoute("/clones/$cloneId")({
   component: () => (
@@ -30,6 +32,7 @@ export const Route = createFileRoute("/clones/$cloneId")({
       <CloneDetail />
     </ProtectedRoute>
   ),
+  errorComponent: RouteError,
 });
 
 function CloneDetail() {
@@ -179,9 +182,19 @@ function CloneDetail() {
             <Badge variant="outline" className="font-mono text-[10px] uppercase">
               {clone.provisioning_method}
             </Badge>
-            <span className="font-mono">
+            <span className="inline-flex items-center gap-1 font-mono">
               {clone.github_owner}/{clone.github_repo}
+              <CopyButton
+                value={`${clone.github_owner}/${clone.github_repo}`}
+                label="repo slug"
+              />
             </span>
+            {clone.last_synced_sha && (
+              <span className="inline-flex items-center gap-1 font-mono text-xs">
+                sha {clone.last_synced_sha.slice(0, 7)}
+                <CopyButton value={clone.last_synced_sha} label="commit SHA" />
+              </span>
+            )}
           </div>
         </div>
         <div className="flex gap-2">
