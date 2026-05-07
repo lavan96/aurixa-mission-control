@@ -1453,6 +1453,69 @@ function ModuleLibraryPanel() {
         )}
       </div>
 
+      {selected.size > 0 && isAdmin && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-primary/40 bg-primary/5 p-2">
+          <span className="font-mono text-xs text-muted-foreground">
+            {selected.size} entry{selected.size === 1 ? "" : "s"} selected
+          </span>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear</Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={async () => {
+                const { bulkSetLibraryApproval } = await import("@/server/bulk-ops.functions");
+                const r = await bulkSetLibraryApproval({ data: { ids: Array.from(selected), status: "approved" } });
+                if (r.ok) { toast.success(`Approved ${r.count}`); setSelected(new Set()); refresh(); }
+                else toast.error(r.error);
+              }}
+            >
+              <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Approve
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={async () => {
+                const reason = prompt("Rejection reason (optional)") ?? undefined;
+                const { bulkSetLibraryApproval } = await import("@/server/bulk-ops.functions");
+                const r = await bulkSetLibraryApproval({ data: { ids: Array.from(selected), status: "rejected", reason } });
+                if (r.ok) { toast.success(`Rejected ${r.count}`); setSelected(new Set()); refresh(); }
+                else toast.error(r.error);
+              }}
+            >
+              <XCircle className="mr-1 h-3.5 w-3.5" /> Reject
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={async () => {
+                const reason = prompt("Deprecation reason (optional)") ?? undefined;
+                const replacementSlug = prompt("Replacement slug (optional)") ?? undefined;
+                const { bulkDeprecateLibrary } = await import("@/server/bulk-ops.functions");
+                const r = await bulkDeprecateLibrary({ data: { ids: Array.from(selected), reason, replacementSlug } });
+                if (r.ok) { toast.success(`Deprecated ${r.count}`); setSelected(new Set()); refresh(); }
+                else toast.error(r.error);
+              }}
+            >
+              <Clock className="mr-1 h-3.5 w-3.5" /> Deprecate
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={async () => {
+                if (!confirm(`Permanently delete ${selected.size} library entries?`)) return;
+                const { bulkDeleteLibraryEntries } = await import("@/server/bulk-ops.functions");
+                const r = await bulkDeleteLibraryEntries({ data: { ids: Array.from(selected) } });
+                if (r.ok) { toast.success(`Deleted ${r.count}`); setSelected(new Set()); refresh(); }
+                else toast.error(r.error);
+              }}
+            >
+              <Trash2 className="mr-1 h-3.5 w-3.5" /> Delete
+            </Button>
+          </div>
+        </div>
+      )}
+
       {filtered.length === 0 ? (
         <EmptyState
           icon={<Library />}
