@@ -7,7 +7,9 @@ import { useCascadeEvents, useClones } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Waves, GitMerge, Send, Bell, ChevronRight, Package, Bot, X, CalendarClock, Tag } from "lucide-react";
+import { Waves, GitMerge, Send, Bell, ChevronRight, Package, Bot, X, CalendarClock, Tag, Download } from "lucide-react";
+import { exportRowsAsCSV } from "@/lib/csv";
+import { SavedViewsBar } from "@/components/saved-views-bar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -422,21 +424,58 @@ function CascadesPage() {
       />
 
       <section>
-        <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
             history
           </h2>
-          {scheduleId && (
-            <button
-              type="button"
-              onClick={clearScheduleFilter}
-              className="inline-flex items-center gap-1.5 rounded-md border border-primary/40 bg-primary/10 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-primary transition-colors hover:bg-primary/20"
+          <div className="flex items-center gap-2">
+            {scheduleId && (
+              <button
+                type="button"
+                onClick={clearScheduleFilter}
+                className="inline-flex items-center gap-1.5 rounded-md border border-primary/40 bg-primary/10 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-primary transition-colors hover:bg-primary/20"
+              >
+                <CalendarClock className="h-3 w-3" />
+                schedule · {scheduleName ?? scheduleId.slice(0, 8)}
+                <X className="h-3 w-3" />
+              </button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={visibleEvents.length === 0}
+              onClick={() => {
+                exportRowsAsCSV(
+                  `cascades-${new Date().toISOString().slice(0, 10)}.csv`,
+                  visibleEvents.map((e) => ({
+                    id: e.id,
+                    created_at: e.created_at,
+                    trigger: e.trigger,
+                    mode: e.mode,
+                    status: e.status,
+                    requires_approval: e.requires_approval,
+                    initiated_by: e.initiated_by ?? "",
+                    scope_filter: e.scope_filter,
+                  })),
+                );
+                toast.success(`Exported ${visibleEvents.length} cascades`);
+              }}
             >
-              <CalendarClock className="h-3 w-3" />
-              schedule · {scheduleName ?? scheduleId.slice(0, 8)}
-              <X className="h-3 w-3" />
-            </button>
-          )}
+              <Download className="mr-1.5 h-3.5 w-3.5" />
+              Export
+            </Button>
+          </div>
+        </div>
+        <div className="mb-3">
+          <SavedViewsBar<{ mode: Mode; scope: typeof scope; tags: string }>
+            storageKey="cascades"
+            current={{ mode, scope, tags: selectedTags.join(",") }}
+            onApply={(v) => {
+              setMode(v.mode);
+              setScope(v.scope);
+              setTags(v.tags ? v.tags.split(",").filter(Boolean) : []);
+            }}
+          />
         </div>
         {eventsLoading ? (
           <div className="space-y-2">

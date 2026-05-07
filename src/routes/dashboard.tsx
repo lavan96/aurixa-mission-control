@@ -30,6 +30,7 @@ import {
   Waves,
   X,
   Zap,
+  Download,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatDistanceToNow } from "@/lib/format";
@@ -40,6 +41,7 @@ import { Tag, Trash2, PauseCircle, RefreshCw } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { bulkDeleteClones, bulkPauseClones, bulkReprovisionBackends } from "@/server/operator-ux.functions";
 import { toast } from "sonner";
+import { exportRowsAsCSV } from "@/lib/csv";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
