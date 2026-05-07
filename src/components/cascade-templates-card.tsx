@@ -211,6 +211,17 @@ export function CascadeTemplatesCard({
         </Dialog>
       </CardHeader>
       <CardContent className="space-y-2">
+        {selected.size > 0 && (
+          <div className="flex items-center justify-between rounded-md border border-primary/40 bg-primary/5 p-2">
+            <span className="font-mono text-xs text-muted-foreground">{selected.size} selected</span>
+            <div className="flex gap-2">
+              <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear</Button>
+              <Button size="sm" variant="destructive" onClick={bulkDelete}>
+                <Trash2 className="mr-1 h-3 w-3" /> Delete
+              </Button>
+            </div>
+          </div>
+        )}
         {loading ? (
           <div className="font-mono text-xs text-muted-foreground">loading…</div>
         ) : templates.length === 0 ? (
