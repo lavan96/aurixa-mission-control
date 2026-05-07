@@ -34,7 +34,9 @@ import {
   Save,
   Trash2,
   CheckSquare,
+  Radio,
 } from "lucide-react";
+import { CopyButton } from "@/components/copy-button";
 import { cn } from "@/lib/utils";
 import { useClones, type Clone } from "@/lib/queries";
 import { supabase } from "@/integrations/supabase/client";
@@ -842,15 +844,23 @@ export function BulkCascadeCard() {
           <CardContent className="space-y-4">
             {/* Progress bar */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
                   Progress
+                  {running && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-info/40 bg-info/10 px-1.5 py-0.5 text-[9px] text-info">
+                      <Radio className="h-2.5 w-2.5 animate-pulse" /> live
+                    </span>
+                  )}
+                  {eventId && (
+                    <CopyButton value={eventId} label="cascade event id" size="xs" showValue truncate={10} />
+                  )}
                 </div>
                 <div className="flex items-center gap-3 font-mono text-[11px]">
                   <span className="text-success">{succeeded} ok</span>
                   {failed > 0 && <span className="text-destructive">{failed} failed</span>}
                   <span className="text-muted-foreground">
-                    {completed}/{total}
+                    {completed}/{total} · {pct}%
                   </span>
                 </div>
               </div>

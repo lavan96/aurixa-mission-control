@@ -61,6 +61,7 @@ const RichDiffViewer = lazy(() =>
 );
 import { CascadeApprovalBanner } from "@/components/cascade-approval-banner";
 import { CascadeTriageCard } from "@/components/cascade-triage-card";
+import { CopyButton } from "@/components/copy-button";
 import { assessBlastRadius } from "@/lib/blast-radius";
 
 type CascadeEvent = Database["public"]["Tables"]["cascade_events"]["Row"];
@@ -362,6 +363,11 @@ function CascadeDetailPage() {
             <h1 className="mt-1 text-2xl font-semibold tracking-tight">
               {event.mode.replace("_", " ")} cascade
             </h1>
+            <div className="mt-1 flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground">
+              <span className="opacity-60">id</span>
+              <code>{eventId.slice(0, 12)}…</code>
+              <CopyButton value={eventId} label="cascade event id" />
+            </div>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <Badge variant="outline" className={cn("text-[10px] uppercase", statusTone(event.status))}>
                 {event.status}

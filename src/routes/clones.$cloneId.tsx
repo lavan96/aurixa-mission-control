@@ -24,6 +24,7 @@ import { CloneLibraryPinsCard } from "@/components/clone-library-pins";
 import type { DriftSuggestion } from "@/server/drift-suggestions.functions";
 import { CloneEditDialog } from "@/components/clone-edit-dialog";
 import { CopyButton } from "@/components/copy-button";
+import { CloneSyncStatusCard } from "@/components/clone-sync-status-card";
 import { RouteError } from "@/components/route-error";
 
 export const Route = createFileRoute("/clones/$cloneId")({
@@ -176,7 +177,10 @@ function CloneDetail() {
           <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
             clone
           </p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight">{clone.name}</h1>
+          <div className="mt-1 flex items-center gap-2">
+            <h1 className="text-3xl font-semibold tracking-tight">{clone.name}</h1>
+            <CopyButton value={clone.id} label="clone id" />
+          </div>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <StatusPill status={clone.sync_status} behind={clone.commits_behind} />
             <Badge variant="outline" className="font-mono text-[10px] uppercase">
@@ -217,6 +221,8 @@ function CloneDetail() {
         <InfoTile label="Lovable" value={clone.lovable_project_url ?? "—"} icon={<ExternalLink className="h-4 w-4" />} link={clone.lovable_project_url} />
         <InfoTile label="Deploy" value={clone.deploy_url ?? "—"} icon={<ExternalLink className="h-4 w-4" />} link={clone.deploy_url} />
       </div>
+
+      <CloneSyncStatusCard clone={clone} />
 
       <CloneHealthCard cloneId={cloneId} />
       <Suspense fallback={<Card><CardContent className="p-6 text-xs text-muted-foreground">Loading timeline…</CardContent></Card>}>
