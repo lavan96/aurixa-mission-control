@@ -122,6 +122,36 @@
   --sidebar-ring: oklch(0.78 0.16 200 / 60%);
 }
 
+/* Light theme override — cleaner palette for daytime ops. */
+.light {
+  --background: oklch(0.98 0.005 240);
+  --foreground: oklch(0.18 0.02 250);
+  --surface: oklch(0.96 0.005 240);
+  --surface-elevated: oklch(0.99 0.003 240);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.02 250);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.02 250);
+  --primary: oklch(0.55 0.18 220);
+  --primary-foreground: oklch(0.99 0 0);
+  --primary-glow: oklch(0.65 0.2 215);
+  --secondary: oklch(0.92 0.01 240);
+  --secondary-foreground: oklch(0.18 0.02 250);
+  --muted: oklch(0.94 0.005 240);
+  --muted-foreground: oklch(0.45 0.015 250);
+  --accent: oklch(0.7 0.2 145);
+  --accent-foreground: oklch(0.18 0.02 250);
+  --border: oklch(0 0 0 / 10%);
+  --input: oklch(0 0 0 / 14%);
+  --ring: oklch(0.55 0.18 220 / 60%);
+  --grid-line: oklch(0 0 0 / 4%);
+  --sidebar: oklch(0.97 0.005 240);
+  --sidebar-foreground: oklch(0.2 0.02 250);
+  --sidebar-accent: oklch(0.92 0.01 240);
+  --sidebar-accent-foreground: oklch(0.18 0.02 250);
+  --sidebar-border: oklch(0 0 0 / 10%);
+}
+
 @layer base {
   * {
     border-color: var(--color-border);
