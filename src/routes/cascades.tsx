@@ -424,7 +424,7 @@ function CascadesPage() {
       />
 
       <section>
-        <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
             history
           </h2>
