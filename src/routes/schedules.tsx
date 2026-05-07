@@ -215,6 +215,7 @@ function SchedulesPage() {
                       {s.last_run_at && <> · last {formatDistanceToNow(s.last_run_at)}</>}
                       {s.next_run_at && <> · next {formatDistanceToNow(s.next_run_at)}</>}
                     </div>
+                    </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <Switch
