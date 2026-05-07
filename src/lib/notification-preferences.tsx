@@ -15,6 +15,7 @@ type LocalCache = {
   muted_severities: NotificationSeverity[];
   mute_toasts: boolean;
   mute_browser_push: boolean;
+  digest_mode: "realtime" | "hourly" | "daily";
 };
 
 const DEFAULTS: LocalCache = {
@@ -22,6 +23,7 @@ const DEFAULTS: LocalCache = {
   muted_severities: [],
   mute_toasts: false,
   mute_browser_push: false,
+  digest_mode: "realtime",
 };
 
 function readCache(): LocalCache {
