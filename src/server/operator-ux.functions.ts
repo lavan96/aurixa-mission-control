@@ -52,7 +52,8 @@ export const diffBrandVersions = createServerFn({ method: "POST" })
       ...diffJson(a.report_contact as Json, b.report_contact as Json, "report_contact"),
       ...diffJson(a.asset_manifest as Json, b.asset_manifest as Json, "asset_manifest"),
     ];
-    return { ok: true as const, a: { id: a.id, version: a.version, published_at: a.published_at }, b: { id: b.id, version: b.version, published_at: b.published_at }, diff };
+    const safeDiff = JSON.parse(JSON.stringify(diff)) as Array<{ path: string; before: Json; after: Json; kind: "added" | "removed" | "changed" }>;
+    return { ok: true as const, a: { id: a.id, version: a.version, published_at: a.published_at }, b: { id: b.id, version: b.version, published_at: b.published_at }, diff: safeDiff };
   });
 
 // ─── Pending cascade approvals (queue) ────────────────────────────────
