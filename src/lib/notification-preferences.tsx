@@ -37,6 +37,7 @@ function readCache(): LocalCache {
       muted_severities: parsed.muted_severities ?? [],
       mute_toasts: parsed.mute_toasts ?? false,
       mute_browser_push: parsed.mute_browser_push ?? false,
+      digest_mode: parsed.digest_mode ?? "realtime",
     };
   } catch {
     return DEFAULTS;
