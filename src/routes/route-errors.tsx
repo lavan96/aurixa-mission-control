@@ -10,10 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CopyButton } from "@/components/copy-button";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "@/lib/format";
-import { AlertTriangle, RefreshCw, Search, Filter, ExternalLink } from "lucide-react";
+import { AlertTriangle, RefreshCw, Search, Filter, ExternalLink, Download } from "lucide-react";
 import { useUrlState } from "@/lib/use-url-state";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { exportRowsAsCSV } from "@/lib/csv";
 
 type Row = {
   id: string;
@@ -129,12 +130,39 @@ function RouteErrorsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={rows.length === 0}
+            onClick={() => {
+              exportRowsAsCSV(
+                `route-errors-${windowKey}-${new Date().toISOString().slice(0, 10)}.csv`,
+                rows,
+                [
+                  { key: "created_at", header: "created_at" },
+                  { key: "route_path", header: "route_path" },
+                  { key: "message", header: "message" },
+                  { key: "user_id", header: "user_id" },
+                  { key: "user_agent", header: "user_agent" },
+                  { key: "stack", header: "stack" },
+                  { key: "id", header: "id" },
+                ],
+              );
+              toast.success(`Exported ${rows.length} rows`);
+            }}
+          >
+            <Download className="mr-1.5 h-3.5 w-3.5" />
+            Export CSV
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => void load()} disabled={loading}>
             <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", loading && "animate-spin")} />
             Reload
           </Button>
         </div>
       </header>
+
+      <TrendSparkline rows={rows} />
+
 
       <div className="grid gap-2 md:grid-cols-3">
         <SummaryTile label="Total reports" value={String(total)} tone="info" />
@@ -305,3 +333,70 @@ function SummaryTile({
     </Card>
   );
 }
+
+function TrendSparkline({ rows }: { rows: Row[] }) {
+  const buckets = useMemo(() => {
+    const days = 14;
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const arr: { day: string; count: number }[] = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      arr.push({ day: d.toISOString().slice(0, 10), count: 0 });
+    }
+    const idx = new Map(arr.map((b, i) => [b.day, i]));
+    for (const r of rows) {
+      const k = r.created_at.slice(0, 10);
+      const i = idx.get(k);
+      if (i !== undefined) arr[i].count += 1;
+    }
+    return arr;
+  }, [rows]);
+
+  const max = Math.max(1, ...buckets.map((b) => b.count));
+  const total = buckets.reduce((s, b) => s + b.count, 0);
+
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="mb-2 flex items-center justify-between">
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              14-day trend
+            </div>
+            <div className="text-sm font-medium">{total} reports · peak {max}/day</div>
+          </div>
+        </div>
+        <div className="flex h-16 items-end gap-1">
+          {buckets.map((b) => (
+            <div
+              key={b.day}
+              className="group relative flex-1"
+              title={`${b.day}: ${b.count}`}
+            >
+              <div
+                className={cn(
+                  "w-full rounded-sm transition-colors",
+                  b.count === 0
+                    ? "bg-muted/30"
+                    : b.count >= max * 0.66
+                      ? "bg-destructive/70"
+                      : b.count >= max * 0.33
+                        ? "bg-warning/70"
+                        : "bg-info/60",
+                )}
+                style={{ height: `${Math.max(4, (b.count / max) * 100)}%` }}
+              />
+            </div>
+          ))}
+        </div>
+        <div className="mt-1 flex justify-between font-mono text-[9px] text-muted-foreground">
+          <span>{buckets[0].day}</span>
+          <span>{buckets[buckets.length - 1].day}</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+

@@ -18,6 +18,9 @@ import {
   Sparkles,
   Zap,
   TrendingDown,
+  Download,
+  Bookmark,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "@/lib/format";
@@ -26,6 +29,7 @@ import { fetchCloneHealth } from "@/server/clone-health.functions";
 import { toast } from "sonner";
 import { useUrlState } from "@/lib/use-url-state";
 import { RouteError } from "@/components/route-error";
+import { exportRowsAsCSV } from "@/lib/csv";
 
 export const Route = createFileRoute("/health")({
   component: () => (
@@ -264,14 +268,44 @@ function FilteredBreakdown({
               Sorted by risk — down deploys first, then failed cascades, then drift.
             </CardDescription>
           </div>
-          <div className="relative w-full md:w-64">
-            <Search className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search clones…"
-              className="h-9 pl-8 font-mono text-xs"
-            />
+          <div className="flex w-full items-center gap-2 md:w-auto">
+            <div className="relative w-full md:w-64">
+              <Search className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search clones…"
+                className="h-9 pl-8 font-mono text-xs"
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={filtered.length === 0}
+              onClick={() => {
+                exportRowsAsCSV(
+                  `fleet-health-${statusFilter}-${new Date().toISOString().slice(0, 10)}.csv`,
+                  filtered.map((r) => ({
+                    name: r.name,
+                    cloneId: r.cloneId,
+                    syncStatus: r.syncStatus,
+                    commitsBehind: r.commitsBehind,
+                    uptime: r.health.uptime.status,
+                    httpStatus: r.health.uptime.httpStatus ?? "",
+                    latencyMs: r.health.uptime.latencyMs ?? "",
+                    driftOpen: r.health.driftSuggestionsOpen,
+                    failures7d: r.health.failureCount7d,
+                    lastSuccessfulCascadeAt: r.health.lastSuccessfulCascadeAt ?? "",
+                    deployUrl: r.health.deployUrl ?? "",
+                    probedAt: r.probedAt,
+                  })),
+                );
+                toast.success(`Exported ${filtered.length} clones`);
+              }}
+            >
+              <Download className="mr-1.5 h-3.5 w-3.5" />
+              Export
+            </Button>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
@@ -292,6 +326,14 @@ function FilteredBreakdown({
             );
           })}
         </div>
+        <SavedViewsBar
+          statusFilter={statusFilter}
+          search={search}
+          onApply={(v) => {
+            setStatusFilter(v.statusFilter);
+            setSearch(v.search);
+          }}
+        />
       </CardHeader>
       <CardContent className="space-y-2">
         {filtered.length === 0 ? (
@@ -520,3 +562,114 @@ function SummaryTile({
     </Card>
   );
 }
+
+type SavedView = { id: string; label: string; statusFilter: StatusFilter; search: string };
+const SAVED_VIEWS_KEY = "aurixa:fleet-health:views";
+
+function loadViews(): SavedView[] {
+  try {
+    const raw = localStorage.getItem(SAVED_VIEWS_KEY);
+    return raw ? (JSON.parse(raw) as SavedView[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistViews(v: SavedView[]) {
+  try {
+    localStorage.setItem(SAVED_VIEWS_KEY, JSON.stringify(v));
+  } catch {
+    /* ignore */
+  }
+}
+
+function SavedViewsBar({
+  statusFilter,
+  search,
+  onApply,
+}: {
+  statusFilter: StatusFilter;
+  search: string;
+  onApply: (v: { statusFilter: StatusFilter; search: string }) => void;
+}) {
+  const [views, setViews] = useState<SavedView[]>(() => loadViews());
+  const [naming, setNaming] = useState(false);
+  const [name, setName] = useState("");
+
+  const save = () => {
+    const trimmed = name.trim();
+    if (!trimmed) return toast.error("Name required");
+    if (views.some((v) => v.label === trimmed)) return toast.error("Name already used");
+    const next = [...views, { id: crypto.randomUUID(), label: trimmed, statusFilter, search }];
+    setViews(next);
+    persistViews(next);
+    setName("");
+    setNaming(false);
+    toast.success(`Saved view "${trimmed}"`);
+  };
+
+  const remove = (id: string) => {
+    const next = views.filter((v) => v.id !== id);
+    setViews(next);
+    persistViews(next);
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <Bookmark className="h-3.5 w-3.5 text-muted-foreground" />
+      {views.length === 0 && !naming && (
+        <span className="font-mono text-[10px] uppercase text-muted-foreground">
+          no saved views
+        </span>
+      )}
+      {views.map((v) => (
+        <span
+          key={v.id}
+          className="group inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 font-mono text-[10px] uppercase text-muted-foreground hover:bg-muted/40"
+        >
+          <button onClick={() => onApply({ statusFilter: v.statusFilter, search: v.search })}>
+            {v.label}
+          </button>
+          <button
+            onClick={() => remove(v.id)}
+            className="opacity-0 transition-opacity group-hover:opacity-100"
+            aria-label={`Remove ${v.label}`}
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </span>
+      ))}
+      {naming ? (
+        <span className="inline-flex items-center gap-1">
+          <Input
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") save();
+              if (e.key === "Escape") {
+                setNaming(false);
+                setName("");
+              }
+            }}
+            placeholder="View name…"
+            className="h-6 w-32 font-mono text-[10px]"
+          />
+          <Button size="sm" variant="outline" className="h-6 px-2 text-[10px]" onClick={save}>
+            Save
+          </Button>
+        </span>
+      ) : (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-6 px-2 font-mono text-[10px] uppercase"
+          onClick={() => setNaming(true)}
+        >
+          + Save view
+        </Button>
+      )}
+    </div>
+  );
+}
+
