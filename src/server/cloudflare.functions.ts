@@ -77,6 +77,61 @@ export const cfAttachZone = createServerFn({ method: "POST" })
     }
   });
 
+export const cfSeedZone = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    cloneId: string;
+    zoneId: string;
+    zoneName: string;
+    accountId?: string;
+    plan?: string;
+    securityLevel?: "off" | "essentially_off" | "low" | "medium" | "high" | "under_attack";
+    botFight?: boolean;
+    rateLimitRps?: number;
+    wafPreset?: "lenient" | "balanced" | "strict";
+  }) =>
+    z.object({
+      cloneId: z.string().uuid(),
+      zoneId: z.string().min(1),
+      zoneName: z.string().min(1),
+      accountId: z.string().optional(),
+      plan: z.string().optional(),
+      securityLevel: z.enum(["off","essentially_off","low","medium","high","under_attack"]).optional(),
+      botFight: z.boolean().optional(),
+      rateLimitRps: z.number().int().min(0).max(10000).optional(),
+      wafPreset: z.enum(["lenient","balanced","strict"]).optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    try {
+      const { error } = await supabase.from("cloudflare_clone_config").upsert(
+        {
+          clone_id: data.cloneId,
+          account_id: data.accountId ?? "manual",
+          zone_id: data.zoneId,
+          zone_name: data.zoneName,
+          plan: data.plan ?? null,
+          status: "manual",
+          security_level: data.securityLevel ?? null,
+          bot_fight_mode: data.botFight ?? false,
+          rate_limit_rps: data.rateLimitRps ?? null,
+          waf_preset: data.wafPreset ?? null,
+          last_synced_at: new Date().toISOString(),
+        },
+        { onConflict: "clone_id" },
+      );
+      if (error) throw new Error(error.message);
+      await supabase.from("clones").update({ cloudflare_enabled: true, cloudflare_zone_id: data.zoneId }).eq("id", data.cloneId);
+      await audit(supabase, { clone_id: data.cloneId, zone_id: data.zoneId, action: "seed_zone_manual", payload: data, success: true, actor: userId });
+      return { ok: true };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      await audit(supabase, { clone_id: data.cloneId, zone_id: data.zoneId, action: "seed_zone_manual", payload: data, success: false, error: msg, actor: userId });
+      throw new Error(msg);
+    }
+  });
+
 export const cfDetachZone = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { cloneId: string }) => z.object({ cloneId: z.string().uuid() }).parse(d))
