@@ -21,7 +21,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Sparkles, Eye, RotateCcw, Sun, Moon } from "lucide-react";
+import { Sparkles, Eye, RotateCcw, Sun, Moon, Loader2, ShieldCheck } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { aiBrandValidate } from "@/server/ai-features.functions";
 import { cn } from "@/lib/utils";
 import { BrandPreviewFrame, type PreviewBundle } from "./brand-preview-frame";
 
