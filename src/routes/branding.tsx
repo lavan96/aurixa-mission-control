@@ -17,6 +17,7 @@ import {
   duplicateBrandProfile,
 } from "@/server/branding.functions";
 import { createSchedule, deleteSchedule, runScheduleNow, updateSchedule } from "@/server/schedules.functions";
+import { BrandProfileIO } from "@/components/brand-profile-io";
 import { describeCron } from "@/server/cron";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
