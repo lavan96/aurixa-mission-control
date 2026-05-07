@@ -53,6 +53,11 @@ function SchedulesPage() {
   const update = useServerFn(updateSchedule);
   const del = useServerFn(deleteSchedule);
   const runNow = useServerFn(runScheduleNow);
+  const bulkToggleFn = useServerFn(bulkUpdateSchedules);
+  const bulkDeleteFn = useServerFn(bulkDeleteSchedules);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const toggleSel = (id: string) =>
+    setSelected((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const refresh = useCallback(async () => {
     setLoading(true);
