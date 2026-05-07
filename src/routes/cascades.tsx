@@ -21,7 +21,8 @@ import { EmptyState } from "@/components/empty-state";
 import { CascadeTemplatesCard, type CascadeTemplateValue } from "@/components/cascade-templates-card";
 import { CascadeDryRunCard } from "@/components/cascade-dryrun-card";
 import { assessBlastRadius } from "@/lib/blast-radius";
-import { ShieldAlert } from "lucide-react";
+import { ShieldAlert, Sparkles, Loader2 } from "lucide-react";
+import { aiCascadeSummary } from "@/server/ai-features.functions";
 
 const MODE_VALUES = ["pr", "auto_merge", "notify"] as const;
 const SCOPE_VALUES = ["all", "tagged", "selected"] as const;
