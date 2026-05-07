@@ -92,6 +92,16 @@ function CloudflarePage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+  const seedFn = useServerFn(cfSeedZone);
+  const seed = useMutation({
+    mutationFn: (v: Parameters<typeof seedFn>[0]["data"]) => seedFn({ data: v }),
+    onSuccess: () => {
+      toast.success("Zone seeded");
+      qc.invalidateQueries({ queryKey: ["cf-fleet"] });
+      qc.invalidateQueries({ queryKey: ["clones"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const unattachedClones = clones.filter((c) => !attached.some((a) => a.clone_id === c.id));
 
