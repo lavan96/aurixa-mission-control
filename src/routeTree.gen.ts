@@ -14,9 +14,11 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SchedulesRouteImport } from './routes/schedules'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as ModulesRouteImport } from './routes/modules'
+import { Route as MetricsRouteImport } from './routes/metrics'
 import { Route as HealthRouteImport } from './routes/health'
 import { Route as FleetManagerRouteImport } from './routes/fleet-manager'
 import { Route as DriftRouteImport } from './routes/drift'
+import { Route as DigestsRouteImport } from './routes/digests'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CloudflareRouteImport } from './routes/cloudflare'
 import { Route as CascadesRouteImport } from './routes/cascades'
@@ -67,6 +69,11 @@ const ModulesRoute = ModulesRouteImport.update({
   path: '/modules',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MetricsRoute = MetricsRouteImport.update({
+  id: '/metrics',
+  path: '/metrics',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HealthRoute = HealthRouteImport.update({
   id: '/health',
   path: '/health',
@@ -80,6 +87,11 @@ const FleetManagerRoute = FleetManagerRouteImport.update({
 const DriftRoute = DriftRouteImport.update({
   id: '/drift',
   path: '/drift',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DigestsRoute = DigestsRouteImport.update({
+  id: '/digests',
+  path: '/digests',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -213,9 +225,11 @@ export interface FileRoutesByFullPath {
   '/cascades': typeof CascadesRouteWithChildren
   '/cloudflare': typeof CloudflareRoute
   '/dashboard': typeof DashboardRoute
+  '/digests': typeof DigestsRoute
   '/drift': typeof DriftRoute
   '/fleet-manager': typeof FleetManagerRoute
   '/health': typeof HealthRoute
+  '/metrics': typeof MetricsRoute
   '/modules': typeof ModulesRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/schedules': typeof SchedulesRoute
@@ -247,9 +261,11 @@ export interface FileRoutesByTo {
   '/cascades': typeof CascadesRouteWithChildren
   '/cloudflare': typeof CloudflareRoute
   '/dashboard': typeof DashboardRoute
+  '/digests': typeof DigestsRoute
   '/drift': typeof DriftRoute
   '/fleet-manager': typeof FleetManagerRoute
   '/health': typeof HealthRoute
+  '/metrics': typeof MetricsRoute
   '/modules': typeof ModulesRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/schedules': typeof SchedulesRoute
@@ -281,9 +297,11 @@ export interface FileRoutesById {
   '/cascades': typeof CascadesRouteWithChildren
   '/cloudflare': typeof CloudflareRoute
   '/dashboard': typeof DashboardRoute
+  '/digests': typeof DigestsRoute
   '/drift': typeof DriftRoute
   '/fleet-manager': typeof FleetManagerRoute
   '/health': typeof HealthRoute
+  '/metrics': typeof MetricsRoute
   '/modules': typeof ModulesRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/schedules': typeof SchedulesRoute
@@ -317,9 +335,11 @@ export interface FileRouteTypes {
     | '/cascades'
     | '/cloudflare'
     | '/dashboard'
+    | '/digests'
     | '/drift'
     | '/fleet-manager'
     | '/health'
+    | '/metrics'
     | '/modules'
     | '/notifications'
     | '/schedules'
@@ -351,9 +371,11 @@ export interface FileRouteTypes {
     | '/cascades'
     | '/cloudflare'
     | '/dashboard'
+    | '/digests'
     | '/drift'
     | '/fleet-manager'
     | '/health'
+    | '/metrics'
     | '/modules'
     | '/notifications'
     | '/schedules'
@@ -384,9 +406,11 @@ export interface FileRouteTypes {
     | '/cascades'
     | '/cloudflare'
     | '/dashboard'
+    | '/digests'
     | '/drift'
     | '/fleet-manager'
     | '/health'
+    | '/metrics'
     | '/modules'
     | '/notifications'
     | '/schedules'
@@ -419,9 +443,11 @@ export interface RootRouteChildren {
   CascadesRoute: typeof CascadesRouteWithChildren
   CloudflareRoute: typeof CloudflareRoute
   DashboardRoute: typeof DashboardRoute
+  DigestsRoute: typeof DigestsRoute
   DriftRoute: typeof DriftRoute
   FleetManagerRoute: typeof FleetManagerRoute
   HealthRoute: typeof HealthRoute
+  MetricsRoute: typeof MetricsRoute
   ModulesRoute: typeof ModulesRouteWithChildren
   NotificationsRoute: typeof NotificationsRoute
   SchedulesRoute: typeof SchedulesRoute
@@ -474,6 +500,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/metrics': {
+      id: '/metrics'
+      path: '/metrics'
+      fullPath: '/metrics'
+      preLoaderRoute: typeof MetricsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/health': {
       id: '/health'
       path: '/health'
@@ -493,6 +526,13 @@ declare module '@tanstack/react-router' {
       path: '/drift'
       fullPath: '/drift'
       preLoaderRoute: typeof DriftRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/digests': {
+      id: '/digests'
+      path: '/digests'
+      fullPath: '/digests'
+      preLoaderRoute: typeof DigestsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -721,9 +761,11 @@ const rootRouteChildren: RootRouteChildren = {
   CascadesRoute: CascadesRouteWithChildren,
   CloudflareRoute: CloudflareRoute,
   DashboardRoute: DashboardRoute,
+  DigestsRoute: DigestsRoute,
   DriftRoute: DriftRoute,
   FleetManagerRoute: FleetManagerRoute,
   HealthRoute: HealthRoute,
+  MetricsRoute: MetricsRoute,
   ModulesRoute: ModulesRouteWithChildren,
   NotificationsRoute: NotificationsRoute,
   SchedulesRoute: SchedulesRoute,
