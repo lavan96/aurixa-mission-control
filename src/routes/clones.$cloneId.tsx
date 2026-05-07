@@ -197,6 +197,7 @@ function CloneDetail() {
       </div>
 
       <CloneHealthCard cloneId={cloneId} />
+      <CloneHealthTimeline cloneId={cloneId} />
 
       <CloneBackendCard cloneId={cloneId} />
 
