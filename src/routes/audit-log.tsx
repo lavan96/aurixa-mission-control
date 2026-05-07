@@ -72,15 +72,26 @@ function AuditLogPage() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/audit-log" });
   const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [selected, setSelected] = useState<AuditLog | null>(null);
 
   type SearchState = typeof search;
 
-  const setSearch = useCallback(
+  const updateFilter = useCallback(
     (patch: Partial<SearchState>) => {
       void navigate({
-        search: (prev: SearchState) => ({ ...prev, ...patch }),
+        search: (prev: SearchState) => ({ ...prev, ...patch, page: 0 }),
+        replace: true,
+      });
+    },
+    [navigate],
+  );
+  const setPage = useCallback(
+    (page: number) => {
+      void navigate({
+        search: (prev: SearchState) => ({ ...prev, page }),
         replace: true,
       });
     },
@@ -89,13 +100,21 @@ function AuditLogPage() {
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    let q = supabase.from("audit_log").select("*").order("created_at", { ascending: false }).limit(200);
+    const from = search.page * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+    let q = supabase
+      .from("audit_log")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .range(from, to);
     if (search.action !== "all") q = q.eq("action", search.action);
     if (search.entity !== "all") q = q.eq("entity_type", search.entity);
-    const { data } = await q;
+    const { data, count } = await q;
     setLogs(data ?? []);
+    setTotal(count ?? 0);
     setLoading(false);
-  }, [search.action, search.entity]);
+    setLastUpdated(new Date());
+  }, [search.action, search.entity, search.page]);
 
   useEffect(() => {
     refresh();
@@ -110,11 +129,13 @@ function AuditLogPage() {
       )
     : logs;
 
-  const hasFilters = search.action !== "all" || search.entity !== "all" || search.q.length > 0;
+  const hasFilters =
+    search.action !== "all" || search.entity !== "all" || search.q.length > 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const clearFilters = () =>
     navigate({
-      search: () => ({ action: "all", entity: "all", q: "" }),
+      search: () => ({ action: "all", entity: "all", q: "", page: 0 }),
       replace: true,
     });
 
@@ -135,21 +156,40 @@ function AuditLogPage() {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={async () => {
               const { exportAuditLog } = await import("@/server/operator-ux.functions");
-              const res = await exportAuditLog({ data: { action: search.action, entity: search.entity, limit: 5000 } });
+              const res = await exportAuditLog({
+                data: { action: search.action, entity: search.entity, limit: 5000 },
+              });
               if (!res.ok) return;
-              const header = ["created_at", "action", "entity_type", "entity_id", "actor_user_id", "metadata"];
-              const csv = [header.join(",")].concat(
-                res.rows.map((r) =>
-                  [r.created_at, r.action, r.entity_type ?? "", r.entity_id ?? "", r.actor_user_id ?? "", JSON.stringify(r.metadata).replace(/"/g, '""')]
-                    .map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","),
-                ),
-              ).join("\n");
+              const header = [
+                "created_at",
+                "action",
+                "entity_type",
+                "entity_id",
+                "actor_user_id",
+                "metadata",
+              ];
+              const csv = [header.join(",")]
+                .concat(
+                  res.rows.map((r) =>
+                    [
+                      r.created_at,
+                      r.action,
+                      r.entity_type ?? "",
+                      r.entity_id ?? "",
+                      r.actor_user_id ?? "",
+                      JSON.stringify(r.metadata).replace(/"/g, '""'),
+                    ]
+                      .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+                      .join(","),
+                  ),
+                )
+                .join("\n");
               const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
               const url = URL.createObjectURL(blob);
               const link = document.createElement("a");
@@ -161,9 +201,7 @@ function AuditLogPage() {
           >
             Export CSV
           </Button>
-          <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
-            <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", loading && "animate-spin")} /> Refresh
-          </Button>
+          <RefreshButton onRefresh={refresh} loading={loading} lastUpdated={lastUpdated} />
         </div>
       </header>
 
@@ -176,7 +214,7 @@ function AuditLogPage() {
         <CardContent className="grid gap-3 md:grid-cols-3">
           <Select
             value={search.action}
-            onValueChange={(v) => setSearch({ action: v as typeof search.action })}
+            onValueChange={(v) => updateFilter({ action: v as typeof search.action })}
           >
             <SelectTrigger>
               <SelectValue />
@@ -191,7 +229,7 @@ function AuditLogPage() {
           </Select>
           <Select
             value={search.entity}
-            onValueChange={(v) => setSearch({ entity: v as typeof search.entity })}
+            onValueChange={(v) => updateFilter({ entity: v as typeof search.entity })}
           >
             <SelectTrigger>
               <SelectValue />
@@ -208,7 +246,7 @@ function AuditLogPage() {
             <Input
               placeholder="Search actions, metadata…"
               value={search.q}
-              onChange={(e) => setSearch({ q: e.target.value })}
+              onChange={(e) => updateFilter({ q: e.target.value })}
             />
             {hasFilters && (
               <Button
@@ -225,10 +263,33 @@ function AuditLogPage() {
       </Card>
 
       <Card>
-        <CardHeader className="pb-3">
+        <CardHeader className="flex-row items-center justify-between space-y-0 pb-3">
           <CardDescription className="font-mono text-[11px] uppercase tracking-wider">
-            {visible.length} {visible.length === 1 ? "entry" : "entries"}
+            {total.toLocaleString()} {total === 1 ? "entry" : "entries"}
+            {total > 0 && (
+              <span className="ml-2 text-muted-foreground/70">
+                · page {search.page + 1} of {totalPages}
+              </span>
+            )}
           </CardDescription>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={search.page === 0 || loading}
+              onClick={() => setPage(search.page - 1)}
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={search.page + 1 >= totalPages || loading}
+              onClick={() => setPage(search.page + 1)}
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
@@ -252,14 +313,18 @@ function AuditLogPage() {
                   key={log.id}
                   log={log}
                   isLast={i === visible.length - 1}
-                  expanded={expanded === log.id}
-                  onToggle={() => setExpanded(expanded === log.id ? null : log.id)}
+                  onOpen={() => setSelected(log)}
                 />
               ))}
             </ol>
           )}
         </CardContent>
       </Card>
+
+      <AuditLogDetailDrawer
+        log={selected}
+        onOpenChange={(open) => !open && setSelected(null)}
+      />
     </div>
   );
 }
@@ -267,16 +332,13 @@ function AuditLogPage() {
 function LogRow({
   log,
   isLast,
-  expanded,
-  onToggle,
+  onOpen,
 }: {
   log: AuditLog;
   isLast: boolean;
-  expanded: boolean;
-  onToggle: () => void;
+  onOpen: () => void;
 }) {
   const tone = actionTone(log.action);
-  const link = entityLink(log);
 
   return (
     <li className={cn("relative px-4 py-3", !isLast && "border-b border-border/60")}>
@@ -285,11 +347,7 @@ function LogRow({
           <div className={cn("h-2 w-2 rounded-full ring-2 ring-background", tone.dot)} />
           {!isLast && <div className="absolute top-3 h-full w-px bg-border/60" />}
         </div>
-        <button
-          type="button"
-          onClick={onToggle}
-          className="flex-1 text-left"
-        >
+        <button type="button" onClick={onOpen} className="flex-1 text-left">
           <div className="flex flex-wrap items-center gap-2">
             <code className={cn("font-mono text-sm font-medium", tone.text)}>
               {log.action}
@@ -302,27 +360,14 @@ function LogRow({
             <span className="font-mono text-[11px] text-muted-foreground">
               {formatDistanceToNow(log.created_at)}
             </span>
+            <ChevronRight className="ml-auto h-3.5 w-3.5 text-muted-foreground/50" />
           </div>
-          {!expanded && Object.keys(log.metadata as object).length > 0 && (
+          {Object.keys(log.metadata as object).length > 0 && (
             <div className="mt-1 truncate font-mono text-xs text-muted-foreground">
               {summarizeMeta(log.metadata)}
             </div>
           )}
-          {expanded && (
-            <pre className="mt-2 overflow-x-auto rounded-md border border-border/60 bg-muted p-2 font-mono text-[11px] text-muted-foreground">
-              {JSON.stringify(log.metadata, null, 2)}
-            </pre>
-          )}
         </button>
-        {link && (
-          <Link
-            to={link.to}
-            params={link.params}
-            className="inline-flex items-center font-mono text-[11px] text-accent hover:underline"
-          >
-            view <ChevronRight className="h-3 w-3" />
-          </Link>
-        )}
       </div>
     </li>
   );
