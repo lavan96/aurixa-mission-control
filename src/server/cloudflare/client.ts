@@ -31,23 +31,36 @@ async function cf<T>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
-  const res = await fetch(`${CF_BASE}${path}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${token()}`,
-      "Content-Type": "application/json",
-      ...(init.headers ?? {}),
+  return withRetry(
+    async () => {
+      const res = await fetch(`${CF_BASE}${path}`, {
+        ...init,
+        headers: {
+          Authorization: `Bearer ${token()}`,
+          "Content-Type": "application/json",
+          ...(init.headers ?? {}),
+        },
+      });
+      const json = (await res.json()) as CFResponse<T>;
+      if (!res.ok || !json.success) {
+        throw new CloudflareError(
+          json.errors?.[0]?.message ?? `Cloudflare API ${res.status}`,
+          res.status,
+          json.errors,
+        );
+      }
+      return json.result;
     },
-  });
-  const json = (await res.json()) as CFResponse<T>;
-  if (!res.ok || !json.success) {
-    throw new CloudflareError(
-      json.errors?.[0]?.message ?? `Cloudflare API ${res.status}`,
-      res.status,
-      json.errors,
-    );
-  }
-  return json.result;
+    {
+      attempts: 3,
+      shouldRetry: (err) => {
+        if (err instanceof CloudflareError) {
+          return err.status === 429 || err.status >= 500;
+        }
+        return isTransientHttpError(err);
+      },
+    },
+  );
 }
 
 export type CFZone = {
