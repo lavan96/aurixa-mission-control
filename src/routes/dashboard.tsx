@@ -36,7 +36,14 @@ import { formatDistanceToNow } from "@/lib/format";
 import { CloneGridSkeleton } from "@/components/list-skeletons";
 import { EmptyState } from "@/components/empty-state";
 import { BulkTagDialog } from "@/components/bulk-tag-dialog";
-import { Tag } from "lucide-react";
+import { Tag, Trash2, PauseCircle, RefreshCw } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { bulkDeleteClones, bulkPauseClones, bulkReprovisionBackends } from "@/server/operator-ux.functions";
+import { toast } from "sonner";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const dashboardSearchSchema = z.object({
   q: fallback(z.string(), "").default(""),
