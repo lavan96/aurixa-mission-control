@@ -213,11 +213,10 @@ export const bulkSetBrandProfileStatus = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const patch: Record<string, unknown> = { status: data.status };
-    if (data.status === "published") {
-      patch.published_at = new Date().toISOString();
-      patch.published_by = userId;
-    }
+    const patch =
+      data.status === "published"
+        ? { status: data.status, published_at: new Date().toISOString(), published_by: userId }
+        : { status: data.status };
     const { error } = await supabase.from("clone_brand_profiles").update(patch).in("id", data.ids);
     if (error) return { ok: false as const, error: error.message };
     await supabase.from("audit_log").insert({
