@@ -1563,6 +1563,7 @@ function ModuleLibraryPanel() {
                         {(e.entry_file as string) ?? (e.slug as string)}
                       </CardDescription>
                     </div>
+                    </div>
                     <div className="flex flex-col items-end gap-1">
                       <Badge variant="outline" className={cn("font-mono text-[10px] uppercase", statusTone)}>
                         {statusIcon}{status}
