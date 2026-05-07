@@ -3,7 +3,6 @@ import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, Upload } from "lucide-react";
 import { toast } from "sonner";
-import type { Database } from "@/integrations/supabase/types";
 import { useServerAction } from "@/lib/use-server-action";
 import { upsertBrandProfile } from "@/server/branding.functions";
 
