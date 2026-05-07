@@ -73,6 +73,23 @@ export function getAppOctokit(installationId?: string | number): Octokit {
       privateKey,
       installationId: Number(installation),
     },
+    request: {
+      retries: 0, // we handle retry via withRetry hook below
+    },
+  });
+  // Wrap every request in withRetry for transient 429/5xx/network errors.
+  octokit.hook.wrap("request", async (request, options) => {
+    return withRetry(() => request(options), {
+      attempts: 3,
+      baseMs: 400,
+      shouldRetry: (err) => isTransientHttpError(err),
+      onRetry: (err, attempt, delay) => {
+        const status = (err as { status?: number })?.status;
+        console.warn(
+          `[github] retry ${attempt} after ${Math.round(delay)}ms (status=${status ?? "?"})`,
+        );
+      },
+    });
   });
   cache.set(cacheKey, octokit);
   return octokit;
