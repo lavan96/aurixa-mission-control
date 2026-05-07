@@ -38,6 +38,7 @@ import {
   deleteDetectionRun, clearDetectionHistory,
 } from "@/server/ai-detect-modules.functions";
 import { setLibraryApprovalStatus } from "@/server/library-admin.functions";
+import { deprecateLibraryEntry, undeprecateLibraryEntry } from "@/server/reliability.functions";
 import { ModuleGridSkeleton } from "@/components/list-skeletons";
 import { EmptyState } from "@/components/empty-state";
 import { FleetModuleSyncCard } from "@/components/fleet-module-sync-card";
