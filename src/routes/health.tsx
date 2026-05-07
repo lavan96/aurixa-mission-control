@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Search, Filter } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { ProtectedRoute } from "@/components/protected-route";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,6 +49,8 @@ function FleetHealthPage() {
   const [loading, setLoading] = useState(false);
   const [refreshedAt, setRefreshedAt] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<"all" | "down" | "drift" | "behind" | "failing">("all");
+  const [search, setSearch] = useState("");
 
   const load = async (force = false) => {
     setLoading(true);
@@ -169,44 +173,134 @@ function FleetHealthPage() {
             />
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Per-clone breakdown</CardTitle>
-              <CardDescription>
-                Sorted by risk — down deploys first, then failed cascades, then drift.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {data.rows.length === 0 && (
-                <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-                  No clones in the fleet yet.
-                </div>
-              )}
-              {[...data.rows]
-                .sort((a, b) => riskScore(b) - riskScore(a))
-                .map((r) => (
-                  <FleetRow
-                    key={r.cloneId}
-                    row={r}
-                    onUpdated={(next) =>
-                      setData((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              rows: prev.rows.map((row) =>
-                                row.cloneId === next.cloneId ? next : row,
-                              ),
-                            }
-                          : prev,
-                      )
+          <FilteredBreakdown
+            data={data}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            search={search}
+            setSearch={setSearch}
+            onRowUpdated={(next) =>
+              setData((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      rows: prev.rows.map((row) =>
+                        row.cloneId === next.cloneId ? next : row,
+                      ),
                     }
-                  />
-                ))}
-            </CardContent>
-          </Card>
+                  : prev,
+              )
+            }
+          />
         </>
       )}
     </div>
+  );
+}
+
+type StatusFilter = "all" | "down" | "drift" | "behind" | "failing";
+
+function FilteredBreakdown({
+  data,
+  statusFilter,
+  setStatusFilter,
+  search,
+  setSearch,
+  onRowUpdated,
+}: {
+  data: FleetHealth;
+  statusFilter: StatusFilter;
+  setStatusFilter: (v: StatusFilter) => void;
+  search: string;
+  setSearch: (v: string) => void;
+  onRowUpdated: (next: FleetHealthRow) => void;
+}) {
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return data.rows
+      .filter((r) => {
+        if (statusFilter === "down" && r.health.uptime.status !== "down") return false;
+        if (statusFilter === "drift" && r.health.driftSuggestionsOpen === 0) return false;
+        if (statusFilter === "behind" && r.commitsBehind === 0) return false;
+        if (statusFilter === "failing" && r.health.failureCount7d === 0) return false;
+        if (q && !r.name.toLowerCase().includes(q)) return false;
+        return true;
+      })
+      .sort((a, b) => riskScore(b) - riskScore(a));
+  }, [data.rows, statusFilter, search]);
+
+  const counts = useMemo(
+    () => ({
+      all: data.rows.length,
+      down: data.rows.filter((r) => r.health.uptime.status === "down").length,
+      drift: data.rows.filter((r) => r.health.driftSuggestionsOpen > 0).length,
+      behind: data.rows.filter((r) => r.commitsBehind > 0).length,
+      failing: data.rows.filter((r) => r.health.failureCount7d > 0).length,
+    }),
+    [data.rows],
+  );
+
+  const FILTERS: { key: StatusFilter; label: string; tone: string }[] = [
+    { key: "all", label: "All", tone: "" },
+    { key: "down", label: "Down", tone: "border-destructive/40 text-destructive" },
+    { key: "failing", label: "Failing cascades", tone: "border-warning/40 text-warning" },
+    { key: "drift", label: "Drift", tone: "border-warning/40 text-warning" },
+    { key: "behind", label: "Behind", tone: "border-info/40 text-info" },
+  ];
+
+  return (
+    <Card>
+      <CardHeader className="space-y-3">
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <CardTitle className="text-base">Per-clone breakdown</CardTitle>
+            <CardDescription>
+              Sorted by risk — down deploys first, then failed cascades, then drift.
+            </CardDescription>
+          </div>
+          <div className="relative w-full md:w-64">
+            <Search className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search clones…"
+              className="h-9 pl-8 font-mono text-xs"
+            />
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+          {FILTERS.map((f) => {
+            const active = statusFilter === f.key;
+            return (
+              <button
+                key={f.key}
+                onClick={() => setStatusFilter(f.key)}
+                className={cn(
+                  "rounded-full border px-2.5 py-0.5 font-mono text-[10px] uppercase transition-colors",
+                  active ? "bg-foreground text-background border-foreground" : f.tone || "border-border text-muted-foreground hover:bg-muted/40",
+                )}
+              >
+                {f.label} · {counts[f.key]}
+              </button>
+            );
+          })}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {filtered.length === 0 ? (
+          <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+            {data.rows.length === 0
+              ? "No clones in the fleet yet."
+              : "No clones match the current filter."}
+          </div>
+        ) : (
+          filtered.map((r) => (
+            <FleetRow key={r.cloneId} row={r} onUpdated={onRowUpdated} />
+          ))
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
