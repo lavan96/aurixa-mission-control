@@ -1047,6 +1047,7 @@ function ProfileCard({
           <Button size="sm" variant="outline" onClick={onDuplicate}>
             Duplicate
           </Button>
+          <BrandProfileIO profile={profile} />
           <Button size="sm" onClick={onApply} disabled={profile.status !== "published"}>
             <Rocket className="mr-1 h-3 w-3" /> Apply
           </Button>
