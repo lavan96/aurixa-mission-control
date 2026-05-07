@@ -8,7 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { CalendarClock, Play, Trash2, Plus } from "lucide-react";
+import { CalendarClock, Play, Trash2, Plus, Power, PowerOff } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActionBar } from "@/components/bulk-action-bar";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -17,6 +19,7 @@ import {
   runScheduleNow,
   updateSchedule,
 } from "@/server/schedules.functions";
+import { bulkDeleteSchedules, bulkUpdateSchedules } from "@/server/bulk-ops.functions";
 import { describeCron } from "@/server/cron";
 import { formatDistanceToNow } from "@/lib/format";
 import { ScheduleRecentFires } from "@/components/schedule-recent-fires";
