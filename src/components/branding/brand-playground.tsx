@@ -353,3 +353,50 @@ export function BrandPlaygroundDialog({
     </Dialog>
   );
 }
+
+function BrandAiValidator({ brandConfig }: { brandConfig: Record<string, unknown> }) {
+  const fn = useServerFn(aiBrandValidate);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<{ contrast_issues?: Array<{ pair: string; ratio?: number; min?: number; fix?: string }>; tone_notes?: string[]; color_harmony?: string; recommendations?: string[]; raw?: string } | null>(null);
+  const run = async () => {
+    setLoading(true); setResult(null);
+    try {
+      const r = await fn({ data: { brandConfig } });
+      setResult(r.result);
+    } finally { setLoading(false); }
+  };
+  return (
+    <div className="rounded-md border border-border/60 bg-surface/50 p-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">
+          <ShieldCheck className="h-3.5 w-3.5 text-primary" /> AI accessibility & tone audit
+        </div>
+        <Button size="sm" variant="outline" disabled={loading} onClick={run}>
+          {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Audit"}
+        </Button>
+      </div>
+      {result && (
+        <div className="mt-2 space-y-2 text-xs">
+          {result.color_harmony && (
+            <div className="font-mono text-[11px]">harmony: <span className="text-foreground">{result.color_harmony}</span></div>
+          )}
+          {(result.contrast_issues ?? []).length > 0 && (
+            <div>
+              <div className="font-mono text-[10px] uppercase text-muted-foreground">Contrast issues</div>
+              {result.contrast_issues!.map((c, i) => (
+                <div key={i} className="ml-2 text-[11px] text-amber-300">• {c.pair} — {c.ratio} (min {c.min}). Fix: {c.fix}</div>
+              ))}
+            </div>
+          )}
+          {(result.recommendations ?? []).length > 0 && (
+            <div>
+              <div className="font-mono text-[10px] uppercase text-muted-foreground">Recommendations</div>
+              {result.recommendations!.map((r, i) => <div key={i} className="ml-2 text-[11px]">• {r}</div>)}
+            </div>
+          )}
+          {result.raw && <pre className="whitespace-pre-wrap font-mono text-[10px]">{result.raw}</pre>}
+        </div>
+      )}
+    </div>
+  );
+}
