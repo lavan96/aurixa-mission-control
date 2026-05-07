@@ -13,6 +13,7 @@ import { Route as YggdrasilRouteImport } from './routes/yggdrasil'
 import { Route as SloRouteImport } from './routes/slo'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SchedulesRouteImport } from './routes/schedules'
+import { Route as RouteErrorsRouteImport } from './routes/route-errors'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as ModulesRouteImport } from './routes/modules'
 import { Route as MetricsRouteImport } from './routes/metrics'
@@ -64,6 +65,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const SchedulesRoute = SchedulesRouteImport.update({
   id: '/schedules',
   path: '/schedules',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RouteErrorsRoute = RouteErrorsRouteImport.update({
+  id: '/route-errors',
+  path: '/route-errors',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NotificationsRoute = NotificationsRouteImport.update({
@@ -245,6 +251,7 @@ export interface FileRoutesByFullPath {
   '/metrics': typeof MetricsRoute
   '/modules': typeof ModulesRouteWithChildren
   '/notifications': typeof NotificationsRoute
+  '/route-errors': typeof RouteErrorsRoute
   '/schedules': typeof SchedulesRoute
   '/settings': typeof SettingsRouteWithChildren
   '/slo': typeof SloRoute
@@ -283,6 +290,7 @@ export interface FileRoutesByTo {
   '/metrics': typeof MetricsRoute
   '/modules': typeof ModulesRouteWithChildren
   '/notifications': typeof NotificationsRoute
+  '/route-errors': typeof RouteErrorsRoute
   '/schedules': typeof SchedulesRoute
   '/slo': typeof SloRoute
   '/yggdrasil': typeof YggdrasilRoute
@@ -321,6 +329,7 @@ export interface FileRoutesById {
   '/metrics': typeof MetricsRoute
   '/modules': typeof ModulesRouteWithChildren
   '/notifications': typeof NotificationsRoute
+  '/route-errors': typeof RouteErrorsRoute
   '/schedules': typeof SchedulesRoute
   '/settings': typeof SettingsRouteWithChildren
   '/slo': typeof SloRoute
@@ -361,6 +370,7 @@ export interface FileRouteTypes {
     | '/metrics'
     | '/modules'
     | '/notifications'
+    | '/route-errors'
     | '/schedules'
     | '/settings'
     | '/slo'
@@ -399,6 +409,7 @@ export interface FileRouteTypes {
     | '/metrics'
     | '/modules'
     | '/notifications'
+    | '/route-errors'
     | '/schedules'
     | '/slo'
     | '/yggdrasil'
@@ -436,6 +447,7 @@ export interface FileRouteTypes {
     | '/metrics'
     | '/modules'
     | '/notifications'
+    | '/route-errors'
     | '/schedules'
     | '/settings'
     | '/slo'
@@ -475,6 +487,7 @@ export interface RootRouteChildren {
   MetricsRoute: typeof MetricsRoute
   ModulesRoute: typeof ModulesRouteWithChildren
   NotificationsRoute: typeof NotificationsRoute
+  RouteErrorsRoute: typeof RouteErrorsRoute
   SchedulesRoute: typeof SchedulesRoute
   SettingsRoute: typeof SettingsRouteWithChildren
   SloRoute: typeof SloRoute
@@ -517,6 +530,13 @@ declare module '@tanstack/react-router' {
       path: '/schedules'
       fullPath: '/schedules'
       preLoaderRoute: typeof SchedulesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/route-errors': {
+      id: '/route-errors'
+      path: '/route-errors'
+      fullPath: '/route-errors'
+      preLoaderRoute: typeof RouteErrorsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notifications': {
@@ -809,6 +829,7 @@ const rootRouteChildren: RootRouteChildren = {
   MetricsRoute: MetricsRoute,
   ModulesRoute: ModulesRouteWithChildren,
   NotificationsRoute: NotificationsRoute,
+  RouteErrorsRoute: RouteErrorsRoute,
   SchedulesRoute: SchedulesRoute,
   SettingsRoute: SettingsRouteWithChildren,
   SloRoute: SloRoute,
