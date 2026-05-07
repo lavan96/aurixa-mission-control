@@ -29,6 +29,7 @@ import { NotificationsBell } from "@/components/notifications-bell";
 import { CommandPalette } from "@/components/command-palette";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
+import { GitHubRateLimitMeter } from "@/components/github-rate-limit-meter";
 import {
   Sheet,
   SheetContent,
