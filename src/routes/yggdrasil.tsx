@@ -1,11 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect, lazy, Suspense } from "react";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { ProtectedRoute } from "@/components/protected-route";
 
 import { useClones, usePrimeConfig } from "@/lib/queries";
-import { YggdrasilTree } from "@/components/yggdrasil/yggdrasil-tree";
+const YggdrasilTree = lazy(() =>
+  import("@/components/yggdrasil/yggdrasil-tree").then((m) => ({ default: m.YggdrasilTree })),
+);
 import { TreeStats } from "@/components/yggdrasil/tree-stats";
 import { YggdrasilToolbar, type StatusFilter } from "@/components/yggdrasil/yggdrasil-toolbar";
 import { TreePine } from "lucide-react";
@@ -395,22 +397,24 @@ function YggdrasilPage() {
           </div>
         </div>
       ) : (
-        <YggdrasilTree
-          clones={filteredClones}
-          primeName={primeName}
-          highlightId={highlightId}
-          zoom={zoom}
-          pan={pan}
-          onPanChange={setPan}
-          onLayoutReady={(nodes, dims) => {
-            layoutNodesRef.current = nodes;
-            treeDimensionsRef.current = dims;
-          }}
-          onNodeSelect={handleNodeSelect}
-          selectedNodeId={search.selected || null}
-          multiSelectedIds={stagedCompare}
-          onMultiSelectChange={handleMultiSelectChange}
-        />
+        <Suspense fallback={<div className="flex items-center justify-center py-24 text-xs text-muted-foreground">Loading tree…</div>}>
+          <YggdrasilTree
+            clones={filteredClones}
+            primeName={primeName}
+            highlightId={highlightId}
+            zoom={zoom}
+            pan={pan}
+            onPanChange={setPan}
+            onLayoutReady={(nodes, dims) => {
+              layoutNodesRef.current = nodes;
+              treeDimensionsRef.current = dims;
+            }}
+            onNodeSelect={handleNodeSelect}
+            selectedNodeId={search.selected || null}
+            multiSelectedIds={stagedCompare}
+            onMultiSelectChange={handleMultiSelectChange}
+          />
+        </Suspense>
       )}
     </div>
   );

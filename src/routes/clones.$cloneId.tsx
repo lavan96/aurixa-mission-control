@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/protected-route";
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Clone, Module } from "@/lib/queries";
 import { useModules } from "@/lib/queries";
@@ -15,7 +15,9 @@ import { CloneActivityHistory } from "@/components/clone-activity-history";
 import { CloneDriftSuggestionsCard } from "@/components/clone-drift-suggestions-card";
 import { CloneDriftPolicyCard } from "@/components/clone-drift-policy-card";
 import { CloneHealthCard } from "@/components/clone-health-card";
-import { CloneHealthTimeline } from "@/components/clone-health-timeline";
+const CloneHealthTimeline = lazy(() =>
+  import("@/components/clone-health-timeline").then((m) => ({ default: m.CloneHealthTimeline })),
+);
 import { CloneBackendCard } from "@/components/clone-backend-card";
 import { bulkSyncModuleFn } from "@/server/module-sync.functions";
 import { CloneLibraryPinsCard } from "@/components/clone-library-pins";
@@ -204,7 +206,9 @@ function CloneDetail() {
       </div>
 
       <CloneHealthCard cloneId={cloneId} />
-      <CloneHealthTimeline cloneId={cloneId} />
+      <Suspense fallback={<Card><CardContent className="p-6 text-xs text-muted-foreground">Loading timeline…</CardContent></Card>}>
+        <CloneHealthTimeline cloneId={cloneId} />
+      </Suspense>
 
       <CloneBackendCard cloneId={cloneId} />
 

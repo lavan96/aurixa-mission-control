@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useRouter, useNavigate } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/protected-route";
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,7 +55,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { runCascade, cancelCascade } from "@/server/cascade-engine.functions";
 import { CascadeLineagePanel } from "@/components/cascade-lineage-panel";
 import { InlineDiffSummary } from "@/components/inline-diff-summary";
-import { RichDiffViewer } from "@/components/rich-diff-viewer";
+const RichDiffViewer = lazy(() =>
+  import("@/components/rich-diff-viewer").then((m) => ({ default: m.RichDiffViewer })),
+);
 import { CascadeApprovalBanner } from "@/components/cascade-approval-banner";
 import { CascadeTriageCard } from "@/components/cascade-triage-card";
 import { assessBlastRadius } from "@/lib/blast-radius";
@@ -805,13 +807,15 @@ function ResultRow({
           )}
           {clone && result.previous_sha && result.commit_sha && (
             <div className="mt-2">
-              <RichDiffViewer
-                cloneOwner={clone.github_owner}
-                cloneRepo={clone.github_repo}
-                baseSha={result.previous_sha}
-                headSha={result.commit_sha}
-                filesChanged={result.files_changed}
-              />
+              <Suspense fallback={<div className="text-xs text-muted-foreground">Loading diff viewer…</div>}>
+                <RichDiffViewer
+                  cloneOwner={clone.github_owner}
+                  cloneRepo={clone.github_repo}
+                  baseSha={result.previous_sha}
+                  headSha={result.commit_sha}
+                  filesChanged={result.files_changed}
+                />
+              </Suspense>
             </div>
           )}
           {result.error_message && (
