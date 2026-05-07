@@ -1516,6 +1516,26 @@ function ModuleLibraryPanel() {
                   {status === "rejected" && e.rejection_reason ? (
                     <p className="text-[11px] text-destructive italic">Reason: {e.rejection_reason as string}</p>
                   ) : null}
+                  {(e.deprecated_at as string | null) ? (
+                    <div className="rounded border border-warning/40 bg-warning/5 p-2 text-[11px]">
+                      <div className="font-mono uppercase tracking-wider text-warning">Deprecated</div>
+                      {e.deprecated_reason ? <div className="text-warning/90">{e.deprecated_reason as string}</div> : null}
+                      {e.replacement_slug ? <div className="font-mono text-[10px]">replaced by: {e.replacement_slug as string}</div> : null}
+                      {isAdmin && (
+                        <Button size="sm" variant="ghost" className="mt-1 h-6 text-[10px]" onClick={async () => {
+                          await undeprecateLibraryEntry({ data: { entryId: e.id as string } });
+                          toast.success("Restored"); reload();
+                        }}>Undeprecate</Button>
+                      )}
+                    </div>
+                  ) : isAdmin && status === "approved" ? (
+                    <Button size="sm" variant="ghost" className="h-6 text-[10px] text-muted-foreground" onClick={async () => {
+                      const reason = prompt("Deprecation reason"); if (!reason) return;
+                      const replacement = prompt("Replacement slug (optional)") || undefined;
+                      const r = await deprecateLibraryEntry({ data: { entryId: e.id as string, reason, replacementSlug: replacement } });
+                      if (r.ok) { toast.success("Marked deprecated"); reload(); } else toast.error(r.error);
+                    }}>Mark deprecated</Button>
+                  ) : null}
 
                   {isAdmin && status !== "approved" && (
                     <div className="flex justify-end gap-1.5 pt-1">
