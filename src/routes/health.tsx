@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { useUrlState } from "@/lib/use-url-state";
 import { RouteError } from "@/components/route-error";
 import { exportRowsAsCSV } from "@/lib/csv";
+import { SavedViewsBar } from "@/components/saved-views-bar";
 
 export const Route = createFileRoute("/health")({
   component: () => (
