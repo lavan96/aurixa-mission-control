@@ -139,6 +139,7 @@ export function useNotificationPreferences() {
             muted_severities: next.muted_severities,
             mute_toasts: next.mute_toasts,
             mute_browser_push: next.mute_browser_push,
+            digest_mode: next.digest_mode,
           },
           { onConflict: "user_id" },
         );
