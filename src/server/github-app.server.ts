@@ -79,7 +79,7 @@ export function getAppOctokit(installationId?: string | number): Octokit {
   });
   // Wrap every request in withRetry for transient 429/5xx/network errors.
   octokit.hook.wrap("request", async (request, options) => {
-    return withRetry(() => request(options), {
+    return withRetry(async () => request(options), {
       attempts: 3,
       baseMs: 400,
       shouldRetry: (err) => isTransientHttpError(err),
