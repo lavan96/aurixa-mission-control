@@ -283,9 +283,9 @@ function Dashboard() {
             <Button size="sm" variant="outline" onClick={() => setBulkTagOpen(true)}>
               <Tag className="mr-1.5 h-3.5 w-3.5" /> Edit tags
             </Button>
-            <Button size="sm" variant="outline">
-              <Waves className="mr-1.5 h-3.5 w-3.5" /> Cascade selected
-            </Button>
+            <BulkPauseButton ids={Array.from(selected)} onDone={() => { setSelected(new Set()); refreshClones(); }} />
+            <BulkReprovisionButton ids={Array.from(selected)} onDone={() => { setSelected(new Set()); refreshClones(); }} />
+            <BulkDeleteButton ids={Array.from(selected)} onDone={() => { setSelected(new Set()); refreshClones(); }} />
           </div>
         )}
       </section>
