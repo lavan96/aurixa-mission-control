@@ -141,6 +141,47 @@ function SchedulesPage() {
         </CardContent>
       </Card>
 
+      <BulkActionBar
+        count={selected.size}
+        noun="schedule"
+        onClear={() => setSelected(new Set())}
+      >
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={async () => {
+            const r = await bulkToggleFn({ data: { ids: Array.from(selected), enabled: true } });
+            if (r.ok) { toast.success(`Enabled ${r.count}`); setSelected(new Set()); refresh(); }
+            else toast.error(r.error);
+          }}
+        >
+          <Power className="mr-1 h-3.5 w-3.5" /> Enable
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={async () => {
+            const r = await bulkToggleFn({ data: { ids: Array.from(selected), enabled: false } });
+            if (r.ok) { toast.success(`Disabled ${r.count}`); setSelected(new Set()); refresh(); }
+            else toast.error(r.error);
+          }}
+        >
+          <PowerOff className="mr-1 h-3.5 w-3.5" /> Disable
+        </Button>
+        <Button
+          size="sm"
+          variant="destructive"
+          onClick={async () => {
+            if (!confirm(`Delete ${selected.size} schedule(s)?`)) return;
+            const r = await bulkDeleteFn({ data: { ids: Array.from(selected) } });
+            if (r.ok) { toast.success(`Deleted ${r.count}`); setSelected(new Set()); refresh(); }
+            else toast.error(r.error);
+          }}
+        >
+          <Trash2 className="mr-1 h-3.5 w-3.5" /> Delete
+        </Button>
+      </BulkActionBar>
+
       <section className="space-y-2">
         {loading ? (
           <div className="font-mono text-sm text-muted-foreground">loading…</div>
@@ -156,7 +197,13 @@ function SchedulesPage() {
             <Card key={s.id}>
               <CardContent className="space-y-3 p-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                    <Checkbox
+                      checked={selected.has(s.id)}
+                      onCheckedChange={() => toggleSel(s.id)}
+                      className="mt-1"
+                    />
+                    <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-mono text-sm font-semibold">{s.name}</span>
                       <Badge variant="outline" className="text-[10px] uppercase">{s.kind.replace("_", " ")}</Badge>
