@@ -1375,6 +1375,9 @@ function ModuleLibraryPanel() {
   const [entries, setEntries] = useState<Array<Record<string, unknown>>>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const toggleSel = (id: string) =>
+    setSelected((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const getLibraryFn = useServerFn(getModuleLibrary);
   const removeFn = useServerFn(removeFromLibrary);
   const setApprovalFn = useServerFn(setLibraryApprovalStatus);
