@@ -397,3 +397,130 @@ function PostureDialog({
     </Dialog>
   );
 }
+
+function SeedZoneDialog({
+  clones,
+  onSeed,
+  pending,
+}: {
+  clones: { id: string; name: string }[];
+  onSeed: (v: {
+    cloneId: string;
+    zoneId: string;
+    zoneName: string;
+    accountId?: string;
+    plan?: string;
+    securityLevel?: "off" | "essentially_off" | "low" | "medium" | "high" | "under_attack";
+    botFight?: boolean;
+    rateLimitRps?: number;
+    wafPreset?: "lenient" | "balanced" | "strict";
+  }) => void;
+  pending: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [cloneId, setCloneId] = useState("");
+  const [zoneId, setZoneId] = useState("");
+  const [zoneName, setZoneName] = useState("");
+  const [accountId, setAccountId] = useState("");
+  const [plan, setPlan] = useState("");
+  const [sec, setSec] = useState<string>("");
+  const [bot, setBot] = useState(false);
+  const [rl, setRl] = useState("");
+  const [waf, setWaf] = useState<string>("");
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline">
+          <Plug className="mr-2 h-4 w-4" /> Seed manually
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Seed Cloudflare zone</DialogTitle>
+          <DialogDescription>
+            Optional. Bind a clone to a zone without an API token. Posture fields are stored locally; live posture
+            apply still requires the <code className="font-mono">CLOUDFLARE_API_TOKEN</code> secret.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <label className="font-mono text-[11px] uppercase text-muted-foreground">Clone *</label>
+            <Select value={cloneId} onValueChange={setCloneId}>
+              <SelectTrigger><SelectValue placeholder="Pick a clone" /></SelectTrigger>
+              <SelectContent>{clones.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="font-mono text-[11px] uppercase text-muted-foreground">Zone ID *</label>
+              <Input value={zoneId} onChange={(e) => setZoneId(e.target.value)} placeholder="e.g. abc123…" />
+            </div>
+            <div>
+              <label className="font-mono text-[11px] uppercase text-muted-foreground">Zone name *</label>
+              <Input value={zoneName} onChange={(e) => setZoneName(e.target.value)} placeholder="example.com" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="font-mono text-[11px] uppercase text-muted-foreground">Account ID</label>
+              <Input value={accountId} onChange={(e) => setAccountId(e.target.value)} placeholder="optional" />
+            </div>
+            <div>
+              <label className="font-mono text-[11px] uppercase text-muted-foreground">Plan</label>
+              <Input value={plan} onChange={(e) => setPlan(e.target.value)} placeholder="optional" />
+            </div>
+          </div>
+          <div>
+            <label className="font-mono text-[11px] uppercase text-muted-foreground">Security level</label>
+            <Select value={sec} onValueChange={setSec}>
+              <SelectTrigger><SelectValue placeholder="optional" /></SelectTrigger>
+              <SelectContent>
+                {["off","essentially_off","low","medium","high","under_attack"].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center justify-between">
+            <label className="font-mono text-[11px] uppercase text-muted-foreground">Bot fight mode</label>
+            <Switch checked={bot} onCheckedChange={setBot} />
+          </div>
+          <div>
+            <label className="font-mono text-[11px] uppercase text-muted-foreground">Rate limit (req/sec)</label>
+            <Input type="number" value={rl} onChange={(e) => setRl(e.target.value)} placeholder="optional" />
+          </div>
+          <div>
+            <label className="font-mono text-[11px] uppercase text-muted-foreground">WAF preset</label>
+            <Select value={waf} onValueChange={setWaf}>
+              <SelectTrigger><SelectValue placeholder="optional" /></SelectTrigger>
+              <SelectContent>
+                {["lenient","balanced","strict"].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button
+            disabled={pending || !cloneId || !zoneId || !zoneName}
+            onClick={() => {
+              onSeed({
+                cloneId,
+                zoneId,
+                zoneName,
+                accountId: accountId || undefined,
+                plan: plan || undefined,
+                securityLevel: (sec || undefined) as any,
+                botFight: bot,
+                rateLimitRps: rl ? Number(rl) : undefined,
+                wafPreset: (waf || undefined) as any,
+              });
+              setOpen(false);
+              setCloneId(""); setZoneId(""); setZoneName(""); setAccountId(""); setPlan("");
+              setSec(""); setBot(false); setRl(""); setWaf("");
+            }}
+          >
+            Seed zone
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
