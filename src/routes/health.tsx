@@ -24,6 +24,8 @@ import { formatDistanceToNow } from "@/lib/format";
 import { fetchFleetHealth, type FleetHealth, type FleetHealthRow } from "@/server/fleet-health.functions";
 import { fetchCloneHealth } from "@/server/clone-health.functions";
 import { toast } from "sonner";
+import { useUrlState } from "@/lib/use-url-state";
+import { RouteError } from "@/components/route-error";
 
 export const Route = createFileRoute("/health")({
   component: () => (
@@ -31,6 +33,7 @@ export const Route = createFileRoute("/health")({
       <FleetHealthPage />
     </ProtectedRoute>
   ),
+  errorComponent: RouteError,
   head: () => ({
     meta: [
       { title: "Fleet Health — Aurixa Systems Mission Control" },
@@ -49,8 +52,11 @@ function FleetHealthPage() {
   const [loading, setLoading] = useState(false);
   const [refreshedAt, setRefreshedAt] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<"all" | "down" | "drift" | "behind" | "failing">("all");
-  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useUrlState<"all" | "down" | "drift" | "behind" | "failing">(
+    "filter",
+    "all",
+  );
+  const [search, setSearch] = useUrlState<string>("q", "");
 
   const load = async (force = false) => {
     setLoading(true);

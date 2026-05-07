@@ -25,7 +25,6 @@ export function useUrlState<T extends string>(
   const setValue = useCallback(
     (next: T) => {
       navigate({
-        to: ".",
         search: (prev: Record<string, unknown>) => {
           const out = { ...prev };
           if (next === defaultValue || next === "" || next == null) {
