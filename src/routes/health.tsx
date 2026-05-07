@@ -18,6 +18,9 @@ import {
   Sparkles,
   Zap,
   TrendingDown,
+  Download,
+  Bookmark,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "@/lib/format";
@@ -26,6 +29,7 @@ import { fetchCloneHealth } from "@/server/clone-health.functions";
 import { toast } from "sonner";
 import { useUrlState } from "@/lib/use-url-state";
 import { RouteError } from "@/components/route-error";
+import { exportRowsAsCSV } from "@/lib/csv";
 
 export const Route = createFileRoute("/health")({
   component: () => (
