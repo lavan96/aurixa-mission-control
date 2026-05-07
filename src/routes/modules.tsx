@@ -1524,7 +1524,7 @@ function ModuleLibraryPanel() {
                       {isAdmin && (
                         <Button size="sm" variant="ghost" className="mt-1 h-6 text-[10px]" onClick={async () => {
                           await undeprecateLibraryEntry({ data: { entryId: e.id as string } });
-                          toast.success("Restored"); reload();
+                          toast.success("Restored"); refresh();
                         }}>Undeprecate</Button>
                       )}
                     </div>
@@ -1533,7 +1533,7 @@ function ModuleLibraryPanel() {
                       const reason = prompt("Deprecation reason"); if (!reason) return;
                       const replacement = prompt("Replacement slug (optional)") || undefined;
                       const r = await deprecateLibraryEntry({ data: { entryId: e.id as string, reason, replacementSlug: replacement } });
-                      if (r.ok) { toast.success("Marked deprecated"); reload(); } else toast.error(r.error);
+                      if (r.ok) { toast.success("Marked deprecated"); refresh(); } else toast.error(r.error);
                     }}>Mark deprecated</Button>
                   ) : null}
 
