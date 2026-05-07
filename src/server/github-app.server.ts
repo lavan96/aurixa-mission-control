@@ -4,6 +4,7 @@
 import { createAppAuth } from "@octokit/auth-app";
 import { Octokit } from "@octokit/rest";
 import forge from "node-forge";
+import { withRetry, isTransientHttpError } from "@/lib/with-retry";
 
 const cache = new Map<string, Octokit>();
 
