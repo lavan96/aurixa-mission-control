@@ -62,6 +62,21 @@ export function CascadeTemplatesCard({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const toggleSel = (id: string) =>
+    setSelected((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const bulkDelete = async () => {
+    if (selected.size === 0) return;
+    if (!confirm(`Delete ${selected.size} template(s)?`)) return;
+    const { error } = await supabase
+      .from("cascade_templates")
+      .delete()
+      .in("id", Array.from(selected));
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Deleted ${selected.size}`);
+    setSelected(new Set());
+    refresh();
+  };
 
   const refresh = useCallback(async () => {
     setLoading(true);
