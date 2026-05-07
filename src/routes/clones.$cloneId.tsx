@@ -24,6 +24,7 @@ import { CloneLibraryPinsCard } from "@/components/clone-library-pins";
 import type { DriftSuggestion } from "@/server/drift-suggestions.functions";
 import { CloneEditDialog } from "@/components/clone-edit-dialog";
 import { CopyButton } from "@/components/copy-button";
+import { CloneSyncStatusCard } from "@/components/clone-sync-status-card";
 import { RouteError } from "@/components/route-error";
 
 export const Route = createFileRoute("/clones/$cloneId")({
@@ -217,6 +218,8 @@ function CloneDetail() {
         <InfoTile label="Lovable" value={clone.lovable_project_url ?? "—"} icon={<ExternalLink className="h-4 w-4" />} link={clone.lovable_project_url} />
         <InfoTile label="Deploy" value={clone.deploy_url ?? "—"} icon={<ExternalLink className="h-4 w-4" />} link={clone.deploy_url} />
       </div>
+
+      <CloneSyncStatusCard clone={clone} />
 
       <CloneHealthCard cloneId={cloneId} />
       <Suspense fallback={<Card><CardContent className="p-6 text-xs text-muted-foreground">Loading timeline…</CardContent></Card>}>
