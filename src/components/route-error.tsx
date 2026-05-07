@@ -1,13 +1,39 @@
-import { useRouter, Link } from "@tanstack/react-router";
+import { useEffect, useRef } from "react";
+import { useRouter, Link, useLocation } from "@tanstack/react-router";
 import { AlertTriangle, RefreshCw, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Reusable per-route error boundary. Drop into createFileRoute({ errorComponent: RouteError })
- * for routes with loaders or heavy data fetching.
+ * for routes with loaders or heavy data fetching. Also reports the error
+ * to the route_errors telemetry table for the Route Errors dashboard.
  */
 export function RouteError({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
+  const loc = useLocation();
+  const reportedRef = useRef(false);
+
+  useEffect(() => {
+    if (reportedRef.current) return;
+    reportedRef.current = true;
+    void (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.from("route_errors").insert({
+          route_path: loc.pathname,
+          message: error?.message?.slice(0, 2000) ?? "Unknown error",
+          stack: error?.stack?.slice(0, 8000) ?? null,
+          user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+          user_id: user?.id ?? null,
+          metadata: { search: loc.search ?? null },
+        });
+      } catch {
+        // swallow — telemetry must never crash the boundary
+      }
+    })();
+  }, [error, loc.pathname, loc.search]);
+
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-4">
       <div className="max-w-md text-center">
