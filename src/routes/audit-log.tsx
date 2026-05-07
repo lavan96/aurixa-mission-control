@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { ProtectedRoute } from "@/components/protected-route";
@@ -16,13 +16,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ScrollText, Filter, RefreshCw, X, ChevronRight, Inbox } from "lucide-react";
+import { ScrollText, Filter, X, Inbox, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "@/lib/format";
 import { AuditLogSkeleton } from "@/components/list-skeletons";
 import { EmptyState } from "@/components/empty-state";
+import { AuditLogDetailDrawer } from "@/components/audit-log-detail-drawer";
+import { RefreshButton } from "@/components/refresh-button";
 
 type AuditLog = Database["public"]["Tables"]["audit_log"]["Row"];
+
+const PAGE_SIZE = 50;
 
 const ACTION_VALUES = [
   "all",
@@ -51,6 +55,7 @@ const searchSchema = z.object({
   action: fallback(z.enum(ACTION_VALUES), "all").default("all"),
   entity: fallback(z.enum(ENTITY_VALUES), "all").default("all"),
   q: fallback(z.string(), "").default(""),
+  page: fallback(z.number().int().min(0).max(10_000), 0).default(0),
 });
 
 export const Route = createFileRoute("/audit-log")({
