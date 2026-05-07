@@ -177,7 +177,10 @@ function CloneDetail() {
           <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
             clone
           </p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight">{clone.name}</h1>
+          <div className="mt-1 flex items-center gap-2">
+            <h1 className="text-3xl font-semibold tracking-tight">{clone.name}</h1>
+            <CopyButton value={clone.id} label="clone id" />
+          </div>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <StatusPill status={clone.sync_status} behind={clone.commits_behind} />
             <Badge variant="outline" className="font-mono text-[10px] uppercase">
