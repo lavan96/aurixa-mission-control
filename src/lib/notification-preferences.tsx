@@ -175,6 +175,13 @@ export function useNotificationPreferences() {
     [prefs, save],
   );
 
+  const setDigestMode = useCallback(
+    async (mode: LocalCache["digest_mode"]) => {
+      await save({ ...prefs, digest_mode: mode });
+    },
+    [prefs, save],
+  );
+
   const muted = useMemo(
     () =>
       (kind: NotificationKind, severity: NotificationSeverity) =>
@@ -190,6 +197,7 @@ export function useNotificationPreferences() {
     toggleKind,
     toggleSeverity,
     setToggle,
+    setDigestMode,
     muted,
   };
 }
