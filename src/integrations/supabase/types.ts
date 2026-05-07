@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_usage_log: {
+        Row: {
+          completion_tokens: number | null
+          cost_estimate_usd: number | null
+          created_at: string
+          feature: string
+          id: string
+          metadata: Json
+          model: string
+          prompt_tokens: number | null
+          total_tokens: number | null
+          user_id: string | null
+        }
+        Insert: {
+          completion_tokens?: number | null
+          cost_estimate_usd?: number | null
+          created_at?: string
+          feature: string
+          id?: string
+          metadata?: Json
+          model: string
+          prompt_tokens?: number | null
+          total_tokens?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          completion_tokens?: number | null
+          cost_estimate_usd?: number | null
+          created_at?: string
+          feature?: string
+          id?: string
+          metadata?: Json
+          model?: string
+          prompt_tokens?: number | null
+          total_tokens?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       audit_log: {
         Row: {
           action: string
@@ -882,6 +921,165 @@ export type Database = {
         }
         Relationships: []
       }
+      cloudflare_accounts: {
+        Row: {
+          account_id: string
+          account_name: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          is_active: boolean
+          token_secret_name: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          account_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          token_secret_name?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          account_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          token_secret_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cloudflare_audit: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          clone_id: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          payload: Json
+          result: Json
+          success: boolean
+          zone_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          clone_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          payload?: Json
+          result?: Json
+          success?: boolean
+          zone_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          clone_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          payload?: Json
+          result?: Json
+          success?: boolean
+          zone_id?: string | null
+        }
+        Relationships: []
+      }
+      cloudflare_clone_config: {
+        Row: {
+          account_id: string
+          bot_fight_mode: boolean
+          clone_id: string
+          created_at: string
+          id: string
+          last_synced_at: string | null
+          plan: string | null
+          posture: Json
+          rate_limit_rps: number | null
+          security_level: string | null
+          status: string
+          updated_at: string
+          waf_preset: string | null
+          zone_id: string
+          zone_name: string
+        }
+        Insert: {
+          account_id: string
+          bot_fight_mode?: boolean
+          clone_id: string
+          created_at?: string
+          id?: string
+          last_synced_at?: string | null
+          plan?: string | null
+          posture?: Json
+          rate_limit_rps?: number | null
+          security_level?: string | null
+          status?: string
+          updated_at?: string
+          waf_preset?: string | null
+          zone_id: string
+          zone_name: string
+        }
+        Update: {
+          account_id?: string
+          bot_fight_mode?: boolean
+          clone_id?: string
+          created_at?: string
+          id?: string
+          last_synced_at?: string | null
+          plan?: string | null
+          posture?: Json
+          rate_limit_rps?: number | null
+          security_level?: string | null
+          status?: string
+          updated_at?: string
+          waf_preset?: string | null
+          zone_id?: string
+          zone_name?: string
+        }
+        Relationships: []
+      }
+      fleet_digests: {
+        Row: {
+          created_at: string
+          generated_by_model: string | null
+          id: string
+          metrics: Json
+          period_end: string
+          period_start: string
+          summary_markdown: string
+        }
+        Insert: {
+          created_at?: string
+          generated_by_model?: string | null
+          id?: string
+          metrics?: Json
+          period_end: string
+          period_start: string
+          summary_markdown: string
+        }
+        Update: {
+          created_at?: string
+          generated_by_model?: string | null
+          id?: string
+          metrics?: Json
+          period_end?: string
+          period_start?: string
+          summary_markdown?: string
+        }
+        Relationships: []
+      }
       module_cascade_jobs: {
         Row: {
           cascade_event_id: string | null
@@ -1138,6 +1336,8 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           created_at: string
+          deprecated_at: string | null
+          deprecated_reason: string | null
           description: string | null
           entry_file: string
           file_count: number
@@ -1149,6 +1349,7 @@ export type Database = {
           published_at: string
           published_by: string | null
           rejection_reason: string | null
+          replacement_slug: string | null
           route_path: string | null
           slug: string
           source_detection_run_id: string | null
@@ -1162,6 +1363,8 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
+          deprecated_at?: string | null
+          deprecated_reason?: string | null
           description?: string | null
           entry_file: string
           file_count?: number
@@ -1173,6 +1376,7 @@ export type Database = {
           published_at?: string
           published_by?: string | null
           rejection_reason?: string | null
+          replacement_slug?: string | null
           route_path?: string | null
           slug: string
           source_detection_run_id?: string | null
@@ -1186,6 +1390,8 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
+          deprecated_at?: string | null
+          deprecated_reason?: string | null
           description?: string | null
           entry_file?: string
           file_count?: number
@@ -1197,6 +1403,7 @@ export type Database = {
           published_at?: string
           published_by?: string | null
           rejection_reason?: string | null
+          replacement_slug?: string | null
           route_path?: string | null
           slug?: string
           source_detection_run_id?: string | null
@@ -1305,6 +1512,7 @@ export type Database = {
       notification_preferences: {
         Row: {
           created_at: string
+          digest_mode: string
           id: string
           mute_browser_push: boolean
           mute_toasts: boolean
@@ -1315,6 +1523,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          digest_mode?: string
           id?: string
           mute_browser_push?: boolean
           mute_toasts?: boolean
@@ -1325,6 +1534,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          digest_mode?: string
           id?: string
           mute_browser_push?: boolean
           mute_toasts?: boolean
@@ -1458,6 +1668,39 @@ export type Database = {
         }
         Relationships: []
       }
+      push_delivery_log: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          notification_id: string | null
+          status_code: number | null
+          subscription_id: string | null
+          success: boolean
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          notification_id?: string | null
+          status_code?: number | null
+          subscription_id?: string | null
+          success: boolean
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          notification_id?: string | null
+          status_code?: number | null
+          subscription_id?: string | null
+          success?: boolean
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       push_subscriptions: {
         Row: {
           auth: string
@@ -1487,6 +1730,36 @@ export type Database = {
           last_used_at?: string
           p256dh?: string
           user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_preferences: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          payload: Json
+          scope: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          payload?: Json
+          scope: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          payload?: Json
+          scope?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
