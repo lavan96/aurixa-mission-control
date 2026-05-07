@@ -288,6 +288,7 @@ export function BrandPlaygroundDialog({
             {/* Previews */}
             <div className="space-y-4">
               <BrandAiValidator brandConfig={draftBundle.brand_config as Record<string, unknown>} />
+              {previewVariant !== "dark" && (
                 <div>
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2 flex items-center gap-1">
                     <Sun className="h-3 w-3" /> Light variant
