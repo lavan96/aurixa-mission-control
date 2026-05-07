@@ -397,22 +397,24 @@ function YggdrasilPage() {
           </div>
         </div>
       ) : (
-        <YggdrasilTree
-          clones={filteredClones}
-          primeName={primeName}
-          highlightId={highlightId}
-          zoom={zoom}
-          pan={pan}
-          onPanChange={setPan}
-          onLayoutReady={(nodes, dims) => {
-            layoutNodesRef.current = nodes;
-            treeDimensionsRef.current = dims;
-          }}
-          onNodeSelect={handleNodeSelect}
-          selectedNodeId={search.selected || null}
-          multiSelectedIds={stagedCompare}
-          onMultiSelectChange={handleMultiSelectChange}
-        />
+        <Suspense fallback={<div className="flex items-center justify-center py-24 text-xs text-muted-foreground">Loading tree…</div>}>
+          <YggdrasilTree
+            clones={filteredClones}
+            primeName={primeName}
+            highlightId={highlightId}
+            zoom={zoom}
+            pan={pan}
+            onPanChange={setPan}
+            onLayoutReady={(nodes, dims) => {
+              layoutNodesRef.current = nodes;
+              treeDimensionsRef.current = dims;
+            }}
+            onNodeSelect={handleNodeSelect}
+            selectedNodeId={search.selected || null}
+            multiSelectedIds={stagedCompare}
+            onMultiSelectChange={handleMultiSelectChange}
+          />
+        </Suspense>
       )}
     </div>
   );
