@@ -327,9 +327,9 @@ function FilteredBreakdown({
             );
           })}
         </div>
-        <SavedViewsBar
-          statusFilter={statusFilter}
-          search={search}
+        <SavedViewsBar<{ statusFilter: StatusFilter; search: string }>
+          storageKey="fleet-health"
+          current={{ statusFilter, search }}
           onApply={(v) => {
             setStatusFilter(v.statusFilter);
             setSearch(v.search);
