@@ -24,20 +24,15 @@ export function useUrlState<T extends string>(
 
   const setValue = useCallback(
     (next: T) => {
-      navigate({
-        search: (prev: Record<string, unknown>) => {
-          const out = { ...prev };
-          if (next === defaultValue || next === "" || next == null) {
-            delete out[key];
-          } else {
-            out[key] = next;
-          }
-          return out;
-        },
-        replace: true,
-      });
+      const out: Record<string, unknown> = { ...search };
+      if (next === defaultValue || next === "" || next == null) {
+        delete out[key];
+      } else {
+        out[key] = next;
+      }
+      navigate({ search: out as never, replace: true });
     },
-    [key, defaultValue, navigate],
+    [key, defaultValue, navigate, search],
   );
 
   return [value, setValue];
