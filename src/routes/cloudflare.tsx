@@ -20,6 +20,7 @@ import {
   cfDetachZone,
   cfApplyPosture,
   cfFleetAnalytics,
+  cfSeedZone,
 } from "@/server/cloudflare.functions";
 
 export const Route = createFileRoute("/cloudflare")({
