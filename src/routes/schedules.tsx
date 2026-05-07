@@ -8,7 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { CalendarClock, Play, Trash2, Plus } from "lucide-react";
+import { CalendarClock, Play, Trash2, Plus, Power, PowerOff } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActionBar } from "@/components/bulk-action-bar";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -17,6 +19,7 @@ import {
   runScheduleNow,
   updateSchedule,
 } from "@/server/schedules.functions";
+import { bulkDeleteSchedules, bulkUpdateSchedules } from "@/server/bulk-ops.functions";
 import { describeCron } from "@/server/cron";
 import { formatDistanceToNow } from "@/lib/format";
 import { ScheduleRecentFires } from "@/components/schedule-recent-fires";
@@ -50,6 +53,11 @@ function SchedulesPage() {
   const update = useServerFn(updateSchedule);
   const del = useServerFn(deleteSchedule);
   const runNow = useServerFn(runScheduleNow);
+  const bulkToggleFn = useServerFn(bulkUpdateSchedules);
+  const bulkDeleteFn = useServerFn(bulkDeleteSchedules);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const toggleSel = (id: string) =>
+    setSelected((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -133,6 +141,47 @@ function SchedulesPage() {
         </CardContent>
       </Card>
 
+      <BulkActionBar
+        count={selected.size}
+        noun="schedule"
+        onClear={() => setSelected(new Set())}
+      >
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={async () => {
+            const r = await bulkToggleFn({ data: { ids: Array.from(selected), enabled: true } });
+            if (r.ok) { toast.success(`Enabled ${r.count}`); setSelected(new Set()); refresh(); }
+            else toast.error(r.error);
+          }}
+        >
+          <Power className="mr-1 h-3.5 w-3.5" /> Enable
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={async () => {
+            const r = await bulkToggleFn({ data: { ids: Array.from(selected), enabled: false } });
+            if (r.ok) { toast.success(`Disabled ${r.count}`); setSelected(new Set()); refresh(); }
+            else toast.error(r.error);
+          }}
+        >
+          <PowerOff className="mr-1 h-3.5 w-3.5" /> Disable
+        </Button>
+        <Button
+          size="sm"
+          variant="destructive"
+          onClick={async () => {
+            if (!confirm(`Delete ${selected.size} schedule(s)?`)) return;
+            const r = await bulkDeleteFn({ data: { ids: Array.from(selected) } });
+            if (r.ok) { toast.success(`Deleted ${r.count}`); setSelected(new Set()); refresh(); }
+            else toast.error(r.error);
+          }}
+        >
+          <Trash2 className="mr-1 h-3.5 w-3.5" /> Delete
+        </Button>
+      </BulkActionBar>
+
       <section className="space-y-2">
         {loading ? (
           <div className="font-mono text-sm text-muted-foreground">loading…</div>
@@ -148,7 +197,13 @@ function SchedulesPage() {
             <Card key={s.id}>
               <CardContent className="space-y-3 p-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                    <Checkbox
+                      checked={selected.has(s.id)}
+                      onCheckedChange={() => toggleSel(s.id)}
+                      className="mt-1"
+                    />
+                    <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-mono text-sm font-semibold">{s.name}</span>
                       <Badge variant="outline" className="text-[10px] uppercase">{s.kind.replace("_", " ")}</Badge>
@@ -159,6 +214,7 @@ function SchedulesPage() {
                       {describeCron(s.cron_expression)}
                       {s.last_run_at && <> · last {formatDistanceToNow(s.last_run_at)}</>}
                       {s.next_run_at && <> · next {formatDistanceToNow(s.next_run_at)}</>}
+                    </div>
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">

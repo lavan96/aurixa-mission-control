@@ -62,6 +62,21 @@ export function CascadeTemplatesCard({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const toggleSel = (id: string) =>
+    setSelected((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const bulkDelete = async () => {
+    if (selected.size === 0) return;
+    if (!confirm(`Delete ${selected.size} template(s)?`)) return;
+    const { error } = await supabase
+      .from("cascade_templates")
+      .delete()
+      .in("id", Array.from(selected));
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Deleted ${selected.size}`);
+    setSelected(new Set());
+    refresh();
+  };
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -211,6 +226,17 @@ export function CascadeTemplatesCard({
         </Dialog>
       </CardHeader>
       <CardContent className="space-y-2">
+        {selected.size > 0 && (
+          <div className="flex items-center justify-between rounded-md border border-primary/40 bg-primary/5 p-2">
+            <span className="font-mono text-xs text-muted-foreground">{selected.size} selected</span>
+            <div className="flex gap-2">
+              <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear</Button>
+              <Button size="sm" variant="destructive" onClick={bulkDelete}>
+                <Trash2 className="mr-1 h-3 w-3" /> Delete
+              </Button>
+            </div>
+          </div>
+        )}
         {loading ? (
           <div className="font-mono text-xs text-muted-foreground">loading…</div>
         ) : templates.length === 0 ? (
@@ -224,6 +250,13 @@ export function CascadeTemplatesCard({
               key={t.id}
               className="flex items-center gap-3 rounded-md border border-border/80 bg-surface p-2.5"
             >
+              <input
+                type="checkbox"
+                checked={selected.has(t.id)}
+                onChange={() => toggleSel(t.id)}
+                className="h-4 w-4 cursor-pointer accent-primary"
+                aria-label="Select template"
+              />
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
                 <Bookmark className="h-3.5 w-3.5" />
               </div>
