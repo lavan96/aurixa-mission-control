@@ -10,10 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CopyButton } from "@/components/copy-button";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "@/lib/format";
-import { AlertTriangle, RefreshCw, Search, Filter, ExternalLink } from "lucide-react";
+import { AlertTriangle, RefreshCw, Search, Filter, ExternalLink, Download } from "lucide-react";
 import { useUrlState } from "@/lib/use-url-state";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { exportRowsAsCSV } from "@/lib/csv";
 
 type Row = {
   id: string;
@@ -129,12 +130,39 @@ function RouteErrorsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={rows.length === 0}
+            onClick={() => {
+              exportRowsAsCSV(
+                `route-errors-${windowKey}-${new Date().toISOString().slice(0, 10)}.csv`,
+                rows,
+                [
+                  { key: "created_at", header: "created_at" },
+                  { key: "route_path", header: "route_path" },
+                  { key: "message", header: "message" },
+                  { key: "user_id", header: "user_id" },
+                  { key: "user_agent", header: "user_agent" },
+                  { key: "stack", header: "stack" },
+                  { key: "id", header: "id" },
+                ],
+              );
+              toast.success(`Exported ${rows.length} rows`);
+            }}
+          >
+            <Download className="mr-1.5 h-3.5 w-3.5" />
+            Export CSV
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => void load()} disabled={loading}>
             <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", loading && "animate-spin")} />
             Reload
           </Button>
         </div>
       </header>
+
+      <TrendSparkline rows={rows} />
+
 
       <div className="grid gap-2 md:grid-cols-3">
         <SummaryTile label="Total reports" value={String(total)} tone="info" />
