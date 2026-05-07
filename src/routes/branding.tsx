@@ -17,6 +17,7 @@ import {
   duplicateBrandProfile,
 } from "@/server/branding.functions";
 import { createSchedule, deleteSchedule, runScheduleNow, updateSchedule } from "@/server/schedules.functions";
+import { BrandProfileIO } from "@/components/brand-profile-io";
 import { describeCron } from "@/server/cron";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1047,6 +1048,7 @@ function ProfileCard({
           <Button size="sm" variant="outline" onClick={onDuplicate}>
             Duplicate
           </Button>
+          <BrandProfileIO profile={profile} />
           <Button size="sm" onClick={onApply} disabled={profile.status !== "published"}>
             <Rocket className="mr-1 h-3 w-3" /> Apply
           </Button>

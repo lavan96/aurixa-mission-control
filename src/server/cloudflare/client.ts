@@ -1,5 +1,6 @@
 // Cloudflare API v4 client — typed wrapper used by all server functions.
 // Reads CLOUDFLARE_API_TOKEN from process.env (server-only).
+import { withRetry, isTransientHttpError } from "@/lib/with-retry";
 
 const CF_BASE = "https://api.cloudflare.com/client/v4";
 
@@ -30,23 +31,36 @@ async function cf<T>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
-  const res = await fetch(`${CF_BASE}${path}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${token()}`,
-      "Content-Type": "application/json",
-      ...(init.headers ?? {}),
+  return withRetry(
+    async () => {
+      const res = await fetch(`${CF_BASE}${path}`, {
+        ...init,
+        headers: {
+          Authorization: `Bearer ${token()}`,
+          "Content-Type": "application/json",
+          ...(init.headers ?? {}),
+        },
+      });
+      const json = (await res.json()) as CFResponse<T>;
+      if (!res.ok || !json.success) {
+        throw new CloudflareError(
+          json.errors?.[0]?.message ?? `Cloudflare API ${res.status}`,
+          res.status,
+          json.errors,
+        );
+      }
+      return json.result;
     },
-  });
-  const json = (await res.json()) as CFResponse<T>;
-  if (!res.ok || !json.success) {
-    throw new CloudflareError(
-      json.errors?.[0]?.message ?? `Cloudflare API ${res.status}`,
-      res.status,
-      json.errors,
-    );
-  }
-  return json.result;
+    {
+      attempts: 3,
+      shouldRetry: (err) => {
+        if (err instanceof CloudflareError) {
+          return err.status === 429 || err.status >= 500;
+        }
+        return isTransientHttpError(err);
+      },
+    },
+  );
 }
 
 export type CFZone = {

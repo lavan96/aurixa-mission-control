@@ -30,6 +30,7 @@ import { CommandPalette } from "@/components/command-palette";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { GitHubRateLimitMeter } from "@/components/github-rate-limit-meter";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Sheet,
   SheetContent,
@@ -196,6 +197,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             ⌘K
             <span className="text-muted-foreground/60">command palette</span>
           </kbd>
+          <ThemeToggle />
           <NotificationsBell />
         </header>
         <div className="p-4 md:p-8">{children}</div>
