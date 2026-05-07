@@ -1,0 +1,149 @@
+// Phase 11 — SLO surface: fleet uptime + per-clone breakdown.
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
+import { ProtectedRoute } from "@/components/protected-route";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Activity, RefreshCw, Target } from "lucide-react";
+import { computeFleetSlo } from "@/server/reliability.functions";
+import { brandDriftTimeseries } from "@/server/reliability.functions";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
+
+export const Route = createFileRoute("/slo")({
+  component: () => (<ProtectedRoute><SloPage /></ProtectedRoute>),
+  head: () => ({ meta: [{ title: "SLO — Aurixa Systems Mission Control" }] }),
+});
+
+function SloPage() {
+  const sloFn = useServerFn(computeFleetSlo);
+  const driftFn = useServerFn(brandDriftTimeseries);
+  const [days, setDays] = useState(30);
+  const slo = useQuery({ queryKey: ["slo", days], queryFn: () => sloFn({ data: { windowDays: days } }) });
+  const drift = useQuery({ queryKey: ["brand-drift-ts", days], queryFn: () => driftFn({ data: { days } }) });
+
+  const fleet = slo.data?.ok ? slo.data : null;
+  const series = drift.data?.ok ? drift.data.series : [];
+
+  return (
+    <div className="space-y-6">
+      <header className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-success/15 ring-1 ring-success/40">
+          <Target className="h-5 w-5 text-success" />
+        </div>
+        <div className="flex-1">
+          <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">reliability</p>
+          <h1 className="text-3xl font-semibold tracking-tight">Fleet SLO</h1>
+          <p className="text-sm text-muted-foreground">Uptime over the last {days} days from health snapshots.</p>
+        </div>
+        <div className="flex gap-1">
+          {[7, 30, 90].map((d) => (
+            <Button key={d} variant={d === days ? "default" : "outline"} size="sm" onClick={() => setDays(d)}>{d}d</Button>
+          ))}
+          <Button variant="ghost" size="icon" onClick={() => { slo.refetch(); drift.refetch(); }}><RefreshCw className="h-4 w-4" /></Button>
+        </div>
+      </header>
+
+      <div className="grid gap-3 md:grid-cols-3">
+        <StatCard
+          label="Fleet uptime"
+          value={fleet?.fleetUptime !== null && fleet?.fleetUptime !== undefined ? `${fleet.fleetUptime}%` : "—"}
+          tone={fleet?.fleetUptime != null ? (fleet.fleetUptime >= 99 ? "success" : fleet.fleetUptime >= 95 ? "warning" : "destructive") : "muted"}
+        />
+        <StatCard label="Health samples" value={(fleet?.samplesTotal ?? 0).toLocaleString()} />
+        <StatCard label="Clones tracked" value={(fleet?.clones.length ?? 0).toString()} />
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2"><Activity className="h-4 w-4" /> Per-clone uptime</CardTitle>
+          <CardDescription>Sorted by lowest uptime first — these need attention.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {!fleet || fleet.clones.length === 0 ? (
+            <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+              No health snapshots in the window.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {fleet.clones.map((c) => (
+                <div key={c.clone_id} className="flex items-center gap-3 rounded-md border border-border bg-surface p-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-mono text-sm font-semibold truncate">{c.name}</div>
+                    <div className="font-mono text-[10px] text-muted-foreground">
+                      {c.samples} samples · last: {c.last_status}
+                    </div>
+                  </div>
+                  <UptimeBar pct={c.uptime_pct} />
+                  <Badge
+                    variant="outline"
+                    className={
+                      c.uptime_pct === null ? "" :
+                      c.uptime_pct >= 99 ? "border-success/40 text-success" :
+                      c.uptime_pct >= 95 ? "border-warning/40 text-warning" :
+                      "border-destructive/40 text-destructive"
+                    }
+                  >
+                    {c.uptime_pct === null ? "n/a" : `${c.uptime_pct}%`}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Brand drift severity</CardTitle>
+          <CardDescription>Brand assignment status by day.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {series.length === 0 ? (
+            <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">No drift data in window.</div>
+          ) : (
+            <div className="h-[260px] w-full">
+              <ResponsiveContainer>
+                <BarChart data={series}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} />
+                  <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Bar dataKey="applied" stackId="a" fill="hsl(var(--success))" />
+                  <Bar dataKey="pending" stackId="a" fill="hsl(var(--info))" />
+                  <Bar dataKey="drifted" stackId="a" fill="hsl(var(--warning))" />
+                  <Bar dataKey="failed" stackId="a" fill="hsl(var(--destructive))" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function StatCard({ label, value, tone = "muted" }: { label: string; value: string; tone?: "success" | "warning" | "destructive" | "muted" }) {
+  const cls = tone === "success" ? "text-success" : tone === "warning" ? "text-warning" : tone === "destructive" ? "text-destructive" : "";
+  return (
+    <Card>
+      <CardContent className="p-5">
+        <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+        <div className={`mt-1 text-2xl font-semibold ${cls}`}>{value}</div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function UptimeBar({ pct }: { pct: number | null }) {
+  if (pct === null) return <div className="h-1.5 w-32 rounded-full bg-muted" />;
+  const color = pct >= 99 ? "bg-success" : pct >= 95 ? "bg-warning" : "bg-destructive";
+  return (
+    <div className="h-1.5 w-32 overflow-hidden rounded-full bg-muted">
+      <div className={`h-full ${color}`} style={{ width: `${pct}%` }} />
+    </div>
+  );
+}
