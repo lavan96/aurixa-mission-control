@@ -268,14 +268,44 @@ function FilteredBreakdown({
               Sorted by risk — down deploys first, then failed cascades, then drift.
             </CardDescription>
           </div>
-          <div className="relative w-full md:w-64">
-            <Search className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search clones…"
-              className="h-9 pl-8 font-mono text-xs"
-            />
+          <div className="flex w-full items-center gap-2 md:w-auto">
+            <div className="relative w-full md:w-64">
+              <Search className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search clones…"
+                className="h-9 pl-8 font-mono text-xs"
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={filtered.length === 0}
+              onClick={() => {
+                exportRowsAsCSV(
+                  `fleet-health-${statusFilter}-${new Date().toISOString().slice(0, 10)}.csv`,
+                  filtered.map((r) => ({
+                    name: r.name,
+                    cloneId: r.cloneId,
+                    syncStatus: r.syncStatus,
+                    commitsBehind: r.commitsBehind,
+                    uptime: r.health.uptime.status,
+                    httpStatus: r.health.uptime.httpStatus ?? "",
+                    latencyMs: r.health.uptime.latencyMs ?? "",
+                    driftOpen: r.health.driftSuggestionsOpen,
+                    failures7d: r.health.failureCount7d,
+                    lastSuccessfulCascadeAt: r.health.lastSuccessfulCascadeAt ?? "",
+                    deployUrl: r.health.deployUrl ?? "",
+                    probedAt: r.probedAt,
+                  })),
+                );
+                toast.success(`Exported ${filtered.length} clones`);
+              }}
+            >
+              <Download className="mr-1.5 h-3.5 w-3.5" />
+              Export
+            </Button>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
@@ -296,6 +326,14 @@ function FilteredBreakdown({
             );
           })}
         </div>
+        <SavedViewsBar
+          statusFilter={statusFilter}
+          search={search}
+          onApply={(v) => {
+            setStatusFilter(v.statusFilter);
+            setSearch(v.search);
+          }}
+        />
       </CardHeader>
       <CardContent className="space-y-2">
         {filtered.length === 0 ? (
