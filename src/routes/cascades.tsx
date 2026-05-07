@@ -377,6 +377,7 @@ function CascadesPage() {
                 </div>
               </div>
             </div>
+          )}
           <AiPreflightSummary
             scope={scope}
             mode={mode}
