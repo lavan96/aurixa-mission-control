@@ -21,10 +21,14 @@ import {
   Palette,
   BarChart3,
   Newspaper,
+  ShieldCheck,
+  Target,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { CommandPalette } from "@/components/command-palette";
+import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
+import { OnboardingWizard } from "@/components/onboarding-wizard";
 import {
   Sheet,
   SheetContent,
@@ -45,7 +49,9 @@ const NAV = [
   { to: "/fleet-manager", label: "AI Manager", icon: Bot },
   { to: "/audit-log", label: "Audit Log", icon: ScrollText },
   { to: "/cloudflare", label: "Cloudflare", icon: Shield },
+  { to: "/approvals", label: "Approvals", icon: ShieldCheck },
   { to: "/metrics", label: "Metrics", icon: BarChart3 },
+  { to: "/slo", label: "SLO", icon: Target },
   { to: "/digests", label: "Digests", icon: Newspaper },
   { to: "/yggdrasil", label: "Yggdrasil", icon: TreePine },
   { to: "/settings", label: "Settings", icon: Settings },
