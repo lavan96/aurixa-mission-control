@@ -59,7 +59,7 @@ export function CommandPalette() {
   const { data: modules } = useModules();
   const { data: events } = useCascadeEvents(15);
 
-  // Toggle on ⌘K / Ctrl+K
+  // Toggle on ⌘K / Ctrl+K, or via a global "open-command-palette" event.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.key === "k" || e.key === "K") && (e.metaKey || e.ctrlKey)) {
@@ -67,8 +67,13 @@ export function CommandPalette() {
         setOpen((v) => !v);
       }
     };
+    const onOpen = () => setOpen(true);
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("open-command-palette", onOpen);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("open-command-palette", onOpen);
+    };
   }, []);
 
   const run = useCallback(
