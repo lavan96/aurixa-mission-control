@@ -160,7 +160,7 @@ type DeviceSub = {
 };
 
 function SettingsNotificationsPage() {
-  const { prefs, loading, toggleKind, toggleSeverity, setToggle } =
+  const { prefs, loading, toggleKind, toggleSeverity, setToggle, setDigestMode } =
     useNotificationPreferences();
   const { session } = useAuth();
 
