@@ -149,6 +149,7 @@ export const upsertBrandProfile = createServerFn({ method: "POST" })
       actor_user_id: context.userId,
       metadata: { slug, hash: config_hash },
     });
+    return { ok: true as const, profile: row };
   });
 
 // ─── Duplicate ───────────────────────────────────────────────────────
