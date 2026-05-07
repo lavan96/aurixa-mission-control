@@ -49,6 +49,8 @@ function FleetHealthPage() {
   const [loading, setLoading] = useState(false);
   const [refreshedAt, setRefreshedAt] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<"all" | "down" | "drift" | "behind" | "failing">("all");
+  const [search, setSearch] = useState("");
 
   const load = async (force = false) => {
     setLoading(true);
