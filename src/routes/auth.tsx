@@ -22,6 +22,7 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
 
   useEffect(() => {
     if (session) nav({ to: "/dashboard" });
@@ -37,10 +38,32 @@ function AuthPage() {
       return;
     }
     if (mode === "up") {
-      toast.success("Account created. Check your email if confirmation is required.");
+      // Check if a session was created (email confirmation disabled) or not (confirmation required)
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        toast.success("Account created — welcome aboard");
+      } else {
+        setPendingEmail(email);
+        toast.success("Account created — check your inbox to confirm");
+      }
     } else {
       toast.success("Welcome back");
     }
+  };
+
+  const resendConfirmation = async () => {
+    if (!pendingEmail) return;
+    setBusy(true);
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: pendingEmail,
+      options: {
+        emailRedirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
+      },
+    });
+    setBusy(false);
+    if (error) toast.error(error.message);
+    else toast.success("Confirmation email re-sent");
   };
 
   return (
