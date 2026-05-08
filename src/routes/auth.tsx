@@ -1,12 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Radio } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Radio, MailCheck } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
@@ -20,6 +22,7 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
 
   useEffect(() => {
     if (session) nav({ to: "/dashboard" });
@@ -35,10 +38,32 @@ function AuthPage() {
       return;
     }
     if (mode === "up") {
-      toast.success("Account created. Check your email if confirmation is required.");
+      // Check if a session was created (email confirmation disabled) or not (confirmation required)
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        toast.success("Account created — welcome aboard");
+      } else {
+        setPendingEmail(email);
+        toast.success("Account created — check your inbox to confirm");
+      }
     } else {
       toast.success("Welcome back");
     }
+  };
+
+  const resendConfirmation = async () => {
+    if (!pendingEmail) return;
+    setBusy(true);
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: pendingEmail,
+      options: {
+        emailRedirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
+      },
+    });
+    setBusy(false);
+    if (error) toast.error(error.message);
+    else toast.success("Confirmation email re-sent");
   };
 
   return (
@@ -91,6 +116,39 @@ function AuthPage() {
               </TabsContent>
             ))}
           </Tabs>
+
+          {pendingEmail && (
+            <Alert className="mt-6 border-primary/40 bg-primary/5">
+              <MailCheck className="h-4 w-4 text-primary" />
+              <AlertTitle className="font-mono text-sm">Confirm your email</AlertTitle>
+              <AlertDescription className="space-y-3 text-xs text-muted-foreground">
+                <p>
+                  We sent a confirmation link to{" "}
+                  <span className="font-mono text-foreground">{pendingEmail}</span>. Click it to
+                  finish setup, then sign in below.
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={busy}
+                    onClick={resendConfirmation}
+                  >
+                    Resend email
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setPendingEmail(null)}
+                  >
+                    Dismiss
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
         </CardContent>
       </Card>
       </div>
