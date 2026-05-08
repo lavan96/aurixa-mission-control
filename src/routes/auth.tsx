@@ -116,6 +116,39 @@ function AuthPage() {
               </TabsContent>
             ))}
           </Tabs>
+
+          {pendingEmail && (
+            <Alert className="mt-6 border-primary/40 bg-primary/5">
+              <MailCheck className="h-4 w-4 text-primary" />
+              <AlertTitle className="font-mono text-sm">Confirm your email</AlertTitle>
+              <AlertDescription className="space-y-3 text-xs text-muted-foreground">
+                <p>
+                  We sent a confirmation link to{" "}
+                  <span className="font-mono text-foreground">{pendingEmail}</span>. Click it to
+                  finish setup, then sign in below.
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={busy}
+                    onClick={resendConfirmation}
+                  >
+                    Resend email
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setPendingEmail(null)}
+                  >
+                    Dismiss
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
         </CardContent>
       </Card>
       </div>
