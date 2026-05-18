@@ -278,7 +278,7 @@ export const applyTenantTopup = createServerFn({ method: "POST" })
     const { data: result, error } = await context.supabase.rpc("apply_topup", {
       _tenant_id: data.tenantId,
       _pack_id: data.packId,
-      _source_ref: data.sourceRef ?? null,
+      _source_ref: data.sourceRef ?? undefined,
     });
     if (error) return { ok: false as const, error: error.message };
     return result as { ok: boolean; error?: string; tokens?: number };
