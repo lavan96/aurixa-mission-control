@@ -151,6 +151,56 @@ export const provisionClone = createServerFn({ method: "POST" })
       );
     }
 
+    // ─── Auto-issue + cascade Aurixa API key ──────────────────────────
+    // Every new clone gets a Mission Control API key generated immediately
+    // and committed into its own repo (`.aurixa/credentials.json`) so the
+    // clone's frontend can read it at build time. Failure here is non-fatal:
+    // the clone is still considered created and the operator can re-issue.
+    let issuedApiKey: { raw: string; prefix: string; id: string } | null = null;
+    let cascadeResult: { ok: boolean; path: string; commit_sha?: string | null; error?: string } | null = null;
+    try {
+      const { raw, hash, prefix } = generateApiKey();
+      const keyInsert = await supabaseAdmin
+        .from("clone_api_keys")
+        .insert({
+          clone_id: inserted.id,
+          label: "auto-provisioned",
+          scopes: ["tokens:meter", "clones:rotate"],
+          key_hash: hash,
+          key_prefix: prefix,
+          created_by: userId,
+        })
+        .select("id")
+        .single();
+      if (!keyInsert.error && keyInsert.data) {
+        issuedApiKey = { raw, prefix, id: keyInsert.data.id };
+        if (data.method !== "clone" && githubUrl) {
+          cascadeResult = await cascadeApiKeyToRepo({
+            owner: githubOwner,
+            repo: githubRepo,
+            branch: prime.default_branch || "main",
+            apiKey: raw,
+            apiKeyPrefix: prefix,
+            reason: "initial",
+            metadata: { clone_id: inserted.id, clone_name: data.name },
+          });
+        }
+        void fireTokenWebhook(
+          "tokens.key.rotated",
+          {
+            event_reason: "initial_provision",
+            clone_id: inserted.id,
+            new_key_id: keyInsert.data.id,
+            new_key_prefix: prefix,
+            repo_cascade: cascadeResult,
+          },
+          inserted.id,
+        );
+      }
+    } catch (e) {
+      console.error("[provisionClone] api key auto-issue failed:", e);
+    }
+
     await supabase.from("audit_log").insert({
       action: "clone.created",
       entity_type: "clone",
@@ -161,6 +211,8 @@ export const provisionClone = createServerFn({ method: "POST" })
         cloudflare: data.cloudflareEnabled,
         modules: data.moduleIds,
         github_url: githubUrl,
+        api_key_prefix: issuedApiKey?.prefix ?? null,
+        repo_cascade: cascadeResult,
       },
     });
 
@@ -176,6 +228,28 @@ export const provisionClone = createServerFn({ method: "POST" })
       url: `/clones/${inserted.id}`,
       metadata: { method: data.method, cloudflare: data.cloudflareEnabled, github_url: githubUrl },
     });
+
+    if (issuedApiKey) {
+      await supabase.from("notifications").insert({
+        kind: "tokens_key_issued",
+        severity: cascadeResult?.ok === false ? "warning" : "success",
+        title: `API key issued for ${data.name}`,
+        body: cascadeResult?.ok
+          ? `Prefix ${issuedApiKey.prefix}… cascaded to ${cascadeResult.path} on ${githubOwner}/${githubRepo}.`
+          : cascadeResult
+            ? `Prefix ${issuedApiKey.prefix}… created but repo cascade failed: ${cascadeResult.error ?? "unknown"}. Re-cascade from the API Keys tab.`
+            : `Prefix ${issuedApiKey.prefix}… created (no repo cascade — independent clone).`,
+        clone_id: inserted.id,
+        url: `/settings/billing`,
+        metadata: {
+          new_key_id: issuedApiKey.id,
+          new_key_prefix: issuedApiKey.prefix,
+          new_key_secret: issuedApiKey.raw,
+          repo_cascade: cascadeResult,
+          reason: "initial_provision",
+        },
+      });
+    }
 
     return { ok: true, cloneId: inserted.id, githubUrl };
   });
