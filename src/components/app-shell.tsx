@@ -21,6 +21,7 @@ import {
   Palette,
   BarChart3,
   Newspaper,
+  Receipt,
   ShieldCheck,
   Target,
   Search,
