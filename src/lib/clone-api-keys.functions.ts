@@ -14,7 +14,7 @@ export const listCloneApiKeys = createServerFn({ method: "GET" })
     let q = context.supabase
       .from("clone_api_keys")
       .select(
-        "id, clone_id, label, key_prefix, scopes, revoked_at, last_used_at, created_at, clones:clone_id(id, name, slug)",
+        "id, clone_id, label, key_prefix, scopes, revoked_at, revoke_at, rotated_from, rotated_to, last_used_at, first_used_at, created_at, clones:clone_id(id, name, slug)",
       )
       .order("created_at", { ascending: false });
     if (data.cloneId) q = q.eq("clone_id", data.cloneId);
