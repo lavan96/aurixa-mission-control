@@ -123,6 +123,22 @@ function TopupBody() {
     return sorted;
   }, [all, search, currency, minTokens, maxPrice, sort]);
 
+  // ── Pagination ────────────────────────────────────────────────────────────
+  const [pageSize, setPageSize] = useState<number>(9);
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  // Clamp when filters shrink the result set below the current page.
+  const safePage = Math.min(page, totalPages);
+  const pageStart = (safePage - 1) * pageSize;
+  const visible = filtered.slice(pageStart, pageStart + pageSize);
+  // Reset to first page whenever filters change the result count.
+  const filterKey = `${search}|${currency}|${minTokens}|${maxPrice}|${sort}|${pageSize}`;
+  const [lastFilterKey, setLastFilterKey] = useState(filterKey);
+  if (filterKey !== lastFilterKey) {
+    setLastFilterKey(filterKey);
+    setPage(1);
+  }
+
   // ── Confirmation state ────────────────────────────────────────────────────
   const [pending, setPending] = useState<{ pack: Pack; idemKey: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
