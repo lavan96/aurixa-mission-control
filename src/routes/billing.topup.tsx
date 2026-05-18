@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -7,6 +8,24 @@ import { ProtectedRoute } from "@/components/protected-route";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { listPacks, applyTenantTopup, getTenant } from "@/lib/tokens.functions";
 
@@ -23,6 +42,19 @@ export const Route = createFileRoute("/billing/topup")({
 function money(cents: number, ccy = "USD") {
   return new Intl.NumberFormat(undefined, { style: "currency", currency: ccy }).format(cents / 100);
 }
+
+type Pack = {
+  id: string;
+  slug: string;
+  name: string;
+  tokens: number;
+  price_cents: number;
+  currency: string;
+  expires_after_days: number | null;
+  is_active: boolean;
+};
+
+type SortKey = "tokens-asc" | "tokens-desc" | "price-asc" | "price-desc" | "name";
 
 function TopupPage() {
   return (
@@ -50,20 +82,83 @@ function TopupBody() {
     enabled: !!tenant,
   });
 
-  const active = (packs.data?.packs ?? []).filter((p) => p.is_active);
+  const all: Pack[] = (packs.data?.packs ?? []) as Pack[];
 
-  async function buy(packId: string) {
+  // ── Filters / search ──────────────────────────────────────────────────────
+  const [search, setSearch] = useState("");
+  const [currency, setCurrency] = useState<string>("__all__");
+  const [sort, setSort] = useState<SortKey>("tokens-asc");
+  const [minTokens, setMinTokens] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+
+  const currencies = useMemo(
+    () => Array.from(new Set(all.map((p) => p.currency))).sort(),
+    [all],
+  );
+
+  const filtered = useMemo(() => {
+    let rows = all.filter((p) => p.is_active);
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      rows = rows.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) || p.slug.toLowerCase().includes(q),
+      );
+    }
+    if (currency !== "__all__") rows = rows.filter((p) => p.currency === currency);
+    const minT = Number(minTokens);
+    if (minTokens && Number.isFinite(minT)) rows = rows.filter((p) => p.tokens >= minT);
+    const maxP = Number(maxPrice);
+    if (maxPrice && Number.isFinite(maxP)) {
+      rows = rows.filter((p) => p.price_cents <= Math.round(maxP * 100));
+    }
+    const sorted = [...rows];
+    switch (sort) {
+      case "tokens-asc": sorted.sort((a, b) => a.tokens - b.tokens); break;
+      case "tokens-desc": sorted.sort((a, b) => b.tokens - a.tokens); break;
+      case "price-asc": sorted.sort((a, b) => a.price_cents - b.price_cents); break;
+      case "price-desc": sorted.sort((a, b) => b.price_cents - a.price_cents); break;
+      case "name": sorted.sort((a, b) => a.name.localeCompare(b.name)); break;
+    }
+    return sorted;
+  }, [all, search, currency, minTokens, maxPrice, sort]);
+
+  // ── Confirmation state ────────────────────────────────────────────────────
+  const [pending, setPending] = useState<{ pack: Pack; idemKey: string } | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  function requestBuy(pack: Pack) {
     if (!tenant) {
       toast.error("No tenant in context — open this page from a clone deep-link.");
       return;
     }
-    const r = await topupFn({ data: { tenantId: tenant, packId } });
-    if ((r as { ok?: boolean }).ok === false) {
-      toast.error(((r as { error?: string }).error) ?? "Top-up failed");
-      return;
+    // Generate a fresh idempotency key per confirmation flow. Repeated clicks
+    // on the confirm button reuse this same key, so the server short-circuits
+    // duplicate charges.
+    setPending({ pack, idemKey: crypto.randomUUID() });
+  }
+
+  async function confirmBuy() {
+    if (!pending || !tenant) return;
+    setSubmitting(true);
+    try {
+      const r = await topupFn({
+        data: { tenantId: tenant, packId: pending.pack.id, idempotencyKey: pending.idemKey },
+      }) as { ok?: boolean; error?: string; idempotent_replay?: boolean; tokens?: number };
+      if (r.ok === false) {
+        toast.error(r.error ?? "Top-up failed");
+        return;
+      }
+      if (r.idempotent_replay) {
+        toast.info(`Already applied earlier (${r.tokens?.toLocaleString()} tokens) — no double-charge.`);
+      } else {
+        toast.success(`Top-up applied: +${r.tokens?.toLocaleString() ?? pending.pack.tokens.toLocaleString()} tokens`);
+      }
+      qc.invalidateQueries({ queryKey: ["topup", "tenant", tenant] });
+      setPending(null);
+    } finally {
+      setSubmitting(false);
     }
-    toast.success("Top-up applied");
-    qc.invalidateQueries({ queryKey: ["topup", "tenant", tenant] });
   }
 
   return (
@@ -107,8 +202,57 @@ function TopupBody() {
         </Card>
       )}
 
+      {/* Filters */}
+      <Card>
+        <CardContent className="grid gap-3 py-4 md:grid-cols-5">
+          <Input
+            placeholder="Search name or slug…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="md:col-span-2"
+          />
+          <Select value={currency} onValueChange={setCurrency}>
+            <SelectTrigger><SelectValue placeholder="Currency" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All currencies</SelectItem>
+              {currencies.map((c) => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input
+            type="number"
+            min={0}
+            placeholder="Min tokens"
+            value={minTokens}
+            onChange={(e) => setMinTokens(e.target.value)}
+          />
+          <Input
+            type="number"
+            min={0}
+            step="0.01"
+            placeholder="Max price"
+            value={maxPrice}
+            onChange={(e) => setMaxPrice(e.target.value)}
+          />
+          <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
+            <SelectTrigger className="md:col-span-1"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="tokens-asc">Tokens · low → high</SelectItem>
+              <SelectItem value="tokens-desc">Tokens · high → low</SelectItem>
+              <SelectItem value="price-asc">Price · low → high</SelectItem>
+              <SelectItem value="price-desc">Price · high → low</SelectItem>
+              <SelectItem value="name">Name (A→Z)</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground md:col-span-5">
+            Showing {filtered.length} of {all.filter((p) => p.is_active).length} active packs
+          </p>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {active.map((p) => (
+        {filtered.map((p) => (
           <Card key={p.id} className="flex flex-col">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -125,16 +269,60 @@ function TopupBody() {
                 {money(p.price_cents, p.currency)}
                 {p.expires_after_days ? ` · expires in ${p.expires_after_days}d` : " · no expiry"}
               </p>
-              <Button className="mt-auto" disabled={!tenant} onClick={() => buy(p.id)}>
+              <Button className="mt-auto" disabled={!tenant} onClick={() => requestBuy(p)}>
                 {tenant ? "Apply top-up" : "Select tenant"}
               </Button>
             </CardContent>
           </Card>
         ))}
-        {active.length === 0 && !packs.isLoading && (
-          <p className="text-sm text-muted-foreground">No active top-up packs configured.</p>
+        {filtered.length === 0 && !packs.isLoading && (
+          <p className="text-sm text-muted-foreground">No packs match the current filters.</p>
         )}
       </div>
+
+      <AlertDialog open={!!pending} onOpenChange={(o) => { if (!o && !submitting) setPending(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm top-up</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm">
+                <p>Review before charging the tenant's account. This action is recorded in the audit log.</p>
+                {pending && (
+                  <div className="rounded border border-border bg-muted/30 p-3 font-mono text-xs">
+                    <Row k="Tenant" v={tenantQ.data?.tenant?.display_name ?? tenantQ.data?.tenant?.external_ref ?? tenant} />
+                    <Row k="Pack" v={`${pending.pack.name} (${pending.pack.slug})`} />
+                    <Row k="Tokens" v={`+${pending.pack.tokens.toLocaleString()}`} />
+                    <Row k="Price" v={money(pending.pack.price_cents, pending.pack.currency)} />
+                    <Row k="Expires" v={pending.pack.expires_after_days ? `in ${pending.pack.expires_after_days}d` : "never"} />
+                    <Row k="Idempotency key" v={pending.idemKey} />
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Repeated submissions with this same key will not double-charge.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={submitting}
+              onClick={(e) => { e.preventDefault(); void confirmBuy(); }}
+            >
+              {submitting ? "Applying…" : "Confirm & apply"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+function Row({ k, v }: { k: string; v: React.ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 py-0.5">
+      <span className="text-muted-foreground">{k}</span>
+      <span className="break-all text-right text-foreground">{v}</span>
     </div>
   );
 }
