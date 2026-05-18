@@ -257,7 +257,7 @@ export const grantTenantTokens = createServerFn({ method: "POST" })
       _tenant_id: data.tenantId,
       _tokens: data.tokens,
       _reason: data.reason,
-      _expires_at: data.expiresAt ?? null,
+      _expires_at: data.expiresAt ?? undefined,
     });
     if (error) return { ok: false as const, error: error.message };
     return result as { ok: boolean; error?: string };
