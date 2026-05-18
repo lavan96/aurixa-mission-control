@@ -395,36 +395,48 @@ export type Database = {
           clone_id: string | null
           created_at: string
           created_by: string | null
+          first_used_at: string | null
           id: string
           key_hash: string
           key_prefix: string
           label: string
           last_used_at: string | null
+          revoke_at: string | null
           revoked_at: string | null
+          rotated_from: string | null
+          rotated_to: string | null
           scopes: string[]
         }
         Insert: {
           clone_id?: string | null
           created_at?: string
           created_by?: string | null
+          first_used_at?: string | null
           id?: string
           key_hash: string
           key_prefix: string
           label: string
           last_used_at?: string | null
+          revoke_at?: string | null
           revoked_at?: string | null
+          rotated_from?: string | null
+          rotated_to?: string | null
           scopes?: string[]
         }
         Update: {
           clone_id?: string | null
           created_at?: string
           created_by?: string | null
+          first_used_at?: string | null
           id?: string
           key_hash?: string
           key_prefix?: string
           label?: string
           last_used_at?: string | null
+          revoke_at?: string | null
           revoked_at?: string | null
+          rotated_from?: string | null
+          rotated_to?: string | null
           scopes?: string[]
         }
         Relationships: [
@@ -433,6 +445,20 @@ export type Database = {
             columns: ["clone_id"]
             isOneToOne: false
             referencedRelation: "clones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clone_api_keys_rotated_from_fkey"
+            columns: ["rotated_from"]
+            isOneToOne: false
+            referencedRelation: "clone_api_keys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clone_api_keys_rotated_to_fkey"
+            columns: ["rotated_to"]
+            isOneToOne: false
+            referencedRelation: "clone_api_keys"
             referencedColumns: ["id"]
           },
         ]
@@ -1991,6 +2017,32 @@ export type Database = {
           },
         ]
       }
+      token_api_rate_limits: {
+        Row: {
+          count: number
+          key_id: string
+          window_start: string
+        }
+        Insert: {
+          count?: number
+          key_id: string
+          window_start: string
+        }
+        Update: {
+          count?: number
+          key_id?: string
+          window_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "token_api_rate_limits_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "clone_api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       token_balances: {
         Row: {
           available: number
@@ -2119,6 +2171,92 @@ export type Database = {
         }
         Relationships: []
       }
+      token_webhook_deliveries: {
+        Row: {
+          attempts: number
+          created_at: string
+          delivered_at: string | null
+          endpoint_id: string
+          event_type: string
+          id: string
+          next_attempt_at: string | null
+          payload: Json
+          response_body: string | null
+          response_code: number | null
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          delivered_at?: string | null
+          endpoint_id: string
+          event_type: string
+          id?: string
+          next_attempt_at?: string | null
+          payload?: Json
+          response_body?: string | null
+          response_code?: number | null
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          delivered_at?: string | null
+          endpoint_id?: string
+          event_type?: string
+          id?: string
+          next_attempt_at?: string | null
+          payload?: Json
+          response_body?: string | null
+          response_code?: number | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "token_webhook_deliveries_endpoint_id_fkey"
+            columns: ["endpoint_id"]
+            isOneToOne: false
+            referencedRelation: "token_webhook_endpoints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      token_webhook_endpoints: {
+        Row: {
+          clone_id: string | null
+          created_at: string
+          created_by: string | null
+          events: string[]
+          id: string
+          is_active: boolean
+          secret: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          clone_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          events?: string[]
+          id?: string
+          is_active?: boolean
+          secret: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          clone_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          events?: string[]
+          id?: string
+          is_active?: boolean
+          secret?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       topup_packs: {
         Row: {
           created_at: string
@@ -2242,10 +2380,15 @@ export type Database = {
         Args: { _job_id: string; _reason?: string }
         Returns: Json
       }
+      check_api_rate_limit: {
+        Args: { _key_id: string; _limit?: number }
+        Returns: Json
+      }
       commit_tokens: {
         Args: { _actual_tokens: number; _job_id: string; _result_meta?: Json }
         Returns: Json
       }
+      expire_stale_reservations: { Args: never; Returns: Json }
       grant_tokens: {
         Args: {
           _expires_at?: string
@@ -2281,10 +2424,16 @@ export type Database = {
         }
         Returns: Json
       }
+      revoke_scheduled_keys: { Args: never; Returns: Json }
       role_level: {
         Args: { _role: Database["public"]["Enums"]["app_role"] }
         Returns: number
       }
+      schedule_key_revoke: {
+        Args: { _at: string; _key_id: string }
+        Returns: Json
+      }
+      tenant_usage_summary: { Args: { _tenant_id: string }; Returns: Json }
     }
     Enums: {
       app_role: "super_admin" | "admin" | "operator" | "user"
@@ -2342,6 +2491,8 @@ export type Database = {
         | "cascade_rejected"
         | "library_entry_approved"
         | "library_entry_rejected"
+        | "tokens_alert"
+        | "tokens_key_first_use"
       notification_severity: "info" | "success" | "warning" | "error"
       overage_policy: "block" | "topup_only" | "pay_as_you_go"
       provisioning_method: "fork" | "template" | "clone"
@@ -2540,6 +2691,8 @@ export const Constants = {
         "cascade_rejected",
         "library_entry_approved",
         "library_entry_rejected",
+        "tokens_alert",
+        "tokens_key_first_use",
       ],
       notification_severity: ["info", "success", "warning", "error"],
       overage_policy: ["block", "topup_only", "pay_as_you_go"],

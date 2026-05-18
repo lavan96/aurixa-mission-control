@@ -6,6 +6,8 @@ import {
   jsonResponse,
   resolveCloneApiKey,
 } from "@/server/clone-api-keys.server";
+import { checkRateLimit } from "@/server/token-rate-limit.server";
+import { fireTokenWebhook, balanceSnapshot } from "@/server/token-webhooks.server";
 
 const Schema = z.object({
   tenant_ref: z.string().min(1).max(200),
@@ -26,6 +28,29 @@ export const Route = createFileRoute("/api/public/tokens/reserve")({
           "tokens:meter",
         );
         if (!key) return jsonResponse({ ok: false, error: "unauthorized" }, 401);
+
+        const rl = await checkRateLimit(key.id);
+        if (!rl.ok) {
+          return new Response(
+            JSON.stringify({ ok: false, error: "rate_limited", count: rl.count, limit: rl.limit, retry_after_seconds: rl.retry_after_seconds }),
+            { status: 429, headers: { "Content-Type": "application/json", "Retry-After": String(rl.retry_after_seconds) } },
+          );
+        }
+
+        // Track first-use of an API key (security signal)
+        if (!key.first_used_at) {
+          await supabaseAdmin.from("clone_api_keys").update({ first_used_at: new Date().toISOString() }).eq("id", key.id);
+          await supabaseAdmin.from("notifications").insert({
+            kind: "tokens_key_first_use",
+            severity: "info",
+            title: `API key first use: ${key.label ?? key.key_prefix ?? key.id.slice(0, 8)}`,
+            body: "An API key was used for the first time.",
+            clone_id: key.clone_id,
+            url: "/settings/billing",
+            metadata: { key_id: key.id },
+          });
+          await fireTokenWebhook("tokens.alert", { alert: "key_first_use", key_id: key.id }, key.clone_id);
+        }
 
         let body: unknown;
         try {
@@ -59,6 +84,10 @@ export const Route = createFileRoute("/api/public/tokens/reserve")({
           _request_payload: (data.request_payload ?? {}) as never,
         });
         if (error) return jsonResponse({ ok: false, error: error.message }, 500);
+        // Fire balance update webhook (fire-and-forget)
+        balanceSnapshot(tenant.tenantId).then((snap) =>
+          fireTokenWebhook("tokens.balance.updated", { ...snap, source: "reserve" }, key.clone_id),
+        ).catch(() => {});
         return jsonResponse(result, 200);
       },
     },
