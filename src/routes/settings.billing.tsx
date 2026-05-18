@@ -542,8 +542,11 @@ function KeysTab() {
             ) : (
               <div className="grid gap-2 text-sm">
                 <Select value={cloneId} onValueChange={setCloneId}>
-                  <SelectTrigger><SelectValue placeholder="Pick clone…" /></SelectTrigger>
-                  <SelectContent>{clones?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                  <SelectTrigger><SelectValue placeholder="Pick target…" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__prime__">Prime repo (Mission Control)</SelectItem>
+                    {clones?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  </SelectContent>
                 </Select>
                 <Input placeholder="Label (e.g. prod, staging)" value={label} onChange={(e) => setLabel(e.target.value)} />
               </div>
@@ -551,7 +554,8 @@ function KeysTab() {
             <DialogFooter>
               {issuedKey ? <Button onClick={() => setOpen(false)}>Done</Button> : (
                 <Button disabled={!cloneId || !label} onClick={async () => {
-                  const r = await createFn({ data: { cloneId, label, scopes: ["tokens:meter"] } });
+                  const targetCloneId = cloneId === "__prime__" ? null : cloneId;
+                  const r = await createFn({ data: { cloneId: targetCloneId, label, scopes: ["tokens:meter"] } });
                   if (r.ok) { setIssuedKey(r.key); qc.invalidateQueries({ queryKey: ["clone-api-keys"] }); } else toast.error(r.error);
                 }}>Issue</Button>
               )}
@@ -565,7 +569,7 @@ function KeysTab() {
           <TableBody>
             {data?.keys.map((k: any) => (
               <TableRow key={k.id}>
-                <TableCell>{k.clones?.name ?? "—"}</TableCell>
+                <TableCell>{k.clones?.name ?? <span className="font-mono text-xs text-muted-foreground">prime repo</span>}</TableCell>
                 <TableCell>{k.label}</TableCell>
                 <TableCell className="font-mono text-xs">{k.key_prefix}…</TableCell>
                 <TableCell className="text-xs">{k.last_used_at ? new Date(k.last_used_at).toLocaleString() : "never"}</TableCell>

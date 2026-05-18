@@ -51,7 +51,7 @@ export const Route = createFileRoute("/api/public/tokens/reserve")({
 
         const { data: result, error } = await supabaseAdmin.rpc("reserve_tokens", {
           _tenant_id: tenant.tenantId,
-          _clone_id: key.clone_id,
+          _clone_id: key.clone_id as string,
           _kind: data.kind,
           _estimated_tokens: data.estimated_tokens,
           _idempotency_key: data.idempotency_key,

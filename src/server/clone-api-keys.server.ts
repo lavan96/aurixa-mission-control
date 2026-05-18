@@ -14,7 +14,7 @@ export function generateApiKey(): { raw: string; hash: string; prefix: string } 
 
 export type ResolvedKey = {
   id: string;
-  clone_id: string;
+  clone_id: string | null;
   scopes: string[];
 };
 
@@ -59,16 +59,16 @@ export function jsonResponse(body: unknown, status = 200): Response {
  * default active billing plan if none is set, and returns the tenant id.
  */
 export async function ensureTenant(
-  cloneId: string,
+  cloneId: string | null,
   externalRef: string,
   displayName?: string | null,
 ): Promise<{ ok: true; tenantId: string } | { ok: false; error: string }> {
-  const existing = await supabaseAdmin
+  let q = supabaseAdmin
     .from("tenants")
     .select("id, plan_id")
-    .eq("clone_id", cloneId)
-    .eq("external_ref", externalRef)
-    .maybeSingle();
+    .eq("external_ref", externalRef);
+  q = cloneId == null ? q.is("clone_id", null) : q.eq("clone_id", cloneId);
+  const existing = await q.maybeSingle();
   if (existing.error) return { ok: false, error: existing.error.message };
 
   if (existing.data) {

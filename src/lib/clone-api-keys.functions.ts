@@ -27,7 +27,7 @@ export const createCloneApiKey = createServerFn({ method: "POST" })
   .inputValidator((input) =>
     z
       .object({
-        cloneId: z.string().uuid(),
+        cloneId: z.string().uuid().nullable().optional(),
         label: z.string().min(1).max(120),
         scopes: z.array(z.string().min(1).max(64)).min(1).max(10).default(["tokens:meter"]),
       })
@@ -36,7 +36,7 @@ export const createCloneApiKey = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { raw, hash, prefix } = generateApiKey();
     const { error } = await supabaseAdmin.from("clone_api_keys").insert({
-      clone_id: data.cloneId,
+      clone_id: data.cloneId ?? null,
       label: data.label,
       scopes: data.scopes,
       key_hash: hash,
