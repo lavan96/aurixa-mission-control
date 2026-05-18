@@ -491,6 +491,13 @@ The Mission Control `/billing/topup` page is authenticated — only operators
 with billing access can apply a top-up. End-users without MC access should
 be routed to an in-app "Contact billing" workflow that pages an admin.
 
+The page ships with built-in search, currency/min-tokens/max-price filters,
+sort controls, and **paginated pack cards** (page-size selector + First /
+Prev / Next / Last controls). For programmatic consumers, the underlying
+`/api/public/tokens/packs` endpoint paginates server-side via `limit` /
+`offset` (see §11a).
+
+
 ### 11c. Refresh balance after top-up
 
 Top-ups fire a `tokens.balance.updated` webhook (see §10). If you've wired
