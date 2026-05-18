@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/protected-route";
 import { cn } from "@/lib/utils";
-import { Cog, BellRing, Shield, Eye, ScrollText, Grid3x3 } from "lucide-react";
+import { Cog, BellRing, Shield, Eye, ScrollText, Grid3x3, Wallet } from "lucide-react";
 
 export const Route = createFileRoute("/settings")({
   component: () => (
@@ -17,6 +17,7 @@ const TABS = [
   { to: "/settings/notifications", label: "Notifications", icon: BellRing, exact: false },
   { to: "/settings/roles", label: "Roles", icon: Shield, exact: false },
   { to: "/settings/role-audit", label: "Role Audit", icon: ScrollText, exact: false },
+  { to: "/settings/billing", label: "Billing", icon: Wallet, exact: false },
   { to: "/settings/provisioning-preview", label: "Provisioning", icon: Eye, exact: false },
   { to: "/settings/permission-matrix", label: "Matrix", icon: Grid3x3, exact: false },
 ] as const;

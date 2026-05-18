@@ -35,6 +35,7 @@ import { Route as SettingsRoleAuditRouteImport } from './routes/settings.role-au
 import { Route as SettingsProvisioningPreviewRouteImport } from './routes/settings.provisioning-preview'
 import { Route as SettingsPermissionMatrixRouteImport } from './routes/settings.permission-matrix'
 import { Route as SettingsNotificationsRouteImport } from './routes/settings.notifications'
+import { Route as SettingsBillingRouteImport } from './routes/settings.billing'
 import { Route as ModulesBuilderRouteImport } from './routes/modules.builder'
 import { Route as ModulesSlugRouteImport } from './routes/modules.$slug'
 import { Route as HooksWarmHealthRouteImport } from './routes/hooks.warm-health'
@@ -46,6 +47,10 @@ import { Route as HooksBrandDriftRouteImport } from './routes/hooks.brand-drift'
 import { Route as ClonesNewRouteImport } from './routes/clones.new'
 import { Route as ClonesCloneIdRouteImport } from './routes/clones.$cloneId'
 import { Route as CascadesEventIdRouteImport } from './routes/cascades.$eventId'
+import { Route as ApiPublicTokensReserveRouteImport } from './routes/api.public.tokens.reserve'
+import { Route as ApiPublicTokensCommitRouteImport } from './routes/api.public.tokens.commit'
+import { Route as ApiPublicTokensCancelRouteImport } from './routes/api.public.tokens.cancel'
+import { Route as ApiPublicTokensBalanceRouteImport } from './routes/api.public.tokens.balance'
 
 const YggdrasilRoute = YggdrasilRouteImport.update({
   id: '/yggdrasil',
@@ -179,6 +184,11 @@ const SettingsNotificationsRoute = SettingsNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsBillingRoute = SettingsBillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const ModulesBuilderRoute = ModulesBuilderRouteImport.update({
   id: '/builder',
   path: '/builder',
@@ -234,6 +244,26 @@ const CascadesEventIdRoute = CascadesEventIdRouteImport.update({
   path: '/$eventId',
   getParentRoute: () => CascadesRoute,
 } as any)
+const ApiPublicTokensReserveRoute = ApiPublicTokensReserveRouteImport.update({
+  id: '/api/public/tokens/reserve',
+  path: '/api/public/tokens/reserve',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicTokensCommitRoute = ApiPublicTokensCommitRouteImport.update({
+  id: '/api/public/tokens/commit',
+  path: '/api/public/tokens/commit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicTokensCancelRoute = ApiPublicTokensCancelRouteImport.update({
+  id: '/api/public/tokens/cancel',
+  path: '/api/public/tokens/cancel',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicTokensBalanceRoute = ApiPublicTokensBalanceRouteImport.update({
+  id: '/api/public/tokens/balance',
+  path: '/api/public/tokens/balance',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -267,12 +297,17 @@ export interface FileRoutesByFullPath {
   '/hooks/warm-health': typeof HooksWarmHealthRoute
   '/modules/$slug': typeof ModulesSlugRoute
   '/modules/builder': typeof ModulesBuilderRoute
+  '/settings/billing': typeof SettingsBillingRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/permission-matrix': typeof SettingsPermissionMatrixRoute
   '/settings/provisioning-preview': typeof SettingsProvisioningPreviewRoute
   '/settings/role-audit': typeof SettingsRoleAuditRoute
   '/settings/roles': typeof SettingsRolesRoute
   '/settings/': typeof SettingsIndexRoute
+  '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
+  '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
+  '/api/public/tokens/commit': typeof ApiPublicTokensCommitRoute
+  '/api/public/tokens/reserve': typeof ApiPublicTokensReserveRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -305,12 +340,17 @@ export interface FileRoutesByTo {
   '/hooks/warm-health': typeof HooksWarmHealthRoute
   '/modules/$slug': typeof ModulesSlugRoute
   '/modules/builder': typeof ModulesBuilderRoute
+  '/settings/billing': typeof SettingsBillingRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/permission-matrix': typeof SettingsPermissionMatrixRoute
   '/settings/provisioning-preview': typeof SettingsProvisioningPreviewRoute
   '/settings/role-audit': typeof SettingsRoleAuditRoute
   '/settings/roles': typeof SettingsRolesRoute
   '/settings': typeof SettingsIndexRoute
+  '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
+  '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
+  '/api/public/tokens/commit': typeof ApiPublicTokensCommitRoute
+  '/api/public/tokens/reserve': typeof ApiPublicTokensReserveRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -345,12 +385,17 @@ export interface FileRoutesById {
   '/hooks/warm-health': typeof HooksWarmHealthRoute
   '/modules/$slug': typeof ModulesSlugRoute
   '/modules/builder': typeof ModulesBuilderRoute
+  '/settings/billing': typeof SettingsBillingRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/permission-matrix': typeof SettingsPermissionMatrixRoute
   '/settings/provisioning-preview': typeof SettingsProvisioningPreviewRoute
   '/settings/role-audit': typeof SettingsRoleAuditRoute
   '/settings/roles': typeof SettingsRolesRoute
   '/settings/': typeof SettingsIndexRoute
+  '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
+  '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
+  '/api/public/tokens/commit': typeof ApiPublicTokensCommitRoute
+  '/api/public/tokens/reserve': typeof ApiPublicTokensReserveRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -386,12 +431,17 @@ export interface FileRouteTypes {
     | '/hooks/warm-health'
     | '/modules/$slug'
     | '/modules/builder'
+    | '/settings/billing'
     | '/settings/notifications'
     | '/settings/permission-matrix'
     | '/settings/provisioning-preview'
     | '/settings/role-audit'
     | '/settings/roles'
     | '/settings/'
+    | '/api/public/tokens/balance'
+    | '/api/public/tokens/cancel'
+    | '/api/public/tokens/commit'
+    | '/api/public/tokens/reserve'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -424,12 +474,17 @@ export interface FileRouteTypes {
     | '/hooks/warm-health'
     | '/modules/$slug'
     | '/modules/builder'
+    | '/settings/billing'
     | '/settings/notifications'
     | '/settings/permission-matrix'
     | '/settings/provisioning-preview'
     | '/settings/role-audit'
     | '/settings/roles'
     | '/settings'
+    | '/api/public/tokens/balance'
+    | '/api/public/tokens/cancel'
+    | '/api/public/tokens/commit'
+    | '/api/public/tokens/reserve'
   id:
     | '__root__'
     | '/'
@@ -463,12 +518,17 @@ export interface FileRouteTypes {
     | '/hooks/warm-health'
     | '/modules/$slug'
     | '/modules/builder'
+    | '/settings/billing'
     | '/settings/notifications'
     | '/settings/permission-matrix'
     | '/settings/provisioning-preview'
     | '/settings/role-audit'
     | '/settings/roles'
     | '/settings/'
+    | '/api/public/tokens/balance'
+    | '/api/public/tokens/cancel'
+    | '/api/public/tokens/commit'
+    | '/api/public/tokens/reserve'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -500,6 +560,10 @@ export interface RootRouteChildren {
   HooksGithubRoute: typeof HooksGithubRoute
   HooksRunSchedulesRoute: typeof HooksRunSchedulesRoute
   HooksWarmHealthRoute: typeof HooksWarmHealthRoute
+  ApiPublicTokensBalanceRoute: typeof ApiPublicTokensBalanceRoute
+  ApiPublicTokensCancelRoute: typeof ApiPublicTokensCancelRoute
+  ApiPublicTokensCommitRoute: typeof ApiPublicTokensCommitRoute
+  ApiPublicTokensReserveRoute: typeof ApiPublicTokensReserveRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -686,6 +750,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsNotificationsRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/billing': {
+      id: '/settings/billing'
+      path: '/billing'
+      fullPath: '/settings/billing'
+      preLoaderRoute: typeof SettingsBillingRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/modules/builder': {
       id: '/modules/builder'
       path: '/builder'
@@ -763,6 +834,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CascadesEventIdRouteImport
       parentRoute: typeof CascadesRoute
     }
+    '/api/public/tokens/reserve': {
+      id: '/api/public/tokens/reserve'
+      path: '/api/public/tokens/reserve'
+      fullPath: '/api/public/tokens/reserve'
+      preLoaderRoute: typeof ApiPublicTokensReserveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/tokens/commit': {
+      id: '/api/public/tokens/commit'
+      path: '/api/public/tokens/commit'
+      fullPath: '/api/public/tokens/commit'
+      preLoaderRoute: typeof ApiPublicTokensCommitRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/tokens/cancel': {
+      id: '/api/public/tokens/cancel'
+      path: '/api/public/tokens/cancel'
+      fullPath: '/api/public/tokens/cancel'
+      preLoaderRoute: typeof ApiPublicTokensCancelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/tokens/balance': {
+      id: '/api/public/tokens/balance'
+      path: '/api/public/tokens/balance'
+      fullPath: '/api/public/tokens/balance'
+      preLoaderRoute: typeof ApiPublicTokensBalanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -792,6 +891,7 @@ const ModulesRouteWithChildren =
   ModulesRoute._addFileChildren(ModulesRouteChildren)
 
 interface SettingsRouteChildren {
+  SettingsBillingRoute: typeof SettingsBillingRoute
   SettingsNotificationsRoute: typeof SettingsNotificationsRoute
   SettingsPermissionMatrixRoute: typeof SettingsPermissionMatrixRoute
   SettingsProvisioningPreviewRoute: typeof SettingsProvisioningPreviewRoute
@@ -801,6 +901,7 @@ interface SettingsRouteChildren {
 }
 
 const SettingsRouteChildren: SettingsRouteChildren = {
+  SettingsBillingRoute: SettingsBillingRoute,
   SettingsNotificationsRoute: SettingsNotificationsRoute,
   SettingsPermissionMatrixRoute: SettingsPermissionMatrixRoute,
   SettingsProvisioningPreviewRoute: SettingsProvisioningPreviewRoute,
@@ -842,6 +943,10 @@ const rootRouteChildren: RootRouteChildren = {
   HooksGithubRoute: HooksGithubRoute,
   HooksRunSchedulesRoute: HooksRunSchedulesRoute,
   HooksWarmHealthRoute: HooksWarmHealthRoute,
+  ApiPublicTokensBalanceRoute: ApiPublicTokensBalanceRoute,
+  ApiPublicTokensCancelRoute: ApiPublicTokensCancelRoute,
+  ApiPublicTokensCommitRoute: ApiPublicTokensCommitRoute,
+  ApiPublicTokensReserveRoute: ApiPublicTokensReserveRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
