@@ -50,6 +50,7 @@ import { Route as HooksBrandDriftRouteImport } from './routes/hooks.brand-drift'
 import { Route as ClonesNewRouteImport } from './routes/clones.new'
 import { Route as ClonesCloneIdRouteImport } from './routes/clones.$cloneId'
 import { Route as CascadesEventIdRouteImport } from './routes/cascades.$eventId'
+import { Route as BillingTopupRouteImport } from './routes/billing.topup'
 import { Route as ApiPublicTokensReserveRouteImport } from './routes/api.public.tokens.reserve'
 import { Route as ApiPublicTokensPacksRouteImport } from './routes/api.public.tokens.packs'
 import { Route as ApiPublicTokensCommitRouteImport } from './routes/api.public.tokens.commit'
@@ -263,6 +264,11 @@ const CascadesEventIdRoute = CascadesEventIdRouteImport.update({
   path: '/$eventId',
   getParentRoute: () => CascadesRoute,
 } as any)
+const BillingTopupRoute = BillingTopupRouteImport.update({
+  id: '/billing/topup',
+  path: '/billing/topup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicTokensReserveRoute = ApiPublicTokensReserveRouteImport.update({
   id: '/api/public/tokens/reserve',
   path: '/api/public/tokens/reserve',
@@ -311,6 +317,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRouteWithChildren
   '/slo': typeof SloRoute
   '/yggdrasil': typeof YggdrasilRoute
+  '/billing/topup': typeof BillingTopupRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
@@ -358,6 +365,7 @@ export interface FileRoutesByTo {
   '/schedules': typeof SchedulesRoute
   '/slo': typeof SloRoute
   '/yggdrasil': typeof YggdrasilRoute
+  '/billing/topup': typeof BillingTopupRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
@@ -407,6 +415,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRouteWithChildren
   '/slo': typeof SloRoute
   '/yggdrasil': typeof YggdrasilRoute
+  '/billing/topup': typeof BillingTopupRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
@@ -457,6 +466,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/slo'
     | '/yggdrasil'
+    | '/billing/topup'
     | '/cascades/$eventId'
     | '/clones/$cloneId'
     | '/clones/new'
@@ -504,6 +514,7 @@ export interface FileRouteTypes {
     | '/schedules'
     | '/slo'
     | '/yggdrasil'
+    | '/billing/topup'
     | '/cascades/$eventId'
     | '/clones/$cloneId'
     | '/clones/new'
@@ -552,6 +563,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/slo'
     | '/yggdrasil'
+    | '/billing/topup'
     | '/cascades/$eventId'
     | '/clones/$cloneId'
     | '/clones/new'
@@ -601,6 +613,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRouteWithChildren
   SloRoute: typeof SloRoute
   YggdrasilRoute: typeof YggdrasilRoute
+  BillingTopupRoute: typeof BillingTopupRoute
   ClonesCloneIdRoute: typeof ClonesCloneIdRoute
   ClonesNewRoute: typeof ClonesNewRoute
   HooksBrandDriftRoute: typeof HooksBrandDriftRoute
@@ -907,6 +920,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CascadesEventIdRouteImport
       parentRoute: typeof CascadesRoute
     }
+    '/billing/topup': {
+      id: '/billing/topup'
+      path: '/billing/topup'
+      fullPath: '/billing/topup'
+      preLoaderRoute: typeof BillingTopupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/tokens/reserve': {
       id: '/api/public/tokens/reserve'
       path: '/api/public/tokens/reserve'
@@ -1016,6 +1036,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRouteWithChildren,
   SloRoute: SloRoute,
   YggdrasilRoute: YggdrasilRoute,
+  BillingTopupRoute: BillingTopupRoute,
   ClonesCloneIdRoute: ClonesCloneIdRoute,
   ClonesNewRoute: ClonesNewRoute,
   HooksBrandDriftRoute: HooksBrandDriftRoute,
@@ -1035,3 +1056,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
