@@ -239,6 +239,8 @@ function TenantDetail({ id, onClose }: { id: string; onClose: () => void }) {
           </CardContent>
         </Card>
 
+        <TenantUsageCard tenantId={id} />
+
         <Card>
           <CardHeader><CardTitle className="text-sm">Plan</CardTitle></CardHeader>
           <CardContent className="space-y-2">
