@@ -430,8 +430,10 @@ If you want to render plan options inline (e.g. "Buy 50k tokens for $25"),
 call the public catalogue endpoint:
 
 ```typescript
-export function listTopupPacks(tenantRef: string) {
+export function listTopupPacks(tenantRef: string, opts?: { limit?: number; offset?: number }) {
   const q = new URLSearchParams({ tenant_ref: tenantRef });
+  if (opts?.limit) q.set("limit", String(opts.limit));   // default 50, max 100
+  if (opts?.offset) q.set("offset", String(opts.offset));
   return call<{
     ok: true;
     packs: Array<{
@@ -444,9 +446,31 @@ export function listTopupPacks(tenantRef: string) {
       expires_after_days: number | null;
     }>;
     topup_url: string | null; // deep link into Mission Control
+    pagination: {
+      limit: number;
+      offset: number;
+      total: number;
+      has_more: boolean;
+      next_offset: number | null;
+    };
   }>(`/api/public/tokens/packs?${q.toString()}`, { method: "GET" });
 }
 ```
+
+The endpoint paginates server-side (default `limit=50`, max `100`) and
+echoes `X-Total-Count`. Iterate with `next_offset` until `has_more` is
+`false`. Combined with the standard rate-limit headers (`X-RateLimit-*`),
+this scales to large pack catalogues without surprises.
+
+### 11a-bis. Test webhook deliveries
+
+Mission Control's Settings → Billing → Webhooks tab exposes a **Test**
+button on every endpoint. It POSTs a synthetic `tokens.test` event with a
+fresh `x-mc-idempotency-key` header so you can verify both your HMAC
+signature check and your receiver's idempotency handling without touching
+real balances. The payload shape mirrors production events; receivers
+should accept `event === "tokens.test"` as a no-op success.
+
 
 ### 11b. CTA wiring
 
