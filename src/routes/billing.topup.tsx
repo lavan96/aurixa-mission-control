@@ -262,13 +262,13 @@ function TopupBody() {
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground md:col-span-5">
-            Showing {filtered.length} of {all.filter((p) => p.is_active).length} active packs
+            Showing {visible.length === 0 ? 0 : pageStart + 1}–{pageStart + visible.length} of {filtered.length} matching ({all.filter((p) => p.is_active).length} active overall)
           </p>
         </CardContent>
       </Card>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((p) => (
+        {visible.map((p) => (
           <Card key={p.id} className="flex flex-col">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -295,6 +295,31 @@ function TopupBody() {
           <p className="text-sm text-muted-foreground">No packs match the current filters.</p>
         )}
       </div>
+
+      {filtered.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded border border-border bg-card/40 p-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>Page size</span>
+            <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+              <SelectTrigger className="h-8 w-20"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {[6, 9, 12, 24, 48].map((n) => (
+                  <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" disabled={safePage <= 1} onClick={() => setPage(1)}>« First</Button>
+            <Button size="sm" variant="outline" disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>Prev</Button>
+            <span className="font-mono text-xs tabular-nums text-muted-foreground">
+              {safePage} / {totalPages}
+            </span>
+            <Button size="sm" variant="outline" disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)}>Next</Button>
+            <Button size="sm" variant="outline" disabled={safePage >= totalPages} onClick={() => setPage(totalPages)}>Last »</Button>
+          </div>
+        </div>
+      )}
 
       <AlertDialog open={!!pending} onOpenChange={(o) => { if (!o && !submitting) setPending(null); }}>
         <AlertDialogContent>
