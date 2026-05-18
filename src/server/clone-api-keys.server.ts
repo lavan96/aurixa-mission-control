@@ -14,7 +14,7 @@ export function generateApiKey(): { raw: string; hash: string; prefix: string } 
 
 export type ResolvedKey = {
   id: string;
-  clone_id: string;
+  clone_id: string | null;
   scopes: string[];
 };
 
