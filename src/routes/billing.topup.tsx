@@ -33,7 +33,7 @@ function TopupPage() {
 }
 
 function TopupBody() {
-  const { tenant } = useSearch({ from: "/billing/topup" });
+  const { tenant } = Route.useSearch();
   const qc = useQueryClient();
 
   const packsFn = useServerFn(listPacks);
