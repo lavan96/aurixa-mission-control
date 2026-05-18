@@ -28,6 +28,7 @@ import {
 import {
   listWebhookEndpoints, upsertWebhookEndpoint, deleteWebhookEndpoint,
   listWebhookDeliveries, retryWebhookDeliveriesNow, redriveWebhookDelivery,
+  sendTestWebhook,
 } from "@/lib/token-webhooks.functions";
 import { getTenantUsageSummaryFn } from "@/lib/tenant-usage.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -668,6 +669,7 @@ function WebhooksTab() {
   const upsertFn = useServerFn(upsertWebhookEndpoint);
   const deleteFn = useServerFn(deleteWebhookEndpoint);
   const retryFn = useServerFn(retryWebhookDeliveriesNow);
+  const testFn = useServerFn(sendTestWebhook);
   const qc = useQueryClient();
   const { data } = useQuery({ queryKey: ["token-webhooks"], queryFn: () => listFn() });
   const { data: clones } = useQuery({
@@ -720,6 +722,13 @@ function WebhooksTab() {
                   <TableCell>{e.is_active ? <Badge>active</Badge> : <Badge variant="secondary">paused</Badge>}</TableCell>
                   <TableCell className="flex gap-1">
                     <Button size="sm" variant="ghost" onClick={() => edit(e)}>Edit</Button>
+                    <Button size="sm" variant="ghost" onClick={async () => {
+                      toast.info("Sending test event…");
+                      const r = await testFn({ data: { endpointId: e.id } }) as { ok: boolean; status?: number; test_id?: string; error?: string };
+                      if (r.ok) toast.success(`Delivered (${r.status}) · test_id ${r.test_id?.slice(0, 8)}…`);
+                      else toast.error(`Test failed: ${r.error ?? r.status}`);
+                      qc.invalidateQueries({ queryKey: ["token-webhook-deliveries"] });
+                    }}>Test</Button>
                     <Button size="sm" variant="ghost" onClick={async () => {
                       if (!confirm("Delete this endpoint?")) return;
                       const r = await deleteFn({ data: { id: e.id } });
