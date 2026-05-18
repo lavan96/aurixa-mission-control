@@ -83,6 +83,51 @@ export type Database = {
         }
         Relationships: []
       }
+      billing_plans: {
+        Row: {
+          created_at: string
+          currency: string
+          id: string
+          is_active: boolean
+          metadata: Json
+          monthly_allowance: number
+          name: string
+          overage_policy: Database["public"]["Enums"]["overage_policy"]
+          price_cents: number
+          rollover_cap: number
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          monthly_allowance?: number
+          name: string
+          overage_policy?: Database["public"]["Enums"]["overage_policy"]
+          price_cents?: number
+          rollover_cap?: number
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          monthly_allowance?: number
+          name?: string
+          overage_policy?: Database["public"]["Enums"]["overage_policy"]
+          price_cents?: number
+          rollover_cap?: number
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cascade_approvals: {
         Row: {
           approver_user_id: string
@@ -344,6 +389,53 @@ export type Database = {
           use_count?: number
         }
         Relationships: []
+      }
+      clone_api_keys: {
+        Row: {
+          clone_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          key_hash: string
+          key_prefix: string
+          label: string
+          last_used_at: string | null
+          revoked_at: string | null
+          scopes: string[]
+        }
+        Insert: {
+          clone_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          key_hash: string
+          key_prefix: string
+          label: string
+          last_used_at?: string | null
+          revoked_at?: string | null
+          scopes?: string[]
+        }
+        Update: {
+          clone_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          label?: string
+          last_used_at?: string | null
+          revoked_at?: string | null
+          scopes?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clone_api_keys_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       clone_backends: {
         Row: {
@@ -1734,6 +1826,78 @@ export type Database = {
         }
         Relationships: []
       }
+      report_jobs: {
+        Row: {
+          charged_tokens: number
+          clone_id: string | null
+          completed_at: string | null
+          created_at: string
+          error: string | null
+          estimated_tokens: number
+          id: string
+          idempotency_key: string
+          kind: string
+          request_payload: Json
+          reservation_expires_at: string | null
+          result_meta: Json
+          started_at: string
+          status: Database["public"]["Enums"]["report_job_status"]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          charged_tokens?: number
+          clone_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          estimated_tokens?: number
+          id?: string
+          idempotency_key: string
+          kind: string
+          request_payload?: Json
+          reservation_expires_at?: string | null
+          result_meta?: Json
+          started_at?: string
+          status?: Database["public"]["Enums"]["report_job_status"]
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          charged_tokens?: number
+          clone_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          estimated_tokens?: number
+          id?: string
+          idempotency_key?: string
+          kind?: string
+          request_payload?: Json
+          reservation_expires_at?: string | null
+          result_meta?: Json
+          started_at?: string
+          status?: Database["public"]["Enums"]["report_job_status"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_jobs_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       route_errors: {
         Row: {
           created_at: string
@@ -1764,6 +1928,236 @@ export type Database = {
           stack?: string | null
           user_agent?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      tenants: {
+        Row: {
+          clone_id: string | null
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          display_name: string | null
+          external_ref: string
+          id: string
+          metadata: Json
+          plan_id: string | null
+          plan_started_at: string | null
+          status: Database["public"]["Enums"]["tenant_status"]
+          updated_at: string
+        }
+        Insert: {
+          clone_id?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          display_name?: string | null
+          external_ref: string
+          id?: string
+          metadata?: Json
+          plan_id?: string | null
+          plan_started_at?: string | null
+          status?: Database["public"]["Enums"]["tenant_status"]
+          updated_at?: string
+        }
+        Update: {
+          clone_id?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          display_name?: string | null
+          external_ref?: string
+          id?: string
+          metadata?: Json
+          plan_id?: string | null
+          plan_started_at?: string | null
+          status?: Database["public"]["Enums"]["tenant_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenants_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenants_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "billing_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      token_balances: {
+        Row: {
+          available: number
+          lifetime_granted: number
+          lifetime_spent: number
+          reserved: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          available?: number
+          lifetime_granted?: number
+          lifetime_spent?: number
+          reserved?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          available?: number
+          lifetime_granted?: number
+          lifetime_spent?: number
+          reserved?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "token_balances_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      token_ledger: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          kind: Database["public"]["Enums"]["ledger_kind"]
+          metadata: Json
+          reason: string | null
+          report_job_id: string | null
+          source: Database["public"]["Enums"]["ledger_source"]
+          source_ref: string | null
+          tenant_id: string
+          tokens: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          kind: Database["public"]["Enums"]["ledger_kind"]
+          metadata?: Json
+          reason?: string | null
+          report_job_id?: string | null
+          source: Database["public"]["Enums"]["ledger_source"]
+          source_ref?: string | null
+          tenant_id: string
+          tokens: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["ledger_kind"]
+          metadata?: Json
+          reason?: string | null
+          report_job_id?: string | null
+          source?: Database["public"]["Enums"]["ledger_source"]
+          source_ref?: string | null
+          tenant_id?: string
+          tokens?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "token_ledger_report_job_id_fkey"
+            columns: ["report_job_id"]
+            isOneToOne: false
+            referencedRelation: "report_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "token_ledger_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      token_rates: {
+        Row: {
+          base_cost: number
+          created_at: string
+          effective_from: string
+          id: string
+          kind: string
+          notes: string | null
+          per_unit: Json
+          updated_at: string
+        }
+        Insert: {
+          base_cost?: number
+          created_at?: string
+          effective_from?: string
+          id?: string
+          kind: string
+          notes?: string | null
+          per_unit?: Json
+          updated_at?: string
+        }
+        Update: {
+          base_cost?: number
+          created_at?: string
+          effective_from?: string
+          id?: string
+          kind?: string
+          notes?: string | null
+          per_unit?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      topup_packs: {
+        Row: {
+          created_at: string
+          currency: string
+          expires_after_days: number | null
+          id: string
+          is_active: boolean
+          metadata: Json
+          name: string
+          price_cents: number
+          slug: string
+          tokens: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          expires_after_days?: number | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          name: string
+          price_cents: number
+          slug: string
+          tokens: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          expires_after_days?: number | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          name?: string
+          price_cents?: number
+          slug?: string
+          tokens?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1829,6 +2223,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_topup: {
+        Args: { _pack_id: string; _source_ref?: string; _tenant_id: string }
+        Returns: Json
+      }
       can_assign_role: {
         Args: {
           _assigner_id: string
@@ -1840,6 +2238,23 @@ export type Database = {
         Args: { _manager_id: string; _target_user_id: string }
         Returns: boolean
       }
+      cancel_token_reservation: {
+        Args: { _job_id: string; _reason?: string }
+        Returns: Json
+      }
+      commit_tokens: {
+        Args: { _actual_tokens: number; _job_id: string; _result_meta?: Json }
+        Returns: Json
+      }
+      grant_tokens: {
+        Args: {
+          _expires_at?: string
+          _reason: string
+          _tenant_id: string
+          _tokens: number
+        }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1849,6 +2264,23 @@ export type Database = {
       }
       highest_role_level: { Args: { _user_id: string }; Returns: number }
       is_operator: { Args: { _user_id: string }; Returns: boolean }
+      recompute_token_balance: {
+        Args: { _tenant_id: string }
+        Returns: undefined
+      }
+      refund_job: { Args: { _job_id: string; _reason?: string }; Returns: Json }
+      reserve_tokens: {
+        Args: {
+          _clone_id: string
+          _estimated_tokens: number
+          _idempotency_key: string
+          _kind: string
+          _request_payload?: Json
+          _tenant_id: string
+          _ttl_seconds?: number
+        }
+        Returns: Json
+      }
       role_level: {
         Args: { _role: Database["public"]["Enums"]["app_role"] }
         Returns: number
@@ -1883,6 +2315,16 @@ export type Database = {
         | "failed"
         | "suspended"
       drift_severity: "low" | "medium" | "high"
+      ledger_kind:
+        | "grant"
+        | "topup"
+        | "debit"
+        | "refund"
+        | "adjustment"
+        | "expiry"
+        | "reserve"
+        | "release"
+      ledger_source: "subscription" | "topup" | "manual" | "system" | "report"
       module_status: "proposed" | "approved" | "archived" | "rejected"
       notification_kind:
         | "cascade_completed"
@@ -1901,8 +2343,17 @@ export type Database = {
         | "library_entry_approved"
         | "library_entry_rejected"
       notification_severity: "info" | "success" | "warning" | "error"
+      overage_policy: "block" | "topup_only" | "pay_as_you_go"
       provisioning_method: "fork" | "template" | "clone"
+      report_job_status:
+        | "pending"
+        | "reserved"
+        | "completed"
+        | "failed"
+        | "refunded"
+        | "canceled"
       sync_status: "in_sync" | "behind" | "cascading" | "failed" | "unknown"
+      tenant_status: "active" | "past_due" | "canceled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2061,6 +2512,17 @@ export const Constants = {
         "suspended",
       ],
       drift_severity: ["low", "medium", "high"],
+      ledger_kind: [
+        "grant",
+        "topup",
+        "debit",
+        "refund",
+        "adjustment",
+        "expiry",
+        "reserve",
+        "release",
+      ],
+      ledger_source: ["subscription", "topup", "manual", "system", "report"],
       module_status: ["proposed", "approved", "archived", "rejected"],
       notification_kind: [
         "cascade_completed",
@@ -2080,8 +2542,18 @@ export const Constants = {
         "library_entry_rejected",
       ],
       notification_severity: ["info", "success", "warning", "error"],
+      overage_policy: ["block", "topup_only", "pay_as_you_go"],
       provisioning_method: ["fork", "template", "clone"],
+      report_job_status: [
+        "pending",
+        "reserved",
+        "completed",
+        "failed",
+        "refunded",
+        "canceled",
+      ],
       sync_status: ["in_sync", "behind", "cascading", "failed", "unknown"],
+      tenant_status: ["active", "past_due", "canceled"],
     },
   },
 } as const
