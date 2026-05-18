@@ -116,6 +116,52 @@ export const rotateCloneApiKey = createServerFn({ method: "POST" })
       .update({ rotated_to: newId, revoke_at: revokeAt })
       .eq("id", old.id);
 
+    // Re-cascade the new key to the clone's repo (best effort).
+    let cascadeResult: { ok: boolean; path: string; error?: string; commit_sha?: string | null } | null = null;
+    if (old.clone_id) {
+      const { data: clone } = await supabaseAdmin
+        .from("clones")
+        .select("name, github_owner, github_repo, default_branch, github_url")
+        .eq("id", old.clone_id)
+        .maybeSingle();
+      if (clone?.github_url && clone.github_owner && clone.github_repo) {
+        cascadeResult = await cascadeApiKeyToRepo({
+          owner: clone.github_owner,
+          repo: clone.github_repo,
+          branch: clone.default_branch || "main",
+          apiKey: raw,
+          apiKeyPrefix: prefix,
+          reason: "rotation",
+          metadata: { clone_id: old.clone_id, old_key_id: old.id, source: "mission_control" },
+        });
+      }
+
+      // Notify Mission Control with the full new key (one-time reveal in the
+      // notification drawer) so the operator can confirm the rotation.
+      await supabaseAdmin.from("notifications").insert({
+        kind: "tokens_key_rotated",
+        severity: cascadeResult?.ok === false ? "warning" : "info",
+        title: `API key rotated for ${clone?.name ?? "clone"}`,
+        body: cascadeResult?.ok
+          ? `New prefix ${prefix}… cascaded to repo. Old key revokes at ${new Date(revokeAt).toLocaleString()}.`
+          : cascadeResult
+            ? `New prefix ${prefix}… created but repo cascade failed: ${cascadeResult.error ?? "unknown"}.`
+            : `New prefix ${prefix}… created. Old key revokes at ${new Date(revokeAt).toLocaleString()}.`,
+        clone_id: old.clone_id,
+        url: `/settings/billing`,
+        metadata: {
+          old_key_id: old.id,
+          new_key_id: newId,
+          new_key_prefix: prefix,
+          new_key_secret: raw,
+          revoke_at: revokeAt,
+          grace_hours: data.graceHours,
+          repo_cascade: cascadeResult,
+          source: "mission_control",
+        },
+      });
+    }
+
     void fireTokenWebhook(
       "tokens.key.rotated",
       {
@@ -124,9 +170,10 @@ export const rotateCloneApiKey = createServerFn({ method: "POST" })
         new_key_prefix: prefix,
         revoke_at: revokeAt,
         grace_hours: data.graceHours,
+        repo_cascade: cascadeResult,
       },
       old.clone_id,
     );
 
-    return { ok: true as const, key: raw, prefix, newId, revokeAt };
+    return { ok: true as const, key: raw, prefix, newId, revokeAt, repoCascade: cascadeResult };
   });
