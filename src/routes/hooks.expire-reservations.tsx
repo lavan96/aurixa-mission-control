@@ -8,9 +8,12 @@ export const Route = createFileRoute("/hooks/expire-reservations")({
     handlers: {
       POST: async ({ request }) => {
         const auth = request.headers.get("authorization");
-        const token = auth?.replace("Bearer ", "");
-        const expected = process.env.DRIFT_REFRESH_TOKEN;
-        if (!token || !expected || token !== expected) {
+        const bearer = auth?.replace("Bearer ", "");
+        const apikey = request.headers.get("apikey");
+        const anon = process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_ANON_KEY;
+        const drift = process.env.DRIFT_REFRESH_TOKEN;
+        const ok = (drift && bearer && bearer === drift) || (anon && apikey && apikey === anon);
+        if (!ok) {
           return new Response(JSON.stringify({ error: "Unauthorized" }), {
             status: 401,
             headers: { "Content-Type": "application/json" },
