@@ -286,14 +286,37 @@ export const applyTenantTopup = createServerFn({ method: "POST" })
         tenantId: z.string().uuid(),
         packId: z.string().uuid(),
         sourceRef: z.string().max(200).nullable().optional(),
+        idempotencyKey: z.string().min(8).max(120).optional(),
       })
       .parse(input)
   )
   .handler(async ({ data, context }) => {
+    // Client-generated idempotency: if a ledger row already exists with this
+    // tenant + source_ref key, treat the call as a no-op success (the user
+    // double-clicked, retried after a transient error, etc.).
+    const idemRef = data.idempotencyKey ? `idem:${data.idempotencyKey}` : null;
+    const effectiveSourceRef = idemRef ?? data.sourceRef ?? undefined;
+
+    if (idemRef) {
+      const { data: existing } = await context.supabase
+        .from("token_ledger")
+        .select("tokens")
+        .eq("tenant_id", data.tenantId)
+        .eq("source_ref", idemRef)
+        .maybeSingle();
+      if (existing) {
+        return {
+          ok: true as const,
+          tokens: existing.tokens,
+          idempotent_replay: true,
+        };
+      }
+    }
+
     const { data: result, error } = await context.supabase.rpc("apply_topup", {
       _tenant_id: data.tenantId,
       _pack_id: data.packId,
-      _source_ref: data.sourceRef ?? undefined,
+      _source_ref: effectiveSourceRef,
     });
     if (error) return { ok: false as const, error: error.message };
     void fanBalanceUpdated(data.tenantId, "admin_topup");
