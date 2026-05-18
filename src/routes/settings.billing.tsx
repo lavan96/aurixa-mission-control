@@ -25,6 +25,11 @@ import {
 import {
   listCloneApiKeys, createCloneApiKey, revokeCloneApiKey, rotateCloneApiKey,
 } from "@/lib/clone-api-keys.functions";
+import {
+  listWebhookEndpoints, upsertWebhookEndpoint, deleteWebhookEndpoint,
+  listWebhookDeliveries, retryWebhookDeliveriesNow, redriveWebhookDelivery,
+} from "@/lib/token-webhooks.functions";
+import { getTenantUsageSummaryFn } from "@/lib/tenant-usage.functions";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/settings/billing")({
@@ -52,18 +57,20 @@ function BillingDashboard() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="tenants">Tenants</TabsTrigger>
           <TabsTrigger value="plans">Plans &amp; Packs</TabsTrigger>
           <TabsTrigger value="rates">Rates</TabsTrigger>
           <TabsTrigger value="keys">API Keys</TabsTrigger>
+          <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
         </TabsList>
         <TabsContent value="overview"><OverviewTab /></TabsContent>
         <TabsContent value="tenants"><TenantsTab /></TabsContent>
         <TabsContent value="plans"><PlansPacksTab /></TabsContent>
         <TabsContent value="rates"><RatesTab /></TabsContent>
         <TabsContent value="keys"><KeysTab /></TabsContent>
+        <TabsContent value="webhooks"><WebhooksTab /></TabsContent>
       </Tabs>
     </div>
   );
@@ -231,6 +238,8 @@ function TenantDetail({ id, onClose }: { id: string; onClose: () => void }) {
             <div><p className="text-[10px] uppercase text-muted-foreground">Spent</p><p className="text-lg font-semibold">{fmt(data.balance?.lifetime_spent)}</p></div>
           </CardContent>
         </Card>
+
+        <TenantUsageCard tenantId={id} />
 
         <Card>
           <CardHeader><CardTitle className="text-sm">Plan</CardTitle></CardHeader>
@@ -604,6 +613,226 @@ function KeysTab() {
               </TableRow>
             ))}
             {!data?.keys.length && <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground">No keys issued.</TableCell></TableRow>}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Tenant Usage ────────────────────────────────────────────────────────────
+
+function TenantUsageCard({ tenantId }: { tenantId: string }) {
+  const fn = useServerFn(getTenantUsageSummaryFn);
+  const { data, isLoading } = useQuery({
+    queryKey: ["tenant-usage", tenantId],
+    queryFn: () => fn({ data: { tenantId } }),
+  });
+  if (isLoading) return <Card><CardContent className="pt-4 text-sm text-muted-foreground">Loading usage…</CardContent></Card>;
+  const s = data?.summary as any;
+  if (!s) return null;
+  const pct = s.allowance_used_pct == null ? null : Math.round(Number(s.allowance_used_pct));
+  const burn = s.avg_per_day_7d ? Math.round(Number(s.avg_per_day_7d)).toLocaleString() : "—";
+  const daysLeft = s.days_until_empty == null ? null : Math.round(Number(s.days_until_empty));
+  const cancelRate = Math.round(Number(s.cancel_rate_24h ?? 0) * 100);
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Usage &amp; burn rate</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        {pct != null && (
+          <div>
+            <div className="flex justify-between text-xs"><span className="text-muted-foreground">Monthly allowance</span><span className="tabular-nums">{pct}% used · {fmt(s.period_spent)} / {fmt(s.monthly_allowance)}</span></div>
+            <div className="mt-1 h-2 overflow-hidden rounded bg-muted">
+              <div className={`h-full ${pct >= 100 ? "bg-destructive" : pct >= 80 ? "bg-amber-500" : "bg-primary"}`} style={{ width: `${Math.min(100, pct)}%` }} />
+            </div>
+          </div>
+        )}
+        <div className="grid grid-cols-3 gap-2 text-xs">
+          <div><p className="text-muted-foreground">Burn (7d avg/day)</p><p className="text-base font-semibold tabular-nums">{burn}</p></div>
+          <div><p className="text-muted-foreground">Last 24h</p><p className="text-base font-semibold tabular-nums">{fmt(s.last_24h_spent)}</p></div>
+          <div><p className="text-muted-foreground">Days until empty</p><p className="text-base font-semibold tabular-nums">{daysLeft == null ? "∞" : daysLeft}</p></div>
+        </div>
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div><p className="text-muted-foreground">Cancel rate 24h</p><p className={`text-base font-semibold tabular-nums ${cancelRate >= 25 ? "text-amber-500" : ""}`}>{cancelRate}%</p></div>
+          <div><p className="text-muted-foreground">Projected exhaustion</p><p className="text-base font-semibold">{s.projected_exhaustion ? new Date(s.projected_exhaustion).toLocaleDateString() : "—"}</p></div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Webhooks ────────────────────────────────────────────────────────────────
+
+function WebhooksTab() {
+  const listFn = useServerFn(listWebhookEndpoints);
+  const upsertFn = useServerFn(upsertWebhookEndpoint);
+  const deleteFn = useServerFn(deleteWebhookEndpoint);
+  const retryFn = useServerFn(retryWebhookDeliveriesNow);
+  const qc = useQueryClient();
+  const { data } = useQuery({ queryKey: ["token-webhooks"], queryFn: () => listFn() });
+  const { data: clones } = useQuery({
+    queryKey: ["clones-min"],
+    queryFn: async () => {
+      const { data } = await supabase.from("clones").select("id, name").order("name");
+      return data ?? [];
+    },
+  });
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<any>(null);
+  const [issuedSecret, setIssuedSecret] = useState<string | null>(null);
+
+  const EVENTS = ["tokens.balance.updated", "tokens.key.revoked", "tokens.key.rotated", "tokens.alert"];
+
+  const startNew = () => {
+    setIssuedSecret(null);
+    setDraft({ id: null, cloneId: null, url: "", events: [...EVENTS], isActive: true, rotateSecret: false });
+    setOpen(true);
+  };
+  const edit = (e: any) => {
+    setIssuedSecret(null);
+    setDraft({ id: e.id, cloneId: e.clone_id, url: e.url, events: e.events ?? [...EVENTS], isActive: e.is_active, rotateSecret: false });
+    setOpen(true);
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-sm">Webhook endpoints</CardTitle>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={async () => {
+              const r = await retryFn();
+              toast.success(`Retried ${r.retried}, delivered ${r.delivered}`);
+              qc.invalidateQueries({ queryKey: ["token-webhook-deliveries"] });
+            }}>Retry due</Button>
+            <Button size="sm" onClick={startNew}><Plus className="mr-1 h-3 w-3" />New</Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader><TableRow><TableHead>URL</TableHead><TableHead>Scope</TableHead><TableHead>Events</TableHead><TableHead>Status</TableHead><TableHead></TableHead></TableRow></TableHeader>
+            <TableBody>
+              {data?.endpoints.map((e: any) => (
+                <TableRow key={e.id}>
+                  <TableCell className="max-w-[300px] truncate font-mono text-xs">{e.url}</TableCell>
+                  <TableCell className="text-xs">{e.clones?.name ?? <span className="text-muted-foreground">all clones</span>}</TableCell>
+                  <TableCell className="font-mono text-[10px]">{(e.events ?? []).length} events</TableCell>
+                  <TableCell>{e.is_active ? <Badge>active</Badge> : <Badge variant="secondary">paused</Badge>}</TableCell>
+                  <TableCell className="flex gap-1">
+                    <Button size="sm" variant="ghost" onClick={() => edit(e)}>Edit</Button>
+                    <Button size="sm" variant="ghost" onClick={async () => {
+                      if (!confirm("Delete this endpoint?")) return;
+                      const r = await deleteFn({ data: { id: e.id } });
+                      if (r.ok) { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["token-webhooks"] }); } else toast.error(r.error);
+                    }}><Trash2 className="h-3 w-3" /></Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {!data?.endpoints.length && <TableRow><TableCell colSpan={5} className="text-center text-sm text-muted-foreground">No webhook endpoints. Add one to receive balance, key, and alert events.</TableCell></TableRow>}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <WebhookDeliveriesCard />
+
+      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setIssuedSecret(null); setDraft(null); } }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{draft?.id ? "Edit webhook" : "New webhook"}</DialogTitle></DialogHeader>
+          {issuedSecret ? (
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Save this signing secret — it will not be shown again. Verify HMAC-SHA256 on the <span className="font-mono">x-mc-signature</span> header.</p>
+              <div className="flex items-center gap-2 rounded border border-border bg-muted/30 p-2 font-mono text-xs">
+                <span className="flex-1 break-all">{issuedSecret}</span>
+                <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard.writeText(issuedSecret); toast.success("Copied"); }}><Copy className="h-3 w-3" /></Button>
+              </div>
+            </div>
+          ) : draft && (
+            <div className="grid gap-3 text-sm">
+              <Input placeholder="https://your-app.example.com/webhooks/tokens" value={draft.url} onChange={(e) => setDraft({ ...draft, url: e.target.value })} />
+              <Select value={draft.cloneId ?? "__all__"} onValueChange={(v) => setDraft({ ...draft, cloneId: v === "__all__" ? null : v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All clones (fleet-wide)</SelectItem>
+                  {clones?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Events</p>
+                {EVENTS.map((ev) => (
+                  <label key={ev} className="flex items-center gap-2 font-mono text-xs">
+                    <input type="checkbox" checked={(draft.events ?? []).includes(ev)} onChange={(e) => {
+                      const set = new Set<string>(draft.events ?? []);
+                      if (e.target.checked) set.add(ev); else set.delete(ev);
+                      setDraft({ ...draft, events: Array.from(set) });
+                    }} />
+                    {ev}
+                  </label>
+                ))}
+              </div>
+              <label className="flex items-center gap-2 text-xs">
+                <input type="checkbox" checked={draft.isActive} onChange={(e) => setDraft({ ...draft, isActive: e.target.checked })} />
+                Active
+              </label>
+              {draft.id && (
+                <label className="flex items-center gap-2 text-xs">
+                  <input type="checkbox" checked={draft.rotateSecret} onChange={(e) => setDraft({ ...draft, rotateSecret: e.target.checked })} />
+                  Rotate signing secret (invalidates old secret)
+                </label>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            {issuedSecret ? <Button onClick={() => setOpen(false)}>Done</Button> : (
+              <Button disabled={!draft?.url} onClick={async () => {
+                const r = await upsertFn({ data: draft });
+                if (r.ok) {
+                  qc.invalidateQueries({ queryKey: ["token-webhooks"] });
+                  if (r.secret) setIssuedSecret(r.secret); else { toast.success("Saved"); setOpen(false); }
+                } else toast.error(r.error);
+              }}>{draft?.id ? "Save" : "Create"}</Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function WebhookDeliveriesCard() {
+  const listFn = useServerFn(listWebhookDeliveries);
+  const redriveFn = useServerFn(redriveWebhookDelivery);
+  const qc = useQueryClient();
+  const { data } = useQuery({ queryKey: ["token-webhook-deliveries"], queryFn: () => listFn({ data: { limit: 50 } }) });
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Recent deliveries</CardTitle></CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader><TableRow><TableHead>When</TableHead><TableHead>Event</TableHead><TableHead>URL</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Attempts</TableHead><TableHead></TableHead></TableRow></TableHeader>
+          <TableBody>
+            {data?.deliveries.map((d: any) => (
+              <TableRow key={d.id}>
+                <TableCell className="text-xs">{new Date(d.created_at).toLocaleString()}</TableCell>
+                <TableCell className="font-mono text-xs">{d.event_type}</TableCell>
+                <TableCell className="max-w-[240px] truncate font-mono text-xs">{d.token_webhook_endpoints?.url ?? "—"}</TableCell>
+                <TableCell>
+                  {d.status === "delivered" ? <Badge>{d.response_code}</Badge>
+                    : d.status === "failed" ? <Badge variant="destructive">{d.response_code ?? "fail"}</Badge>
+                    : <Badge variant="secondary">pending</Badge>}
+                </TableCell>
+                <TableCell className="text-right tabular-nums text-xs">{d.attempts}</TableCell>
+                <TableCell>
+                  {d.status !== "delivered" && (
+                    <Button size="sm" variant="ghost" onClick={async () => {
+                      const r = await redriveFn({ data: { id: d.id } });
+                      if (r.ok) { toast.success("Redriven"); qc.invalidateQueries({ queryKey: ["token-webhook-deliveries"] }); } else toast.error(r.error);
+                    }}>Redrive</Button>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+            {!data?.deliveries.length && <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground">No deliveries yet.</TableCell></TableRow>}
           </TableBody>
         </Table>
       </CardContent>
