@@ -316,8 +316,15 @@ export const refundReportJob = createServerFn({ method: "POST" })
       _reason: data.reason,
     });
     if (error) return { ok: false as const, error: error.message };
-    const r = result as { ok: boolean; error?: string; refunded_tokens?: number; tenant_id?: string };
-    if (r.ok && r.tenant_id) void fanBalanceUpdated(r.tenant_id, "admin_refund");
+    const r = result as { ok: boolean; error?: string; refunded_tokens?: number };
+    if (r.ok) {
+      const { data: job } = await context.supabase
+        .from("report_jobs")
+        .select("tenant_id, clone_id")
+        .eq("id", data.jobId)
+        .maybeSingle();
+      if (job?.tenant_id) void fanBalanceUpdated(job.tenant_id, "admin_refund", job.clone_id);
+    }
     return r;
   });
 
