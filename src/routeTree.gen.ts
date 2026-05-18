@@ -40,9 +40,11 @@ import { Route as SettingsBillingRouteImport } from './routes/settings.billing'
 import { Route as ModulesBuilderRouteImport } from './routes/modules.builder'
 import { Route as ModulesSlugRouteImport } from './routes/modules.$slug'
 import { Route as HooksWarmHealthRouteImport } from './routes/hooks.warm-health'
+import { Route as HooksTokenAlertsRouteImport } from './routes/hooks.token-alerts'
 import { Route as HooksRunSchedulesRouteImport } from './routes/hooks.run-schedules'
 import { Route as HooksGithubRouteImport } from './routes/hooks.github'
 import { Route as HooksFleetDriftRouteImport } from './routes/hooks.fleet-drift'
+import { Route as HooksExpireReservationsRouteImport } from './routes/hooks.expire-reservations'
 import { Route as HooksDriftRefreshRouteImport } from './routes/hooks.drift-refresh'
 import { Route as HooksBrandDriftRouteImport } from './routes/hooks.brand-drift'
 import { Route as ClonesNewRouteImport } from './routes/clones.new'
@@ -210,6 +212,11 @@ const HooksWarmHealthRoute = HooksWarmHealthRouteImport.update({
   path: '/hooks/warm-health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HooksTokenAlertsRoute = HooksTokenAlertsRouteImport.update({
+  id: '/hooks/token-alerts',
+  path: '/hooks/token-alerts',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HooksRunSchedulesRoute = HooksRunSchedulesRouteImport.update({
   id: '/hooks/run-schedules',
   path: '/hooks/run-schedules',
@@ -223,6 +230,11 @@ const HooksGithubRoute = HooksGithubRouteImport.update({
 const HooksFleetDriftRoute = HooksFleetDriftRouteImport.update({
   id: '/hooks/fleet-drift',
   path: '/hooks/fleet-drift',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HooksExpireReservationsRoute = HooksExpireReservationsRouteImport.update({
+  id: '/hooks/expire-reservations',
+  path: '/hooks/expire-reservations',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HooksDriftRefreshRoute = HooksDriftRefreshRouteImport.update({
@@ -298,9 +310,11 @@ export interface FileRoutesByFullPath {
   '/clones/new': typeof ClonesNewRoute
   '/hooks/brand-drift': typeof HooksBrandDriftRoute
   '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
+  '/hooks/expire-reservations': typeof HooksExpireReservationsRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
   '/hooks/github': typeof HooksGithubRoute
   '/hooks/run-schedules': typeof HooksRunSchedulesRoute
+  '/hooks/token-alerts': typeof HooksTokenAlertsRoute
   '/hooks/warm-health': typeof HooksWarmHealthRoute
   '/modules/$slug': typeof ModulesSlugRoute
   '/modules/builder': typeof ModulesBuilderRoute
@@ -342,9 +356,11 @@ export interface FileRoutesByTo {
   '/clones/new': typeof ClonesNewRoute
   '/hooks/brand-drift': typeof HooksBrandDriftRoute
   '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
+  '/hooks/expire-reservations': typeof HooksExpireReservationsRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
   '/hooks/github': typeof HooksGithubRoute
   '/hooks/run-schedules': typeof HooksRunSchedulesRoute
+  '/hooks/token-alerts': typeof HooksTokenAlertsRoute
   '/hooks/warm-health': typeof HooksWarmHealthRoute
   '/modules/$slug': typeof ModulesSlugRoute
   '/modules/builder': typeof ModulesBuilderRoute
@@ -388,9 +404,11 @@ export interface FileRoutesById {
   '/clones/new': typeof ClonesNewRoute
   '/hooks/brand-drift': typeof HooksBrandDriftRoute
   '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
+  '/hooks/expire-reservations': typeof HooksExpireReservationsRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
   '/hooks/github': typeof HooksGithubRoute
   '/hooks/run-schedules': typeof HooksRunSchedulesRoute
+  '/hooks/token-alerts': typeof HooksTokenAlertsRoute
   '/hooks/warm-health': typeof HooksWarmHealthRoute
   '/modules/$slug': typeof ModulesSlugRoute
   '/modules/builder': typeof ModulesBuilderRoute
@@ -435,9 +453,11 @@ export interface FileRouteTypes {
     | '/clones/new'
     | '/hooks/brand-drift'
     | '/hooks/drift-refresh'
+    | '/hooks/expire-reservations'
     | '/hooks/fleet-drift'
     | '/hooks/github'
     | '/hooks/run-schedules'
+    | '/hooks/token-alerts'
     | '/hooks/warm-health'
     | '/modules/$slug'
     | '/modules/builder'
@@ -479,9 +499,11 @@ export interface FileRouteTypes {
     | '/clones/new'
     | '/hooks/brand-drift'
     | '/hooks/drift-refresh'
+    | '/hooks/expire-reservations'
     | '/hooks/fleet-drift'
     | '/hooks/github'
     | '/hooks/run-schedules'
+    | '/hooks/token-alerts'
     | '/hooks/warm-health'
     | '/modules/$slug'
     | '/modules/builder'
@@ -524,9 +546,11 @@ export interface FileRouteTypes {
     | '/clones/new'
     | '/hooks/brand-drift'
     | '/hooks/drift-refresh'
+    | '/hooks/expire-reservations'
     | '/hooks/fleet-drift'
     | '/hooks/github'
     | '/hooks/run-schedules'
+    | '/hooks/token-alerts'
     | '/hooks/warm-health'
     | '/modules/$slug'
     | '/modules/builder'
@@ -569,9 +593,11 @@ export interface RootRouteChildren {
   ClonesNewRoute: typeof ClonesNewRoute
   HooksBrandDriftRoute: typeof HooksBrandDriftRoute
   HooksDriftRefreshRoute: typeof HooksDriftRefreshRoute
+  HooksExpireReservationsRoute: typeof HooksExpireReservationsRoute
   HooksFleetDriftRoute: typeof HooksFleetDriftRoute
   HooksGithubRoute: typeof HooksGithubRoute
   HooksRunSchedulesRoute: typeof HooksRunSchedulesRoute
+  HooksTokenAlertsRoute: typeof HooksTokenAlertsRoute
   HooksWarmHealthRoute: typeof HooksWarmHealthRoute
   ApiPublicTokensBalanceRoute: typeof ApiPublicTokensBalanceRoute
   ApiPublicTokensCancelRoute: typeof ApiPublicTokensCancelRoute
@@ -798,6 +824,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HooksWarmHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/hooks/token-alerts': {
+      id: '/hooks/token-alerts'
+      path: '/hooks/token-alerts'
+      fullPath: '/hooks/token-alerts'
+      preLoaderRoute: typeof HooksTokenAlertsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/hooks/run-schedules': {
       id: '/hooks/run-schedules'
       path: '/hooks/run-schedules'
@@ -817,6 +850,13 @@ declare module '@tanstack/react-router' {
       path: '/hooks/fleet-drift'
       fullPath: '/hooks/fleet-drift'
       preLoaderRoute: typeof HooksFleetDriftRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hooks/expire-reservations': {
+      id: '/hooks/expire-reservations'
+      path: '/hooks/expire-reservations'
+      fullPath: '/hooks/expire-reservations'
+      preLoaderRoute: typeof HooksExpireReservationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/hooks/drift-refresh': {
@@ -960,9 +1000,11 @@ const rootRouteChildren: RootRouteChildren = {
   ClonesNewRoute: ClonesNewRoute,
   HooksBrandDriftRoute: HooksBrandDriftRoute,
   HooksDriftRefreshRoute: HooksDriftRefreshRoute,
+  HooksExpireReservationsRoute: HooksExpireReservationsRoute,
   HooksFleetDriftRoute: HooksFleetDriftRoute,
   HooksGithubRoute: HooksGithubRoute,
   HooksRunSchedulesRoute: HooksRunSchedulesRoute,
+  HooksTokenAlertsRoute: HooksTokenAlertsRoute,
   HooksWarmHealthRoute: HooksWarmHealthRoute,
   ApiPublicTokensBalanceRoute: ApiPublicTokensBalanceRoute,
   ApiPublicTokensCancelRoute: ApiPublicTokensCancelRoute,
