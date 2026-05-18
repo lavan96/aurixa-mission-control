@@ -39,17 +39,18 @@ export const upsertWebhookEndpoint = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     if (data.id) {
-      const patch: Record<string, unknown> = {
+      const newSecret = data.rotateSecret ? crypto.randomBytes(32).toString("base64url") : undefined;
+      const patch = {
         url: data.url,
         events: data.events,
         is_active: data.isActive,
         clone_id: data.cloneId ?? null,
         updated_at: new Date().toISOString(),
+        ...(newSecret ? { secret: newSecret } : {}),
       };
-      if (data.rotateSecret) patch.secret = crypto.randomBytes(32).toString("base64url");
       const { error } = await supabaseAdmin.from("token_webhook_endpoints").update(patch).eq("id", data.id);
       if (error) return { ok: false as const, error: error.message };
-      return { ok: true as const, secret: data.rotateSecret ? (patch.secret as string) : null };
+      return { ok: true as const, secret: newSecret ?? null };
     }
     const secret = crypto.randomBytes(32).toString("base64url");
     const { error } = await supabaseAdmin.from("token_webhook_endpoints").insert({
