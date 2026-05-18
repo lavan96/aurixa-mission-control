@@ -360,3 +360,81 @@ export const getTokenUsageSummary = createServerFn({ method: "GET" })
       series,
     };
   });
+
+// ─── Report jobs (admin listing) ─────────────────────────────────────────────
+
+export const listReportJobs = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        tenantId: z.string().uuid().optional(),
+        cloneId: z.string().uuid().optional(),
+        status: z
+          .enum(["reserved", "completed", "canceled", "refunded", "expired"])
+          .optional(),
+        kind: z.string().max(120).optional(),
+        search: z.string().max(200).optional(),
+        from: z.string().datetime().optional(),
+        to: z.string().datetime().optional(),
+        limit: z.number().int().min(1).max(500).default(100),
+      })
+      .parse(input ?? {})
+  )
+  .handler(async ({ data, context }) => {
+    let q = context.supabase
+      .from("report_jobs")
+      .select(
+        `id, tenant_id, clone_id, kind, status,
+         estimated_tokens, charged_tokens,
+         idempotency_key, error, started_at, completed_at, reservation_expires_at,
+         tenants:tenant_id(display_name, external_ref),
+         clones:clone_id(name, slug)`,
+        { count: "exact" }
+      )
+      .order("started_at", { ascending: false })
+      .limit(data.limit);
+    if (data.tenantId) q = q.eq("tenant_id", data.tenantId);
+    if (data.cloneId) q = q.eq("clone_id", data.cloneId);
+    if (data.status) q = q.eq("status", data.status);
+    if (data.kind) q = q.eq("kind", data.kind);
+    if (data.from) q = q.gte("started_at", data.from);
+    if (data.to) q = q.lte("started_at", data.to);
+    if (data.search) {
+      q = q.or(
+        `idempotency_key.ilike.%${data.search}%,kind.ilike.%${data.search}%`
+      );
+    }
+    const { data: rows, error, count } = await q;
+    if (error) throw new Error(error.message);
+
+    // Aggregate totals across the filtered set (separate query — capped at 5000 for safety)
+    let aggQ = context.supabase
+      .from("report_jobs")
+      .select("status, estimated_tokens, charged_tokens")
+      .limit(5000);
+    if (data.tenantId) aggQ = aggQ.eq("tenant_id", data.tenantId);
+    if (data.cloneId) aggQ = aggQ.eq("clone_id", data.cloneId);
+    if (data.status) aggQ = aggQ.eq("status", data.status);
+    if (data.kind) aggQ = aggQ.eq("kind", data.kind);
+    if (data.from) aggQ = aggQ.gte("started_at", data.from);
+    if (data.to) aggQ = aggQ.lte("started_at", data.to);
+    const { data: aggRows } = await aggQ;
+
+    const totals = {
+      reserved: 0,
+      committed: 0,
+      canceled: 0,
+      refunded: 0,
+      jobs: aggRows?.length ?? 0,
+    };
+    for (const r of aggRows ?? []) {
+      if (r.status === "reserved") totals.reserved += r.estimated_tokens ?? 0;
+      else if (r.status === "completed") totals.committed += r.charged_tokens ?? 0;
+      else if (r.status === "canceled" || r.status === "expired")
+        totals.canceled += r.estimated_tokens ?? 0;
+      else if (r.status === "refunded") totals.refunded += r.charged_tokens ?? 0;
+    }
+
+    return { jobs: rows ?? [], count: count ?? 0, totals };
+  });
