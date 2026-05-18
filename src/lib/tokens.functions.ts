@@ -371,7 +371,7 @@ export const listReportJobs = createServerFn({ method: "GET" })
         tenantId: z.string().uuid().optional(),
         cloneId: z.string().uuid().optional(),
         status: z
-          .enum(["reserved", "completed", "canceled", "refunded", "expired"])
+          .enum(["reserved", "completed", "canceled", "refunded", "failed", "pending"])
           .optional(),
         kind: z.string().max(120).optional(),
         search: z.string().max(200).optional(),
@@ -431,7 +431,7 @@ export const listReportJobs = createServerFn({ method: "GET" })
     for (const r of aggRows ?? []) {
       if (r.status === "reserved") totals.reserved += r.estimated_tokens ?? 0;
       else if (r.status === "completed") totals.committed += r.charged_tokens ?? 0;
-      else if (r.status === "canceled" || r.status === "expired")
+      else if (r.status === "canceled" || r.status === "failed")
         totals.canceled += r.estimated_tokens ?? 0;
       else if (r.status === "refunded") totals.refunded += r.charged_tokens ?? 0;
     }
