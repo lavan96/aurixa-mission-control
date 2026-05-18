@@ -794,11 +794,23 @@ function WebhooksTab() {
           <DialogFooter>
             {issuedSecret ? <Button onClick={() => setOpen(false)}>Done</Button> : (
               <Button disabled={!draft?.url} onClick={async () => {
-                const r = await upsertFn({ data: draft });
-                if (r.ok) {
-                  qc.invalidateQueries({ queryKey: ["token-webhooks"] });
-                  if (r.secret) setIssuedSecret(r.secret); else { toast.success("Saved"); setOpen(false); }
-                } else toast.error(r.error);
+                try {
+                  const payload: Record<string, unknown> = {
+                    url: draft.url,
+                    cloneId: draft.cloneId ?? null,
+                    events: draft.events ?? [...EVENTS],
+                    isActive: draft.isActive ?? true,
+                    rotateSecret: draft.rotateSecret ?? false,
+                  };
+                  if (draft.id) payload.id = draft.id;
+                  const r = await upsertFn({ data: payload });
+                  if (r.ok) {
+                    qc.invalidateQueries({ queryKey: ["token-webhooks"] });
+                    if (r.secret) setIssuedSecret(r.secret); else { toast.success("Saved"); setOpen(false); }
+                  } else toast.error(r.error ?? "Failed to save webhook");
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : "Failed to save webhook");
+                }
               }}>{draft?.id ? "Save" : "Create"}</Button>
             )}
           </DialogFooter>
