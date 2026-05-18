@@ -57,18 +57,20 @@ function BillingDashboard() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="tenants">Tenants</TabsTrigger>
           <TabsTrigger value="plans">Plans &amp; Packs</TabsTrigger>
           <TabsTrigger value="rates">Rates</TabsTrigger>
           <TabsTrigger value="keys">API Keys</TabsTrigger>
+          <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
         </TabsList>
         <TabsContent value="overview"><OverviewTab /></TabsContent>
         <TabsContent value="tenants"><TenantsTab /></TabsContent>
         <TabsContent value="plans"><PlansPacksTab /></TabsContent>
         <TabsContent value="rates"><RatesTab /></TabsContent>
         <TabsContent value="keys"><KeysTab /></TabsContent>
+        <TabsContent value="webhooks"><WebhooksTab /></TabsContent>
       </Tabs>
     </div>
   );
