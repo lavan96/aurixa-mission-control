@@ -2491,6 +2491,8 @@ export type Database = {
         | "cascade_rejected"
         | "library_entry_approved"
         | "library_entry_rejected"
+        | "tokens_alert"
+        | "tokens_key_first_use"
       notification_severity: "info" | "success" | "warning" | "error"
       overage_policy: "block" | "topup_only" | "pay_as_you_go"
       provisioning_method: "fork" | "template" | "clone"
@@ -2689,6 +2691,8 @@ export const Constants = {
         "cascade_rejected",
         "library_entry_approved",
         "library_entry_rejected",
+        "tokens_alert",
+        "tokens_key_first_use",
       ],
       notification_severity: ["info", "success", "warning", "error"],
       overage_policy: ["block", "topup_only", "pay_as_you_go"],
