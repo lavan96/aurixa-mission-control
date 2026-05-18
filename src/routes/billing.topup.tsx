@@ -46,7 +46,7 @@ function TopupBody() {
   });
   const tenantQ = useQuery({
     queryKey: ["topup", "tenant", tenant],
-    queryFn: () => tenantFn({ data: { tenantId: tenant! } }),
+    queryFn: () => tenantFn({ data: { id: tenant! } }),
     enabled: !!tenant,
   });
 
