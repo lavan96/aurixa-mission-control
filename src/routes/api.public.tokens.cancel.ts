@@ -35,7 +35,7 @@ export const Route = createFileRoute("/api/public/tokens/cancel")({
 
         const { data: result, error } = await supabaseAdmin.rpc("cancel_token_reservation", {
           _job_id: parsed.data.job_id,
-          _reason: parsed.data.reason ?? null,
+          _reason: parsed.data.reason ?? undefined,
         });
         if (error) return jsonResponse({ ok: false, error: error.message }, 500);
         return jsonResponse(result, 200);

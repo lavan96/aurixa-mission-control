@@ -56,7 +56,7 @@ export const Route = createFileRoute("/api/public/tokens/reserve")({
           _estimated_tokens: data.estimated_tokens,
           _idempotency_key: data.idempotency_key,
           _ttl_seconds: data.ttl_seconds ?? 600,
-          _request_payload: data.request_payload ?? {},
+          _request_payload: (data.request_payload ?? {}) as never,
         });
         if (error) return jsonResponse({ ok: false, error: error.message }, 500);
         return jsonResponse(result, 200);

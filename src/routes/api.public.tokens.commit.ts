@@ -38,7 +38,7 @@ export const Route = createFileRoute("/api/public/tokens/commit")({
         const { data: result, error } = await supabaseAdmin.rpc("commit_tokens", {
           _job_id: parsed.data.job_id,
           _actual_tokens: parsed.data.actual_tokens,
-          _result_meta: parsed.data.result_meta ?? {},
+          _result_meta: (parsed.data.result_meta ?? {}) as never,
         });
         if (error) return jsonResponse({ ok: false, error: error.message }, 500);
         return jsonResponse(result, 200);
