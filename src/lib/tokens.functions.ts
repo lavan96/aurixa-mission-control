@@ -274,6 +274,7 @@ export const grantTenantTokens = createServerFn({ method: "POST" })
       _expires_at: data.expiresAt ?? undefined,
     });
     if (error) return { ok: false as const, error: error.message };
+    void fanBalanceUpdated(data.tenantId, "admin_grant");
     return result as { ok: boolean; error?: string };
   });
 
@@ -295,6 +296,7 @@ export const applyTenantTopup = createServerFn({ method: "POST" })
       _source_ref: data.sourceRef ?? undefined,
     });
     if (error) return { ok: false as const, error: error.message };
+    void fanBalanceUpdated(data.tenantId, "admin_topup");
     return result as { ok: boolean; error?: string; tokens?: number };
   });
 
@@ -314,7 +316,9 @@ export const refundReportJob = createServerFn({ method: "POST" })
       _reason: data.reason,
     });
     if (error) return { ok: false as const, error: error.message };
-    return result as { ok: boolean; error?: string; refunded_tokens?: number };
+    const r = result as { ok: boolean; error?: string; refunded_tokens?: number; tenant_id?: string };
+    if (r.ok && r.tenant_id) void fanBalanceUpdated(r.tenant_id, "admin_refund");
+    return r;
   });
 
 // ─── Fleet usage summary ─────────────────────────────────────────────────────
