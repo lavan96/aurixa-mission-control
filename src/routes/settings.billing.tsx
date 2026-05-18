@@ -28,11 +28,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/settings/billing")({
-  component: () => (
-    <ProtectedRoute>
-      <BillingDashboard />
-    </ProtectedRoute>
-  ),
+  component: BillingDashboard,
   head: () => ({ meta: [{ title: "Billing & Tokens — Mission Control" }] }),
 });
 
