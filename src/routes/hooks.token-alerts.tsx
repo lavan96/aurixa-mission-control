@@ -43,13 +43,13 @@ export const Route = createFileRoute("/hooks/token-alerts")({
               const existing = await supabaseAdmin
                 .from("notifications")
                 .select("id")
-                .eq("kind", "system")
+                .eq("kind", "tokens_alert")
                 .contains("metadata", { dedupe_key: dedupeKey })
                 .maybeSingle();
               if (!existing.data) {
                 await supabaseAdmin.from("notifications").insert({
-                  kind: "system",
-                  severity: threshold >= 100 ? "critical" : "warning",
+                  kind: "tokens_alert",
+                  severity: threshold >= 100 ? "error" : "warning",
                   title: `${t.display_name ?? t.external_ref} crossed ${threshold}% allowance`,
                   body: `Used ${Math.round(pct)}% of monthly allowance.`,
                   clone_id: t.clone_id,
@@ -79,12 +79,12 @@ export const Route = createFileRoute("/hooks/token-alerts")({
             const existing = await supabaseAdmin
               .from("notifications")
               .select("id")
-              .eq("kind", "system")
+              .eq("kind", "tokens_alert")
               .contains("metadata", { dedupe_key: dedupeKey })
               .maybeSingle();
             if (!existing.data) {
               await supabaseAdmin.from("notifications").insert({
-                kind: "system",
+                kind: "tokens_alert",
                 severity: "warning",
                 title: `Cancel spike on ${t.display_name ?? t.external_ref}`,
                 body: `${Math.round(cancelRate * 100)}% of last-24h jobs canceled/failed.`,

@@ -45,7 +45,7 @@ export async function fireTokenWebhook(
         .insert({
           endpoint_id: e.id,
           event_type: event,
-          payload: { event, data: payload },
+          payload: { event, data: payload } as never,
           status: "pending",
         })
         .select("id")
