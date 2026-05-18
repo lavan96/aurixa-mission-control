@@ -23,7 +23,7 @@ import {
   getTokenUsageSummary,
 } from "@/lib/tokens.functions";
 import {
-  listCloneApiKeys, createCloneApiKey, revokeCloneApiKey,
+  listCloneApiKeys, createCloneApiKey, revokeCloneApiKey, rotateCloneApiKey,
 } from "@/lib/clone-api-keys.functions";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -509,6 +509,7 @@ function KeysTab() {
   const listFn = useServerFn(listCloneApiKeys);
   const createFn = useServerFn(createCloneApiKey);
   const revokeFn = useServerFn(revokeCloneApiKey);
+  const rotateFn = useServerFn(rotateCloneApiKey);
   const qc = useQueryClient();
   const { data } = useQuery({ queryKey: ["clone-api-keys"], queryFn: () => listFn({ data: {} }) });
   const { data: clones } = useQuery({
@@ -573,8 +574,25 @@ function KeysTab() {
                 <TableCell>{k.label}</TableCell>
                 <TableCell className="font-mono text-xs">{k.key_prefix}…</TableCell>
                 <TableCell className="text-xs">{k.last_used_at ? new Date(k.last_used_at).toLocaleString() : "never"}</TableCell>
-                <TableCell>{k.revoked_at ? <Badge variant="destructive">revoked</Badge> : <Badge>active</Badge>}</TableCell>
                 <TableCell>
+                  {k.revoked_at ? <Badge variant="destructive">revoked</Badge>
+                    : k.revoke_at ? <Badge variant="outline">grace · revokes {new Date(k.revoke_at).toLocaleString()}</Badge>
+                    : <Badge>active</Badge>}
+                </TableCell>
+                <TableCell className="flex gap-1">
+                  {!k.revoked_at && !k.revoke_at && (
+                    <Button size="sm" variant="ghost" title="Rotate (issue new + grace period)" onClick={async () => {
+                      const hoursStr = prompt("Grace period in hours before old key is revoked?", "24");
+                      if (hoursStr == null) return;
+                      const graceHours = Math.max(0, parseInt(hoursStr, 10) || 0);
+                      const r = await rotateFn({ data: { oldKeyId: k.id, graceHours } });
+                      if (r.ok) {
+                        await navigator.clipboard.writeText(r.key).catch(() => {});
+                        toast.success(`New key copied. Old revokes at ${new Date(r.revokeAt).toLocaleString()}`);
+                        qc.invalidateQueries({ queryKey: ["clone-api-keys"] });
+                      } else toast.error(r.error);
+                    }}><RotateCw className="h-3 w-3" /></Button>
+                  )}
                   {!k.revoked_at && (
                     <Button size="sm" variant="ghost" onClick={async () => {
                       if (!confirm("Revoke this key? Calls using it will fail immediately.")) return;

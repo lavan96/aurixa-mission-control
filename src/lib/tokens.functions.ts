@@ -1,6 +1,20 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { balanceSnapshot, fireTokenWebhook } from "@/server/token-webhooks.server";
+
+async function fanBalanceUpdated(tenantId: string, source: string, cloneId?: string | null) {
+  try {
+    const snap = await balanceSnapshot(tenantId);
+    await fireTokenWebhook(
+      "tokens.balance.updated",
+      { ...snap, source },
+      cloneId ?? (snap.tenant?.clone_id ?? null),
+    );
+  } catch {
+    // best-effort
+  }
+}
 
 // ─── Plans ───────────────────────────────────────────────────────────────────
 
@@ -260,6 +274,7 @@ export const grantTenantTokens = createServerFn({ method: "POST" })
       _expires_at: data.expiresAt ?? undefined,
     });
     if (error) return { ok: false as const, error: error.message };
+    void fanBalanceUpdated(data.tenantId, "admin_grant");
     return result as { ok: boolean; error?: string };
   });
 
@@ -281,6 +296,7 @@ export const applyTenantTopup = createServerFn({ method: "POST" })
       _source_ref: data.sourceRef ?? undefined,
     });
     if (error) return { ok: false as const, error: error.message };
+    void fanBalanceUpdated(data.tenantId, "admin_topup");
     return result as { ok: boolean; error?: string; tokens?: number };
   });
 
@@ -300,7 +316,16 @@ export const refundReportJob = createServerFn({ method: "POST" })
       _reason: data.reason,
     });
     if (error) return { ok: false as const, error: error.message };
-    return result as { ok: boolean; error?: string; refunded_tokens?: number };
+    const r = result as { ok: boolean; error?: string; refunded_tokens?: number };
+    if (r.ok) {
+      const { data: job } = await context.supabase
+        .from("report_jobs")
+        .select("tenant_id, clone_id")
+        .eq("id", data.jobId)
+        .maybeSingle();
+      if (job?.tenant_id) void fanBalanceUpdated(job.tenant_id, "admin_refund", job.clone_id);
+    }
+    return r;
   });
 
 // ─── Fleet usage summary ─────────────────────────────────────────────────────
