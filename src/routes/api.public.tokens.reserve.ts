@@ -32,7 +32,7 @@ export const Route = createFileRoute("/api/public/tokens/reserve")({
         const rl = await checkRateLimit(key.id);
         if (!rl.ok) {
           return new Response(
-            JSON.stringify({ ok: false, error: "rate_limited", ...rl }),
+            JSON.stringify({ ok: false, error: "rate_limited", count: rl.count, limit: rl.limit, retry_after_seconds: rl.retry_after_seconds }),
             { status: 429, headers: { "Content-Type": "application/json", "Retry-After": String(rl.retry_after_seconds) } },
           );
         }

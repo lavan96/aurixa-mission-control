@@ -16,6 +16,9 @@ export type ResolvedKey = {
   id: string;
   clone_id: string | null;
   scopes: string[];
+  label: string | null;
+  key_prefix: string | null;
+  first_used_at: string | null;
 };
 
 /**
@@ -32,7 +35,7 @@ export async function resolveCloneApiKey(
   const hash = hashApiKey(rawKey);
   const { data, error } = await supabaseAdmin
     .from("clone_api_keys")
-    .select("id, clone_id, scopes, revoked_at")
+    .select("id, clone_id, scopes, revoked_at, label, key_prefix, first_used_at")
     .eq("key_hash", hash)
     .maybeSingle();
   if (error || !data) return null;
@@ -44,7 +47,14 @@ export async function resolveCloneApiKey(
     .from("clone_api_keys")
     .update({ last_used_at: new Date().toISOString() })
     .eq("id", data.id);
-  return { id: data.id, clone_id: data.clone_id, scopes };
+  return {
+    id: data.id,
+    clone_id: data.clone_id,
+    scopes,
+    label: data.label ?? null,
+    key_prefix: data.key_prefix ?? null,
+    first_used_at: data.first_used_at ?? null,
+  };
 }
 
 export function jsonResponse(body: unknown, status = 200): Response {
