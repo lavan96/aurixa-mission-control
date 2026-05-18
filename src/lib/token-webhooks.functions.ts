@@ -119,3 +119,89 @@ export const redriveWebhookDelivery = createServerFn({ method: "POST" })
     const r = await retryDueDeliveries();
     return { ok: true as const, ...r };
   });
+
+/**
+ * Send a synthetic `tokens.test` event to a single endpoint so operators can
+ * verify HMAC signature handling + idempotency on the receiver side. Bypasses
+ * subscription matching — always delivers to the specified endpoint.
+ */
+export const sendTestWebhook = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ endpointId: z.string().uuid() }).parse(input))
+  .handler(async ({ data }) => {
+    const { data: ep, error } = await supabaseAdmin
+      .from("token_webhook_endpoints")
+      .select("id, url, secret, is_active")
+      .eq("id", data.endpointId)
+      .maybeSingle();
+    if (error || !ep) return { ok: false as const, error: error?.message ?? "endpoint_not_found" };
+    if (!ep.is_active) return { ok: false as const, error: "endpoint_paused" };
+
+    const testId = crypto.randomUUID();
+    const payload = {
+      event: "tokens.test",
+      occurred_at: new Date().toISOString(),
+      data: {
+        test_id: testId,
+        message: "Synthetic test event from Mission Control. Safe to ignore.",
+      },
+    };
+    const body = JSON.stringify(payload);
+    const signature = crypto.createHmac("sha256", ep.secret).update(body).digest("hex");
+
+    const delivery = await supabaseAdmin
+      .from("token_webhook_deliveries")
+      .insert({
+        endpoint_id: ep.id,
+        event_type: "tokens.test",
+        payload: payload as never,
+        status: "pending",
+      })
+      .select("id")
+      .single();
+
+    try {
+      const res = await fetch(ep.url, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-mc-signature": signature,
+          "x-mc-event": "tokens.test",
+          "x-mc-idempotency-key": testId,
+        },
+        body,
+        signal: AbortSignal.timeout(8000),
+      });
+      const text = await res.text().catch(() => "");
+      await supabaseAdmin
+        .from("token_webhook_deliveries")
+        .update({
+          status: res.ok ? "delivered" : "failed",
+          response_code: res.status,
+          response_body: text.slice(0, 2000),
+          attempts: 1,
+          delivered_at: res.ok ? new Date().toISOString() : null,
+          next_attempt_at: res.ok ? null : new Date(Date.now() + 60_000).toISOString(),
+        })
+        .eq("id", delivery.data!.id);
+      return {
+        ok: res.ok,
+        status: res.status,
+        test_id: testId,
+        signature,
+        body: text.slice(0, 500),
+      };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "unknown";
+      await supabaseAdmin
+        .from("token_webhook_deliveries")
+        .update({
+          status: "failed",
+          attempts: 1,
+          response_body: msg.slice(0, 2000),
+          next_attempt_at: new Date(Date.now() + 60_000).toISOString(),
+        })
+        .eq("id", delivery.data!.id);
+      return { ok: false as const, error: msg, test_id: testId };
+    }
+  });
