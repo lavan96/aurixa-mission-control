@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { generateApiKey } from "@/server/clone-api-keys.server";
 import { fireTokenWebhook } from "@/server/token-webhooks.server";
+import { cascadeApiKeyToRepo } from "@/server/clone-credentials.server";
 
 export const listCloneApiKeys = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
