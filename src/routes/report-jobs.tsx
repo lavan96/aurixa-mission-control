@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ProtectedRoute } from "@/components/protected-route";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,9 +22,27 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import { EmptyState } from "@/components/empty-state";
-import { Receipt, RotateCw, X } from "lucide-react";
-import { listReportJobs, listTenants } from "@/lib/tokens.functions";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Receipt,
+  RotateCw,
+  X,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  RefreshCcw,
+  Coins,
+} from "lucide-react";
+import { getReportJob, listReportJobs, listTenants } from "@/lib/tokens.functions";
 import { formatDistanceToNow } from "@/lib/format";
 
 export const Route = createFileRoute("/report-jobs")({
@@ -51,6 +69,11 @@ function fmt(n: number | null | undefined): string {
   return (n ?? 0).toLocaleString();
 }
 
+function fmtDateTime(d: string | null | undefined): string {
+  if (!d) return "—";
+  return new Date(d).toLocaleString();
+}
+
 function ReportJobsPage() {
   const listJobs = useServerFn(listReportJobs);
   const listTenantsFn = useServerFn(listTenants);
@@ -60,7 +83,14 @@ function ReportJobsPage() {
   const [search, setSearch] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [limit, setLimit] = useState(100);
+  const [limit, setLimit] = useState(50);
+  const [page, setPage] = useState(1);
+  const [openJobId, setOpenJobId] = useState<string | null>(null);
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setPage(1);
+  }, [tenantId, status, search, from, to, limit]);
 
   const tenantsQ = useQuery({
     queryKey: ["tenants", "all"],
@@ -75,8 +105,9 @@ function ReportJobsPage() {
       from: from ? new Date(from).toISOString() : undefined,
       to: to ? new Date(to + "T23:59:59").toISOString() : undefined,
       limit,
+      page,
     }),
-    [tenantId, status, search, from, to, limit],
+    [tenantId, status, search, from, to, limit, page],
   );
 
   const jobsQ = useQuery({
@@ -85,6 +116,8 @@ function ReportJobsPage() {
   });
 
   const totals = jobsQ.data?.totals;
+  const totalPages = jobsQ.data?.totalPages ?? 1;
+  const count = jobsQ.data?.count ?? 0;
 
   const reset = () => {
     setTenantId("all");
@@ -92,8 +125,12 @@ function ReportJobsPage() {
     setSearch("");
     setFrom("");
     setTo("");
-    setLimit(100);
+    setLimit(50);
+    setPage(1);
   };
+
+  const startRow = count === 0 ? 0 : (page - 1) * limit + 1;
+  const endRow = Math.min(page * limit, count);
 
   return (
     <div className="space-y-6">
@@ -157,29 +194,19 @@ function ReportJobsPage() {
               <SelectItem value="pending">Pending</SelectItem>
             </SelectContent>
           </Select>
-          <Input
-            type="date"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            placeholder="From"
-          />
-          <Input
-            type="date"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            placeholder="To"
-          />
+          <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+          <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search kind / idempotency key"
+            placeholder="Search kind / idempotency"
           />
           <div className="flex gap-2">
             <Select value={String(limit)} onValueChange={(v) => setLimit(Number(v))}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {[50, 100, 250, 500].map((n) => (
-                  <SelectItem key={n} value={String(n)}>{n} rows</SelectItem>
+                {[25, 50, 100, 250].map((n) => (
+                  <SelectItem key={n} value={String(n)}>{n} / page</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -216,7 +243,11 @@ function ReportJobsPage() {
               </TableHeader>
               <TableBody>
                 {(jobsQ.data?.jobs ?? []).map((j: any) => (
-                  <TableRow key={j.id}>
+                  <TableRow
+                    key={j.id}
+                    onClick={() => setOpenJobId(j.id)}
+                    className="cursor-pointer"
+                  >
                     <TableCell className="text-sm">
                       {j.tenants?.display_name ?? j.tenants?.external_ref ?? (
                         <span className="font-mono text-xs text-muted-foreground">
@@ -237,7 +268,9 @@ function ReportJobsPage() {
                         {j.status}
                       </Badge>
                       {j.error && (
-                        <p className="mt-1 text-[10px] text-destructive">{j.error}</p>
+                        <p className="mt-1 line-clamp-1 text-[10px] text-destructive">
+                          {j.error}
+                        </p>
                       )}
                     </TableCell>
                     <TableCell className="text-right font-mono text-xs">
@@ -257,8 +290,45 @@ function ReportJobsPage() {
               </TableBody>
             </Table>
           )}
+
+          {count > 0 && (
+            <div className="flex items-center justify-between border-t border-border p-3 text-xs text-muted-foreground">
+              <span>
+                Showing <strong className="text-foreground">{startRow.toLocaleString()}</strong>
+                –<strong className="text-foreground">{endRow.toLocaleString()}</strong> of{" "}
+                <strong className="text-foreground">{count.toLocaleString()}</strong>
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1 || jobsQ.isFetching}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  <ChevronLeft className="mr-1 h-3.5 w-3.5" /> Prev
+                </Button>
+                <span className="font-mono">
+                  Page <strong className="text-foreground">{page}</strong> /{" "}
+                  {totalPages.toLocaleString()}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages || jobsQ.isFetching}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  Next <ChevronRight className="ml-1 h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      <JobDetailDrawer
+        jobId={openJobId}
+        onOpenChange={(open) => !open && setOpenJobId(null)}
+      />
     </div>
   );
 }
@@ -274,5 +344,200 @@ function StatCard({ label, value, hint }: { label: string; value: string; hint?:
         {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
       </CardContent>
     </Card>
+  );
+}
+
+// ─── Job detail drawer ─────────────────────────────────────────────────────
+
+const LEDGER_ICON: Record<string, typeof Clock> = {
+  reserve: Clock,
+  release: XCircle,
+  debit: CheckCircle2,
+  refund: RefreshCcw,
+  grant: Coins,
+  topup: Coins,
+  adjustment: Coins,
+  expiry: XCircle,
+};
+
+const LEDGER_LABEL: Record<string, string> = {
+  reserve: "Reserved",
+  release: "Released",
+  debit: "Committed (debit)",
+  refund: "Refunded",
+  grant: "Granted",
+  topup: "Top-up",
+  adjustment: "Adjustment",
+  expiry: "Expired",
+};
+
+function JobDetailDrawer({
+  jobId,
+  onOpenChange,
+}: {
+  jobId: string | null;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const getJob = useServerFn(getReportJob);
+  const q = useQuery({
+    queryKey: ["report-job", jobId],
+    queryFn: () => getJob({ data: { id: jobId! } }),
+    enabled: !!jobId,
+  });
+
+  const job: any = q.data?.job;
+  const ledger: any[] = q.data?.ledger ?? [];
+
+  return (
+    <Sheet open={!!jobId} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
+        <SheetHeader>
+          <SheetTitle className="font-mono text-sm">
+            {job ? job.kind : "Report job"}
+          </SheetTitle>
+          <SheetDescription>
+            {jobId && (
+              <span className="font-mono text-[10px]">{jobId}</span>
+            )}
+          </SheetDescription>
+        </SheetHeader>
+
+        {q.isLoading || !job ? (
+          <div className="p-10 text-center text-sm text-muted-foreground">Loading…</div>
+        ) : (
+          <div className="mt-6 space-y-6">
+            {/* Summary */}
+            <section className="grid grid-cols-2 gap-3 text-sm">
+              <Field label="Status">
+                <Badge variant={STATUS_VARIANTS[job.status as Status] ?? "outline"}>
+                  {job.status}
+                </Badge>
+              </Field>
+              <Field label="Tenant">
+                {job.tenants?.display_name ??
+                  job.tenants?.external_ref ??
+                  job.tenant_id}
+              </Field>
+              <Field label="Clone">{job.clones?.name ?? job.clone_id}</Field>
+              <Field label="Idempotency key">
+                <span className="font-mono text-[11px]">{job.idempotency_key}</span>
+              </Field>
+              <Field label="Estimated tokens">{fmt(job.estimated_tokens)}</Field>
+              <Field label="Charged tokens">
+                {job.charged_tokens != null ? fmt(job.charged_tokens) : "—"}
+              </Field>
+              <Field label="Started">{fmtDateTime(job.started_at)}</Field>
+              <Field label="Completed">{fmtDateTime(job.completed_at)}</Field>
+              <Field label="Reservation expires">
+                {fmtDateTime(job.reservation_expires_at)}
+              </Field>
+            </section>
+
+            {/* Timeline */}
+            <section>
+              <h3 className="mb-3 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                Timeline
+              </h3>
+              {ledger.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No ledger entries.</p>
+              ) : (
+                <ol className="space-y-3 border-l border-border pl-4">
+                  {ledger.map((e) => {
+                    const Icon = LEDGER_ICON[e.kind] ?? Clock;
+                    const positive =
+                      e.kind === "grant" ||
+                      e.kind === "topup" ||
+                      e.kind === "refund" ||
+                      e.kind === "release";
+                    return (
+                      <li key={e.id} className="relative">
+                        <span className="absolute -left-[22px] flex h-4 w-4 items-center justify-center rounded-full bg-background ring-1 ring-border">
+                          <Icon className="h-3 w-3 text-muted-foreground" />
+                        </span>
+                        <div className="flex items-baseline justify-between gap-3">
+                          <p className="text-sm font-medium">
+                            {LEDGER_LABEL[e.kind] ?? e.kind}
+                          </p>
+                          <span
+                            className={
+                              "font-mono text-xs tabular-nums " +
+                              (positive ? "text-emerald-500" : "text-foreground")
+                            }
+                          >
+                            {positive ? "+" : "−"}
+                            {fmt(Math.abs(e.tokens))}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          {fmtDateTime(e.created_at)}
+                          {e.reason && <> · {e.reason}</>}
+                        </p>
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
+            </section>
+
+            {/* Error */}
+            {job.error && (
+              <section>
+                <h3 className="mb-2 font-mono text-[11px] uppercase tracking-wider text-destructive">
+                  Error
+                </h3>
+                <pre className="overflow-x-auto rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
+                  {job.error}
+                </pre>
+              </section>
+            )}
+
+            {/* Request payload */}
+            <section>
+              <h3 className="mb-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                Request payload
+              </h3>
+              <JsonBlock value={job.request_payload} />
+            </section>
+
+            {/* Result meta */}
+            {job.result_meta && Object.keys(job.result_meta).length > 0 && (
+              <section>
+                <h3 className="mb-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                  Result metadata
+                </h3>
+                <JsonBlock value={job.result_meta} />
+              </section>
+            )}
+          </div>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+        {label}
+      </p>
+      <div className="mt-0.5">{children}</div>
+    </div>
+  );
+}
+
+function JsonBlock({ value }: { value: unknown }) {
+  const text = useMemo(() => {
+    if (value == null) return "—";
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return String(value);
+    }
+  }, [value]);
+  return (
+    <pre className="max-h-72 overflow-auto rounded-md border border-border bg-muted/40 p-3 font-mono text-[11px]">
+      {text}
+    </pre>
   );
 }
