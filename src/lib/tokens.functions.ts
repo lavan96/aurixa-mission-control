@@ -1,6 +1,20 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { balanceSnapshot, fireTokenWebhook } from "@/server/token-webhooks.server";
+
+async function fanBalanceUpdated(tenantId: string, source: string, cloneId?: string | null) {
+  try {
+    const snap = await balanceSnapshot(tenantId);
+    await fireTokenWebhook(
+      "tokens.balance.updated",
+      { ...snap, source },
+      cloneId ?? (snap.tenant?.clone_id ?? null),
+    );
+  } catch {
+    // best-effort
+  }
+}
 
 // ─── Plans ───────────────────────────────────────────────────────────────────
 
