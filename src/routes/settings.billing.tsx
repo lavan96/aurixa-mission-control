@@ -569,7 +569,7 @@ function KeysTab() {
           <TableBody>
             {data?.keys.map((k: any) => (
               <TableRow key={k.id}>
-                <TableCell>{k.clones?.name ?? "—"}</TableCell>
+                <TableCell>{k.clones?.name ?? <span className="font-mono text-xs text-muted-foreground">prime repo</span>}</TableCell>
                 <TableCell>{k.label}</TableCell>
                 <TableCell className="font-mono text-xs">{k.key_prefix}…</TableCell>
                 <TableCell className="text-xs">{k.last_used_at ? new Date(k.last_used_at).toLocaleString() : "never"}</TableCell>
