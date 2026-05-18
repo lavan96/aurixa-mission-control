@@ -438,5 +438,38 @@ export const listReportJobs = createServerFn({ method: "GET" })
       else if (r.status === "refunded") totals.refunded += r.charged_tokens ?? 0;
     }
 
-    return { jobs: rows ?? [], count: count ?? 0, totals };
+    return {
+      jobs: rows ?? [],
+      count: count ?? 0,
+      totals,
+      page: data.page,
+      limit: data.limit,
+      totalPages: Math.max(1, Math.ceil((count ?? 0) / data.limit)),
+    };
   });
+
+export const getReportJob = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const [jobRes, ledgerRes] = await Promise.all([
+      context.supabase
+        .from("report_jobs")
+        .select(
+          `*,
+           tenants:tenant_id(id, display_name, external_ref),
+           clones:clone_id(id, name, slug)`
+        )
+        .eq("id", data.id)
+        .maybeSingle(),
+      context.supabase
+        .from("token_ledger")
+        .select("*")
+        .eq("report_job_id", data.id)
+        .order("created_at", { ascending: true }),
+    ]);
+    if (jobRes.error) throw new Error(jobRes.error.message);
+    if (!jobRes.data) throw new Error("Job not found");
+    return { job: jobRes.data, ledger: ledgerRes.data ?? [] };
+  });
+
