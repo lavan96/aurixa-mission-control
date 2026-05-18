@@ -5,6 +5,7 @@ import {
   jsonResponse,
   resolveCloneApiKey,
 } from "@/server/clone-api-keys.server";
+import { checkRateLimit } from "@/server/token-rate-limit.server";
 
 export const Route = createFileRoute("/api/public/tokens/balance")({
   server: {
