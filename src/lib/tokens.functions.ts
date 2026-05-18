@@ -377,11 +377,13 @@ export const listReportJobs = createServerFn({ method: "GET" })
         search: z.string().max(200).optional(),
         from: z.string().datetime().optional(),
         to: z.string().datetime().optional(),
-        limit: z.number().int().min(1).max(500).default(100),
+        limit: z.number().int().min(1).max(500).default(50),
+        page: z.number().int().min(1).default(1),
       })
       .parse(input ?? {})
   )
   .handler(async ({ data, context }) => {
+    const offset = (data.page - 1) * data.limit;
     let q = context.supabase
       .from("report_jobs")
       .select(
@@ -393,7 +395,7 @@ export const listReportJobs = createServerFn({ method: "GET" })
         { count: "exact" }
       )
       .order("started_at", { ascending: false })
-      .limit(data.limit);
+      .range(offset, offset + data.limit - 1);
     if (data.tenantId) q = q.eq("tenant_id", data.tenantId);
     if (data.cloneId) q = q.eq("clone_id", data.cloneId);
     if (data.status) q = q.eq("status", data.status);
