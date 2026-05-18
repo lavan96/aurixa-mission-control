@@ -1,5 +1,6 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
@@ -70,19 +71,30 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: { staleTime: 10_000, retry: 1, refetchOnWindowFocus: false },
+        },
+      }),
+  );
+
   useEffect(() => {
     void registerServiceWorker();
   }, []);
 
   return (
-    <AuthProvider>
-      <TooltipProvider delayDuration={150}>
-        <NotificationPreferencesSync />
-        <RealtimeNotifications />
-        <BrowserPushNotifications />
-        <Outlet />
-        <Toaster />
-      </TooltipProvider>
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider delayDuration={150}>
+          <NotificationPreferencesSync />
+          <RealtimeNotifications />
+          <BrowserPushNotifications />
+          <Outlet />
+          <Toaster />
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
