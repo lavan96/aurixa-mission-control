@@ -71,19 +71,30 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: { staleTime: 10_000, retry: 1, refetchOnWindowFocus: false },
+        },
+      }),
+  );
+
   useEffect(() => {
     void registerServiceWorker();
   }, []);
 
   return (
-    <AuthProvider>
-      <TooltipProvider delayDuration={150}>
-        <NotificationPreferencesSync />
-        <RealtimeNotifications />
-        <BrowserPushNotifications />
-        <Outlet />
-        <Toaster />
-      </TooltipProvider>
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider delayDuration={150}>
+          <NotificationPreferencesSync />
+          <RealtimeNotifications />
+          <BrowserPushNotifications />
+          <Outlet />
+          <Toaster />
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
