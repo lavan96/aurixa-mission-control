@@ -177,7 +177,121 @@ billing surface is: pre-flight balance check + post-report receipt.
 | Error from Mission Control | Meaning | Prime repo action |
 | --- | --- | --- |
 | `unauthorized` (401) | Bad/revoked `x-clone-api-key` | Page on-call; do not retry. |
-| `insufficient_funds` (200, `ok:false`) | Balance < estimate, plan blocks overage | Show "Out of tokens — top up" CTA; do not start the report. |
+| `insufficient_funds` (200, `ok:false`) | Balance < estimate, plan blocks overage | Show "Out of tokens — top up" CTA; do not start the report. See §7. |
 | `job_not_found` / `forbidden` | Job from a different clone | Bug — log and surface. |
 | `invalid_input` (400) | Schema mismatch | Bug — log payload. |
 | Network/5xx on commit | Mission Control unreachable after generation | Retry commit with same `job_id` (commit is idempotent on completed jobs). |
+
+## 7. Out-of-tokens UI flow
+
+When `reserveTokens` rejects with `insufficient_funds`, the response body is:
+
+```json
+{ "ok": false, "error": "insufficient_funds", "available": 240, "required": 1500 }
+```
+
+Surface this as a dedicated state — never a generic toast.
+
+### 7a. Typed error class
+
+Update `tokens.client.ts` so callers can `instanceof`-check the failure:
+
+```typescript
+export class InsufficientTokensError extends Error {
+  constructor(public available: number, public required: number) {
+    super(`insufficient_funds: have ${available}, need ${required}`);
+    this.name = "InsufficientTokensError";
+  }
+}
+
+// inside `call()`:
+if (json.ok === false && json.error === "insufficient_funds") {
+  throw new InsufficientTokensError(
+    (json as any).available ?? 0,
+    (json as any).required ?? 0,
+  );
+}
+```
+
+### 7b. Intake-form guard
+
+```tsx
+import { InsufficientTokensError } from "@/server/tokens.client";
+import { OutOfTokensBanner } from "@/components/out-of-tokens-banner";
+
+const [outOfTokens, setOutOfTokens] = useState<{ available: number; required: number } | null>(null);
+
+async function onSubmit() {
+  setOutOfTokens(null);
+  try {
+    const report = await generateReport({ userId, reportRequestId, inputs });
+    // …
+  } catch (err) {
+    if (err instanceof InsufficientTokensError) {
+      setOutOfTokens({ available: err.available, required: err.required });
+      return; // do NOT show a generic error toast
+    }
+    toast.error("Report generation failed");
+  }
+}
+
+return (
+  <>
+    {outOfTokens && (
+      <OutOfTokensBanner
+        available={outOfTokens.available}
+        required={outOfTokens.required}
+      />
+    )}
+    <ReportForm onSubmit={onSubmit} />
+  </>
+);
+```
+
+### 7c. Banner component
+
+```tsx
+// src/components/out-of-tokens-banner.tsx
+import { AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Link } from "@tanstack/react-router";
+
+export function OutOfTokensBanner({
+  available,
+  required,
+}: { available: number; required: number }) {
+  const short = (required - available).toLocaleString();
+  return (
+    <div
+      role="alert"
+      className="flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/10 p-4"
+    >
+      <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+      <div className="flex-1">
+        <p className="font-semibold text-destructive">Out of report credits</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          This report needs <strong>{required.toLocaleString()}</strong> tokens but
+          you only have <strong>{available.toLocaleString()}</strong> available —
+          you're short by <strong>{short}</strong>.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button asChild>
+            <Link to="/billing/topup">Top up credits</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/billing">Upgrade plan</Link>
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+### 7d. Pre-flight guard (avoid the error entirely)
+
+Before showing the report intake form, call `getBalance(userId)` and disable
+the "Generate report" CTA when `balance.available < estimateTokens(form)`. Pair
+with the same banner so the messaging is identical. The 401-style fallback in
+`onSubmit` then only fires for race conditions (concurrent reports draining
+balance between pre-flight and reserve).
