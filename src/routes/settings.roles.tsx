@@ -363,18 +363,40 @@ function UserRow({
   myLevel: number;
   myUserId: string;
   assignableRoles: AppRole[];
-  onAssign: (userId: string, role: AppRole) => Promise<void>;
-  onRevoke: (roleId: string, userId: string, role: string) => Promise<void>;
+  onAssign: (
+    userId: string,
+    role: AppRole,
+    opts?: { displayName?: string; previousLabel?: string; verb?: string }
+  ) => Promise<boolean>;
+  onRevoke: (
+    roleId: string,
+    userId: string,
+    role: string,
+    opts?: { displayName?: string; silent?: boolean }
+  ) => Promise<boolean>;
 }) {
   const [selectedRole, setSelectedRole] = useState<AppRole | "">(
     assignableRoles[0] ?? ""
   );
-  const [assigning, setAssigning] = useState(false);
+  const [busy, setBusy] = useState<null | "promote" | "demote" | "assign">(null);
+  const [confirm, setConfirm] = useState<null | {
+    kind: "promote" | "demote";
+    from: AppRole | null;
+    to: AppRole | null;
+    roleIdToRevoke?: string;
+  }>(null);
 
-  const userMaxLevel = Math.max(
-    ...u.roles.map((r) => ROLE_META[r.role]?.level ?? 0),
-    0
-  );
+  const displayName = u.display_name ?? u.user_id.slice(0, 8);
+  // Highest current role
+  const currentTop = u.roles
+    .map((r) => r.role)
+    .sort((a, b) => (ROLE_META[b]?.level ?? 0) - (ROLE_META[a]?.level ?? 0))[0];
+  const currentTopMeta = currentTop ? ROLE_META[currentTop] : null;
+  const currentTopEntry = currentTop
+    ? u.roles.find((r) => r.role === currentTop)
+    : undefined;
+
+  const userMaxLevel = currentTopMeta?.level ?? 0;
   const canManage = myLevel > userMaxLevel && u.user_id !== myUserId;
   const isSelf = u.user_id === myUserId;
   const existingRoles = new Set(u.roles.map((r) => r.role));
@@ -382,20 +404,90 @@ function UserRow({
     (r) => !existingRoles.has(r)
   );
 
+  // Promote target = the next role above currentTop that the actor can assign.
+  const ladderAsc: AppRole[] = ["user", "operator", "admin", "super_admin"];
+  const promoteTo: AppRole | null = (() => {
+    const idx = currentTop ? ladderAsc.indexOf(currentTop) : -1;
+    for (let i = idx + 1; i < ladderAsc.length; i++) {
+      const candidate = ladderAsc[i];
+      if (ROLE_META[candidate].level < myLevel && !existingRoles.has(candidate)) {
+        return candidate;
+      }
+    }
+    return null;
+  })();
+
+  // Demote target = next role below currentTop (or null = strip the only role).
+  // We only allow demoting *down to* baseline 'user'; revoking 'user' itself
+  // would lock them out, so block that.
+  const demoteTo: AppRole | null = (() => {
+    if (!currentTop || currentTop === "user") return null;
+    const idx = ladderAsc.indexOf(currentTop);
+    for (let i = idx - 1; i >= 0; i--) {
+      const candidate = ladderAsc[i];
+      // Must be assignable by the actor too (so the user ends up holding it).
+      if (ROLE_META[candidate].level < myLevel) {
+        return candidate;
+      }
+    }
+    return null;
+  })();
+
+  const runPromote = async () => {
+    if (!promoteTo) return;
+    setBusy("promote");
+    await onAssign(u.user_id, promoteTo, {
+      displayName,
+      previousLabel: currentTopMeta?.label ?? "No role",
+      verb: "Promoted",
+    });
+    setBusy(null);
+    setConfirm(null);
+  };
+
+  const runDemote = async () => {
+    if (!currentTopEntry || !demoteTo) return;
+    setBusy("demote");
+    // 1) Ensure the lower role exists (assign silently if missing).
+    let ok = true;
+    if (!existingRoles.has(demoteTo)) {
+      ok = await onAssign(u.user_id, demoteTo, {
+        displayName,
+        verb: "Demoted",
+        previousLabel: currentTopMeta?.label ?? undefined,
+      });
+    }
+    // 2) Revoke the higher role.
+    if (ok) {
+      await onRevoke(currentTopEntry.id, u.user_id, currentTopEntry.role, {
+        displayName,
+        silent: existingRoles.has(demoteTo), // if we didn't assign, surface this toast
+      });
+    }
+    setBusy(null);
+    setConfirm(null);
+  };
+
   return (
     <div className="px-4 py-3">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-bold uppercase text-muted-foreground">
           {(u.display_name ?? u.user_id)?.[0] ?? "?"}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="truncate font-medium text-sm">
-              {u.display_name ?? u.user_id.slice(0, 8)}
-            </span>
+            <span className="truncate font-medium text-sm">{displayName}</span>
             {isSelf && (
               <Badge variant="outline" className="text-[10px]">
                 you
+              </Badge>
+            )}
+            {currentTopMeta && (
+              <Badge
+                variant="secondary"
+                className={cn("text-[10px] font-mono", currentTopMeta.color)}
+              >
+                {currentTopMeta.label}
               </Badge>
             )}
           </div>
@@ -403,6 +495,7 @@ function UserRow({
             {u.user_id}
           </div>
         </div>
+
         <div className="flex flex-wrap gap-1.5">
           {u.roles.map((r) => {
             const meta = ROLE_META[r.role];
@@ -426,6 +519,7 @@ function UserRow({
                       <button
                         type="button"
                         className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        aria-label={`Revoke ${meta.label}`}
                       >
                         <Trash2 className="h-3 w-3 text-destructive" />
                       </button>
@@ -435,14 +529,14 @@ function UserRow({
                         <AlertDialogTitle>Revoke {meta.label}?</AlertDialogTitle>
                         <AlertDialogDescription>
                           This will remove the {meta.label} role from{" "}
-                          {u.display_name ?? "this user"}.
+                          {displayName}.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={() =>
-                            onRevoke(r.id, u.user_id, r.role)
+                            onRevoke(r.id, u.user_id, r.role, { displayName })
                           }
                         >
                           Revoke
@@ -455,65 +549,177 @@ function UserRow({
             );
           })}
         </div>
-        {canManage && availableToAssign.length > 0 && (
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="ml-2">
-                <UserPlus className="mr-1.5 h-3.5 w-3.5" /> Assign
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>
-                  Assign role to {u.display_name ?? u.user_id.slice(0, 8)}
-                </DialogTitle>
-                <DialogDescription>
-                  Select a role below your level ({myLevel}) to assign.
-                </DialogDescription>
-              </DialogHeader>
-              <Select
-                value={selectedRole}
-                onValueChange={(v) => setSelectedRole(v as AppRole)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableToAssign.map((r) => (
-                    <SelectItem key={r} value={r}>
-                      {ROLE_META[r].label} (level {ROLE_META[r].level})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {selectedRole && (
-                <div className="flex items-center gap-2 rounded-md border border-info/30 bg-info/5 px-3 py-2 text-xs text-info">
-                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                  <span>
-                    This grants{" "}
-                    <strong>{ROLE_META[selectedRole as AppRole]?.label}</strong>{" "}
-                    privileges. The user will be able to assign roles below level{" "}
-                    {ROLE_META[selectedRole as AppRole]?.level}.
-                  </span>
-                </div>
-              )}
-              <DialogFooter>
-                <Button
-                  disabled={!selectedRole || assigning}
-                  onClick={async () => {
-                    if (!selectedRole) return;
-                    setAssigning(true);
-                    await onAssign(u.user_id, selectedRole as AppRole);
-                    setAssigning(false);
-                  }}
-                >
-                  {assigning ? "Assigning…" : "Assign role"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+
+        {canManage && (
+          <div className="flex items-center gap-1.5 ml-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!promoteTo || busy !== null}
+              onClick={() =>
+                promoteTo &&
+                setConfirm({
+                  kind: "promote",
+                  from: currentTop ?? null,
+                  to: promoteTo,
+                })
+              }
+              title={
+                promoteTo
+                  ? `Promote to ${ROLE_META[promoteTo].label}`
+                  : "No higher role available to assign"
+              }
+            >
+              <ArrowUp className="mr-1 h-3.5 w-3.5 text-success" />
+              Promote
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!demoteTo || !currentTopEntry || busy !== null}
+              onClick={() =>
+                demoteTo &&
+                currentTopEntry &&
+                setConfirm({
+                  kind: "demote",
+                  from: currentTop ?? null,
+                  to: demoteTo,
+                  roleIdToRevoke: currentTopEntry.id,
+                })
+              }
+              title={
+                demoteTo
+                  ? `Demote to ${ROLE_META[demoteTo].label}`
+                  : "Cannot demote — already at baseline"
+              }
+            >
+              <ArrowDown className="mr-1 h-3.5 w-3.5 text-warning" />
+              Demote
+            </Button>
+            {availableToAssign.length > 0 && (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <UserPlus className="mr-1.5 h-3.5 w-3.5" /> Assign…
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Assign role to {displayName}</DialogTitle>
+                    <DialogDescription>
+                      Select a role below your level ({myLevel}) to assign.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Select
+                    value={selectedRole}
+                    onValueChange={(v) => setSelectedRole(v as AppRole)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableToAssign.map((r) => (
+                        <SelectItem key={r} value={r}>
+                          {ROLE_META[r].label} (level {ROLE_META[r].level})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedRole && (
+                    <div className="flex items-center gap-2 rounded-md border border-info/30 bg-info/5 px-3 py-2 text-xs text-info">
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                      <span>
+                        This grants{" "}
+                        <strong>
+                          {ROLE_META[selectedRole as AppRole]?.label}
+                        </strong>{" "}
+                        privileges. The user will be able to assign roles below
+                        level {ROLE_META[selectedRole as AppRole]?.level}.
+                      </span>
+                    </div>
+                  )}
+                  <DialogFooter>
+                    <Button
+                      disabled={!selectedRole || busy !== null}
+                      onClick={async () => {
+                        if (!selectedRole) return;
+                        setBusy("assign");
+                        await onAssign(u.user_id, selectedRole as AppRole, {
+                          displayName,
+                        });
+                        setBusy(null);
+                      }}
+                    >
+                      {busy === "assign" ? "Assigning…" : "Assign role"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         )}
       </div>
+
+      {/* Promote / Demote confirmation */}
+      <AlertDialog
+        open={!!confirm}
+        onOpenChange={(open) => !open && setConfirm(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirm?.kind === "promote" ? "Promote" : "Demote"} {displayName}?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm">
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {confirm?.from
+                      ? ROLE_META[confirm.from].label
+                      : "No role"}
+                  </span>
+                  {confirm?.kind === "promote" ? (
+                    <ArrowUp className="h-4 w-4 text-success" />
+                  ) : (
+                    <ArrowDown className="h-4 w-4 text-warning" />
+                  )}
+                  <span className="font-mono text-xs font-semibold text-foreground">
+                    {confirm?.to ? ROLE_META[confirm.to].label : "—"}
+                  </span>
+                </div>
+                <div className="text-xs">
+                  {confirm?.kind === "promote"
+                    ? `Grants the ${
+                        confirm.to ? ROLE_META[confirm.to].label : ""
+                      } role on top of any existing roles.`
+                    : `Adds the ${
+                        confirm?.to ? ROLE_META[confirm.to].label : ""
+                      } role (if missing) and revokes the higher ${
+                        confirm?.from ? ROLE_META[confirm.from].label : ""
+                      } role.`}
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy !== null}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={busy !== null}
+              onClick={(e) => {
+                e.preventDefault();
+                if (confirm?.kind === "promote") runPromote();
+                else runDemote();
+              }}
+            >
+              {busy
+                ? "Working…"
+                : confirm?.kind === "promote"
+                  ? "Promote"
+                  : "Demote"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
