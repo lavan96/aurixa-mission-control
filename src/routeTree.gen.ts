@@ -56,6 +56,7 @@ import { Route as ApiPublicTokensPacksRouteImport } from './routes/api.public.to
 import { Route as ApiPublicTokensCommitRouteImport } from './routes/api.public.tokens.commit'
 import { Route as ApiPublicTokensCancelRouteImport } from './routes/api.public.tokens.cancel'
 import { Route as ApiPublicTokensBalanceRouteImport } from './routes/api.public.tokens.balance'
+import { Route as ApiPublicClonesRotateKeyRouteImport } from './routes/api.public.clones.rotate-key'
 
 const YggdrasilRoute = YggdrasilRouteImport.update({
   id: '/yggdrasil',
@@ -294,6 +295,12 @@ const ApiPublicTokensBalanceRoute = ApiPublicTokensBalanceRouteImport.update({
   path: '/api/public/tokens/balance',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicClonesRotateKeyRoute =
+  ApiPublicClonesRotateKeyRouteImport.update({
+    id: '/api/public/clones/rotate-key',
+    path: '/api/public/clones/rotate-key',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -338,6 +345,7 @@ export interface FileRoutesByFullPath {
   '/settings/role-audit': typeof SettingsRoleAuditRoute
   '/settings/roles': typeof SettingsRolesRoute
   '/settings/': typeof SettingsIndexRoute
+  '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
   '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
   '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
   '/api/public/tokens/commit': typeof ApiPublicTokensCommitRoute
@@ -386,6 +394,7 @@ export interface FileRoutesByTo {
   '/settings/role-audit': typeof SettingsRoleAuditRoute
   '/settings/roles': typeof SettingsRolesRoute
   '/settings': typeof SettingsIndexRoute
+  '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
   '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
   '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
   '/api/public/tokens/commit': typeof ApiPublicTokensCommitRoute
@@ -436,6 +445,7 @@ export interface FileRoutesById {
   '/settings/role-audit': typeof SettingsRoleAuditRoute
   '/settings/roles': typeof SettingsRolesRoute
   '/settings/': typeof SettingsIndexRoute
+  '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
   '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
   '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
   '/api/public/tokens/commit': typeof ApiPublicTokensCommitRoute
@@ -487,6 +497,7 @@ export interface FileRouteTypes {
     | '/settings/role-audit'
     | '/settings/roles'
     | '/settings/'
+    | '/api/public/clones/rotate-key'
     | '/api/public/tokens/balance'
     | '/api/public/tokens/cancel'
     | '/api/public/tokens/commit'
@@ -535,6 +546,7 @@ export interface FileRouteTypes {
     | '/settings/role-audit'
     | '/settings/roles'
     | '/settings'
+    | '/api/public/clones/rotate-key'
     | '/api/public/tokens/balance'
     | '/api/public/tokens/cancel'
     | '/api/public/tokens/commit'
@@ -584,6 +596,7 @@ export interface FileRouteTypes {
     | '/settings/role-audit'
     | '/settings/roles'
     | '/settings/'
+    | '/api/public/clones/rotate-key'
     | '/api/public/tokens/balance'
     | '/api/public/tokens/cancel'
     | '/api/public/tokens/commit'
@@ -624,6 +637,7 @@ export interface RootRouteChildren {
   HooksRunSchedulesRoute: typeof HooksRunSchedulesRoute
   HooksTokenAlertsRoute: typeof HooksTokenAlertsRoute
   HooksWarmHealthRoute: typeof HooksWarmHealthRoute
+  ApiPublicClonesRotateKeyRoute: typeof ApiPublicClonesRotateKeyRoute
   ApiPublicTokensBalanceRoute: typeof ApiPublicTokensBalanceRoute
   ApiPublicTokensCancelRoute: typeof ApiPublicTokensCancelRoute
   ApiPublicTokensCommitRoute: typeof ApiPublicTokensCommitRoute
@@ -962,6 +976,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTokensBalanceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/clones/rotate-key': {
+      id: '/api/public/clones/rotate-key'
+      path: '/api/public/clones/rotate-key'
+      fullPath: '/api/public/clones/rotate-key'
+      preLoaderRoute: typeof ApiPublicClonesRotateKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1047,6 +1068,7 @@ const rootRouteChildren: RootRouteChildren = {
   HooksRunSchedulesRoute: HooksRunSchedulesRoute,
   HooksTokenAlertsRoute: HooksTokenAlertsRoute,
   HooksWarmHealthRoute: HooksWarmHealthRoute,
+  ApiPublicClonesRotateKeyRoute: ApiPublicClonesRotateKeyRoute,
   ApiPublicTokensBalanceRoute: ApiPublicTokensBalanceRoute,
   ApiPublicTokensCancelRoute: ApiPublicTokensCancelRoute,
   ApiPublicTokensCommitRoute: ApiPublicTokensCommitRoute,
