@@ -669,6 +669,7 @@ function WebhooksTab() {
   const upsertFn = useServerFn(upsertWebhookEndpoint);
   const deleteFn = useServerFn(deleteWebhookEndpoint);
   const retryFn = useServerFn(retryWebhookDeliveriesNow);
+  const testFn = useServerFn(sendTestWebhook);
   const qc = useQueryClient();
   const { data } = useQuery({ queryKey: ["token-webhooks"], queryFn: () => listFn() });
   const { data: clones } = useQuery({
