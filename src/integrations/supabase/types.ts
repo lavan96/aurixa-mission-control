@@ -392,7 +392,7 @@ export type Database = {
       }
       clone_api_keys: {
         Row: {
-          clone_id: string
+          clone_id: string | null
           created_at: string
           created_by: string | null
           id: string
@@ -404,7 +404,7 @@ export type Database = {
           scopes: string[]
         }
         Insert: {
-          clone_id: string
+          clone_id?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -416,7 +416,7 @@ export type Database = {
           scopes?: string[]
         }
         Update: {
-          clone_id?: string
+          clone_id?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
