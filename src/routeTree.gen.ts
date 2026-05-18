@@ -50,7 +50,9 @@ import { Route as HooksBrandDriftRouteImport } from './routes/hooks.brand-drift'
 import { Route as ClonesNewRouteImport } from './routes/clones.new'
 import { Route as ClonesCloneIdRouteImport } from './routes/clones.$cloneId'
 import { Route as CascadesEventIdRouteImport } from './routes/cascades.$eventId'
+import { Route as BillingTopupRouteImport } from './routes/billing.topup'
 import { Route as ApiPublicTokensReserveRouteImport } from './routes/api.public.tokens.reserve'
+import { Route as ApiPublicTokensPacksRouteImport } from './routes/api.public.tokens.packs'
 import { Route as ApiPublicTokensCommitRouteImport } from './routes/api.public.tokens.commit'
 import { Route as ApiPublicTokensCancelRouteImport } from './routes/api.public.tokens.cancel'
 import { Route as ApiPublicTokensBalanceRouteImport } from './routes/api.public.tokens.balance'
@@ -262,9 +264,19 @@ const CascadesEventIdRoute = CascadesEventIdRouteImport.update({
   path: '/$eventId',
   getParentRoute: () => CascadesRoute,
 } as any)
+const BillingTopupRoute = BillingTopupRouteImport.update({
+  id: '/billing/topup',
+  path: '/billing/topup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicTokensReserveRoute = ApiPublicTokensReserveRouteImport.update({
   id: '/api/public/tokens/reserve',
   path: '/api/public/tokens/reserve',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicTokensPacksRoute = ApiPublicTokensPacksRouteImport.update({
+  id: '/api/public/tokens/packs',
+  path: '/api/public/tokens/packs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicTokensCommitRoute = ApiPublicTokensCommitRouteImport.update({
@@ -305,6 +317,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRouteWithChildren
   '/slo': typeof SloRoute
   '/yggdrasil': typeof YggdrasilRoute
+  '/billing/topup': typeof BillingTopupRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
@@ -328,6 +341,7 @@ export interface FileRoutesByFullPath {
   '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
   '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
   '/api/public/tokens/commit': typeof ApiPublicTokensCommitRoute
+  '/api/public/tokens/packs': typeof ApiPublicTokensPacksRoute
   '/api/public/tokens/reserve': typeof ApiPublicTokensReserveRoute
 }
 export interface FileRoutesByTo {
@@ -351,6 +365,7 @@ export interface FileRoutesByTo {
   '/schedules': typeof SchedulesRoute
   '/slo': typeof SloRoute
   '/yggdrasil': typeof YggdrasilRoute
+  '/billing/topup': typeof BillingTopupRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
@@ -374,6 +389,7 @@ export interface FileRoutesByTo {
   '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
   '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
   '/api/public/tokens/commit': typeof ApiPublicTokensCommitRoute
+  '/api/public/tokens/packs': typeof ApiPublicTokensPacksRoute
   '/api/public/tokens/reserve': typeof ApiPublicTokensReserveRoute
 }
 export interface FileRoutesById {
@@ -399,6 +415,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRouteWithChildren
   '/slo': typeof SloRoute
   '/yggdrasil': typeof YggdrasilRoute
+  '/billing/topup': typeof BillingTopupRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
@@ -422,6 +439,7 @@ export interface FileRoutesById {
   '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
   '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
   '/api/public/tokens/commit': typeof ApiPublicTokensCommitRoute
+  '/api/public/tokens/packs': typeof ApiPublicTokensPacksRoute
   '/api/public/tokens/reserve': typeof ApiPublicTokensReserveRoute
 }
 export interface FileRouteTypes {
@@ -448,6 +466,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/slo'
     | '/yggdrasil'
+    | '/billing/topup'
     | '/cascades/$eventId'
     | '/clones/$cloneId'
     | '/clones/new'
@@ -471,6 +490,7 @@ export interface FileRouteTypes {
     | '/api/public/tokens/balance'
     | '/api/public/tokens/cancel'
     | '/api/public/tokens/commit'
+    | '/api/public/tokens/packs'
     | '/api/public/tokens/reserve'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -494,6 +514,7 @@ export interface FileRouteTypes {
     | '/schedules'
     | '/slo'
     | '/yggdrasil'
+    | '/billing/topup'
     | '/cascades/$eventId'
     | '/clones/$cloneId'
     | '/clones/new'
@@ -517,6 +538,7 @@ export interface FileRouteTypes {
     | '/api/public/tokens/balance'
     | '/api/public/tokens/cancel'
     | '/api/public/tokens/commit'
+    | '/api/public/tokens/packs'
     | '/api/public/tokens/reserve'
   id:
     | '__root__'
@@ -541,6 +563,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/slo'
     | '/yggdrasil'
+    | '/billing/topup'
     | '/cascades/$eventId'
     | '/clones/$cloneId'
     | '/clones/new'
@@ -564,6 +587,7 @@ export interface FileRouteTypes {
     | '/api/public/tokens/balance'
     | '/api/public/tokens/cancel'
     | '/api/public/tokens/commit'
+    | '/api/public/tokens/packs'
     | '/api/public/tokens/reserve'
   fileRoutesById: FileRoutesById
 }
@@ -589,6 +613,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRouteWithChildren
   SloRoute: typeof SloRoute
   YggdrasilRoute: typeof YggdrasilRoute
+  BillingTopupRoute: typeof BillingTopupRoute
   ClonesCloneIdRoute: typeof ClonesCloneIdRoute
   ClonesNewRoute: typeof ClonesNewRoute
   HooksBrandDriftRoute: typeof HooksBrandDriftRoute
@@ -602,6 +627,7 @@ export interface RootRouteChildren {
   ApiPublicTokensBalanceRoute: typeof ApiPublicTokensBalanceRoute
   ApiPublicTokensCancelRoute: typeof ApiPublicTokensCancelRoute
   ApiPublicTokensCommitRoute: typeof ApiPublicTokensCommitRoute
+  ApiPublicTokensPacksRoute: typeof ApiPublicTokensPacksRoute
   ApiPublicTokensReserveRoute: typeof ApiPublicTokensReserveRoute
 }
 
@@ -894,11 +920,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CascadesEventIdRouteImport
       parentRoute: typeof CascadesRoute
     }
+    '/billing/topup': {
+      id: '/billing/topup'
+      path: '/billing/topup'
+      fullPath: '/billing/topup'
+      preLoaderRoute: typeof BillingTopupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/tokens/reserve': {
       id: '/api/public/tokens/reserve'
       path: '/api/public/tokens/reserve'
       fullPath: '/api/public/tokens/reserve'
       preLoaderRoute: typeof ApiPublicTokensReserveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/tokens/packs': {
+      id: '/api/public/tokens/packs'
+      path: '/api/public/tokens/packs'
+      fullPath: '/api/public/tokens/packs'
+      preLoaderRoute: typeof ApiPublicTokensPacksRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/tokens/commit': {
@@ -996,6 +1036,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRouteWithChildren,
   SloRoute: SloRoute,
   YggdrasilRoute: YggdrasilRoute,
+  BillingTopupRoute: BillingTopupRoute,
   ClonesCloneIdRoute: ClonesCloneIdRoute,
   ClonesNewRoute: ClonesNewRoute,
   HooksBrandDriftRoute: HooksBrandDriftRoute,
@@ -1009,6 +1050,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicTokensBalanceRoute: ApiPublicTokensBalanceRoute,
   ApiPublicTokensCancelRoute: ApiPublicTokensCancelRoute,
   ApiPublicTokensCommitRoute: ApiPublicTokensCommitRoute,
+  ApiPublicTokensPacksRoute: ApiPublicTokensPacksRoute,
   ApiPublicTokensReserveRoute: ApiPublicTokensReserveRoute,
 }
 export const routeTree = rootRouteImport
