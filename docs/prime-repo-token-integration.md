@@ -295,3 +295,180 @@ the "Generate report" CTA when `balance.available < estimateTokens(form)`. Pair
 with the same banner so the messaging is identical. The 401-style fallback in
 `onSubmit` then only fires for race conditions (concurrent reports draining
 balance between pre-flight and reserve).
+
+## 8. Idempotency contract
+
+| Endpoint | Idempotency key | Behavior on replay |
+| --- | --- | --- |
+| `reserve` | `(clone_id, idempotency_key)` — pass via `idempotency_key` field | Returns the existing `job_id` and reservation with `idempotent: true` instead of double-reserving. Use the **same key** for retries of the same logical attempt. |
+| `commit` | `job_id` | If the job is already `completed`, returns the original `charged_tokens` with `idempotent: true` — never double-charges. Safe to retry on network/5xx. |
+| `cancel` | `job_id` | No-op if the job is not in `reserved` state; returns `ok: true` regardless. |
+
+**Rule of thumb:** retries with the same `idempotency_key` / `job_id` are
+always safe. Generating a new key for a retry creates a new charge.
+
+## 9. Rate limiting
+
+All `/api/public/tokens/*` endpoints are rate-limited per API key. Default:
+**60 requests / minute / key**. Responses include:
+
+```
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 42
+```
+
+When exceeded the server returns **HTTP 429** with:
+
+```
+Retry-After: 37
+Content-Type: application/json
+
+{ "ok": false, "error": "rate_limited", "count": 73, "limit": 60, "retry_after_seconds": 37 }
+```
+
+Clients should honour `Retry-After` (seconds) and back off. Reserve calls
+that hit the limit do **not** consume tokens — safe to retry after the
+window resets.
+
+## 10. Webhooks (Mission Control → prime repo)
+
+Mission Control fires webhooks for administrative or asynchronous events
+the prime repo cannot observe via the synchronous reserve/commit path.
+
+### 10a. Events
+
+| Event | Fired when |
+| --- | --- |
+| `tokens.balance.updated` | A reserve/commit/cancel/grant/topup/refund changed the tenant balance. Payload includes the latest `{ tenant, balance }` snapshot. |
+| `tokens.key.rotated` | An admin rotated an API key. Payload includes `{ key_id, old_prefix, new_prefix, revoke_at }` so the prime repo can swap secrets before the grace period ends. |
+| `tokens.key.revoked` | A key was revoked (manually or by scheduled rotation). |
+| `tokens.alert` | Threshold alert (80%/100% allowance), cancel-rate spike, or first-use of a key. |
+
+### 10b. Configuring an endpoint
+
+Mission Control admins register endpoints under **Settings → Billing &
+Tokens → Webhooks**. Each endpoint gets a per-endpoint signing secret —
+treat it as sensitive and store in the prime repo as `MISSION_CONTROL_WEBHOOK_SECRET`.
+
+### 10c. Verifying signatures
+
+Every delivery includes these headers:
+
+```
+x-mc-event:     tokens.balance.updated
+x-mc-signature: <hex hmac-sha256 of the raw request body using the endpoint secret>
+```
+
+Verify before processing — never trust the payload otherwise.
+
+```typescript
+// src/routes/api/webhooks/mission-control.ts (prime repo)
+import { createFileRoute } from "@tanstack/react-router";
+import { createHmac, timingSafeEqual } from "crypto";
+
+export const Route = createFileRoute("/api/webhooks/mission-control")({
+  server: {
+    handlers: {
+      POST: async ({ request }) => {
+        const secret = process.env.MISSION_CONTROL_WEBHOOK_SECRET!;
+        const signature = request.headers.get("x-mc-signature");
+        const event = request.headers.get("x-mc-event");
+        const raw = await request.text();
+
+        const expected = createHmac("sha256", secret).update(raw).digest("hex");
+        if (
+          !signature ||
+          signature.length !== expected.length ||
+          !timingSafeEqual(Buffer.from(signature), Buffer.from(expected))
+        ) {
+          return new Response("invalid_signature", { status: 401 });
+        }
+
+        const { data } = JSON.parse(raw) as { event: string; data: any };
+
+        switch (event) {
+          case "tokens.balance.updated":
+            await cacheBalance(data.tenant.external_ref, data.balance);
+            break;
+          case "tokens.key.rotated":
+            await scheduleKeySwap(data.new_prefix, data.revoke_at);
+            break;
+          case "tokens.key.revoked":
+            await alertOnCall(`MC key ${data.key_id} revoked`);
+            break;
+          case "tokens.alert":
+            await notifyOps(data);
+            break;
+        }
+        return new Response("ok");
+      },
+    },
+  },
+});
+```
+
+### 10d. Delivery semantics
+
+- **At-least-once.** Mission Control retries failed deliveries with exponential
+  backoff (1m, 2m, 4m, … capped at 6h) up to 6 attempts. Make handlers
+  idempotent — keyed on `data.tenant.id` + `event` is usually enough.
+- **Best-effort ordering.** Out-of-order arrival is possible during retries —
+  always trust the most recent `balance.updated` snapshot, not deltas.
+- **Timeouts.** Endpoints must respond within 8s or the delivery is recorded
+  as failed and retried.
+
+## 11. Top-up purchase flow
+
+When `reserveTokens` rejects with `insufficient_funds`, surface the
+`OutOfTokensBanner` (see §7c) — but instead of linking to a prime-repo
+`/billing/topup` page, deep-link the user to Mission Control's hosted
+top-up page so an admin can apply credits in seconds.
+
+### 11a. Fetch packs (optional)
+
+If you want to render plan options inline (e.g. "Buy 50k tokens for $25"),
+call the public catalogue endpoint:
+
+```typescript
+export function listTopupPacks(tenantRef: string) {
+  const q = new URLSearchParams({ tenant_ref: tenantRef });
+  return call<{
+    ok: true;
+    packs: Array<{
+      id: string;
+      slug: string;
+      name: string;
+      tokens: number;
+      price_cents: number;
+      currency: string;
+      expires_after_days: number | null;
+    }>;
+    topup_url: string | null; // deep link into Mission Control
+  }>(`/api/public/tokens/packs?${q.toString()}`, { method: "GET" });
+}
+```
+
+### 11b. CTA wiring
+
+Replace the placeholder `/billing/topup` link in `OutOfTokensBanner` with
+the `topup_url` returned by `listTopupPacks(userId)`:
+
+```tsx
+const { packs, topup_url } = await listTopupPacks(userId);
+
+<Button asChild>
+  <a href={topup_url ?? `${MISSION_CONTROL_URL}/billing/topup`} target="_blank" rel="noreferrer">
+    Top up credits
+  </a>
+</Button>
+```
+
+The Mission Control `/billing/topup` page is authenticated — only operators
+with billing access can apply a top-up. End-users without MC access should
+be routed to an in-app "Contact billing" workflow that pages an admin.
+
+### 11c. Refresh balance after top-up
+
+Top-ups fire a `tokens.balance.updated` webhook (see §10). If you've wired
+the webhook handler, balance caches auto-invalidate. Otherwise, re-call
+`getBalance(userId)` when the user returns to the report intake page.
