@@ -143,30 +143,49 @@ function RolesPage() {
     (r) => ROLE_META[r].level < myLevel
   );
 
-  const handleAssign = async (targetUserId: string, role: AppRole) => {
+  const handleAssign = async (
+    targetUserId: string,
+    role: AppRole,
+    opts?: { displayName?: string; previousLabel?: string; verb?: string }
+  ) => {
     const res = await assignRoleFn({ data: { targetUserId, role } });
+    const who = opts?.displayName ?? "user";
+    const verb = opts?.verb ?? "Assigned";
     if (res.ok) {
-      toast.success(`Assigned ${ROLE_META[role].label}`);
+      toast.success(
+        opts?.previousLabel
+          ? `${verb} ${who}: ${opts.previousLabel} → ${ROLE_META[role].label}`
+          : `${verb} ${ROLE_META[role].label} to ${who}`,
+        { icon: <CheckCircle2 className="h-4 w-4" /> }
+      );
       refresh();
-    } else {
-      toast.error(res.error);
+      return true;
     }
+    toast.error(res.error, { description: `Could not ${verb.toLowerCase()} ${who}` });
+    return false;
   };
 
   const handleRevoke = async (
     roleId: string,
     targetUserId: string,
-    role: string
+    role: string,
+    opts?: { displayName?: string; silent?: boolean }
   ) => {
     const res = await revokeRoleFn({
       data: { roleId, targetUserId, role },
     });
+    const who = opts?.displayName ?? "user";
     if (res.ok) {
-      toast.success("Role revoked");
-      refresh();
-    } else {
-      toast.error(res.error);
+      if (!opts?.silent) {
+        toast.success(
+          `Revoked ${ROLE_META[role as AppRole]?.label ?? role} from ${who}`
+        );
+        refresh();
+      }
+      return true;
     }
+    toast.error(res.error, { description: `Could not revoke role from ${who}` });
+    return false;
   };
 
   return (
