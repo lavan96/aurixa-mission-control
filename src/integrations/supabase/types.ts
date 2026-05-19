@@ -958,6 +958,74 @@ export type Database = {
           },
         ]
       }
+      clone_seat_devices: {
+        Row: {
+          clone_id: string | null
+          created_at: string
+          device_fingerprint: string
+          device_label: string | null
+          external_user_id: string
+          first_seen_at: string
+          id: string
+          ip_address: string | null
+          last_seen_at: string
+          metadata: Json
+          platform: string | null
+          revoked_at: string | null
+          revoked_reason: string | null
+          seat_id: string
+          status: string
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          clone_id?: string | null
+          created_at?: string
+          device_fingerprint: string
+          device_label?: string | null
+          external_user_id: string
+          first_seen_at?: string
+          id?: string
+          ip_address?: string | null
+          last_seen_at?: string
+          metadata?: Json
+          platform?: string | null
+          revoked_at?: string | null
+          revoked_reason?: string | null
+          seat_id: string
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          clone_id?: string | null
+          created_at?: string
+          device_fingerprint?: string
+          device_label?: string | null
+          external_user_id?: string
+          first_seen_at?: string
+          id?: string
+          ip_address?: string | null
+          last_seen_at?: string
+          metadata?: Json
+          platform?: string | null
+          revoked_at?: string | null
+          revoked_reason?: string | null
+          seat_id?: string
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clone_seat_devices_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "clone_seats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clone_seat_entitlements: {
         Row: {
           clone_id: string | null
@@ -2589,14 +2657,41 @@ export type Database = {
         }
         Returns: boolean
       }
+      heartbeat_device: { Args: { _device_id: string }; Returns: Json }
       highest_role_level: { Args: { _user_id: string }; Returns: number }
       is_operator: { Args: { _user_id: string }; Returns: boolean }
+      recompute_seat_device_count: {
+        Args: { _seat_id: string }
+        Returns: number
+      }
       recompute_seats_used: { Args: { _clone_id: string }; Returns: number }
       recompute_token_balance: {
         Args: { _tenant_id: string }
         Returns: undefined
       }
       refund_job: { Args: { _job_id: string; _reason?: string }; Returns: Json }
+      register_device: {
+        Args: {
+          _clone_id: string
+          _device_fingerprint: string
+          _device_label?: string
+          _external_user_id: string
+          _ip_address?: string
+          _platform?: string
+          _user_agent?: string
+        }
+        Returns: Json
+      }
+      release_device: {
+        Args: {
+          _clone_id?: string
+          _device_fingerprint?: string
+          _device_id?: string
+          _external_user_id?: string
+          _reason?: string
+        }
+        Returns: Json
+      }
       release_seat: {
         Args: { _clone_id: string; _external_user_id: string; _reason?: string }
         Returns: Json
