@@ -18,7 +18,7 @@ export const Route = createFileRoute("/api/public/seats/devices/register")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const key = await resolveCloneApiKey(request.headers.get("x-clone-api-key"), "seats:manage");
+        const key = await resolveCloneApiKey(request.headers.get("x-clone-api-key"), ["devices:manage", "seats:manage"]);
         if (!key) return jsonResponse({ ok: false, error: "unauthorized" }, 401);
         const rl = await checkRateLimit(key.id);
         if (!rl.ok) {

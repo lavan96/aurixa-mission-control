@@ -1,0 +1,24 @@
+/**
+ * Catalog of API key scopes — safe to import from both client and server.
+ * Used by the Mission Control "Issue key" dialog (scope picker) and by
+ * `resolveCloneApiKey` on the server as the source of truth.
+ */
+export type CloneApiScope = {
+  value: string;
+  group: "tokens" | "seats" | "devices" | "pricing" | "webhooks";
+  label: string;
+  description: string;
+  default?: boolean;
+};
+
+export const CLONE_API_SCOPES: CloneApiScope[] = [
+  { value: "tokens:meter", group: "tokens", label: "Tokens — meter", description: "Reserve, commit, cancel report credits and read tenant balance.", default: true },
+  { value: "tokens:read", group: "tokens", label: "Tokens — read", description: "Read-only access to token packs and balance endpoints.", default: true },
+  { value: "seats:manage", group: "seats", label: "Seats — manage", description: "Reserve, commit, release user seats and read seat entitlement.", default: true },
+  { value: "devices:manage", group: "devices", label: "Devices — manage", description: "Register, heartbeat, release per-seat devices and enforce device caps.", default: true },
+  { value: "pricing:read", group: "pricing", label: "Pricing — read catalog", description: "Read seat plans, roles, addons, setup packages, and per-report credit costs.", default: true },
+  { value: "webhooks:emit", group: "webhooks", label: "Webhooks — emit", description: "Allow this key to trigger outbound webhook deliveries on usage events.", default: false },
+];
+
+export const DEFAULT_SCOPES = CLONE_API_SCOPES.filter((s) => s.default).map((s) => s.value);
+export const SCOPE_VALUES = CLONE_API_SCOPES.map((s) => s.value);

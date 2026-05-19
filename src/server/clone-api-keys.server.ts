@@ -25,9 +25,14 @@ export type ResolvedKey = {
  * Look up an API key by its plaintext form, validating that it exists,
  * is not revoked, and has the required scope. Updates last_used_at on hit.
  */
+// Re-export the shared scope catalog so server code has a single import path.
+export { CLONE_API_SCOPES, DEFAULT_SCOPES, SCOPE_VALUES } from "@/lib/clone-api-scopes";
+export type { CloneApiScope } from "@/lib/clone-api-scopes";
+
+
 export async function resolveCloneApiKey(
   rawKey: string | null,
-  requiredScope: string,
+  requiredScope: string | string[],
 ): Promise<ResolvedKey | null> {
   if (!rawKey || typeof rawKey !== "string" || !rawKey.startsWith("mck_")) {
     return null;
@@ -41,7 +46,9 @@ export async function resolveCloneApiKey(
   if (error || !data) return null;
   if (data.revoked_at) return null;
   const scopes = (data.scopes as string[]) ?? [];
-  if (!scopes.includes(requiredScope)) return null;
+  const required = Array.isArray(requiredScope) ? requiredScope : [requiredScope];
+  // Any-of: at least one required scope must be present.
+  if (!required.some((s) => scopes.includes(s))) return null;
   // best-effort last_used_at update
   await supabaseAdmin
     .from("clone_api_keys")

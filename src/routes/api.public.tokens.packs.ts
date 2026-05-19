@@ -21,7 +21,7 @@ export const Route = createFileRoute("/api/public/tokens/packs")({
       GET: async ({ request }) => {
         const key = await resolveCloneApiKey(
           request.headers.get("x-clone-api-key"),
-          "tokens:meter",
+          ["tokens:read", "tokens:meter"],
         );
         if (!key) return jsonResponse({ ok: false, error: "unauthorized" }, 401);
 
