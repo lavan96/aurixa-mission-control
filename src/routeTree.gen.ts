@@ -63,6 +63,7 @@ import { Route as ApiPublicSeatsReleaseRouteImport } from './routes/api.public.s
 import { Route as ApiPublicSeatsListRouteImport } from './routes/api.public.seats.list'
 import { Route as ApiPublicSeatsEntitlementRouteImport } from './routes/api.public.seats.entitlement'
 import { Route as ApiPublicSeatsCommitRouteImport } from './routes/api.public.seats.commit'
+import { Route as ApiPublicPricingCatalogRouteImport } from './routes/api.public.pricing.catalog'
 import { Route as ApiPublicClonesRotateKeyRouteImport } from './routes/api.public.clones.rotate-key'
 import { Route as ApiPublicSeatsDevicesReleaseRouteImport } from './routes/api.public.seats.devices.release'
 import { Route as ApiPublicSeatsDevicesRegisterRouteImport } from './routes/api.public.seats.devices.register'
@@ -342,6 +343,11 @@ const ApiPublicSeatsCommitRoute = ApiPublicSeatsCommitRouteImport.update({
   path: '/api/public/seats/commit',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicPricingCatalogRoute = ApiPublicPricingCatalogRouteImport.update({
+  id: '/api/public/pricing/catalog',
+  path: '/api/public/pricing/catalog',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicClonesRotateKeyRoute =
   ApiPublicClonesRotateKeyRouteImport.update({
     id: '/api/public/clones/rotate-key',
@@ -419,6 +425,7 @@ export interface FileRoutesByFullPath {
   '/settings/roles': typeof SettingsRolesRoute
   '/settings/': typeof SettingsIndexRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
+  '/api/public/pricing/catalog': typeof ApiPublicPricingCatalogRoute
   '/api/public/seats/commit': typeof ApiPublicSeatsCommitRoute
   '/api/public/seats/entitlement': typeof ApiPublicSeatsEntitlementRoute
   '/api/public/seats/list': typeof ApiPublicSeatsListRoute
@@ -479,6 +486,7 @@ export interface FileRoutesByTo {
   '/settings/roles': typeof SettingsRolesRoute
   '/settings': typeof SettingsIndexRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
+  '/api/public/pricing/catalog': typeof ApiPublicPricingCatalogRoute
   '/api/public/seats/commit': typeof ApiPublicSeatsCommitRoute
   '/api/public/seats/entitlement': typeof ApiPublicSeatsEntitlementRoute
   '/api/public/seats/list': typeof ApiPublicSeatsListRoute
@@ -541,6 +549,7 @@ export interface FileRoutesById {
   '/settings/roles': typeof SettingsRolesRoute
   '/settings/': typeof SettingsIndexRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
+  '/api/public/pricing/catalog': typeof ApiPublicPricingCatalogRoute
   '/api/public/seats/commit': typeof ApiPublicSeatsCommitRoute
   '/api/public/seats/entitlement': typeof ApiPublicSeatsEntitlementRoute
   '/api/public/seats/list': typeof ApiPublicSeatsListRoute
@@ -604,6 +613,7 @@ export interface FileRouteTypes {
     | '/settings/roles'
     | '/settings/'
     | '/api/public/clones/rotate-key'
+    | '/api/public/pricing/catalog'
     | '/api/public/seats/commit'
     | '/api/public/seats/entitlement'
     | '/api/public/seats/list'
@@ -664,6 +674,7 @@ export interface FileRouteTypes {
     | '/settings/roles'
     | '/settings'
     | '/api/public/clones/rotate-key'
+    | '/api/public/pricing/catalog'
     | '/api/public/seats/commit'
     | '/api/public/seats/entitlement'
     | '/api/public/seats/list'
@@ -725,6 +736,7 @@ export interface FileRouteTypes {
     | '/settings/roles'
     | '/settings/'
     | '/api/public/clones/rotate-key'
+    | '/api/public/pricing/catalog'
     | '/api/public/seats/commit'
     | '/api/public/seats/entitlement'
     | '/api/public/seats/list'
@@ -777,6 +789,7 @@ export interface RootRouteChildren {
   HooksTokenAlertsRoute: typeof HooksTokenAlertsRoute
   HooksWarmHealthRoute: typeof HooksWarmHealthRoute
   ApiPublicClonesRotateKeyRoute: typeof ApiPublicClonesRotateKeyRoute
+  ApiPublicPricingCatalogRoute: typeof ApiPublicPricingCatalogRoute
   ApiPublicSeatsCommitRoute: typeof ApiPublicSeatsCommitRoute
   ApiPublicSeatsEntitlementRoute: typeof ApiPublicSeatsEntitlementRoute
   ApiPublicSeatsListRoute: typeof ApiPublicSeatsListRoute
@@ -1173,6 +1186,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSeatsCommitRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/pricing/catalog': {
+      id: '/api/public/pricing/catalog'
+      path: '/api/public/pricing/catalog'
+      fullPath: '/api/public/pricing/catalog'
+      preLoaderRoute: typeof ApiPublicPricingCatalogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/clones/rotate-key': {
       id: '/api/public/clones/rotate-key'
       path: '/api/public/clones/rotate-key'
@@ -1296,6 +1316,7 @@ const rootRouteChildren: RootRouteChildren = {
   HooksTokenAlertsRoute: HooksTokenAlertsRoute,
   HooksWarmHealthRoute: HooksWarmHealthRoute,
   ApiPublicClonesRotateKeyRoute: ApiPublicClonesRotateKeyRoute,
+  ApiPublicPricingCatalogRoute: ApiPublicPricingCatalogRoute,
   ApiPublicSeatsCommitRoute: ApiPublicSeatsCommitRoute,
   ApiPublicSeatsEntitlementRoute: ApiPublicSeatsEntitlementRoute,
   ApiPublicSeatsListRoute: ApiPublicSeatsListRoute,
@@ -1314,3 +1335,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
