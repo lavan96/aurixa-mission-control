@@ -97,7 +97,7 @@ function SeatsPage() {
             <Users className="h-6 w-6" /> Seat Plans
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Seat entitlements per clone. Prime repo baseline is the Starter tier (4 seats).
+            Seat entitlements per clone, aligned with the Aurixa Systems pricing guide. Prime repo baseline is the Launch tier (2 included users).
           </p>
         </div>
         <Link to="/settings/billing" className="flex items-center gap-1 font-mono text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground">
@@ -109,7 +109,7 @@ function SeatsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Plan catalog</CardTitle>
-          <CardDescription>Mock pricing — wire to a real billing provider later.</CardDescription>
+          <CardDescription>Indicative AUD pricing from the Aurixa Systems pricing guide — excludes GST. Final pricing confirmed after discovery.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-2">
