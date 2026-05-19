@@ -83,6 +83,9 @@ const KIND_VALUES = [
   "module_removed",
   "tokens_key_issued",
   "tokens_key_rotated",
+  "seat_limit_approaching",
+  "seat_limit_reached",
+  "seat_plan_changed",
 ] as const;
 
 const SEVERITY_VALUES = ["info", "success", "warning", "error"] as const;
@@ -105,6 +108,9 @@ const KIND_OPTIONS: { value: Kind | "all"; label: string }[] = [
   { value: "module_removed", label: "Module removed" },
   { value: "tokens_key_issued", label: "API key issued" },
   { value: "tokens_key_rotated", label: "API key rotated" },
+  { value: "seat_limit_approaching" as Kind, label: "Seat limit approaching" },
+  { value: "seat_limit_reached" as Kind, label: "Seat limit reached" },
+  { value: "seat_plan_changed" as Kind, label: "Seat plan changed" },
 ];
 
 const SEVERITY_OPTIONS: { value: Severity | "all"; label: string }[] = [
