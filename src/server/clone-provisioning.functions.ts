@@ -165,7 +165,7 @@ export const provisionClone = createServerFn({ method: "POST" })
         .insert({
           clone_id: inserted.id,
           label: "auto-provisioned",
-          scopes: ["tokens:meter", "clones:rotate"],
+          scopes: ["tokens:meter", "clones:rotate", "seats:manage"],
           key_hash: hash,
           key_prefix: prefix,
           created_by: userId,

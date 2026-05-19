@@ -958,6 +958,104 @@ export type Database = {
           },
         ]
       }
+      clone_seat_entitlements: {
+        Row: {
+          clone_id: string | null
+          created_at: string
+          expires_at: string | null
+          granted_at: string
+          id: string
+          notes: string | null
+          seat_plan_id: string
+          seats_used: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          clone_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          granted_at?: string
+          id?: string
+          notes?: string | null
+          seat_plan_id: string
+          seats_used?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          clone_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          granted_at?: string
+          id?: string
+          notes?: string | null
+          seat_plan_id?: string
+          seats_used?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clone_seat_entitlements_seat_plan_id_fkey"
+            columns: ["seat_plan_id"]
+            isOneToOne: false
+            referencedRelation: "seat_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clone_seats: {
+        Row: {
+          clone_id: string | null
+          committed_at: string | null
+          created_at: string
+          device_count: number
+          display_name: string | null
+          email: string | null
+          external_user_id: string
+          id: string
+          idempotency_key: string | null
+          metadata: Json
+          removed_at: string | null
+          reservation_expires_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          clone_id?: string | null
+          committed_at?: string | null
+          created_at?: string
+          device_count?: number
+          display_name?: string | null
+          email?: string | null
+          external_user_id: string
+          id?: string
+          idempotency_key?: string | null
+          metadata?: Json
+          removed_at?: string | null
+          reservation_expires_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          clone_id?: string | null
+          committed_at?: string | null
+          created_at?: string
+          device_count?: number
+          display_name?: string | null
+          email?: string | null
+          external_user_id?: string
+          id?: string
+          idempotency_key?: string | null
+          metadata?: Json
+          removed_at?: string | null
+          reservation_expires_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       clones: {
         Row: {
           cloudflare_enabled: boolean
@@ -1957,6 +2055,90 @@ export type Database = {
         }
         Relationships: []
       }
+      seat_audit: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          clone_id: string | null
+          created_at: string
+          external_user_id: string | null
+          id: string
+          metadata: Json
+          seat_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          clone_id?: string | null
+          created_at?: string
+          external_user_id?: string | null
+          id?: string
+          metadata?: Json
+          seat_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          clone_id?: string | null
+          created_at?: string
+          external_user_id?: string | null
+          id?: string
+          metadata?: Json
+          seat_id?: string | null
+        }
+        Relationships: []
+      }
+      seat_plans: {
+        Row: {
+          created_at: string
+          currency: string
+          description: string | null
+          device_limit_per_seat: number | null
+          id: string
+          is_active: boolean
+          is_default: boolean
+          metadata: Json
+          name: string
+          overage_policy: string
+          price_cents: number
+          seat_limit: number
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          description?: string | null
+          device_limit_per_seat?: number | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          metadata?: Json
+          name: string
+          overage_policy?: string
+          price_cents?: number
+          seat_limit: number
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          description?: string | null
+          device_limit_per_seat?: number | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          metadata?: Json
+          name?: string
+          overage_policy?: string
+          price_cents?: number
+          seat_limit?: number
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tenants: {
         Row: {
           clone_id: string | null
@@ -2384,11 +2566,13 @@ export type Database = {
         Args: { _key_id: string; _limit?: number }
         Returns: Json
       }
+      commit_seat: { Args: { _seat_id: string }; Returns: Json }
       commit_tokens: {
         Args: { _actual_tokens: number; _job_id: string; _result_meta?: Json }
         Returns: Json
       }
       expire_stale_reservations: { Args: never; Returns: Json }
+      expire_stale_seat_reservations: { Args: never; Returns: Json }
       grant_tokens: {
         Args: {
           _expires_at?: string
@@ -2407,11 +2591,27 @@ export type Database = {
       }
       highest_role_level: { Args: { _user_id: string }; Returns: number }
       is_operator: { Args: { _user_id: string }; Returns: boolean }
+      recompute_seats_used: { Args: { _clone_id: string }; Returns: number }
       recompute_token_balance: {
         Args: { _tenant_id: string }
         Returns: undefined
       }
       refund_job: { Args: { _job_id: string; _reason?: string }; Returns: Json }
+      release_seat: {
+        Args: { _clone_id: string; _external_user_id: string; _reason?: string }
+        Returns: Json
+      }
+      reserve_seat: {
+        Args: {
+          _clone_id: string
+          _display_name: string
+          _email: string
+          _external_user_id: string
+          _idempotency_key: string
+          _ttl_seconds?: number
+        }
+        Returns: Json
+      }
       reserve_tokens: {
         Args: {
           _clone_id: string
@@ -2495,6 +2695,9 @@ export type Database = {
         | "tokens_key_first_use"
         | "tokens_key_issued"
         | "tokens_key_rotated"
+        | "seat_limit_approaching"
+        | "seat_limit_reached"
+        | "seat_plan_changed"
       notification_severity: "info" | "success" | "warning" | "error"
       overage_policy: "block" | "topup_only" | "pay_as_you_go"
       provisioning_method: "fork" | "template" | "clone"
@@ -2697,6 +2900,9 @@ export const Constants = {
         "tokens_key_first_use",
         "tokens_key_issued",
         "tokens_key_rotated",
+        "seat_limit_approaching",
+        "seat_limit_reached",
+        "seat_plan_changed",
       ],
       notification_severity: ["info", "success", "warning", "error"],
       overage_policy: ["block", "topup_only", "pay_as_you_go"],
