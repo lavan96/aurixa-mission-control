@@ -52,6 +52,7 @@ import { Route as ClonesCloneIdRouteImport } from './routes/clones.$cloneId'
 import { Route as CascadesEventIdRouteImport } from './routes/cascades.$eventId'
 import { Route as BillingTopupRouteImport } from './routes/billing.topup'
 import { Route as BillingSeatsRouteImport } from './routes/billing.seats'
+import { Route as BillingCatalogRouteImport } from './routes/billing.catalog'
 import { Route as ApiPublicTokensReserveRouteImport } from './routes/api.public.tokens.reserve'
 import { Route as ApiPublicTokensPacksRouteImport } from './routes/api.public.tokens.packs'
 import { Route as ApiPublicTokensCommitRouteImport } from './routes/api.public.tokens.commit'
@@ -285,6 +286,11 @@ const BillingSeatsRoute = BillingSeatsRouteImport.update({
   path: '/billing/seats',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BillingCatalogRoute = BillingCatalogRouteImport.update({
+  id: '/billing/catalog',
+  path: '/billing/catalog',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicTokensReserveRoute = ApiPublicTokensReserveRouteImport.update({
   id: '/api/public/tokens/reserve',
   path: '/api/public/tokens/reserve',
@@ -389,6 +395,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRouteWithChildren
   '/slo': typeof SloRoute
   '/yggdrasil': typeof YggdrasilRoute
+  '/billing/catalog': typeof BillingCatalogRoute
   '/billing/seats': typeof BillingSeatsRoute
   '/billing/topup': typeof BillingTopupRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
@@ -448,6 +455,7 @@ export interface FileRoutesByTo {
   '/schedules': typeof SchedulesRoute
   '/slo': typeof SloRoute
   '/yggdrasil': typeof YggdrasilRoute
+  '/billing/catalog': typeof BillingCatalogRoute
   '/billing/seats': typeof BillingSeatsRoute
   '/billing/topup': typeof BillingTopupRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
@@ -509,6 +517,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRouteWithChildren
   '/slo': typeof SloRoute
   '/yggdrasil': typeof YggdrasilRoute
+  '/billing/catalog': typeof BillingCatalogRoute
   '/billing/seats': typeof BillingSeatsRoute
   '/billing/topup': typeof BillingTopupRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
@@ -571,6 +580,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/slo'
     | '/yggdrasil'
+    | '/billing/catalog'
     | '/billing/seats'
     | '/billing/topup'
     | '/cascades/$eventId'
@@ -630,6 +640,7 @@ export interface FileRouteTypes {
     | '/schedules'
     | '/slo'
     | '/yggdrasil'
+    | '/billing/catalog'
     | '/billing/seats'
     | '/billing/topup'
     | '/cascades/$eventId'
@@ -690,6 +701,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/slo'
     | '/yggdrasil'
+    | '/billing/catalog'
     | '/billing/seats'
     | '/billing/topup'
     | '/cascades/$eventId'
@@ -751,6 +763,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRouteWithChildren
   SloRoute: typeof SloRoute
   YggdrasilRoute: typeof YggdrasilRoute
+  BillingCatalogRoute: typeof BillingCatalogRoute
   BillingSeatsRoute: typeof BillingSeatsRoute
   BillingTopupRoute: typeof BillingTopupRoute
   ClonesCloneIdRoute: typeof ClonesCloneIdRoute
@@ -1083,6 +1096,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BillingSeatsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/billing/catalog': {
+      id: '/billing/catalog'
+      path: '/billing/catalog'
+      fullPath: '/billing/catalog'
+      preLoaderRoute: typeof BillingCatalogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/tokens/reserve': {
       id: '/api/public/tokens/reserve'
       path: '/api/public/tokens/reserve'
@@ -1262,6 +1282,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRouteWithChildren,
   SloRoute: SloRoute,
   YggdrasilRoute: YggdrasilRoute,
+  BillingCatalogRoute: BillingCatalogRoute,
   BillingSeatsRoute: BillingSeatsRoute,
   BillingTopupRoute: BillingTopupRoute,
   ClonesCloneIdRoute: ClonesCloneIdRoute,
