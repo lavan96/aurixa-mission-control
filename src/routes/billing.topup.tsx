@@ -289,17 +289,26 @@ function TopupBody() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>{p.name}</CardTitle>
-                <Badge variant="secondary">{p.slug}</Badge>
+                <div className="flex items-center gap-1">
+                  {p.metadata?.popular && <Badge>Popular</Badge>}
+                  <Badge variant="secondary">{p.slug}</Badge>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="flex flex-1 flex-col gap-3">
               <p className="text-3xl font-semibold tracking-tight">
                 {p.tokens.toLocaleString()}{" "}
-                <span className="text-sm font-normal text-muted-foreground">tokens</span>
+                <span className="text-sm font-normal text-muted-foreground">credits</span>
               </p>
-              <p className="text-sm text-muted-foreground">
-                {money(p.price_cents, p.currency)}
-                {p.expires_after_days ? ` · expires in ${p.expires_after_days}d` : " · no expiry"}
+              <p className="text-sm">
+                <span className="font-medium">{priceRange(p)}</span>
+                <span className="text-muted-foreground"> AUD · ex GST</span>
+              </p>
+              {p.metadata?.best_for && (
+                <p className="text-xs text-muted-foreground">{p.metadata.best_for}</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {p.expires_after_days ? `Expires in ${p.expires_after_days}d` : "No expiry"}
               </p>
               <Button className="mt-auto" disabled={!tenant} onClick={() => requestBuy(p)}>
                 {tenant ? "Apply top-up" : "Select tenant"}
