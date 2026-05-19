@@ -561,9 +561,9 @@ function KeysTab() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-sm">Clone API keys</CardTitle>
-        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setIssuedKey(null); setLabel(""); setCloneId(""); } }}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setIssuedKey(null); setLabel(""); setCloneId(""); setSelectedScopes(DEFAULT_SCOPES); } }}>
           <DialogTrigger asChild><Button size="sm"><KeyRound className="mr-1 h-3 w-3" />Issue key</Button></DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-lg">
             <DialogHeader><DialogTitle>{issuedKey ? "Key issued" : "Issue clone API key"}</DialogTitle></DialogHeader>
             {issuedKey ? (
               <div className="space-y-2">
@@ -574,7 +574,7 @@ function KeysTab() {
                 </div>
               </div>
             ) : (
-              <div className="grid gap-2 text-sm">
+              <div className="grid gap-3 text-sm">
                 <Select value={cloneId} onValueChange={setCloneId}>
                   <SelectTrigger><SelectValue placeholder="Pick target…" /></SelectTrigger>
                   <SelectContent>
@@ -583,17 +583,49 @@ function KeysTab() {
                   </SelectContent>
                 </Select>
                 <Input placeholder="Label (e.g. prod, staging)" value={label} onChange={(e) => setLabel(e.target.value)} />
+                <div className="rounded border border-border p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Scopes</p>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" type="button"
+                        onClick={() => setSelectedScopes(CLONE_API_SCOPES.map((s) => s.value))}>All</Button>
+                      <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" type="button"
+                        onClick={() => setSelectedScopes(DEFAULT_SCOPES)}>Defaults</Button>
+                      <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" type="button"
+                        onClick={() => setSelectedScopes([])}>None</Button>
+                    </div>
+                  </div>
+                  <div className="grid gap-2 max-h-64 overflow-y-auto pr-1">
+                    {CLONE_API_SCOPES.map((s) => (
+                      <label key={s.value} className="flex items-start gap-2 cursor-pointer rounded border border-transparent p-2 hover:border-border">
+                        <Checkbox
+                          checked={selectedScopes.includes(s.value)}
+                          onCheckedChange={(c) => toggleScope(s.value, c === true)}
+                          className="mt-0.5"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs">{s.value}</span>
+                            <span className="text-xs text-muted-foreground">· {s.label}</span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground">{s.description}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
             <DialogFooter>
               {issuedKey ? <Button onClick={() => setOpen(false)}>Done</Button> : (
-                <Button disabled={!cloneId || !label} onClick={async () => {
+                <Button disabled={!cloneId || !label || selectedScopes.length === 0} onClick={async () => {
                   const targetCloneId = cloneId === "__prime__" ? null : cloneId;
-                  const r = await createFn({ data: { cloneId: targetCloneId, label, scopes: ["tokens:meter"] } });
+                  const r = await createFn({ data: { cloneId: targetCloneId, label, scopes: selectedScopes } });
                   if (r.ok) { setIssuedKey(r.key); qc.invalidateQueries({ queryKey: ["clone-api-keys"] }); } else toast.error(r.error);
                 }}>Issue</Button>
               )}
             </DialogFooter>
+
           </DialogContent>
         </Dialog>
       </CardHeader>
