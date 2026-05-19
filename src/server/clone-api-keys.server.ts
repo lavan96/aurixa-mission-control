@@ -25,25 +25,10 @@ export type ResolvedKey = {
  * Look up an API key by its plaintext form, validating that it exists,
  * is not revoked, and has the required scope. Updates last_used_at on hit.
  */
-/**
- * Catalog of API key scopes exposed to operators when issuing keys.
- * Group → human description. Used by the Mission Control UI to render
- * the scope picker and by integration docs as the source of truth.
- */
-export const CLONE_API_SCOPES: Array<{
-  value: string;
-  group: "tokens" | "seats" | "devices" | "pricing" | "webhooks";
-  label: string;
-  description: string;
-  default?: boolean;
-}> = [
-  { value: "tokens:meter", group: "tokens", label: "Tokens — meter", description: "Reserve, commit, cancel report credits and read tenant balance.", default: true },
-  { value: "tokens:read", group: "tokens", label: "Tokens — read", description: "Read-only access to token packs and balance endpoints.", default: true },
-  { value: "seats:manage", group: "seats", label: "Seats — manage", description: "Reserve, commit, release user seats and read seat entitlement.", default: true },
-  { value: "devices:manage", group: "devices", label: "Devices — manage", description: "Register, heartbeat, release per-seat devices and enforce device caps.", default: true },
-  { value: "pricing:read", group: "pricing", label: "Pricing — read catalog", description: "Read seat plans, roles, addons, setup packages, and per-report credit costs.", default: true },
-  { value: "webhooks:emit", group: "webhooks", label: "Webhooks — emit", description: "Allow this key to trigger outbound webhook deliveries on usage events.", default: false },
-];
+// Re-export the shared scope catalog so server code has a single import path.
+export { CLONE_API_SCOPES, DEFAULT_SCOPES, SCOPE_VALUES } from "@/lib/clone-api-scopes";
+export type { CloneApiScope } from "@/lib/clone-api-scopes";
+
 
 export async function resolveCloneApiKey(
   rawKey: string | null,
