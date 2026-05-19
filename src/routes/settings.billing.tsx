@@ -631,13 +631,21 @@ function KeysTab() {
       </CardHeader>
       <CardContent>
         <Table>
-          <TableHeader><TableRow><TableHead>Clone</TableHead><TableHead>Label</TableHead><TableHead>Prefix</TableHead><TableHead>Last used</TableHead><TableHead>Status</TableHead><TableHead></TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>Clone</TableHead><TableHead>Label</TableHead><TableHead>Prefix</TableHead><TableHead>Scopes</TableHead><TableHead>Last used</TableHead><TableHead>Status</TableHead><TableHead></TableHead></TableRow></TableHeader>
           <TableBody>
             {data?.keys.map((k: any) => (
               <TableRow key={k.id}>
                 <TableCell>{k.clones?.name ?? <span className="font-mono text-xs text-muted-foreground">prime repo</span>}</TableCell>
                 <TableCell>{k.label}</TableCell>
                 <TableCell className="font-mono text-xs">{k.key_prefix}…</TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1 max-w-[260px]">
+                    {((k.scopes as string[]) ?? []).map((s) => (
+                      <Badge key={s} variant="outline" className="font-mono text-[10px]">{s}</Badge>
+                    ))}
+                    {!(k.scopes?.length) && <span className="text-xs text-muted-foreground">none</span>}
+                  </div>
+                </TableCell>
                 <TableCell className="text-xs">{k.last_used_at ? new Date(k.last_used_at).toLocaleString() : "never"}</TableCell>
                 <TableCell>
                   {k.revoked_at ? <Badge variant="destructive">revoked</Badge>
@@ -663,7 +671,7 @@ function KeysTab() {
                 </TableCell>
               </TableRow>
             ))}
-            {!data?.keys.length && <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground">No keys issued.</TableCell></TableRow>}
+            {!data?.keys.length && <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground">No keys issued.</TableCell></TableRow>}
           </TableBody>
         </Table>
       </CardContent>
