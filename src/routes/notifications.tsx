@@ -86,6 +86,9 @@ const KIND_VALUES = [
   "seat_limit_approaching",
   "seat_limit_reached",
   "seat_plan_changed",
+  "device_limit_reached",
+  "device_registered",
+  "device_released",
 ] as const;
 
 const SEVERITY_VALUES = ["info", "success", "warning", "error"] as const;
