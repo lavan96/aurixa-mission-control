@@ -231,6 +231,51 @@ function SeatsPage() {
         </CardContent>
       </Card>
 
+      {/* Devices */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Smartphone className="h-4 w-4" /> Active devices
+          </CardTitle>
+          <CardDescription>
+            {deviceSumQ.data?.total_active ?? 0} active · {deviceSumQ.data?.total_revoked ?? 0} revoked across fleet. Per-seat cap set by plan.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>User</TableHead>
+                <TableHead>Label</TableHead>
+                <TableHead>Platform</TableHead>
+                <TableHead>Fingerprint</TableHead>
+                <TableHead>Last seen</TableHead>
+                <TableHead className="w-16"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(devicesQ.data?.devices ?? []).map((d) => (
+                <TableRow key={d.id}>
+                  <TableCell className="font-mono text-xs">{d.external_user_id}</TableCell>
+                  <TableCell className="text-xs">{d.device_label ?? <span className="text-muted-foreground">—</span>}</TableCell>
+                  <TableCell className="text-xs">{d.platform ?? <span className="text-muted-foreground">—</span>}</TableCell>
+                  <TableCell className="font-mono text-[10px] text-muted-foreground">{String(d.device_fingerprint).slice(0, 16)}…</TableCell>
+                  <TableCell className="font-mono text-xs">{new Date(d.last_seen_at).toLocaleString()}</TableCell>
+                  <TableCell>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => revokeDevice(d.id)} title="Revoke device">
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {(devicesQ.data?.devices ?? []).length === 0 && (
+                <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-8">No active devices yet. Devices register via POST /api/public/seats/devices/register from each clone.</TableCell></TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
       {/* Audit */}
       <Card>
         <CardHeader>
