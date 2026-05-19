@@ -13,7 +13,10 @@ export async function fireSeatWebhook(
     | "seats.released"
     | "seats.limit.approaching"
     | "seats.limit.reached"
-    | "seats.plan.changed",
+    | "seats.plan.changed"
+    | "devices.registered"
+    | "devices.released"
+    | "devices.limit.reached",
   payload: Record<string, unknown>,
   cloneId?: string | null,
 ) {
