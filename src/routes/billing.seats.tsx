@@ -39,10 +39,15 @@ function SeatsPage() {
   const entsFn = useServerFn(listSeatEntitlements);
   const auditFn = useServerFn(listSeatAudit);
   const assignFn = useServerFn(assignSeatPlan);
+  const devicesFn = useServerFn(listSeatDevices);
+  const revokeDeviceFn = useServerFn(revokeSeatDevice);
+  const deviceSummaryFn = useServerFn(seatDeviceSummary);
 
   const plansQ = useQuery({ queryKey: ["seats", "plans"], queryFn: () => plansFn({}) });
   const entsQ = useQuery({ queryKey: ["seats", "ents"], queryFn: () => entsFn({}) });
   const auditQ = useQuery({ queryKey: ["seats", "audit"], queryFn: () => auditFn({ data: { limit: 50 } }) });
+  const devicesQ = useQuery({ queryKey: ["seats", "devices"], queryFn: () => devicesFn({ data: { status: "active", limit: 200 } }) });
+  const deviceSumQ = useQuery({ queryKey: ["seats", "devices", "summary"], queryFn: () => deviceSummaryFn({}) });
 
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<"price-asc" | "price-desc" | "seats-asc" | "seats-desc">("price-asc");
