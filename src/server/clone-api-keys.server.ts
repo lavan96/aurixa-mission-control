@@ -25,9 +25,29 @@ export type ResolvedKey = {
  * Look up an API key by its plaintext form, validating that it exists,
  * is not revoked, and has the required scope. Updates last_used_at on hit.
  */
+/**
+ * Catalog of API key scopes exposed to operators when issuing keys.
+ * Group → human description. Used by the Mission Control UI to render
+ * the scope picker and by integration docs as the source of truth.
+ */
+export const CLONE_API_SCOPES: Array<{
+  value: string;
+  group: "tokens" | "seats" | "devices" | "pricing" | "webhooks";
+  label: string;
+  description: string;
+  default?: boolean;
+}> = [
+  { value: "tokens:meter", group: "tokens", label: "Tokens — meter", description: "Reserve, commit, cancel report credits and read tenant balance.", default: true },
+  { value: "tokens:read", group: "tokens", label: "Tokens — read", description: "Read-only access to token packs and balance endpoints.", default: true },
+  { value: "seats:manage", group: "seats", label: "Seats — manage", description: "Reserve, commit, release user seats and read seat entitlement.", default: true },
+  { value: "devices:manage", group: "devices", label: "Devices — manage", description: "Register, heartbeat, release per-seat devices and enforce device caps.", default: true },
+  { value: "pricing:read", group: "pricing", label: "Pricing — read catalog", description: "Read seat plans, roles, addons, setup packages, and per-report credit costs.", default: true },
+  { value: "webhooks:emit", group: "webhooks", label: "Webhooks — emit", description: "Allow this key to trigger outbound webhook deliveries on usage events.", default: false },
+];
+
 export async function resolveCloneApiKey(
   rawKey: string | null,
-  requiredScope: string,
+  requiredScope: string | string[],
 ): Promise<ResolvedKey | null> {
   if (!rawKey || typeof rawKey !== "string" || !rawKey.startsWith("mck_")) {
     return null;
@@ -41,7 +61,9 @@ export async function resolveCloneApiKey(
   if (error || !data) return null;
   if (data.revoked_at) return null;
   const scopes = (data.scopes as string[]) ?? [];
-  if (!scopes.includes(requiredScope)) return null;
+  const required = Array.isArray(requiredScope) ? requiredScope : [requiredScope];
+  // Any-of: at least one required scope must be present.
+  if (!required.some((s) => scopes.includes(s))) return null;
   // best-effort last_used_at update
   await supabaseAdmin
     .from("clone_api_keys")
