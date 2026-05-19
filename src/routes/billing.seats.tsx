@@ -131,38 +131,64 @@ function SeatsPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {filtered.map((p) => (
-              <Card key={p.id} className="border-border/60">
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="text-base">{p.name}</CardTitle>
-                    {p.is_default && (
-                      <Badge variant="outline" className="font-mono text-[10px]">DEFAULT</Badge>
+            {filtered.map((p) => {
+              const meta = ((p as any).metadata ?? {}) as {
+                price_min_cents?: number;
+                price_max_cents?: number;
+                included_credits_min?: number | null;
+                included_credits_max?: number | null;
+                custom_credits?: boolean;
+                best_for?: string;
+                highlights?: string[];
+              };
+              const priceLabel =
+                meta.price_min_cents != null && meta.price_max_cents != null && meta.price_min_cents !== meta.price_max_cents
+                  ? `${money(meta.price_min_cents, p.currency)} – ${money(meta.price_max_cents, p.currency)}`
+                  : money(p.price_cents, p.currency);
+              const creditsLabel = meta.custom_credits
+                ? "Custom allocation"
+                : meta.included_credits_min != null && meta.included_credits_max != null
+                  ? `${meta.included_credits_min}–${meta.included_credits_max} / mo`
+                  : "—";
+              return (
+                <Card key={p.id} className="border-border/60 flex flex-col">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between">
+                      <CardTitle className="text-base">{p.name}</CardTitle>
+                      {p.is_default && (
+                        <Badge variant="outline" className="font-mono text-[10px]">DEFAULT</Badge>
+                      )}
+                    </div>
+                    <CardDescription className="text-xs">{p.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3 text-sm flex-1 flex flex-col">
+                    <div>
+                      <div className="text-xl font-semibold tracking-tight leading-tight">{priceLabel}</div>
+                      <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                        {p.currency} / month · ex GST
+                      </div>
+                    </div>
+                    <div className="space-y-1 text-xs text-muted-foreground">
+                      <div className="flex justify-between"><span>Seats</span><span className="font-mono text-foreground">{p.seat_limit >= 999 ? "Custom" : p.seat_limit}</span></div>
+                      <div className="flex justify-between"><span>Devices / seat</span><span className="font-mono text-foreground">{p.device_limit_per_seat ?? "∞"}</span></div>
+                      <div className="flex justify-between"><span>Report credits</span><span className="font-mono text-foreground">{creditsLabel}</span></div>
+                      <div className="flex justify-between"><span>Overage</span><span className="font-mono">{p.overage_policy}</span></div>
+                    </div>
+                    {meta.best_for && (
+                      <p className="text-[11px] text-muted-foreground italic">Best for: {meta.best_for}</p>
                     )}
-                  </div>
-                  <CardDescription className="text-xs">{p.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3 text-sm">
-                  <div className="text-2xl font-semibold tracking-tight">
-                    {p.price_cents === 0 ? "Free" : money(p.price_cents, p.currency)}
-                    {p.price_cents !== 0 && <span className="text-xs text-muted-foreground"> /mo</span>}
-                  </div>
-                  <div className="space-y-1 text-xs text-muted-foreground">
-                    <div className="flex justify-between"><span>Seats</span><span className="font-mono text-foreground">{p.seat_limit}</span></div>
-                    <div className="flex justify-between"><span>Devices / seat</span><span className="font-mono text-foreground">{p.device_limit_per_seat ?? "∞"}</span></div>
-                    <div className="flex justify-between"><span>Overage</span><span className="font-mono">{p.overage_policy}</span></div>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => assign(null, p.id)}
-                  >
-                    Apply to Prime
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full mt-auto"
+                      onClick={() => assign(null, p.id)}
+                    >
+                      Apply to Prime
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
