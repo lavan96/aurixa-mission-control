@@ -534,7 +534,25 @@ function KeysTab() {
   const [label, setLabel] = useState("");
   const [issuedKey, setIssuedKey] = useState<string | null>(null);
 
+  // Rotation modal state
+  const [rotateOpen, setRotateOpen] = useState(false);
+  const [rotateTarget, setRotateTarget] = useState<any>(null);
+  const [rotateGrace, setRotateGrace] = useState(24);
+  const [rotateBusy, setRotateBusy] = useState(false);
+  const [rotateResult, setRotateResult] = useState<{ key: string; prefix: string; revokeAt: string } | null>(null);
+
+  const closeRotate = (next: boolean) => {
+    setRotateOpen(next);
+    if (!next) {
+      setRotateTarget(null);
+      setRotateResult(null);
+      setRotateGrace(24);
+      setRotateBusy(false);
+    }
+  };
+
   return (
+    <div className="space-y-4">
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-sm">Clone API keys</CardTitle>
@@ -591,16 +609,11 @@ function KeysTab() {
                 </TableCell>
                 <TableCell className="flex gap-1">
                   {!k.revoked_at && !k.revoke_at && (
-                    <Button size="sm" variant="ghost" title="Rotate (issue new + grace period)" onClick={async () => {
-                      const hoursStr = prompt("Grace period in hours before old key is revoked?", "24");
-                      if (hoursStr == null) return;
-                      const graceHours = Math.max(0, parseInt(hoursStr, 10) || 0);
-                      const r = await rotateFn({ data: { oldKeyId: k.id, graceHours } });
-                      if (r.ok) {
-                        await navigator.clipboard.writeText(r.key).catch(() => {});
-                        toast.success(`New key copied. Old revokes at ${new Date(r.revokeAt).toLocaleString()}`);
-                        qc.invalidateQueries({ queryKey: ["clone-api-keys"] });
-                      } else toast.error(r.error);
+                    <Button size="sm" variant="ghost" title="Rotate (issue new + grace period)" onClick={() => {
+                      setRotateTarget(k);
+                      setRotateResult(null);
+                      setRotateGrace(24);
+                      setRotateOpen(true);
                     }}><RotateCw className="h-3 w-3" /></Button>
                   )}
                   {!k.revoked_at && (
@@ -614,6 +627,166 @@ function KeysTab() {
               </TableRow>
             ))}
             {!data?.keys.length && <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground">No keys issued.</TableCell></TableRow>}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+
+    <ActiveKeysPerClonePanel keys={data?.keys ?? []} />
+
+    <Dialog open={rotateOpen} onOpenChange={closeRotate}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {rotateResult ? "New key issued — copy now" : "Rotate API key"}
+          </DialogTitle>
+        </DialogHeader>
+        {rotateResult ? (
+          <div className="space-y-3 text-sm">
+            <div className="rounded border border-warning/40 bg-warning/10 p-3 text-xs">
+              <p className="font-semibold text-warning-foreground">Shown only once.</p>
+              <p className="mt-1 text-muted-foreground">
+                Cascade this secret into your clone now. Mission Control stores
+                only its hash — closing this dialog discards it.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 rounded border border-border bg-muted/30 p-2 font-mono text-xs">
+              <span className="flex-1 break-all">{rotateResult.key}</span>
+              <Button size="sm" variant="ghost" onClick={() => {
+                navigator.clipboard.writeText(rotateResult.key);
+                toast.success("New key copied");
+              }}><Copy className="h-3 w-3" /></Button>
+            </div>
+            <div className="rounded border border-border bg-muted/20 p-3 text-xs text-muted-foreground">
+              <p>
+                <span className="font-mono text-foreground">{rotateResult.prefix}…</span>{" "}
+                is live immediately. The previous key keeps working until{" "}
+                <span className="font-mono text-foreground">{new Date(rotateResult.revokeAt).toLocaleString()}</span>{" "}
+                and is then revoked automatically by the scheduler — no manual cleanup required.
+              </p>
+            </div>
+          </div>
+        ) : rotateTarget ? (
+          <div className="space-y-3 text-sm">
+            <div className="rounded border border-border bg-muted/20 p-3 text-xs">
+              <p className="text-muted-foreground">Target</p>
+              <p className="mt-0.5 font-medium">
+                {rotateTarget.clones?.name ?? "Prime repo"} ·{" "}
+                <span className="font-mono">{rotateTarget.label}</span> ·{" "}
+                <span className="font-mono text-muted-foreground">{rotateTarget.key_prefix}…</span>
+              </p>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Grace period (hours)</label>
+              <Input
+                type="number"
+                min={0}
+                max={720}
+                value={rotateGrace}
+                onChange={(e) => setRotateGrace(Math.max(0, Math.min(720, parseInt(e.target.value, 10) || 0)))}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Old key stays accepting requests for this long, then is revoked
+                automatically. Use <span className="font-mono">0</span> for an immediate cutover.
+              </p>
+            </div>
+          </div>
+        ) : null}
+        <DialogFooter>
+          {rotateResult ? (
+            <Button onClick={() => closeRotate(false)}>Done</Button>
+          ) : (
+            <>
+              <Button variant="ghost" disabled={rotateBusy} onClick={() => closeRotate(false)}>Cancel</Button>
+              <Button disabled={rotateBusy || !rotateTarget} onClick={async () => {
+                if (!rotateTarget) return;
+                setRotateBusy(true);
+                try {
+                  const r = await rotateFn({ data: { oldKeyId: rotateTarget.id, graceHours: rotateGrace } });
+                  if (r.ok) {
+                    await navigator.clipboard.writeText(r.key).catch(() => {});
+                    setRotateResult({ key: r.key, prefix: r.prefix, revokeAt: r.revokeAt });
+                    qc.invalidateQueries({ queryKey: ["clone-api-keys"] });
+                    toast.success("New key copied to clipboard");
+                  } else {
+                    toast.error(r.error);
+                  }
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : "Rotation failed");
+                } finally {
+                  setRotateBusy(false);
+                }
+              }}>{rotateBusy ? "Rotating…" : "Rotate key"}</Button>
+            </>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </div>
+  );
+}
+
+function ActiveKeysPerClonePanel({ keys }: { keys: any[] }) {
+  // Group by clone, then pick the newest non-revoked, non-grace key per clone.
+  const groups = new Map<string, { cloneName: string; key: any }>();
+  for (const k of keys) {
+    if (k.revoked_at) continue;
+    const cloneKey = k.clone_id ?? "__prime__";
+    const cloneName = k.clones?.name ?? "Prime repo (Mission Control)";
+    const existing = groups.get(cloneKey);
+    if (!existing || new Date(k.created_at).getTime() > new Date(existing.key.created_at).getTime()) {
+      // Prefer fully-active (no revoke_at) over a grace-period key
+      if (!existing || (existing.key.revoke_at && !k.revoke_at) || (!existing.key.revoke_at === !k.revoke_at)) {
+        groups.set(cloneKey, { cloneName, key: k });
+      }
+    }
+  }
+  const rows = Array.from(groups.values()).sort((a, b) =>
+    a.cloneName.localeCompare(b.cloneName),
+  );
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm">Latest active key per clone</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Clone</TableHead>
+              <TableHead>Active prefix</TableHead>
+              <TableHead>Issued</TableHead>
+              <TableHead>Last used</TableHead>
+              <TableHead>State</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map(({ cloneName, key }) => (
+              <TableRow key={key.id}>
+                <TableCell className="text-sm">{cloneName}</TableCell>
+                <TableCell className="font-mono text-xs">{key.key_prefix}…</TableCell>
+                <TableCell className="text-xs text-muted-foreground">
+                  {new Date(key.created_at).toLocaleString()}
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground">
+                  {key.last_used_at ? new Date(key.last_used_at).toLocaleString() : "never"}
+                </TableCell>
+                <TableCell>
+                  {key.revoke_at ? (
+                    <Badge variant="outline">grace · revokes {new Date(key.revoke_at).toLocaleString()}</Badge>
+                  ) : (
+                    <Badge>active</Badge>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+            {rows.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
+                  No active keys yet.
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </CardContent>
