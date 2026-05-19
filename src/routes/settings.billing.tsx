@@ -534,7 +534,10 @@ function KeysTab() {
   const [open, setOpen] = useState(false);
   const [cloneId, setCloneId] = useState("");
   const [label, setLabel] = useState("");
+  const [selectedScopes, setSelectedScopes] = useState<string[]>(DEFAULT_SCOPES);
   const [issuedKey, setIssuedKey] = useState<string | null>(null);
+  const toggleScope = (v: string, on: boolean) =>
+    setSelectedScopes((prev) => (on ? Array.from(new Set([...prev, v])) : prev.filter((s) => s !== v)));
 
   // Rotation modal state
   const [rotateOpen, setRotateOpen] = useState(false);
