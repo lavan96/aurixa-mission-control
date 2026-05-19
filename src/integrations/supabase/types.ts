@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      addon_modules: {
+        Row: {
+          billing_period: string
+          category: string
+          created_at: string
+          currency: string
+          description: string | null
+          id: string
+          included_in_plans: string[]
+          is_active: boolean
+          metadata: Json
+          name: string
+          price_max_cents: number
+          price_min_cents: number
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          billing_period?: string
+          category?: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          included_in_plans?: string[]
+          is_active?: boolean
+          metadata?: Json
+          name: string
+          price_max_cents?: number
+          price_min_cents?: number
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          billing_period?: string
+          category?: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          included_in_plans?: string[]
+          is_active?: boolean
+          metadata?: Json
+          name?: string
+          price_max_cents?: number
+          price_min_cents?: number
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ai_usage_log: {
         Row: {
           completion_tokens: number | null
@@ -2018,6 +2072,48 @@ export type Database = {
         }
         Relationships: []
       }
+      report_credit_costs: {
+        Row: {
+          category: string
+          created_at: string
+          credit_cost: number
+          description: string | null
+          id: string
+          is_active: boolean
+          metadata: Json
+          name: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          credit_cost?: number
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          name: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          credit_cost?: number
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          name?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       report_jobs: {
         Row: {
           charged_tokens: number
@@ -2203,6 +2299,105 @@ export type Database = {
           price_cents?: number
           seat_limit?: number
           slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      seat_roles: {
+        Row: {
+          created_at: string
+          currency: string
+          description: string | null
+          id: string
+          is_active: boolean
+          metadata: Json
+          name: string
+          permissions: Json
+          price_max_cents: number
+          price_min_cents: number
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          name: string
+          permissions?: Json
+          price_max_cents?: number
+          price_min_cents?: number
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          name?: string
+          permissions?: Json
+          price_max_cents?: number
+          price_min_cents?: number
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      setup_packages: {
+        Row: {
+          applies_to_plans: string[]
+          created_at: string
+          currency: string
+          deliverables: Json
+          description: string | null
+          id: string
+          is_active: boolean
+          metadata: Json
+          name: string
+          price_max_cents: number
+          price_min_cents: number
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          applies_to_plans?: string[]
+          created_at?: string
+          currency?: string
+          deliverables?: Json
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          name: string
+          price_max_cents?: number
+          price_min_cents?: number
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          applies_to_plans?: string[]
+          created_at?: string
+          currency?: string
+          deliverables?: Json
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          name?: string
+          price_max_cents?: number
+          price_min_cents?: number
+          slug?: string
+          sort_order?: number
           updated_at?: string
         }
         Relationships: []

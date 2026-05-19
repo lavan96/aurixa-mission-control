@@ -52,6 +52,7 @@ import { Route as ClonesCloneIdRouteImport } from './routes/clones.$cloneId'
 import { Route as CascadesEventIdRouteImport } from './routes/cascades.$eventId'
 import { Route as BillingTopupRouteImport } from './routes/billing.topup'
 import { Route as BillingSeatsRouteImport } from './routes/billing.seats'
+import { Route as BillingCatalogRouteImport } from './routes/billing.catalog'
 import { Route as ApiPublicTokensReserveRouteImport } from './routes/api.public.tokens.reserve'
 import { Route as ApiPublicTokensPacksRouteImport } from './routes/api.public.tokens.packs'
 import { Route as ApiPublicTokensCommitRouteImport } from './routes/api.public.tokens.commit'
@@ -62,6 +63,7 @@ import { Route as ApiPublicSeatsReleaseRouteImport } from './routes/api.public.s
 import { Route as ApiPublicSeatsListRouteImport } from './routes/api.public.seats.list'
 import { Route as ApiPublicSeatsEntitlementRouteImport } from './routes/api.public.seats.entitlement'
 import { Route as ApiPublicSeatsCommitRouteImport } from './routes/api.public.seats.commit'
+import { Route as ApiPublicPricingCatalogRouteImport } from './routes/api.public.pricing.catalog'
 import { Route as ApiPublicClonesRotateKeyRouteImport } from './routes/api.public.clones.rotate-key'
 import { Route as ApiPublicSeatsDevicesReleaseRouteImport } from './routes/api.public.seats.devices.release'
 import { Route as ApiPublicSeatsDevicesRegisterRouteImport } from './routes/api.public.seats.devices.register'
@@ -285,6 +287,11 @@ const BillingSeatsRoute = BillingSeatsRouteImport.update({
   path: '/billing/seats',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BillingCatalogRoute = BillingCatalogRouteImport.update({
+  id: '/billing/catalog',
+  path: '/billing/catalog',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicTokensReserveRoute = ApiPublicTokensReserveRouteImport.update({
   id: '/api/public/tokens/reserve',
   path: '/api/public/tokens/reserve',
@@ -334,6 +341,11 @@ const ApiPublicSeatsEntitlementRoute =
 const ApiPublicSeatsCommitRoute = ApiPublicSeatsCommitRouteImport.update({
   id: '/api/public/seats/commit',
   path: '/api/public/seats/commit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicPricingCatalogRoute = ApiPublicPricingCatalogRouteImport.update({
+  id: '/api/public/pricing/catalog',
+  path: '/api/public/pricing/catalog',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicClonesRotateKeyRoute =
@@ -389,6 +401,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRouteWithChildren
   '/slo': typeof SloRoute
   '/yggdrasil': typeof YggdrasilRoute
+  '/billing/catalog': typeof BillingCatalogRoute
   '/billing/seats': typeof BillingSeatsRoute
   '/billing/topup': typeof BillingTopupRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
@@ -412,6 +425,7 @@ export interface FileRoutesByFullPath {
   '/settings/roles': typeof SettingsRolesRoute
   '/settings/': typeof SettingsIndexRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
+  '/api/public/pricing/catalog': typeof ApiPublicPricingCatalogRoute
   '/api/public/seats/commit': typeof ApiPublicSeatsCommitRoute
   '/api/public/seats/entitlement': typeof ApiPublicSeatsEntitlementRoute
   '/api/public/seats/list': typeof ApiPublicSeatsListRoute
@@ -448,6 +462,7 @@ export interface FileRoutesByTo {
   '/schedules': typeof SchedulesRoute
   '/slo': typeof SloRoute
   '/yggdrasil': typeof YggdrasilRoute
+  '/billing/catalog': typeof BillingCatalogRoute
   '/billing/seats': typeof BillingSeatsRoute
   '/billing/topup': typeof BillingTopupRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
@@ -471,6 +486,7 @@ export interface FileRoutesByTo {
   '/settings/roles': typeof SettingsRolesRoute
   '/settings': typeof SettingsIndexRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
+  '/api/public/pricing/catalog': typeof ApiPublicPricingCatalogRoute
   '/api/public/seats/commit': typeof ApiPublicSeatsCommitRoute
   '/api/public/seats/entitlement': typeof ApiPublicSeatsEntitlementRoute
   '/api/public/seats/list': typeof ApiPublicSeatsListRoute
@@ -509,6 +525,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRouteWithChildren
   '/slo': typeof SloRoute
   '/yggdrasil': typeof YggdrasilRoute
+  '/billing/catalog': typeof BillingCatalogRoute
   '/billing/seats': typeof BillingSeatsRoute
   '/billing/topup': typeof BillingTopupRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
@@ -532,6 +549,7 @@ export interface FileRoutesById {
   '/settings/roles': typeof SettingsRolesRoute
   '/settings/': typeof SettingsIndexRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
+  '/api/public/pricing/catalog': typeof ApiPublicPricingCatalogRoute
   '/api/public/seats/commit': typeof ApiPublicSeatsCommitRoute
   '/api/public/seats/entitlement': typeof ApiPublicSeatsEntitlementRoute
   '/api/public/seats/list': typeof ApiPublicSeatsListRoute
@@ -571,6 +589,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/slo'
     | '/yggdrasil'
+    | '/billing/catalog'
     | '/billing/seats'
     | '/billing/topup'
     | '/cascades/$eventId'
@@ -594,6 +613,7 @@ export interface FileRouteTypes {
     | '/settings/roles'
     | '/settings/'
     | '/api/public/clones/rotate-key'
+    | '/api/public/pricing/catalog'
     | '/api/public/seats/commit'
     | '/api/public/seats/entitlement'
     | '/api/public/seats/list'
@@ -630,6 +650,7 @@ export interface FileRouteTypes {
     | '/schedules'
     | '/slo'
     | '/yggdrasil'
+    | '/billing/catalog'
     | '/billing/seats'
     | '/billing/topup'
     | '/cascades/$eventId'
@@ -653,6 +674,7 @@ export interface FileRouteTypes {
     | '/settings/roles'
     | '/settings'
     | '/api/public/clones/rotate-key'
+    | '/api/public/pricing/catalog'
     | '/api/public/seats/commit'
     | '/api/public/seats/entitlement'
     | '/api/public/seats/list'
@@ -690,6 +712,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/slo'
     | '/yggdrasil'
+    | '/billing/catalog'
     | '/billing/seats'
     | '/billing/topup'
     | '/cascades/$eventId'
@@ -713,6 +736,7 @@ export interface FileRouteTypes {
     | '/settings/roles'
     | '/settings/'
     | '/api/public/clones/rotate-key'
+    | '/api/public/pricing/catalog'
     | '/api/public/seats/commit'
     | '/api/public/seats/entitlement'
     | '/api/public/seats/list'
@@ -751,6 +775,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRouteWithChildren
   SloRoute: typeof SloRoute
   YggdrasilRoute: typeof YggdrasilRoute
+  BillingCatalogRoute: typeof BillingCatalogRoute
   BillingSeatsRoute: typeof BillingSeatsRoute
   BillingTopupRoute: typeof BillingTopupRoute
   ClonesCloneIdRoute: typeof ClonesCloneIdRoute
@@ -764,6 +789,7 @@ export interface RootRouteChildren {
   HooksTokenAlertsRoute: typeof HooksTokenAlertsRoute
   HooksWarmHealthRoute: typeof HooksWarmHealthRoute
   ApiPublicClonesRotateKeyRoute: typeof ApiPublicClonesRotateKeyRoute
+  ApiPublicPricingCatalogRoute: typeof ApiPublicPricingCatalogRoute
   ApiPublicSeatsCommitRoute: typeof ApiPublicSeatsCommitRoute
   ApiPublicSeatsEntitlementRoute: typeof ApiPublicSeatsEntitlementRoute
   ApiPublicSeatsListRoute: typeof ApiPublicSeatsListRoute
@@ -1083,6 +1109,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BillingSeatsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/billing/catalog': {
+      id: '/billing/catalog'
+      path: '/billing/catalog'
+      fullPath: '/billing/catalog'
+      preLoaderRoute: typeof BillingCatalogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/tokens/reserve': {
       id: '/api/public/tokens/reserve'
       path: '/api/public/tokens/reserve'
@@ -1151,6 +1184,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/seats/commit'
       fullPath: '/api/public/seats/commit'
       preLoaderRoute: typeof ApiPublicSeatsCommitRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/pricing/catalog': {
+      id: '/api/public/pricing/catalog'
+      path: '/api/public/pricing/catalog'
+      fullPath: '/api/public/pricing/catalog'
+      preLoaderRoute: typeof ApiPublicPricingCatalogRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/clones/rotate-key': {
@@ -1262,6 +1302,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRouteWithChildren,
   SloRoute: SloRoute,
   YggdrasilRoute: YggdrasilRoute,
+  BillingCatalogRoute: BillingCatalogRoute,
   BillingSeatsRoute: BillingSeatsRoute,
   BillingTopupRoute: BillingTopupRoute,
   ClonesCloneIdRoute: ClonesCloneIdRoute,
@@ -1275,6 +1316,7 @@ const rootRouteChildren: RootRouteChildren = {
   HooksTokenAlertsRoute: HooksTokenAlertsRoute,
   HooksWarmHealthRoute: HooksWarmHealthRoute,
   ApiPublicClonesRotateKeyRoute: ApiPublicClonesRotateKeyRoute,
+  ApiPublicPricingCatalogRoute: ApiPublicPricingCatalogRoute,
   ApiPublicSeatsCommitRoute: ApiPublicSeatsCommitRoute,
   ApiPublicSeatsEntitlementRoute: ApiPublicSeatsEntitlementRoute,
   ApiPublicSeatsListRoute: ApiPublicSeatsListRoute,
