@@ -51,11 +51,17 @@ import { Route as ClonesNewRouteImport } from './routes/clones.new'
 import { Route as ClonesCloneIdRouteImport } from './routes/clones.$cloneId'
 import { Route as CascadesEventIdRouteImport } from './routes/cascades.$eventId'
 import { Route as BillingTopupRouteImport } from './routes/billing.topup'
+import { Route as BillingSeatsRouteImport } from './routes/billing.seats'
 import { Route as ApiPublicTokensReserveRouteImport } from './routes/api.public.tokens.reserve'
 import { Route as ApiPublicTokensPacksRouteImport } from './routes/api.public.tokens.packs'
 import { Route as ApiPublicTokensCommitRouteImport } from './routes/api.public.tokens.commit'
 import { Route as ApiPublicTokensCancelRouteImport } from './routes/api.public.tokens.cancel'
 import { Route as ApiPublicTokensBalanceRouteImport } from './routes/api.public.tokens.balance'
+import { Route as ApiPublicSeatsReserveRouteImport } from './routes/api.public.seats.reserve'
+import { Route as ApiPublicSeatsReleaseRouteImport } from './routes/api.public.seats.release'
+import { Route as ApiPublicSeatsListRouteImport } from './routes/api.public.seats.list'
+import { Route as ApiPublicSeatsEntitlementRouteImport } from './routes/api.public.seats.entitlement'
+import { Route as ApiPublicSeatsCommitRouteImport } from './routes/api.public.seats.commit'
 import { Route as ApiPublicClonesRotateKeyRouteImport } from './routes/api.public.clones.rotate-key'
 
 const YggdrasilRoute = YggdrasilRouteImport.update({
@@ -270,6 +276,11 @@ const BillingTopupRoute = BillingTopupRouteImport.update({
   path: '/billing/topup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BillingSeatsRoute = BillingSeatsRouteImport.update({
+  id: '/billing/seats',
+  path: '/billing/seats',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicTokensReserveRoute = ApiPublicTokensReserveRouteImport.update({
   id: '/api/public/tokens/reserve',
   path: '/api/public/tokens/reserve',
@@ -293,6 +304,32 @@ const ApiPublicTokensCancelRoute = ApiPublicTokensCancelRouteImport.update({
 const ApiPublicTokensBalanceRoute = ApiPublicTokensBalanceRouteImport.update({
   id: '/api/public/tokens/balance',
   path: '/api/public/tokens/balance',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicSeatsReserveRoute = ApiPublicSeatsReserveRouteImport.update({
+  id: '/api/public/seats/reserve',
+  path: '/api/public/seats/reserve',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicSeatsReleaseRoute = ApiPublicSeatsReleaseRouteImport.update({
+  id: '/api/public/seats/release',
+  path: '/api/public/seats/release',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicSeatsListRoute = ApiPublicSeatsListRouteImport.update({
+  id: '/api/public/seats/list',
+  path: '/api/public/seats/list',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicSeatsEntitlementRoute =
+  ApiPublicSeatsEntitlementRouteImport.update({
+    id: '/api/public/seats/entitlement',
+    path: '/api/public/seats/entitlement',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicSeatsCommitRoute = ApiPublicSeatsCommitRouteImport.update({
+  id: '/api/public/seats/commit',
+  path: '/api/public/seats/commit',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicClonesRotateKeyRoute =
@@ -324,6 +361,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRouteWithChildren
   '/slo': typeof SloRoute
   '/yggdrasil': typeof YggdrasilRoute
+  '/billing/seats': typeof BillingSeatsRoute
   '/billing/topup': typeof BillingTopupRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
@@ -346,6 +384,11 @@ export interface FileRoutesByFullPath {
   '/settings/roles': typeof SettingsRolesRoute
   '/settings/': typeof SettingsIndexRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
+  '/api/public/seats/commit': typeof ApiPublicSeatsCommitRoute
+  '/api/public/seats/entitlement': typeof ApiPublicSeatsEntitlementRoute
+  '/api/public/seats/list': typeof ApiPublicSeatsListRoute
+  '/api/public/seats/release': typeof ApiPublicSeatsReleaseRoute
+  '/api/public/seats/reserve': typeof ApiPublicSeatsReserveRoute
   '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
   '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
   '/api/public/tokens/commit': typeof ApiPublicTokensCommitRoute
@@ -373,6 +416,7 @@ export interface FileRoutesByTo {
   '/schedules': typeof SchedulesRoute
   '/slo': typeof SloRoute
   '/yggdrasil': typeof YggdrasilRoute
+  '/billing/seats': typeof BillingSeatsRoute
   '/billing/topup': typeof BillingTopupRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
@@ -395,6 +439,11 @@ export interface FileRoutesByTo {
   '/settings/roles': typeof SettingsRolesRoute
   '/settings': typeof SettingsIndexRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
+  '/api/public/seats/commit': typeof ApiPublicSeatsCommitRoute
+  '/api/public/seats/entitlement': typeof ApiPublicSeatsEntitlementRoute
+  '/api/public/seats/list': typeof ApiPublicSeatsListRoute
+  '/api/public/seats/release': typeof ApiPublicSeatsReleaseRoute
+  '/api/public/seats/reserve': typeof ApiPublicSeatsReserveRoute
   '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
   '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
   '/api/public/tokens/commit': typeof ApiPublicTokensCommitRoute
@@ -424,6 +473,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRouteWithChildren
   '/slo': typeof SloRoute
   '/yggdrasil': typeof YggdrasilRoute
+  '/billing/seats': typeof BillingSeatsRoute
   '/billing/topup': typeof BillingTopupRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
@@ -446,6 +496,11 @@ export interface FileRoutesById {
   '/settings/roles': typeof SettingsRolesRoute
   '/settings/': typeof SettingsIndexRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
+  '/api/public/seats/commit': typeof ApiPublicSeatsCommitRoute
+  '/api/public/seats/entitlement': typeof ApiPublicSeatsEntitlementRoute
+  '/api/public/seats/list': typeof ApiPublicSeatsListRoute
+  '/api/public/seats/release': typeof ApiPublicSeatsReleaseRoute
+  '/api/public/seats/reserve': typeof ApiPublicSeatsReserveRoute
   '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
   '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
   '/api/public/tokens/commit': typeof ApiPublicTokensCommitRoute
@@ -476,6 +531,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/slo'
     | '/yggdrasil'
+    | '/billing/seats'
     | '/billing/topup'
     | '/cascades/$eventId'
     | '/clones/$cloneId'
@@ -498,6 +554,11 @@ export interface FileRouteTypes {
     | '/settings/roles'
     | '/settings/'
     | '/api/public/clones/rotate-key'
+    | '/api/public/seats/commit'
+    | '/api/public/seats/entitlement'
+    | '/api/public/seats/list'
+    | '/api/public/seats/release'
+    | '/api/public/seats/reserve'
     | '/api/public/tokens/balance'
     | '/api/public/tokens/cancel'
     | '/api/public/tokens/commit'
@@ -525,6 +586,7 @@ export interface FileRouteTypes {
     | '/schedules'
     | '/slo'
     | '/yggdrasil'
+    | '/billing/seats'
     | '/billing/topup'
     | '/cascades/$eventId'
     | '/clones/$cloneId'
@@ -547,6 +609,11 @@ export interface FileRouteTypes {
     | '/settings/roles'
     | '/settings'
     | '/api/public/clones/rotate-key'
+    | '/api/public/seats/commit'
+    | '/api/public/seats/entitlement'
+    | '/api/public/seats/list'
+    | '/api/public/seats/release'
+    | '/api/public/seats/reserve'
     | '/api/public/tokens/balance'
     | '/api/public/tokens/cancel'
     | '/api/public/tokens/commit'
@@ -575,6 +642,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/slo'
     | '/yggdrasil'
+    | '/billing/seats'
     | '/billing/topup'
     | '/cascades/$eventId'
     | '/clones/$cloneId'
@@ -597,6 +665,11 @@ export interface FileRouteTypes {
     | '/settings/roles'
     | '/settings/'
     | '/api/public/clones/rotate-key'
+    | '/api/public/seats/commit'
+    | '/api/public/seats/entitlement'
+    | '/api/public/seats/list'
+    | '/api/public/seats/release'
+    | '/api/public/seats/reserve'
     | '/api/public/tokens/balance'
     | '/api/public/tokens/cancel'
     | '/api/public/tokens/commit'
@@ -626,6 +699,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRouteWithChildren
   SloRoute: typeof SloRoute
   YggdrasilRoute: typeof YggdrasilRoute
+  BillingSeatsRoute: typeof BillingSeatsRoute
   BillingTopupRoute: typeof BillingTopupRoute
   ClonesCloneIdRoute: typeof ClonesCloneIdRoute
   ClonesNewRoute: typeof ClonesNewRoute
@@ -638,6 +712,11 @@ export interface RootRouteChildren {
   HooksTokenAlertsRoute: typeof HooksTokenAlertsRoute
   HooksWarmHealthRoute: typeof HooksWarmHealthRoute
   ApiPublicClonesRotateKeyRoute: typeof ApiPublicClonesRotateKeyRoute
+  ApiPublicSeatsCommitRoute: typeof ApiPublicSeatsCommitRoute
+  ApiPublicSeatsEntitlementRoute: typeof ApiPublicSeatsEntitlementRoute
+  ApiPublicSeatsListRoute: typeof ApiPublicSeatsListRoute
+  ApiPublicSeatsReleaseRoute: typeof ApiPublicSeatsReleaseRoute
+  ApiPublicSeatsReserveRoute: typeof ApiPublicSeatsReserveRoute
   ApiPublicTokensBalanceRoute: typeof ApiPublicTokensBalanceRoute
   ApiPublicTokensCancelRoute: typeof ApiPublicTokensCancelRoute
   ApiPublicTokensCommitRoute: typeof ApiPublicTokensCommitRoute
@@ -941,6 +1020,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BillingTopupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/billing/seats': {
+      id: '/billing/seats'
+      path: '/billing/seats'
+      fullPath: '/billing/seats'
+      preLoaderRoute: typeof BillingSeatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/tokens/reserve': {
       id: '/api/public/tokens/reserve'
       path: '/api/public/tokens/reserve'
@@ -974,6 +1060,41 @@ declare module '@tanstack/react-router' {
       path: '/api/public/tokens/balance'
       fullPath: '/api/public/tokens/balance'
       preLoaderRoute: typeof ApiPublicTokensBalanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/seats/reserve': {
+      id: '/api/public/seats/reserve'
+      path: '/api/public/seats/reserve'
+      fullPath: '/api/public/seats/reserve'
+      preLoaderRoute: typeof ApiPublicSeatsReserveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/seats/release': {
+      id: '/api/public/seats/release'
+      path: '/api/public/seats/release'
+      fullPath: '/api/public/seats/release'
+      preLoaderRoute: typeof ApiPublicSeatsReleaseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/seats/list': {
+      id: '/api/public/seats/list'
+      path: '/api/public/seats/list'
+      fullPath: '/api/public/seats/list'
+      preLoaderRoute: typeof ApiPublicSeatsListRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/seats/entitlement': {
+      id: '/api/public/seats/entitlement'
+      path: '/api/public/seats/entitlement'
+      fullPath: '/api/public/seats/entitlement'
+      preLoaderRoute: typeof ApiPublicSeatsEntitlementRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/seats/commit': {
+      id: '/api/public/seats/commit'
+      path: '/api/public/seats/commit'
+      fullPath: '/api/public/seats/commit'
+      preLoaderRoute: typeof ApiPublicSeatsCommitRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/clones/rotate-key': {
@@ -1057,6 +1178,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRouteWithChildren,
   SloRoute: SloRoute,
   YggdrasilRoute: YggdrasilRoute,
+  BillingSeatsRoute: BillingSeatsRoute,
   BillingTopupRoute: BillingTopupRoute,
   ClonesCloneIdRoute: ClonesCloneIdRoute,
   ClonesNewRoute: ClonesNewRoute,
@@ -1069,6 +1191,11 @@ const rootRouteChildren: RootRouteChildren = {
   HooksTokenAlertsRoute: HooksTokenAlertsRoute,
   HooksWarmHealthRoute: HooksWarmHealthRoute,
   ApiPublicClonesRotateKeyRoute: ApiPublicClonesRotateKeyRoute,
+  ApiPublicSeatsCommitRoute: ApiPublicSeatsCommitRoute,
+  ApiPublicSeatsEntitlementRoute: ApiPublicSeatsEntitlementRoute,
+  ApiPublicSeatsListRoute: ApiPublicSeatsListRoute,
+  ApiPublicSeatsReleaseRoute: ApiPublicSeatsReleaseRoute,
+  ApiPublicSeatsReserveRoute: ApiPublicSeatsReserveRoute,
   ApiPublicTokensBalanceRoute: ApiPublicTokensBalanceRoute,
   ApiPublicTokensCancelRoute: ApiPublicTokensCancelRoute,
   ApiPublicTokensCommitRoute: ApiPublicTokensCommitRoute,
