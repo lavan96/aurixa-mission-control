@@ -6,12 +6,13 @@ export const Route = createFileRoute("/api/public/pricing/catalog")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        // Any active key is fine — catalog is non-sensitive read.
-        const key = await resolveCloneApiKey(request.headers.get("x-clone-api-key"), "tokens:meter");
-        const fallback = key
-          ? null
-          : await resolveCloneApiKey(request.headers.get("x-clone-api-key"), "seats:manage");
-        if (!key && !fallback) return jsonResponse({ ok: false, error: "unauthorized" }, 401);
+        // Catalog is non-sensitive; any of these scopes can read it.
+        const key = await resolveCloneApiKey(
+          request.headers.get("x-clone-api-key"),
+          ["pricing:read", "tokens:meter", "tokens:read", "seats:manage"],
+        );
+        if (!key) return jsonResponse({ ok: false, error: "unauthorized" }, 401);
+
 
         const [roles, addons, setups, reports, plans, packs] = await Promise.all([
           supabaseAdmin.from("seat_roles" as never).select("slug,name,description,price_min_cents,price_max_cents,currency,permissions,metadata,sort_order").eq("is_active", true).order("sort_order"),
