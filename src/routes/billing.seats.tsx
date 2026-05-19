@@ -76,6 +76,18 @@ function SeatsPage() {
     }
   };
 
+  const revokeDevice = async (deviceId: string) => {
+    if (!confirm("Revoke this device? The next sign-in from it will be blocked or require re-registration.")) return;
+    try {
+      const r = await revokeDeviceFn({ data: { deviceId, reason: "manual_mc_revoke" } });
+      if (!r.ok) throw new Error(r.error);
+      toast.success("Device revoked");
+      qc.invalidateQueries({ queryKey: ["seats"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
