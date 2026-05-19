@@ -11,13 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Users, ArrowLeft, ShieldCheck } from "lucide-react";
+import { Users, ArrowLeft, ShieldCheck, Smartphone, X } from "lucide-react";
 import {
   listSeatPlans,
   listSeatEntitlements,
   assignSeatPlan,
   listSeatAudit,
 } from "@/lib/seats.functions";
+import { listSeatDevices, revokeSeatDevice, seatDeviceSummary } from "@/lib/seat-devices.functions";
 
 export const Route = createFileRoute("/billing/seats")({
   component: () => (
@@ -38,10 +39,15 @@ function SeatsPage() {
   const entsFn = useServerFn(listSeatEntitlements);
   const auditFn = useServerFn(listSeatAudit);
   const assignFn = useServerFn(assignSeatPlan);
+  const devicesFn = useServerFn(listSeatDevices);
+  const revokeDeviceFn = useServerFn(revokeSeatDevice);
+  const deviceSummaryFn = useServerFn(seatDeviceSummary);
 
   const plansQ = useQuery({ queryKey: ["seats", "plans"], queryFn: () => plansFn({}) });
   const entsQ = useQuery({ queryKey: ["seats", "ents"], queryFn: () => entsFn({}) });
   const auditQ = useQuery({ queryKey: ["seats", "audit"], queryFn: () => auditFn({ data: { limit: 50 } }) });
+  const devicesQ = useQuery({ queryKey: ["seats", "devices"], queryFn: () => devicesFn({ data: { status: "active", limit: 200 } }) });
+  const deviceSumQ = useQuery({ queryKey: ["seats", "devices", "summary"], queryFn: () => deviceSummaryFn({}) });
 
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<"price-asc" | "price-desc" | "seats-asc" | "seats-desc">("price-asc");
@@ -64,6 +70,18 @@ function SeatsPage() {
     try {
       await assignFn({ data: { cloneId, seatPlanId: planId, notes: null } });
       toast.success("Plan assigned");
+      qc.invalidateQueries({ queryKey: ["seats"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    }
+  };
+
+  const revokeDevice = async (deviceId: string) => {
+    if (!confirm("Revoke this device? The next sign-in from it will be blocked or require re-registration.")) return;
+    try {
+      const r = await revokeDeviceFn({ data: { deviceId, reason: "manual_mc_revoke" } });
+      if (!r.ok) throw new Error(r.error);
+      toast.success("Device revoked");
       qc.invalidateQueries({ queryKey: ["seats"] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
@@ -207,6 +225,51 @@ function SeatsPage() {
                     No entitlements yet. Apply a plan above to seed Prime, or wait for clones to call the API.
                   </TableCell>
                 </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Devices */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Smartphone className="h-4 w-4" /> Active devices
+          </CardTitle>
+          <CardDescription>
+            {deviceSumQ.data?.total_active ?? 0} active · {deviceSumQ.data?.total_revoked ?? 0} revoked across fleet. Per-seat cap set by plan.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>User</TableHead>
+                <TableHead>Label</TableHead>
+                <TableHead>Platform</TableHead>
+                <TableHead>Fingerprint</TableHead>
+                <TableHead>Last seen</TableHead>
+                <TableHead className="w-16"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(devicesQ.data?.devices ?? []).map((d) => (
+                <TableRow key={d.id}>
+                  <TableCell className="font-mono text-xs">{d.external_user_id}</TableCell>
+                  <TableCell className="text-xs">{d.device_label ?? <span className="text-muted-foreground">—</span>}</TableCell>
+                  <TableCell className="text-xs">{d.platform ?? <span className="text-muted-foreground">—</span>}</TableCell>
+                  <TableCell className="font-mono text-[10px] text-muted-foreground">{String(d.device_fingerprint).slice(0, 16)}…</TableCell>
+                  <TableCell className="font-mono text-xs">{new Date(d.last_seen_at).toLocaleString()}</TableCell>
+                  <TableCell>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => revokeDevice(d.id)} title="Revoke device">
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {(devicesQ.data?.devices ?? []).length === 0 && (
+                <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-8">No active devices yet. Devices register via POST /api/public/seats/devices/register from each clone.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>

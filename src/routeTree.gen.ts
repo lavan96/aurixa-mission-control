@@ -63,6 +63,10 @@ import { Route as ApiPublicSeatsListRouteImport } from './routes/api.public.seat
 import { Route as ApiPublicSeatsEntitlementRouteImport } from './routes/api.public.seats.entitlement'
 import { Route as ApiPublicSeatsCommitRouteImport } from './routes/api.public.seats.commit'
 import { Route as ApiPublicClonesRotateKeyRouteImport } from './routes/api.public.clones.rotate-key'
+import { Route as ApiPublicSeatsDevicesReleaseRouteImport } from './routes/api.public.seats.devices.release'
+import { Route as ApiPublicSeatsDevicesRegisterRouteImport } from './routes/api.public.seats.devices.register'
+import { Route as ApiPublicSeatsDevicesListRouteImport } from './routes/api.public.seats.devices.list'
+import { Route as ApiPublicSeatsDevicesHeartbeatRouteImport } from './routes/api.public.seats.devices.heartbeat'
 
 const YggdrasilRoute = YggdrasilRouteImport.update({
   id: '/yggdrasil',
@@ -338,6 +342,30 @@ const ApiPublicClonesRotateKeyRoute =
     path: '/api/public/clones/rotate-key',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicSeatsDevicesReleaseRoute =
+  ApiPublicSeatsDevicesReleaseRouteImport.update({
+    id: '/api/public/seats/devices/release',
+    path: '/api/public/seats/devices/release',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicSeatsDevicesRegisterRoute =
+  ApiPublicSeatsDevicesRegisterRouteImport.update({
+    id: '/api/public/seats/devices/register',
+    path: '/api/public/seats/devices/register',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicSeatsDevicesListRoute =
+  ApiPublicSeatsDevicesListRouteImport.update({
+    id: '/api/public/seats/devices/list',
+    path: '/api/public/seats/devices/list',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicSeatsDevicesHeartbeatRoute =
+  ApiPublicSeatsDevicesHeartbeatRouteImport.update({
+    id: '/api/public/seats/devices/heartbeat',
+    path: '/api/public/seats/devices/heartbeat',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -394,6 +422,10 @@ export interface FileRoutesByFullPath {
   '/api/public/tokens/commit': typeof ApiPublicTokensCommitRoute
   '/api/public/tokens/packs': typeof ApiPublicTokensPacksRoute
   '/api/public/tokens/reserve': typeof ApiPublicTokensReserveRoute
+  '/api/public/seats/devices/heartbeat': typeof ApiPublicSeatsDevicesHeartbeatRoute
+  '/api/public/seats/devices/list': typeof ApiPublicSeatsDevicesListRoute
+  '/api/public/seats/devices/register': typeof ApiPublicSeatsDevicesRegisterRoute
+  '/api/public/seats/devices/release': typeof ApiPublicSeatsDevicesReleaseRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -449,6 +481,10 @@ export interface FileRoutesByTo {
   '/api/public/tokens/commit': typeof ApiPublicTokensCommitRoute
   '/api/public/tokens/packs': typeof ApiPublicTokensPacksRoute
   '/api/public/tokens/reserve': typeof ApiPublicTokensReserveRoute
+  '/api/public/seats/devices/heartbeat': typeof ApiPublicSeatsDevicesHeartbeatRoute
+  '/api/public/seats/devices/list': typeof ApiPublicSeatsDevicesListRoute
+  '/api/public/seats/devices/register': typeof ApiPublicSeatsDevicesRegisterRoute
+  '/api/public/seats/devices/release': typeof ApiPublicSeatsDevicesReleaseRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -506,6 +542,10 @@ export interface FileRoutesById {
   '/api/public/tokens/commit': typeof ApiPublicTokensCommitRoute
   '/api/public/tokens/packs': typeof ApiPublicTokensPacksRoute
   '/api/public/tokens/reserve': typeof ApiPublicTokensReserveRoute
+  '/api/public/seats/devices/heartbeat': typeof ApiPublicSeatsDevicesHeartbeatRoute
+  '/api/public/seats/devices/list': typeof ApiPublicSeatsDevicesListRoute
+  '/api/public/seats/devices/register': typeof ApiPublicSeatsDevicesRegisterRoute
+  '/api/public/seats/devices/release': typeof ApiPublicSeatsDevicesReleaseRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -564,6 +604,10 @@ export interface FileRouteTypes {
     | '/api/public/tokens/commit'
     | '/api/public/tokens/packs'
     | '/api/public/tokens/reserve'
+    | '/api/public/seats/devices/heartbeat'
+    | '/api/public/seats/devices/list'
+    | '/api/public/seats/devices/register'
+    | '/api/public/seats/devices/release'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -619,6 +663,10 @@ export interface FileRouteTypes {
     | '/api/public/tokens/commit'
     | '/api/public/tokens/packs'
     | '/api/public/tokens/reserve'
+    | '/api/public/seats/devices/heartbeat'
+    | '/api/public/seats/devices/list'
+    | '/api/public/seats/devices/register'
+    | '/api/public/seats/devices/release'
   id:
     | '__root__'
     | '/'
@@ -675,6 +723,10 @@ export interface FileRouteTypes {
     | '/api/public/tokens/commit'
     | '/api/public/tokens/packs'
     | '/api/public/tokens/reserve'
+    | '/api/public/seats/devices/heartbeat'
+    | '/api/public/seats/devices/list'
+    | '/api/public/seats/devices/register'
+    | '/api/public/seats/devices/release'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -722,6 +774,10 @@ export interface RootRouteChildren {
   ApiPublicTokensCommitRoute: typeof ApiPublicTokensCommitRoute
   ApiPublicTokensPacksRoute: typeof ApiPublicTokensPacksRoute
   ApiPublicTokensReserveRoute: typeof ApiPublicTokensReserveRoute
+  ApiPublicSeatsDevicesHeartbeatRoute: typeof ApiPublicSeatsDevicesHeartbeatRoute
+  ApiPublicSeatsDevicesListRoute: typeof ApiPublicSeatsDevicesListRoute
+  ApiPublicSeatsDevicesRegisterRoute: typeof ApiPublicSeatsDevicesRegisterRoute
+  ApiPublicSeatsDevicesReleaseRoute: typeof ApiPublicSeatsDevicesReleaseRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1104,6 +1160,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicClonesRotateKeyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/seats/devices/release': {
+      id: '/api/public/seats/devices/release'
+      path: '/api/public/seats/devices/release'
+      fullPath: '/api/public/seats/devices/release'
+      preLoaderRoute: typeof ApiPublicSeatsDevicesReleaseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/seats/devices/register': {
+      id: '/api/public/seats/devices/register'
+      path: '/api/public/seats/devices/register'
+      fullPath: '/api/public/seats/devices/register'
+      preLoaderRoute: typeof ApiPublicSeatsDevicesRegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/seats/devices/list': {
+      id: '/api/public/seats/devices/list'
+      path: '/api/public/seats/devices/list'
+      fullPath: '/api/public/seats/devices/list'
+      preLoaderRoute: typeof ApiPublicSeatsDevicesListRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/seats/devices/heartbeat': {
+      id: '/api/public/seats/devices/heartbeat'
+      path: '/api/public/seats/devices/heartbeat'
+      fullPath: '/api/public/seats/devices/heartbeat'
+      preLoaderRoute: typeof ApiPublicSeatsDevicesHeartbeatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1201,16 +1285,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicTokensCommitRoute: ApiPublicTokensCommitRoute,
   ApiPublicTokensPacksRoute: ApiPublicTokensPacksRoute,
   ApiPublicTokensReserveRoute: ApiPublicTokensReserveRoute,
+  ApiPublicSeatsDevicesHeartbeatRoute: ApiPublicSeatsDevicesHeartbeatRoute,
+  ApiPublicSeatsDevicesListRoute: ApiPublicSeatsDevicesListRoute,
+  ApiPublicSeatsDevicesRegisterRoute: ApiPublicSeatsDevicesRegisterRoute,
+  ApiPublicSeatsDevicesReleaseRoute: ApiPublicSeatsDevicesReleaseRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

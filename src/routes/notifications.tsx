@@ -86,6 +86,9 @@ const KIND_VALUES = [
   "seat_limit_approaching",
   "seat_limit_reached",
   "seat_plan_changed",
+  "device_limit_reached",
+  "device_registered",
+  "device_released",
 ] as const;
 
 const SEVERITY_VALUES = ["info", "success", "warning", "error"] as const;
@@ -111,6 +114,9 @@ const KIND_OPTIONS: { value: Kind | "all"; label: string }[] = [
   { value: "seat_limit_approaching" as Kind, label: "Seat limit approaching" },
   { value: "seat_limit_reached" as Kind, label: "Seat limit reached" },
   { value: "seat_plan_changed" as Kind, label: "Seat plan changed" },
+  { value: "device_limit_reached" as Kind, label: "Device limit reached" },
+  { value: "device_registered" as Kind, label: "Device registered" },
+  { value: "device_released" as Kind, label: "Device released" },
 ];
 
 const SEVERITY_OPTIONS: { value: Severity | "all"; label: string }[] = [
