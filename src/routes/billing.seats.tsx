@@ -11,13 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Users, ArrowLeft, ShieldCheck } from "lucide-react";
+import { Users, ArrowLeft, ShieldCheck, Smartphone, X } from "lucide-react";
 import {
   listSeatPlans,
   listSeatEntitlements,
   assignSeatPlan,
   listSeatAudit,
 } from "@/lib/seats.functions";
+import { listSeatDevices, revokeSeatDevice, seatDeviceSummary } from "@/lib/seat-devices.functions";
 
 export const Route = createFileRoute("/billing/seats")({
   component: () => (
