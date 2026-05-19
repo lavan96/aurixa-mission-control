@@ -52,7 +52,23 @@ type Pack = {
   currency: string;
   expires_after_days: number | null;
   is_active: boolean;
+  metadata?: {
+    price_min_cents?: number | null;
+    price_max_cents?: number | null;
+    best_for?: string | null;
+    popular?: boolean;
+    order?: number;
+  } | null;
 };
+
+function priceRange(p: { price_cents: number; currency: string; metadata?: Pack["metadata"] }) {
+  const min = p.metadata?.price_min_cents;
+  const max = p.metadata?.price_max_cents;
+  if (min != null && max != null && min !== max) {
+    return `${money(min, p.currency)} – ${money(max, p.currency)}`;
+  }
+  return money(p.price_cents, p.currency);
+}
 
 type SortKey = "tokens-asc" | "tokens-desc" | "price-asc" | "price-desc" | "name";
 
