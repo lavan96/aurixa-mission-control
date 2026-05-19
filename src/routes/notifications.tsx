@@ -81,6 +81,8 @@ const KIND_VALUES = [
   "clone_deleted",
   "module_installed",
   "module_removed",
+  "tokens_key_issued",
+  "tokens_key_rotated",
 ] as const;
 
 const SEVERITY_VALUES = ["info", "success", "warning", "error"] as const;
@@ -101,6 +103,8 @@ const KIND_OPTIONS: { value: Kind | "all"; label: string }[] = [
   { value: "clone_deleted", label: "Clone deleted" },
   { value: "module_installed", label: "Module installed" },
   { value: "module_removed", label: "Module removed" },
+  { value: "tokens_key_issued", label: "API key issued" },
+  { value: "tokens_key_rotated", label: "API key rotated" },
 ];
 
 const SEVERITY_OPTIONS: { value: Severity | "all"; label: string }[] = [
