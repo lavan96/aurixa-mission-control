@@ -14,6 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { Copy, KeyRound, Plus, RotateCw, Trash2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { CLONE_API_SCOPES, DEFAULT_SCOPES } from "@/lib/clone-api-scopes";
 import {
   listPlans, upsertPlan,
   listPacks, upsertPack,
