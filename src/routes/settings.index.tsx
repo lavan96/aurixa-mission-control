@@ -15,6 +15,8 @@ import { GitHubSetupWizard } from "@/components/github-setup-wizard";
 import { WebhookDeliveriesPanel } from "@/components/webhook-deliveries-panel";
 import { PemKeyHelper } from "@/components/pem-key-helper";
 import { ProfileEditorCard } from "@/components/profile-editor-card";
+import { useUserRoles } from "@/lib/use-user-roles";
+import { Lock } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type CascadeMode = Database["public"]["Enums"]["cascade_mode"];
@@ -26,6 +28,9 @@ export const Route = createFileRoute("/settings/")({
 
 function SettingsGeneralPage() {
   const { data: prime, loading: primeLoading, error: primeError, refresh } = usePrimeConfig();
+  const { isAdmin, isOperator, loading: rolesLoading } = useUserRoles();
+  const canEditPrime = isAdmin;
+  const canViewPrime = isOperator;
   const [owner, setOwner] = useState("");
   const [repo, setRepo] = useState("");
   const [branch, setBranch] = useState("main");
