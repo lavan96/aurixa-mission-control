@@ -120,7 +120,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </Link>
 
-        <nav className="flex-1 space-y-1">{navLinks}</nav>
+        <nav className="flex-1 min-h-0 space-y-1 overflow-y-auto pr-1">{navLinks}</nav>
 
         <div className="mt-auto rounded-md border border-border/60 bg-surface p-3">
           <div className="mb-2 truncate font-mono text-[11px] text-muted-foreground">
