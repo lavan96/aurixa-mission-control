@@ -67,11 +67,20 @@ const NAV = [
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
+const AppShellContext = createContext(false);
+
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const alreadyInShell = useContext(AppShellContext);
   const { user, signOut } = useAuth();
   const loc = useLocation();
   const nav = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Idempotency: if an ancestor already rendered AppShell, pass through.
+  // Prevents duplicated sidebars when nested routes each wrap in ProtectedRoute.
+  if (alreadyInShell) {
+    return <>{children}</>;
+  }
 
   const navLinks = NAV.map((item) => {
     const active = loc.pathname.startsWith(item.to);
