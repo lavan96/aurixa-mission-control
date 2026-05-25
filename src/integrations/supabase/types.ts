@@ -2854,6 +2854,7 @@ export type Database = {
       }
       heartbeat_device: { Args: { _device_id: string }; Returns: Json }
       highest_role_level: { Args: { _user_id: string }; Returns: number }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_operator: { Args: { _user_id: string }; Returns: boolean }
       recompute_seat_device_count: {
         Args: { _seat_id: string }
