@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { createContext, useContext, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import {
@@ -67,11 +67,20 @@ const NAV = [
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
+const AppShellContext = createContext(false);
+
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const alreadyInShell = useContext(AppShellContext);
   const { user, signOut } = useAuth();
   const loc = useLocation();
   const nav = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Idempotency: if an ancestor already rendered AppShell, pass through.
+  // Prevents duplicated sidebars when nested routes each wrap in ProtectedRoute.
+  if (alreadyInShell) {
+    return <>{children}</>;
+  }
 
   const navLinks = NAV.map((item) => {
     const active = loc.pathname.startsWith(item.to);
@@ -96,6 +105,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   });
 
   return (
+    <AppShellContext.Provider value={true}>
     <div className="flex min-h-screen w-full">
       {/* Desktop sidebar */}
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-border/60 bg-sidebar p-4 md:flex">
@@ -224,5 +234,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <KeyboardShortcuts />
       <OnboardingWizard />
     </div>
+    </AppShellContext.Provider>
   );
 }
