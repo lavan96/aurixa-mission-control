@@ -126,69 +126,99 @@ function SettingsGeneralPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Github className="h-4 w-4" /> Prime repository
+            {!canEditPrime && !rolesLoading ? (
+              <span className="ml-2 inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                <Lock className="h-3 w-3" /> Admin only
+              </span>
+            ) : null}
           </CardTitle>
-          <CardDescription>The single source-of-truth codebase that all clones cascade from.</CardDescription>
+          <CardDescription>
+            The single source-of-truth codebase that all clones cascade from.
+            {!canEditPrime && canViewPrime ? " View-only — ask an admin to change these values." : ""}
+          </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
-          {primeLoading && !prime ? (
+          {rolesLoading ? (
             <div className="md:col-span-2 rounded-md border border-border bg-surface px-3 py-2 font-mono text-xs text-muted-foreground">
-              Loading prime configuration…
+              Checking permissions…
             </div>
-          ) : null}
-          {primeError ? (
-            <div className="md:col-span-2 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 font-mono text-xs text-destructive">
-              Failed to load prime config: {primeError}
-            </div>
-          ) : null}
-          {!primeLoading && !prime && !primeError ? (
+          ) : !canViewPrime ? (
             <div className="md:col-span-2 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 font-mono text-xs text-warning">
-              No prime config saved yet — fill in the fields below and click Save.
+              Your account does not have operator access. Ask an admin to grant
+              you the operator or admin role to view or edit the Prime
+              repository configuration.
             </div>
-          ) : null}
-          <div className="space-y-2">
-            <Label>GitHub owner</Label>
-            <Input value={owner} onChange={(e) => setOwner(e.target.value)} placeholder="my-org" />
-          </div>
-          <div className="space-y-2">
-            <Label>Repo</Label>
-            <Input value={repo} onChange={(e) => setRepo(e.target.value)} placeholder="prime-codebase" />
-          </div>
-          <div className="space-y-2">
-            <Label>Default branch</Label>
-            <Input value={branch} onChange={(e) => setBranch(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>Default org for new clones</Label>
-            <Input value={defaultOrg} onChange={(e) => setDefaultOrg(e.target.value)} placeholder="my-org" />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label className="flex items-center gap-2">
-              <Zap className="h-3.5 w-3.5" /> Default cascade mode (used on commit webhooks)
-            </Label>
-            <Select value={cascadeMode} onValueChange={(v) => setCascadeMode(v as CascadeMode)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pr">
-                  PR — open a pull request on each clone for human review
-                </SelectItem>
-                <SelectItem value="auto_merge">
-                  Auto-merge — push directly to each clone's default branch
-                </SelectItem>
-                <SelectItem value="notify">
-                  Notify only — record the event, take no action
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="md:col-span-2 flex justify-end">
-            <Button onClick={save} disabled={saving}>
-              {saving ? "Saving…" : "Save prime config"}
-            </Button>
-          </div>
+          ) : (
+            <>
+              {primeLoading && !prime ? (
+                <div className="md:col-span-2 rounded-md border border-border bg-surface px-3 py-2 font-mono text-xs text-muted-foreground">
+                  Loading prime configuration…
+                </div>
+              ) : null}
+              {primeError ? (
+                <div className="md:col-span-2 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 font-mono text-xs text-destructive">
+                  Failed to load prime config: {primeError}
+                </div>
+              ) : null}
+              {!primeLoading && !prime && !primeError && canEditPrime ? (
+                <div className="md:col-span-2 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 font-mono text-xs text-warning">
+                  No prime config saved yet — fill in the fields below and click Save.
+                </div>
+              ) : null}
+              {!primeLoading && !prime && !primeError && !canEditPrime ? (
+                <div className="md:col-span-2 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 font-mono text-xs text-warning">
+                  No prime config saved yet. An admin must configure the Prime repository.
+                </div>
+              ) : null}
+              <div className="space-y-2">
+                <Label>GitHub owner</Label>
+                <Input value={owner} onChange={(e) => setOwner(e.target.value)} placeholder="my-org" disabled={!canEditPrime} />
+              </div>
+              <div className="space-y-2">
+                <Label>Repo</Label>
+                <Input value={repo} onChange={(e) => setRepo(e.target.value)} placeholder="prime-codebase" disabled={!canEditPrime} />
+              </div>
+              <div className="space-y-2">
+                <Label>Default branch</Label>
+                <Input value={branch} onChange={(e) => setBranch(e.target.value)} disabled={!canEditPrime} />
+              </div>
+              <div className="space-y-2">
+                <Label>Default org for new clones</Label>
+                <Input value={defaultOrg} onChange={(e) => setDefaultOrg(e.target.value)} placeholder="my-org" disabled={!canEditPrime} />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label className="flex items-center gap-2">
+                  <Zap className="h-3.5 w-3.5" /> Default cascade mode (used on commit webhooks)
+                </Label>
+                <Select value={cascadeMode} onValueChange={(v) => setCascadeMode(v as CascadeMode)} disabled={!canEditPrime}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pr">
+                      PR — open a pull request on each clone for human review
+                    </SelectItem>
+                    <SelectItem value="auto_merge">
+                      Auto-merge — push directly to each clone's default branch
+                    </SelectItem>
+                    <SelectItem value="notify">
+                      Notify only — record the event, take no action
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {canEditPrime ? (
+                <div className="md:col-span-2 flex justify-end">
+                  <Button onClick={save} disabled={saving}>
+                    {saving ? "Saving…" : "Save prime config"}
+                  </Button>
+                </div>
+              ) : null}
+            </>
+          )}
         </CardContent>
       </Card>
+
 
       <GitHubSetupWizard />
 
