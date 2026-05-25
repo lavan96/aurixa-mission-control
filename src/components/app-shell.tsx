@@ -234,5 +234,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <KeyboardShortcuts />
       <OnboardingWizard />
     </div>
+    </AppShellContext.Provider>
   );
 }
