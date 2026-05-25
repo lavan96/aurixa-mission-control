@@ -105,6 +105,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   });
 
   return (
+    <AppShellContext.Provider value={true}>
     <div className="flex min-h-screen w-full">
       {/* Desktop sidebar */}
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-border/60 bg-sidebar p-4 md:flex">
