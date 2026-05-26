@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,22 +11,34 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Radio, MailCheck } from "lucide-react";
 import { toast } from "sonner";
 
+type AuthSearch = { redirect?: string; intent?: string };
+
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
+  validateSearch: (s: Record<string, unknown>): AuthSearch => ({
+    redirect: typeof s.redirect === "string" ? s.redirect : undefined,
+    intent: typeof s.intent === "string" ? s.intent : undefined,
+  }),
   head: () => ({ meta: [{ title: "Sign in — Aurixa Systems Mission Control" }] }),
 });
 
 function AuthPage() {
   const { session, signIn, signUp } = useAuth();
   const nav = useNavigate();
+  const search = useSearch({ from: "/auth" }) as AuthSearch;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
 
   useEffect(() => {
-    if (session) nav({ to: "/dashboard" });
-  }, [session, nav]);
+    if (session) {
+      const dest = search.redirect && search.redirect.startsWith("/") ? search.redirect : "/dashboard";
+      const qs = search.intent ? `${dest.includes("?") ? "&" : "?"}intent=${encodeURIComponent(search.intent)}` : "";
+      nav({ to: (dest + qs) as never });
+    }
+  }, [session, nav, search.redirect, search.intent]);
+
 
   const handle = async (mode: "in" | "up") => {
     setBusy(true);
