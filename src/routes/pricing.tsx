@@ -97,12 +97,77 @@ function PricingPage() {
   });
 
   const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
+  const { session } = useAuth();
+  const nav = useNavigate();
+  const search = useSearch({ from: "/pricing" }) as PricingSearch;
+  const checkoutFn = useServerFn(createStripeCheckout);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const autoLaunchedRef = useRef(false);
+
+  const startCheckout = async (
+    mode: "seat_plan" | "topup" | "setup_package",
+    itemId: string,
+  ) => {
+    // Unauthenticated: route to auth with redirect + intent for auto-launch on return.
+    if (!session) {
+      nav({
+        to: "/auth" as never,
+        search: { redirect: "/pricing", intent: `${mode}:${itemId}` } as never,
+      });
+      return;
+    }
+    // Top-ups & setup packages need a tenant context — send users to the
+    // signed-in billing pages where tenant is resolved.
+    if (mode === "topup") {
+      nav({ to: "/billing/topup" as never });
+      return;
+    }
+    if (mode === "setup_package") {
+      nav({ to: "/billing/catalog" as never });
+      return;
+    }
+    // Seat plan → direct Stripe checkout (Prime entitlement, no clone).
+    setBusyId(itemId);
+    try {
+      const res = await checkoutFn({
+        data: { mode, itemId, cloneId: null },
+      });
+      if (res.ok && res.url) {
+        window.location.href = res.url;
+        return;
+      }
+      toast.error(
+        res.ok
+          ? "Checkout could not be started"
+          : `Checkout unavailable: ${res.error.replaceAll("_", " ")}`,
+      );
+    } catch (err) {
+      toast.error((err as Error).message ?? "Checkout failed");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  // Auto-resume checkout after auth round-trip.
+  useEffect(() => {
+    if (autoLaunchedRef.current) return;
+    if (!session || !search.intent) return;
+    const [mode, itemId] = search.intent.split(":");
+    if (!mode || !itemId) return;
+    if (mode !== "seat_plan" && mode !== "topup" && mode !== "setup_package") return;
+    autoLaunchedRef.current = true;
+    // Clear the intent param so we don't loop.
+    nav({ to: "/pricing" as never, search: {} as never, replace: true });
+    void startCheckout(mode, itemId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, search.intent]);
 
   const plans = useMemo(() => data?.plans ?? [], [data]);
   const packs = data?.packs ?? [];
   const setups = data?.setups ?? [];
   const addons = data?.addons ?? [];
   const reports = data?.reports ?? [];
+
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
