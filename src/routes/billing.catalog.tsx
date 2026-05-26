@@ -34,11 +34,23 @@ function priceRange(min: number, max: number, currency = "AUD") {
 }
 
 function CatalogPage() {
+  const { tenant } = Route.useSearch();
   const fetchCatalog = useServerFn(listPricingCatalog);
+  const checkoutFn = useServerFn(createStripeCheckout);
   const { data, isLoading } = useQuery({
     queryKey: ["pricing-catalog"],
     queryFn: () => fetchCatalog(),
   });
+
+  async function buySetup(setupId: string, stripePriceId: string | null) {
+    if (!tenant) { toast.error("Open with ?tenant=<id> to purchase"); return; }
+    if (!stripePriceId) { toast.error("Setup package not linked to Stripe yet"); return; }
+    try {
+      const r = await checkoutFn({ data: { mode: "setup_package", itemId: setupId, tenantId: tenant } });
+      if (!r.ok) { toast.error(r.error); return; }
+      if (r.url) window.location.href = r.url;
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Checkout failed"); }
+  }
 
   return (
     <div className="container mx-auto py-8 space-y-8">
