@@ -13,7 +13,7 @@ type Mode = "topup" | "seat_plan" | "setup_package";
 const InputSchema = z.object({
   mode: z.enum(["topup", "seat_plan", "setup_package"]),
   tenantId: z.string().uuid().optional(),
-  cloneId: z.string().uuid().optional(),
+  cloneId: z.string().uuid().nullable().optional(),
   itemId: z.string().uuid(),
   quantity: z.number().int().min(1).max(100).default(1),
   successPath: z.string().startsWith("/").default("/billing/success"),
