@@ -14,26 +14,31 @@ function bad(status: number, msg: string) {
   return new Response(msg, { status });
 }
 
+// We use `any` casts for tables created in the latest migration that aren't
+// yet in the generated Supabase types file (regenerated on next deploy).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const adminAny = supabaseAdmin as any;
+
 async function alreadyProcessed(eventId: string): Promise<boolean> {
-  const { data } = await supabaseAdmin
-    .from("stripe_events" as never)
+  const { data } = await adminAny
+    .from("stripe_events")
     .select("id, processed_at")
     .eq("stripe_event_id", eventId)
     .maybeSingle();
-  return !!(data && (data as { processed_at: string | null }).processed_at);
+  return !!(data && data.processed_at);
 }
 
 async function recordEvent(event: Stripe.Event, payload: unknown) {
-  await supabaseAdmin.from("stripe_events" as never).upsert({
+  await adminAny.from("stripe_events").upsert({
     stripe_event_id: event.id,
     type: event.type,
-    payload: payload as Record<string, unknown>,
+    payload,
   }, { onConflict: "stripe_event_id" });
 }
 
 async function markProcessed(eventId: string, error?: string) {
-  await supabaseAdmin
-    .from("stripe_events" as never)
+  await adminAny
+    .from("stripe_events")
     .update({ processed_at: new Date().toISOString(), error: error ?? null })
     .eq("stripe_event_id", eventId);
 }
@@ -62,7 +67,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   if (mode === "setup_package") {
     if (!tenantId) throw new Error("missing_tenant");
-    await supabaseAdmin.from("setup_purchases" as never).upsert({
+    await adminAny.from("setup_purchases").upsert({
       tenant_id: tenantId,
       setup_package_id: itemId,
       stripe_checkout_session_id: session.id,
@@ -71,7 +76,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       amount_cents: session.amount_total ?? 0,
       currency: (session.currency ?? "aud").toUpperCase(),
       status: session.payment_status === "paid" ? "paid" : "pending",
-      metadata: md as Record<string, unknown>,
+      metadata: md,
     }, { onConflict: "stripe_checkout_session_id" });
     return;
   }

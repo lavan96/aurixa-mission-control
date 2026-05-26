@@ -51,13 +51,16 @@ import { Route as ClonesNewRouteImport } from './routes/clones.new'
 import { Route as ClonesCloneIdRouteImport } from './routes/clones.$cloneId'
 import { Route as CascadesEventIdRouteImport } from './routes/cascades.$eventId'
 import { Route as BillingTopupRouteImport } from './routes/billing.topup'
+import { Route as BillingSuccessRouteImport } from './routes/billing.success'
 import { Route as BillingSeatsRouteImport } from './routes/billing.seats'
 import { Route as BillingCatalogRouteImport } from './routes/billing.catalog'
+import { Route as BillingCancelRouteImport } from './routes/billing.cancel'
 import { Route as ApiPublicTokensReserveRouteImport } from './routes/api.public.tokens.reserve'
 import { Route as ApiPublicTokensPacksRouteImport } from './routes/api.public.tokens.packs'
 import { Route as ApiPublicTokensCommitRouteImport } from './routes/api.public.tokens.commit'
 import { Route as ApiPublicTokensCancelRouteImport } from './routes/api.public.tokens.cancel'
 import { Route as ApiPublicTokensBalanceRouteImport } from './routes/api.public.tokens.balance'
+import { Route as ApiPublicStripeWebhookRouteImport } from './routes/api.public.stripe.webhook'
 import { Route as ApiPublicSeatsReserveRouteImport } from './routes/api.public.seats.reserve'
 import { Route as ApiPublicSeatsReleaseRouteImport } from './routes/api.public.seats.release'
 import { Route as ApiPublicSeatsListRouteImport } from './routes/api.public.seats.list'
@@ -282,6 +285,11 @@ const BillingTopupRoute = BillingTopupRouteImport.update({
   path: '/billing/topup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BillingSuccessRoute = BillingSuccessRouteImport.update({
+  id: '/billing/success',
+  path: '/billing/success',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BillingSeatsRoute = BillingSeatsRouteImport.update({
   id: '/billing/seats',
   path: '/billing/seats',
@@ -290,6 +298,11 @@ const BillingSeatsRoute = BillingSeatsRouteImport.update({
 const BillingCatalogRoute = BillingCatalogRouteImport.update({
   id: '/billing/catalog',
   path: '/billing/catalog',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BillingCancelRoute = BillingCancelRouteImport.update({
+  id: '/billing/cancel',
+  path: '/billing/cancel',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicTokensReserveRoute = ApiPublicTokensReserveRouteImport.update({
@@ -315,6 +328,11 @@ const ApiPublicTokensCancelRoute = ApiPublicTokensCancelRouteImport.update({
 const ApiPublicTokensBalanceRoute = ApiPublicTokensBalanceRouteImport.update({
   id: '/api/public/tokens/balance',
   path: '/api/public/tokens/balance',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicStripeWebhookRoute = ApiPublicStripeWebhookRouteImport.update({
+  id: '/api/public/stripe/webhook',
+  path: '/api/public/stripe/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicSeatsReserveRoute = ApiPublicSeatsReserveRouteImport.update({
@@ -401,8 +419,10 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRouteWithChildren
   '/slo': typeof SloRoute
   '/yggdrasil': typeof YggdrasilRoute
+  '/billing/cancel': typeof BillingCancelRoute
   '/billing/catalog': typeof BillingCatalogRoute
   '/billing/seats': typeof BillingSeatsRoute
+  '/billing/success': typeof BillingSuccessRoute
   '/billing/topup': typeof BillingTopupRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
@@ -431,6 +451,7 @@ export interface FileRoutesByFullPath {
   '/api/public/seats/list': typeof ApiPublicSeatsListRoute
   '/api/public/seats/release': typeof ApiPublicSeatsReleaseRoute
   '/api/public/seats/reserve': typeof ApiPublicSeatsReserveRoute
+  '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
   '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
   '/api/public/tokens/commit': typeof ApiPublicTokensCommitRoute
@@ -462,8 +483,10 @@ export interface FileRoutesByTo {
   '/schedules': typeof SchedulesRoute
   '/slo': typeof SloRoute
   '/yggdrasil': typeof YggdrasilRoute
+  '/billing/cancel': typeof BillingCancelRoute
   '/billing/catalog': typeof BillingCatalogRoute
   '/billing/seats': typeof BillingSeatsRoute
+  '/billing/success': typeof BillingSuccessRoute
   '/billing/topup': typeof BillingTopupRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
@@ -492,6 +515,7 @@ export interface FileRoutesByTo {
   '/api/public/seats/list': typeof ApiPublicSeatsListRoute
   '/api/public/seats/release': typeof ApiPublicSeatsReleaseRoute
   '/api/public/seats/reserve': typeof ApiPublicSeatsReserveRoute
+  '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
   '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
   '/api/public/tokens/commit': typeof ApiPublicTokensCommitRoute
@@ -525,8 +549,10 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRouteWithChildren
   '/slo': typeof SloRoute
   '/yggdrasil': typeof YggdrasilRoute
+  '/billing/cancel': typeof BillingCancelRoute
   '/billing/catalog': typeof BillingCatalogRoute
   '/billing/seats': typeof BillingSeatsRoute
+  '/billing/success': typeof BillingSuccessRoute
   '/billing/topup': typeof BillingTopupRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
@@ -555,6 +581,7 @@ export interface FileRoutesById {
   '/api/public/seats/list': typeof ApiPublicSeatsListRoute
   '/api/public/seats/release': typeof ApiPublicSeatsReleaseRoute
   '/api/public/seats/reserve': typeof ApiPublicSeatsReserveRoute
+  '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
   '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
   '/api/public/tokens/commit': typeof ApiPublicTokensCommitRoute
@@ -589,8 +616,10 @@ export interface FileRouteTypes {
     | '/settings'
     | '/slo'
     | '/yggdrasil'
+    | '/billing/cancel'
     | '/billing/catalog'
     | '/billing/seats'
+    | '/billing/success'
     | '/billing/topup'
     | '/cascades/$eventId'
     | '/clones/$cloneId'
@@ -619,6 +648,7 @@ export interface FileRouteTypes {
     | '/api/public/seats/list'
     | '/api/public/seats/release'
     | '/api/public/seats/reserve'
+    | '/api/public/stripe/webhook'
     | '/api/public/tokens/balance'
     | '/api/public/tokens/cancel'
     | '/api/public/tokens/commit'
@@ -650,8 +680,10 @@ export interface FileRouteTypes {
     | '/schedules'
     | '/slo'
     | '/yggdrasil'
+    | '/billing/cancel'
     | '/billing/catalog'
     | '/billing/seats'
+    | '/billing/success'
     | '/billing/topup'
     | '/cascades/$eventId'
     | '/clones/$cloneId'
@@ -680,6 +712,7 @@ export interface FileRouteTypes {
     | '/api/public/seats/list'
     | '/api/public/seats/release'
     | '/api/public/seats/reserve'
+    | '/api/public/stripe/webhook'
     | '/api/public/tokens/balance'
     | '/api/public/tokens/cancel'
     | '/api/public/tokens/commit'
@@ -712,8 +745,10 @@ export interface FileRouteTypes {
     | '/settings'
     | '/slo'
     | '/yggdrasil'
+    | '/billing/cancel'
     | '/billing/catalog'
     | '/billing/seats'
+    | '/billing/success'
     | '/billing/topup'
     | '/cascades/$eventId'
     | '/clones/$cloneId'
@@ -742,6 +777,7 @@ export interface FileRouteTypes {
     | '/api/public/seats/list'
     | '/api/public/seats/release'
     | '/api/public/seats/reserve'
+    | '/api/public/stripe/webhook'
     | '/api/public/tokens/balance'
     | '/api/public/tokens/cancel'
     | '/api/public/tokens/commit'
@@ -775,8 +811,10 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRouteWithChildren
   SloRoute: typeof SloRoute
   YggdrasilRoute: typeof YggdrasilRoute
+  BillingCancelRoute: typeof BillingCancelRoute
   BillingCatalogRoute: typeof BillingCatalogRoute
   BillingSeatsRoute: typeof BillingSeatsRoute
+  BillingSuccessRoute: typeof BillingSuccessRoute
   BillingTopupRoute: typeof BillingTopupRoute
   ClonesCloneIdRoute: typeof ClonesCloneIdRoute
   ClonesNewRoute: typeof ClonesNewRoute
@@ -795,6 +833,7 @@ export interface RootRouteChildren {
   ApiPublicSeatsListRoute: typeof ApiPublicSeatsListRoute
   ApiPublicSeatsReleaseRoute: typeof ApiPublicSeatsReleaseRoute
   ApiPublicSeatsReserveRoute: typeof ApiPublicSeatsReserveRoute
+  ApiPublicStripeWebhookRoute: typeof ApiPublicStripeWebhookRoute
   ApiPublicTokensBalanceRoute: typeof ApiPublicTokensBalanceRoute
   ApiPublicTokensCancelRoute: typeof ApiPublicTokensCancelRoute
   ApiPublicTokensCommitRoute: typeof ApiPublicTokensCommitRoute
@@ -1102,6 +1141,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BillingTopupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/billing/success': {
+      id: '/billing/success'
+      path: '/billing/success'
+      fullPath: '/billing/success'
+      preLoaderRoute: typeof BillingSuccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/billing/seats': {
       id: '/billing/seats'
       path: '/billing/seats'
@@ -1114,6 +1160,13 @@ declare module '@tanstack/react-router' {
       path: '/billing/catalog'
       fullPath: '/billing/catalog'
       preLoaderRoute: typeof BillingCatalogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/billing/cancel': {
+      id: '/billing/cancel'
+      path: '/billing/cancel'
+      fullPath: '/billing/cancel'
+      preLoaderRoute: typeof BillingCancelRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/tokens/reserve': {
@@ -1149,6 +1202,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/tokens/balance'
       fullPath: '/api/public/tokens/balance'
       preLoaderRoute: typeof ApiPublicTokensBalanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/stripe/webhook': {
+      id: '/api/public/stripe/webhook'
+      path: '/api/public/stripe/webhook'
+      fullPath: '/api/public/stripe/webhook'
+      preLoaderRoute: typeof ApiPublicStripeWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/seats/reserve': {
@@ -1302,8 +1362,10 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRouteWithChildren,
   SloRoute: SloRoute,
   YggdrasilRoute: YggdrasilRoute,
+  BillingCancelRoute: BillingCancelRoute,
   BillingCatalogRoute: BillingCatalogRoute,
   BillingSeatsRoute: BillingSeatsRoute,
+  BillingSuccessRoute: BillingSuccessRoute,
   BillingTopupRoute: BillingTopupRoute,
   ClonesCloneIdRoute: ClonesCloneIdRoute,
   ClonesNewRoute: ClonesNewRoute,
@@ -1322,6 +1384,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicSeatsListRoute: ApiPublicSeatsListRoute,
   ApiPublicSeatsReleaseRoute: ApiPublicSeatsReleaseRoute,
   ApiPublicSeatsReserveRoute: ApiPublicSeatsReserveRoute,
+  ApiPublicStripeWebhookRoute: ApiPublicStripeWebhookRoute,
   ApiPublicTokensBalanceRoute: ApiPublicTokensBalanceRoute,
   ApiPublicTokensCancelRoute: ApiPublicTokensCancelRoute,
   ApiPublicTokensCommitRoute: ApiPublicTokensCommitRoute,
@@ -1335,12 +1398,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

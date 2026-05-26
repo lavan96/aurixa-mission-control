@@ -20,26 +20,22 @@ const InputSchema = z.object({
   cancelPath: z.string().startsWith("/").default("/billing/cancel"),
 });
 
-async function resolveItem(mode: Mode, itemId: string) {
-  if (mode === "topup") {
-    const { data } = await supabaseAdmin
-      .from("topup_packs")
-      .select("id, slug, name, stripe_price_id, currency, is_active")
-      .eq("id", itemId).maybeSingle();
-    return data;
-  }
-  if (mode === "seat_plan") {
-    const { data } = await supabaseAdmin
-      .from("seat_plans")
-      .select("id, slug, name, stripe_price_id, currency, is_active")
-      .eq("id", itemId).maybeSingle();
-    return data;
-  }
-  const { data } = await supabaseAdmin
-    .from("setup_packages" as never)
+type CatalogItem = {
+  id: string; slug: string; name: string;
+  stripe_price_id: string | null; currency: string; is_active: boolean;
+};
+
+async function resolveItem(mode: Mode, itemId: string): Promise<CatalogItem | null> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const adminAny = supabaseAdmin as any;
+  const table = mode === "topup" ? "topup_packs"
+    : mode === "seat_plan" ? "seat_plans"
+    : "setup_packages";
+  const { data } = await adminAny
+    .from(table)
     .select("id, slug, name, stripe_price_id, currency, is_active")
     .eq("id", itemId).maybeSingle();
-  return data as { id: string; slug: string; name: string; stripe_price_id: string | null; currency: string; is_active: boolean } | null;
+  return (data as CatalogItem | null) ?? null;
 }
 
 async function ensureStripeCustomer(tenantId: string): Promise<string> {
