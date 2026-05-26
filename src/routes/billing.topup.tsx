@@ -329,9 +329,18 @@ function TopupBody() {
               <p className="text-xs text-muted-foreground">
                 {p.expires_after_days ? `Expires in ${p.expires_after_days}d` : "No expiry"}
               </p>
-              <Button className="mt-auto" disabled={!tenant} onClick={() => requestBuy(p)}>
-                {tenant ? "Apply top-up" : "Select tenant"}
-              </Button>
+              <div className="mt-auto flex flex-col gap-2">
+                <Button
+                  disabled={!tenant || !p.stripe_price_id}
+                  onClick={() => buyWithStripe(p)}
+                  title={!p.stripe_price_id ? "Stripe price not linked" : undefined}
+                >
+                  {tenant ? (p.stripe_price_id ? "Pay with Stripe" : "Stripe not linked") : "Select tenant"}
+                </Button>
+                <Button variant="outline" size="sm" disabled={!tenant} onClick={() => requestBuy(p)}>
+                  Apply manually (admin)
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ))}
