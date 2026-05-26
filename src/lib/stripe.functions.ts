@@ -64,10 +64,7 @@ export const createStripeCheckout = createServerFn({ method: "POST" })
     if (!item.is_active) return { ok: false as const, error: "item_inactive" };
     if (!item.stripe_price_id) return { ok: false as const, error: "stripe_price_not_linked" };
 
-    // Seat plans must be tied to a clone; topup + setup require a tenant.
-    if (data.mode === "seat_plan" && !data.cloneId) {
-      return { ok: false as const, error: "clone_required" };
-    }
+    // Topups + setup packages require a tenant. Seat plans may target Prime (null clone).
     if ((data.mode === "topup" || data.mode === "setup_package") && !data.tenantId) {
       return { ok: false as const, error: "tenant_required" };
     }
