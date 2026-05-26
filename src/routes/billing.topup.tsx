@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { listPacks, applyTenantTopup, getTenant } from "@/lib/tokens.functions";
+import { createStripeCheckout } from "@/lib/stripe.functions";
 
 const SearchSchema = z.object({
   tenant: z.string().uuid().optional(),
@@ -59,6 +60,7 @@ type Pack = {
     popular?: boolean;
     order?: number;
   } | null;
+  stripe_price_id?: string | null;
 };
 
 function priceRange(p: { price_cents: number; currency: string; metadata?: Pack["metadata"] }) {
@@ -87,6 +89,23 @@ function TopupBody() {
   const packsFn = useServerFn(listPacks);
   const tenantFn = useServerFn(getTenant);
   const topupFn = useServerFn(applyTenantTopup);
+  const checkoutFn = useServerFn(createStripeCheckout);
+
+  async function buyWithStripe(pack: Pack) {
+    if (!tenant) { toast.error("No tenant in context"); return; }
+    if (!pack.stripe_price_id) {
+      toast.error("Pack not linked to Stripe yet"); return;
+    }
+    try {
+      const r = await checkoutFn({
+        data: { mode: "topup", tenantId: tenant, itemId: pack.id },
+      });
+      if (!r.ok) { toast.error(r.error); return; }
+      if (r.url) window.location.href = r.url;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Checkout failed");
+    }
+  }
 
   const packs = useQuery({
     queryKey: ["topup", "packs"],
@@ -310,9 +329,18 @@ function TopupBody() {
               <p className="text-xs text-muted-foreground">
                 {p.expires_after_days ? `Expires in ${p.expires_after_days}d` : "No expiry"}
               </p>
-              <Button className="mt-auto" disabled={!tenant} onClick={() => requestBuy(p)}>
-                {tenant ? "Apply top-up" : "Select tenant"}
-              </Button>
+              <div className="mt-auto flex flex-col gap-2">
+                <Button
+                  disabled={!tenant || !p.stripe_price_id}
+                  onClick={() => buyWithStripe(p)}
+                  title={!p.stripe_price_id ? "Stripe price not linked" : undefined}
+                >
+                  {tenant ? (p.stripe_price_id ? "Pay with Stripe" : "Stripe not linked") : "Select tenant"}
+                </Button>
+                <Button variant="outline" size="sm" disabled={!tenant} onClick={() => requestBuy(p)}>
+                  Apply manually (admin)
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ))}
