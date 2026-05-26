@@ -82,17 +82,16 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   }
 
   if (mode === "seat_plan") {
-    if (!cloneId) throw new Error("missing_clone");
-    // Upsert the entitlement for this clone with the chosen seat plan.
-    const { data: existing } = await supabaseAdmin
-      .from("clone_seat_entitlements")
-      .select("clone_id")
-      .eq("clone_id", cloneId).maybeSingle();
+    // cloneId null = Prime (global) entitlement.
+    const existingQ = cloneId
+      ? supabaseAdmin.from("clone_seat_entitlements").select("clone_id").eq("clone_id", cloneId).maybeSingle()
+      : supabaseAdmin.from("clone_seat_entitlements").select("clone_id").is("clone_id", null).maybeSingle();
+    const { data: existing } = await existingQ;
     if (existing) {
-      await supabaseAdmin
-        .from("clone_seat_entitlements")
-        .update({ seat_plan_id: itemId, updated_at: new Date().toISOString() })
-        .eq("clone_id", cloneId);
+      const updQ = cloneId
+        ? supabaseAdmin.from("clone_seat_entitlements").update({ seat_plan_id: itemId, updated_at: new Date().toISOString() }).eq("clone_id", cloneId)
+        : supabaseAdmin.from("clone_seat_entitlements").update({ seat_plan_id: itemId, updated_at: new Date().toISOString() }).is("clone_id", null);
+      await updQ;
     } else {
       await supabaseAdmin
         .from("clone_seat_entitlements")

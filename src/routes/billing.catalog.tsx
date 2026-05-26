@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
+import { z } from "zod";
+import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/protected-route";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Receipt, Puzzle, UserCog, Wrench, FileText } from "lucide-react";
 import { listPricingCatalog } from "@/lib/pricing-catalog.functions";
+import { createStripeCheckout } from "@/lib/stripe.functions";
+
+const SearchSchema = z.object({ tenant: z.string().uuid().optional() });
 
 export const Route = createFileRoute("/billing/catalog")({
   component: () => (
@@ -15,6 +20,7 @@ export const Route = createFileRoute("/billing/catalog")({
       <CatalogPage />
     </ProtectedRoute>
   ),
+  validateSearch: (s) => SearchSchema.parse(s),
   head: () => ({ meta: [{ title: "Pricing Catalog — Mission Control" }] }),
 });
 
@@ -28,11 +34,23 @@ function priceRange(min: number, max: number, currency = "AUD") {
 }
 
 function CatalogPage() {
+  const { tenant } = Route.useSearch();
   const fetchCatalog = useServerFn(listPricingCatalog);
+  const checkoutFn = useServerFn(createStripeCheckout);
   const { data, isLoading } = useQuery({
     queryKey: ["pricing-catalog"],
     queryFn: () => fetchCatalog(),
   });
+
+  async function buySetup(setupId: string, stripePriceId: string | null) {
+    if (!tenant) { toast.error("Open with ?tenant=<id> to purchase"); return; }
+    if (!stripePriceId) { toast.error("Setup package not linked to Stripe yet"); return; }
+    try {
+      const r = await checkoutFn({ data: { mode: "setup_package", itemId: setupId, tenantId: tenant } });
+      if (!r.ok) { toast.error(r.error); return; }
+      if (r.url) window.location.href = r.url;
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Checkout failed"); }
+  }
 
   return (
     <div className="container mx-auto py-8 space-y-8">
@@ -152,12 +170,21 @@ function CatalogPage() {
                       {s.metadata?.duration_weeks ? ` · ~${s.metadata.duration_weeks} weeks` : ""}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-3">
                     <ul className="text-sm space-y-1">
                       {(s.deliverables as string[]).map((d, i) => (
                         <li key={i} className="flex gap-2"><span className="text-primary">✓</span>{d}</li>
                       ))}
                     </ul>
+                    <Button
+                      size="sm"
+                      className="w-full"
+                      disabled={!tenant || !s.stripe_price_id}
+                      title={!s.stripe_price_id ? "Stripe price not linked" : (!tenant ? "Open with ?tenant=<id>" : undefined)}
+                      onClick={() => buySetup(s.id, s.stripe_price_id)}
+                    >
+                      {!tenant ? "Select tenant to purchase" : (s.stripe_price_id ? "Purchase (Stripe)" : "Stripe not linked")}
+                    </Button>
                   </CardContent>
                 </Card>
               ))}

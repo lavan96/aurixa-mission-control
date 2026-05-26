@@ -19,6 +19,7 @@ import {
   listSeatAudit,
 } from "@/lib/seats.functions";
 import { listSeatDevices, revokeSeatDevice, seatDeviceSummary } from "@/lib/seat-devices.functions";
+import { createStripeCheckout } from "@/lib/stripe.functions";
 
 export const Route = createFileRoute("/billing/seats")({
   component: () => (
@@ -42,6 +43,16 @@ function SeatsPage() {
   const devicesFn = useServerFn(listSeatDevices);
   const revokeDeviceFn = useServerFn(revokeSeatDevice);
   const deviceSummaryFn = useServerFn(seatDeviceSummary);
+  const checkoutFn = useServerFn(createStripeCheckout);
+
+  async function subscribe(planId: string, cloneId: string | null, stripePriceId: string | null) {
+    if (!stripePriceId) { toast.error("Plan not linked to Stripe yet"); return; }
+    try {
+      const r = await checkoutFn({ data: { mode: "seat_plan", itemId: planId, cloneId } });
+      if (!r.ok) { toast.error(r.error); return; }
+      if (r.url) window.location.href = r.url;
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Checkout failed"); }
+  }
 
   const plansQ = useQuery({ queryKey: ["seats", "plans"], queryFn: () => plansFn({}) });
   const entsQ = useQuery({ queryKey: ["seats", "ents"], queryFn: () => entsFn({}) });
@@ -177,14 +188,25 @@ function SeatsPage() {
                     {meta.best_for && (
                       <p className="text-[11px] text-muted-foreground italic">Best for: {meta.best_for}</p>
                     )}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full mt-auto"
-                      onClick={() => assign(null, p.id)}
-                    >
-                      Apply to Prime
-                    </Button>
+                    <div className="mt-auto space-y-2">
+                      <Button
+                        size="sm"
+                        className="w-full"
+                        disabled={!(p as any).stripe_price_id}
+                        title={!(p as any).stripe_price_id ? "Stripe price not linked" : undefined}
+                        onClick={() => subscribe(p.id, null, (p as any).stripe_price_id)}
+                      >
+                        {(p as any).stripe_price_id ? "Subscribe (Stripe)" : "Stripe not linked"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => assign(null, p.id)}
+                      >
+                        Apply manually (admin)
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               );
