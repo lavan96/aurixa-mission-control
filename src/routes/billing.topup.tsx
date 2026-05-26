@@ -60,6 +60,7 @@ type Pack = {
     popular?: boolean;
     order?: number;
   } | null;
+  stripe_price_id?: string | null;
 };
 
 function priceRange(p: { price_cents: number; currency: string; metadata?: Pack["metadata"] }) {
@@ -88,6 +89,23 @@ function TopupBody() {
   const packsFn = useServerFn(listPacks);
   const tenantFn = useServerFn(getTenant);
   const topupFn = useServerFn(applyTenantTopup);
+  const checkoutFn = useServerFn(createStripeCheckout);
+
+  async function buyWithStripe(pack: Pack) {
+    if (!tenant) { toast.error("No tenant in context"); return; }
+    if (!pack.stripe_price_id) {
+      toast.error("Pack not linked to Stripe yet"); return;
+    }
+    try {
+      const r = await checkoutFn({
+        data: { mode: "topup", tenantId: tenant, itemId: pack.id },
+      });
+      if (!r.ok) { toast.error(r.error); return; }
+      if (r.url) window.location.href = r.url;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Checkout failed");
+    }
+  }
 
   const packs = useQuery({
     queryKey: ["topup", "packs"],
