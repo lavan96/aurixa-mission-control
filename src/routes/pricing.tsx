@@ -358,10 +358,14 @@ function PricingPage() {
           {packs.slice(0, 8).map((pack: any, i: number) => {
             const meta = pack.metadata ?? {};
             const popular = !!meta.popular;
+            const isBusy = busyId === pack.id;
             return (
-              <div
+              <button
                 key={pack.id}
-                className={`group relative overflow-hidden rounded-2xl border bg-card/40 p-6 backdrop-blur-xl transition-all duration-500 hover:-translate-y-1.5 hover:border-primary/50 hover:bg-card/70 hover:shadow-[0_30px_80px_-30px] hover:shadow-primary/40 ${
+                type="button"
+                disabled={isBusy}
+                onClick={() => startCheckout("topup", pack.id)}
+                className={`group relative overflow-hidden rounded-2xl border bg-card/40 p-6 text-left backdrop-blur-xl transition-all duration-500 hover:-translate-y-1.5 hover:border-primary/50 hover:bg-card/70 hover:shadow-[0_30px_80px_-30px] hover:shadow-primary/40 disabled:cursor-wait disabled:opacity-70 ${
                   popular ? "border-accent/60" : "border-border/40"
                 }`}
               >
@@ -390,13 +394,21 @@ function PricingPage() {
                   </p>
                 )}
                 <div className="mt-6 flex items-center font-mono text-[10px] uppercase tracking-[0.25em] text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                  Purchase <ArrowRight className="ml-1.5 h-3 w-3" />
+                  {isBusy ? (
+                    <>
+                      <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> Starting…
+                    </>
+                  ) : (
+                    <>
+                      Purchase <ArrowRight className="ml-1.5 h-3 w-3" />
+                    </>
+                  )}
                 </div>
-                {/* hover spotlight */}
                 <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,oklch(0.78_0.16_200/0.12),transparent_60%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-              </div>
+              </button>
             );
           })}
+
         </div>
       </section>
 
