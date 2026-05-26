@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { listPacks, applyTenantTopup, getTenant } from "@/lib/tokens.functions";
+import { createStripeCheckout } from "@/lib/stripe.functions";
 
 const SearchSchema = z.object({
   tenant: z.string().uuid().optional(),
