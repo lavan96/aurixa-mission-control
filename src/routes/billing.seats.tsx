@@ -188,14 +188,25 @@ function SeatsPage() {
                     {meta.best_for && (
                       <p className="text-[11px] text-muted-foreground italic">Best for: {meta.best_for}</p>
                     )}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full mt-auto"
-                      onClick={() => assign(null, p.id)}
-                    >
-                      Apply to Prime
-                    </Button>
+                    <div className="mt-auto space-y-2">
+                      <Button
+                        size="sm"
+                        className="w-full"
+                        disabled={!(p as any).stripe_price_id}
+                        title={!(p as any).stripe_price_id ? "Stripe price not linked" : undefined}
+                        onClick={() => subscribe(p.id, null, (p as any).stripe_price_id)}
+                      >
+                        {(p as any).stripe_price_id ? "Subscribe (Stripe)" : "Stripe not linked"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => assign(null, p.id)}
+                      >
+                        Apply manually (admin)
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               );
