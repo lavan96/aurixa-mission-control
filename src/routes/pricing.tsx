@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -13,7 +13,9 @@ import {
   FileText,
   ShieldCheck,
   Infinity as InfinityIcon,
+  Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,9 +34,16 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { getPublicPricing } from "@/lib/public-pricing.functions";
+import { createStripeCheckout } from "@/lib/stripe.functions";
+import { useAuth } from "@/lib/auth";
+
+type PricingSearch = { intent?: string };
 
 export const Route = createFileRoute("/pricing")({
   component: PricingPage,
+  validateSearch: (s: Record<string, unknown>): PricingSearch => ({
+    intent: typeof s.intent === "string" ? s.intent : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Pricing — Aurixa Systems" },
@@ -52,6 +61,7 @@ export const Route = createFileRoute("/pricing")({
     ],
   }),
 });
+
 
 const aud = (cents: number) =>
   new Intl.NumberFormat("en-AU", {
@@ -87,12 +97,77 @@ function PricingPage() {
   });
 
   const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
+  const { session } = useAuth();
+  const nav = useNavigate();
+  const search = useSearch({ from: "/pricing" }) as PricingSearch;
+  const checkoutFn = useServerFn(createStripeCheckout);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const autoLaunchedRef = useRef(false);
+
+  const startCheckout = async (
+    mode: "seat_plan" | "topup" | "setup_package",
+    itemId: string,
+  ) => {
+    // Unauthenticated: route to auth with redirect + intent for auto-launch on return.
+    if (!session) {
+      nav({
+        to: "/auth" as never,
+        search: { redirect: "/pricing", intent: `${mode}:${itemId}` } as never,
+      });
+      return;
+    }
+    // Top-ups & setup packages need a tenant context — send users to the
+    // signed-in billing pages where tenant is resolved.
+    if (mode === "topup") {
+      nav({ to: "/billing/topup" as never });
+      return;
+    }
+    if (mode === "setup_package") {
+      nav({ to: "/billing/catalog" as never });
+      return;
+    }
+    // Seat plan → direct Stripe checkout (Prime entitlement, no clone).
+    setBusyId(itemId);
+    try {
+      const res = await checkoutFn({
+        data: { mode, itemId, cloneId: null },
+      });
+      if (res.ok && res.url) {
+        window.location.href = res.url;
+        return;
+      }
+      toast.error(
+        res.ok
+          ? "Checkout could not be started"
+          : `Checkout unavailable: ${res.error.replaceAll("_", " ")}`,
+      );
+    } catch (err) {
+      toast.error((err as Error).message ?? "Checkout failed");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  // Auto-resume checkout after auth round-trip.
+  useEffect(() => {
+    if (autoLaunchedRef.current) return;
+    if (!session || !search.intent) return;
+    const [mode, itemId] = search.intent.split(":");
+    if (!mode || !itemId) return;
+    if (mode !== "seat_plan" && mode !== "topup" && mode !== "setup_package") return;
+    autoLaunchedRef.current = true;
+    // Clear the intent param so we don't loop.
+    nav({ to: "/pricing" as never, search: {} as never, replace: true });
+    void startCheckout(mode, itemId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, search.intent]);
 
   const plans = useMemo(() => data?.plans ?? [], [data]);
   const packs = data?.packs ?? [];
   const setups = data?.setups ?? [];
   const addons = data?.addons ?? [];
   const reports = data?.reports ?? [];
+
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
@@ -237,6 +312,7 @@ function PricingPage() {
                 meta.tier === 2 ? "Recommended" :
                 "Starter";
 
+              const isEnterprise = p.seat_limit >= 999;
               return (
                 <PlanCard
                   key={p.id}
@@ -248,13 +324,19 @@ function PricingPage() {
                   priceMax={maxP}
                   showRange={maxP !== minP && billing === "monthly"}
                   ribbon={tierName}
-                  seats={p.seat_limit >= 999 ? "Custom seats" : `${p.seat_limit} seats included`}
+                  seats={isEnterprise ? "Custom seats" : `${p.seat_limit} seats included`}
                   highlights={highlights}
-                  cta={p.seat_limit >= 999 ? "Talk to sales" : "Get started"}
-                  ctaTo="/auth"
+                  cta={isEnterprise ? "Talk to sales" : "Get started"}
+                  busy={busyId === p.id}
+                  onCta={
+                    isEnterprise
+                      ? () => nav({ to: "/auth" as never })
+                      : () => startCheckout("seat_plan", p.id)
+                  }
                 />
               );
             })}
+
           </div>
         )}
 
@@ -276,10 +358,14 @@ function PricingPage() {
           {packs.slice(0, 8).map((pack: any, i: number) => {
             const meta = pack.metadata ?? {};
             const popular = !!meta.popular;
+            const isBusy = busyId === pack.id;
             return (
-              <div
+              <button
                 key={pack.id}
-                className={`group relative overflow-hidden rounded-2xl border bg-card/40 p-6 backdrop-blur-xl transition-all duration-500 hover:-translate-y-1.5 hover:border-primary/50 hover:bg-card/70 hover:shadow-[0_30px_80px_-30px] hover:shadow-primary/40 ${
+                type="button"
+                disabled={isBusy}
+                onClick={() => startCheckout("topup", pack.id)}
+                className={`group relative overflow-hidden rounded-2xl border bg-card/40 p-6 text-left backdrop-blur-xl transition-all duration-500 hover:-translate-y-1.5 hover:border-primary/50 hover:bg-card/70 hover:shadow-[0_30px_80px_-30px] hover:shadow-primary/40 disabled:cursor-wait disabled:opacity-70 ${
                   popular ? "border-accent/60" : "border-border/40"
                 }`}
               >
@@ -308,13 +394,21 @@ function PricingPage() {
                   </p>
                 )}
                 <div className="mt-6 flex items-center font-mono text-[10px] uppercase tracking-[0.25em] text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                  Purchase <ArrowRight className="ml-1.5 h-3 w-3" />
+                  {isBusy ? (
+                    <>
+                      <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> Starting…
+                    </>
+                  ) : (
+                    <>
+                      Purchase <ArrowRight className="ml-1.5 h-3 w-3" />
+                    </>
+                  )}
                 </div>
-                {/* hover spotlight */}
                 <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,oklch(0.78_0.16_200/0.12),transparent_60%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-              </div>
+              </button>
             );
           })}
+
         </div>
       </section>
 
@@ -548,7 +642,8 @@ function PlanCard({
   seats,
   highlights,
   cta,
-  ctaTo,
+  onCta,
+  busy,
   featured,
 }: {
   index: string;
@@ -561,7 +656,8 @@ function PlanCard({
   seats: string;
   highlights: string[];
   cta: string;
-  ctaTo: string;
+  onCta: () => void;
+  busy?: boolean;
   featured?: boolean;
 }) {
   return (
@@ -619,19 +715,29 @@ function PlanCard({
       </ul>
 
       <div className="mt-8">
-        <Link to={ctaTo}>
-          <Button
-            className={`w-full font-mono text-[11px] uppercase tracking-[0.25em] ${
-              featured
-                ? "bg-gradient-to-r from-primary to-primary-glow text-primary-foreground shadow-[0_0_40px_-8px] shadow-primary/70"
-                : ""
-            }`}
-            variant={featured ? "default" : "outline"}
-          >
-            {cta}
-            <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-          </Button>
-        </Link>
+        <Button
+          type="button"
+          onClick={onCta}
+          disabled={busy}
+          className={`w-full font-mono text-[11px] uppercase tracking-[0.25em] ${
+            featured
+              ? "bg-gradient-to-r from-primary to-primary-glow text-primary-foreground shadow-[0_0_40px_-8px] shadow-primary/70"
+              : ""
+          }`}
+          variant={featured ? "default" : "outline"}
+        >
+          {busy ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Starting…
+            </>
+          ) : (
+            <>
+              {cta}
+              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </>
+          )}
+        </Button>
+
       </div>
     </div>
   );
