@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
+import { z } from "zod";
+import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/protected-route";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Receipt, Puzzle, UserCog, Wrench, FileText } from "lucide-react";
 import { listPricingCatalog } from "@/lib/pricing-catalog.functions";
+import { createStripeCheckout } from "@/lib/stripe.functions";
+
+const SearchSchema = z.object({ tenant: z.string().uuid().optional() });
 
 export const Route = createFileRoute("/billing/catalog")({
   component: () => (
@@ -15,6 +20,7 @@ export const Route = createFileRoute("/billing/catalog")({
       <CatalogPage />
     </ProtectedRoute>
   ),
+  validateSearch: (s) => SearchSchema.parse(s),
   head: () => ({ meta: [{ title: "Pricing Catalog — Mission Control" }] }),
 });
 
