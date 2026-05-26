@@ -2267,6 +2267,7 @@ export type Database = {
           price_cents: number
           seat_limit: number
           slug: string
+          stripe_price_id: string | null
           updated_at: string
         }
         Insert: {
@@ -2283,6 +2284,7 @@ export type Database = {
           price_cents?: number
           seat_limit: number
           slug: string
+          stripe_price_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -2299,6 +2301,7 @@ export type Database = {
           price_cents?: number
           seat_limit?: number
           slug?: string
+          stripe_price_id?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -2366,6 +2369,7 @@ export type Database = {
           price_min_cents: number
           slug: string
           sort_order: number
+          stripe_price_id: string | null
           updated_at: string
         }
         Insert: {
@@ -2382,6 +2386,7 @@ export type Database = {
           price_min_cents?: number
           slug: string
           sort_order?: number
+          stripe_price_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -2398,7 +2403,95 @@ export type Database = {
           price_min_cents?: number
           slug?: string
           sort_order?: number
+          stripe_price_id?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      setup_purchases: {
+        Row: {
+          amount_cents: number | null
+          created_at: string
+          currency: string | null
+          id: string
+          metadata: Json
+          setup_package_id: string | null
+          status: string
+          stripe_checkout_session_id: string | null
+          stripe_payment_intent_id: string | null
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_cents?: number | null
+          created_at?: string
+          currency?: string | null
+          id?: string
+          metadata?: Json
+          setup_package_id?: string | null
+          status?: string
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number | null
+          created_at?: string
+          currency?: string | null
+          id?: string
+          metadata?: Json
+          setup_package_id?: string | null
+          status?: string
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "setup_purchases_setup_package_id_fkey"
+            columns: ["setup_package_id"]
+            isOneToOne: false
+            referencedRelation: "setup_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "setup_purchases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stripe_events: {
+        Row: {
+          created_at: string
+          error: string | null
+          id: string
+          payload: Json
+          processed_at: string | null
+          stripe_event_id: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          payload: Json
+          processed_at?: string | null
+          stripe_event_id: string
+          type: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          stripe_event_id?: string
+          type?: string
         }
         Relationships: []
       }
@@ -2415,6 +2508,7 @@ export type Database = {
           plan_id: string | null
           plan_started_at: string | null
           status: Database["public"]["Enums"]["tenant_status"]
+          stripe_customer_id: string | null
           updated_at: string
         }
         Insert: {
@@ -2429,6 +2523,7 @@ export type Database = {
           plan_id?: string | null
           plan_started_at?: string | null
           status?: Database["public"]["Enums"]["tenant_status"]
+          stripe_customer_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -2443,6 +2538,7 @@ export type Database = {
           plan_id?: string | null
           plan_started_at?: string | null
           status?: Database["public"]["Enums"]["tenant_status"]
+          stripe_customer_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -2713,6 +2809,7 @@ export type Database = {
           name: string
           price_cents: number
           slug: string
+          stripe_price_id: string | null
           tokens: number
           updated_at: string
         }
@@ -2726,6 +2823,7 @@ export type Database = {
           name: string
           price_cents: number
           slug: string
+          stripe_price_id?: string | null
           tokens: number
           updated_at?: string
         }
@@ -2739,6 +2837,7 @@ export type Database = {
           name?: string
           price_cents?: number
           slug?: string
+          stripe_price_id?: string | null
           tokens?: number
           updated_at?: string
         }
