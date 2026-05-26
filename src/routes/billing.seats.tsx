@@ -43,6 +43,16 @@ function SeatsPage() {
   const devicesFn = useServerFn(listSeatDevices);
   const revokeDeviceFn = useServerFn(revokeSeatDevice);
   const deviceSummaryFn = useServerFn(seatDeviceSummary);
+  const checkoutFn = useServerFn(createStripeCheckout);
+
+  async function subscribe(planId: string, cloneId: string | null, stripePriceId: string | null) {
+    if (!stripePriceId) { toast.error("Plan not linked to Stripe yet"); return; }
+    try {
+      const r = await checkoutFn({ data: { mode: "seat_plan", itemId: planId, cloneId } });
+      if (!r.ok) { toast.error(r.error); return; }
+      if (r.url) window.location.href = r.url;
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Checkout failed"); }
+  }
 
   const plansQ = useQuery({ queryKey: ["seats", "plans"], queryFn: () => plansFn({}) });
   const entsQ = useQuery({ queryKey: ["seats", "ents"], queryFn: () => entsFn({}) });
