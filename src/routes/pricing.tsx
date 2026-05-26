@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -13,7 +13,9 @@ import {
   FileText,
   ShieldCheck,
   Infinity as InfinityIcon,
+  Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,9 +34,16 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { getPublicPricing } from "@/lib/public-pricing.functions";
+import { createStripeCheckout } from "@/lib/stripe.functions";
+import { useAuth } from "@/lib/auth";
+
+type PricingSearch = { intent?: string };
 
 export const Route = createFileRoute("/pricing")({
   component: PricingPage,
+  validateSearch: (s: Record<string, unknown>): PricingSearch => ({
+    intent: typeof s.intent === "string" ? s.intent : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Pricing — Aurixa Systems" },
@@ -52,6 +61,7 @@ export const Route = createFileRoute("/pricing")({
     ],
   }),
 });
+
 
 const aud = (cents: number) =>
   new Intl.NumberFormat("en-AU", {
