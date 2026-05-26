@@ -170,12 +170,21 @@ function CatalogPage() {
                       {s.metadata?.duration_weeks ? ` · ~${s.metadata.duration_weeks} weeks` : ""}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-3">
                     <ul className="text-sm space-y-1">
                       {(s.deliverables as string[]).map((d, i) => (
                         <li key={i} className="flex gap-2"><span className="text-primary">✓</span>{d}</li>
                       ))}
                     </ul>
+                    <Button
+                      size="sm"
+                      className="w-full"
+                      disabled={!tenant || !s.stripe_price_id}
+                      title={!s.stripe_price_id ? "Stripe price not linked" : (!tenant ? "Open with ?tenant=<id>" : undefined)}
+                      onClick={() => buySetup(s.id, s.stripe_price_id)}
+                    >
+                      {!tenant ? "Select tenant to purchase" : (s.stripe_price_id ? "Purchase (Stripe)" : "Stripe not linked")}
+                    </Button>
                   </CardContent>
                 </Card>
               ))}
