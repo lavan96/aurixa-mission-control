@@ -19,6 +19,7 @@ import {
   listSeatAudit,
 } from "@/lib/seats.functions";
 import { listSeatDevices, revokeSeatDevice, seatDeviceSummary } from "@/lib/seat-devices.functions";
+import { createStripeCheckout } from "@/lib/stripe.functions";
 
 export const Route = createFileRoute("/billing/seats")({
   component: () => (
