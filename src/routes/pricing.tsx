@@ -100,7 +100,7 @@ function PricingPage() {
           <a href="#addons" className="hover:text-foreground">Add-ons</a>
           <a href="#faq" className="hover:text-foreground">FAQ</a>
         </nav>
-        <Link to="/login">
+        <Link to="/auth">
           <Button variant="outline" size="sm" className="border-border/60">
             Sign in
           </Button>
@@ -417,12 +417,12 @@ function PricingPage() {
             it on your data.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Link to="/signup">
+            <Link to="/auth">
               <Button size="lg" className="shadow-[0_0_40px_-10px] shadow-primary/60">
                 Get started <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
-            <Link to="/contact">
+            <Link to="/auth">
               <Button size="lg" variant="outline" className="border-border/60">
                 Talk to sales
               </Button>
