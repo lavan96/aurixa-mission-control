@@ -37,7 +37,7 @@ export const getPublicPricing = createServerFn({ method: "GET" }).handler(
         .order("sort_order", { ascending: true }),
       supabaseAdmin
         .from("report_credit_costs")
-        .select("id, slug, name, category, complexity, credits")
+        .select("id, slug, name, category, description, credit_cost, metadata")
         .eq("is_active", true)
         .order("sort_order", { ascending: true }),
     ]);
