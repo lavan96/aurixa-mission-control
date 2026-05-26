@@ -312,6 +312,7 @@ function PricingPage() {
                 meta.tier === 2 ? "Recommended" :
                 "Starter";
 
+              const isEnterprise = p.seat_limit >= 999;
               return (
                 <PlanCard
                   key={p.id}
@@ -323,13 +324,19 @@ function PricingPage() {
                   priceMax={maxP}
                   showRange={maxP !== minP && billing === "monthly"}
                   ribbon={tierName}
-                  seats={p.seat_limit >= 999 ? "Custom seats" : `${p.seat_limit} seats included`}
+                  seats={isEnterprise ? "Custom seats" : `${p.seat_limit} seats included`}
                   highlights={highlights}
-                  cta={p.seat_limit >= 999 ? "Talk to sales" : "Get started"}
-                  ctaTo="/auth"
+                  cta={isEnterprise ? "Talk to sales" : "Get started"}
+                  busy={busyId === p.id}
+                  onCta={
+                    isEnterprise
+                      ? () => nav({ to: "/auth" as never })
+                      : () => startCheckout("seat_plan", p.id)
+                  }
                 />
               );
             })}
+
           </div>
         )}
 
