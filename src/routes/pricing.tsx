@@ -116,7 +116,7 @@ function PricingPage() {
           >
             <Sparkles className="mr-1.5 h-3 w-3" /> Pricing
           </Badge>
-          <h1 className="font-display text-balance text-5xl font-semibold leading-[1.05] tracking-tight md:text-7xl">
+          <h1 className="text-balance text-5xl font-semibold leading-[1.05] tracking-tight md:text-7xl">
             <span className="bg-gradient-to-br from-foreground via-foreground to-foreground/40 bg-clip-text text-transparent">
               Pricing built for
             </span>
