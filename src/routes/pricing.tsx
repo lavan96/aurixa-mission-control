@@ -642,7 +642,8 @@ function PlanCard({
   seats,
   highlights,
   cta,
-  ctaTo,
+  onCta,
+  busy,
   featured,
 }: {
   index: string;
@@ -655,7 +656,8 @@ function PlanCard({
   seats: string;
   highlights: string[];
   cta: string;
-  ctaTo: string;
+  onCta: () => void;
+  busy?: boolean;
   featured?: boolean;
 }) {
   return (
@@ -713,19 +715,29 @@ function PlanCard({
       </ul>
 
       <div className="mt-8">
-        <Link to={ctaTo}>
-          <Button
-            className={`w-full font-mono text-[11px] uppercase tracking-[0.25em] ${
-              featured
-                ? "bg-gradient-to-r from-primary to-primary-glow text-primary-foreground shadow-[0_0_40px_-8px] shadow-primary/70"
-                : ""
-            }`}
-            variant={featured ? "default" : "outline"}
-          >
-            {cta}
-            <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-          </Button>
-        </Link>
+        <Button
+          type="button"
+          onClick={onCta}
+          disabled={busy}
+          className={`w-full font-mono text-[11px] uppercase tracking-[0.25em] ${
+            featured
+              ? "bg-gradient-to-r from-primary to-primary-glow text-primary-foreground shadow-[0_0_40px_-8px] shadow-primary/70"
+              : ""
+          }`}
+          variant={featured ? "default" : "outline"}
+        >
+          {busy ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Starting…
+            </>
+          ) : (
+            <>
+              {cta}
+              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </>
+          )}
+        </Button>
+
       </div>
     </div>
   );
