@@ -60,11 +60,24 @@ const aud = (cents: number) =>
     maximumFractionDigits: 0,
   }).format(cents / 100);
 
-const range = (min: number | null | undefined, max: number | null | undefined, ccy = "AUD") => {
+const range = (min: number | null | undefined, max: number | null | undefined, _ccy = "AUD") => {
   if (min == null) return "—";
   if (max == null || max === min) return aud(min);
   return `${aud(min)} – ${aud(max)}`;
 };
+
+const MARQUEE_WORDS = [
+  "Pricing",
+  "Seats",
+  "Credits",
+  "Modules",
+  "Onboarding",
+  "Reports",
+  "Cascades",
+  "Fleet",
+  "Branding",
+  "Aurixa",
+];
 
 function PricingPage() {
   const fetchCatalog = useServerFn(getPublicPricing);
@@ -83,68 +96,88 @@ function PricingPage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
-      {/* Ambient background */}
       <BackgroundFX />
 
       {/* Top nav */}
       <header className="relative z-20 mx-auto flex max-w-7xl items-center justify-between px-6 py-6">
-        <Link to="/" className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2.5">
           <LogoMark />
-          <span className="font-mono text-sm tracking-[0.3em] text-foreground/90">
+          <span className="font-mono text-[11px] tracking-[0.4em] text-foreground/90">
             AURIXA
           </span>
         </Link>
-        <nav className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">
-          <a href="#plans" className="hover:text-foreground">Plans</a>
-          <a href="#credits" className="hover:text-foreground">Credits</a>
-          <a href="#addons" className="hover:text-foreground">Add-ons</a>
-          <a href="#faq" className="hover:text-foreground">FAQ</a>
+        <nav className="hidden items-center gap-8 font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground md:flex">
+          <a href="#plans" className="hover:text-foreground transition-colors">Plans</a>
+          <a href="#credits" className="hover:text-foreground transition-colors">Credits</a>
+          <a href="#addons" className="hover:text-foreground transition-colors">Add-ons</a>
+          <a href="#faq" className="hover:text-foreground transition-colors">FAQ</a>
         </nav>
         <Link to="/auth">
-          <Button variant="outline" size="sm" className="border-border/60">
+          <Button variant="outline" size="sm" className="border-border/60 font-mono text-[11px] uppercase tracking-[0.2em]">
             Sign in
           </Button>
         </Link>
       </header>
 
       {/* Hero */}
-      <section className="relative z-10 mx-auto max-w-7xl px-6 pt-12 pb-20 md:pt-20 md:pb-28">
-        <div className="mx-auto max-w-3xl text-center">
+      <section className="relative z-10 mx-auto max-w-7xl px-6 pt-10 pb-16 md:pt-20 md:pb-24">
+        {/* tiny meta strip */}
+        <div className="reveal-up mb-10 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.35em] text-muted-foreground">
+          <span className="flex items-center gap-2">
+            <span className="h-1 w-1 animate-pulse rounded-full bg-accent" />
+            Index · 001 / Pricing
+          </span>
+          <span className="hidden md:inline">
+            v.2026 · AUD · ex GST
+          </span>
+        </div>
+
+        <div className="mx-auto max-w-5xl text-center">
           <Badge
             variant="outline"
-            className="mb-6 border-primary/40 bg-primary/5 font-mono text-[10px] uppercase tracking-[0.3em] text-primary"
+            className="reveal-up mb-8 border-primary/40 bg-primary/5 font-mono text-[10px] uppercase tracking-[0.35em] text-primary"
           >
-            <Sparkles className="mr-1.5 h-3 w-3" /> Pricing
+            <Sparkles className="mr-1.5 h-3 w-3" /> Plans & Pricing
           </Badge>
-          <h1 className="text-balance text-5xl font-semibold leading-[1.05] tracking-tight md:text-7xl">
-            <span className="bg-gradient-to-br from-foreground via-foreground to-foreground/40 bg-clip-text text-transparent">
-              Pricing built for
-            </span>
+          <h1
+            className="reveal-up text-balance text-[44px] font-semibold leading-[0.95] tracking-[-0.03em] md:text-[96px]"
+            style={{ animationDelay: "120ms" }}
+          >
+            <span className="shimmer-text">Pricing built</span>
             <br />
-            <span className="bg-gradient-to-r from-primary via-primary-glow to-accent bg-clip-text text-transparent">
-              firms in motion.
-            </span>
+            <span className="text-foreground/90">for firms </span>
+            <span className="font-display italic text-primary-glow">in&nbsp;motion</span>
+            <span className="text-foreground/90">.</span>
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-balance text-base text-muted-foreground md:text-lg">
-            Pick a plan, scale seats, top up credits as you grow. No surprises —
-            every tier, module and add-on is laid out below.
+          <p
+            className="reveal-up mx-auto mt-8 max-w-2xl text-balance text-[15px] leading-relaxed text-muted-foreground md:text-lg"
+            style={{ animationDelay: "240ms" }}
+          >
+            Pick a plan. Scale seats. Top up credits as you grow. Every tier,
+            module and add-on — laid bare below, with{" "}
+            <span className="font-display italic text-foreground">no surprises</span>.
           </p>
 
-          {/* Billing toggle (visual only) */}
-          <div className="mt-10 inline-flex items-center gap-1 rounded-full border border-border/60 bg-card/60 p-1 backdrop-blur">
+          {/* Billing toggle */}
+          <div
+            className="reveal-up mt-12 inline-flex items-center gap-1 rounded-full border border-border/60 bg-card/60 p-1 backdrop-blur-xl"
+            style={{ animationDelay: "360ms" }}
+          >
             {(["monthly", "annual"] as const).map((b) => (
               <button
                 key={b}
                 onClick={() => setBilling(b)}
-                className={`relative rounded-full px-5 py-2 text-xs font-medium uppercase tracking-wider transition-colors ${
+                className={`relative rounded-full px-6 py-2.5 font-mono text-[11px] uppercase tracking-[0.25em] transition-all ${
                   billing === b
-                    ? "bg-primary text-primary-foreground shadow-[0_0_30px_-8px] shadow-primary/60"
+                    ? "bg-gradient-to-r from-primary to-primary-glow text-primary-foreground shadow-[0_0_40px_-6px] shadow-primary/70"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {b}
                 {b === "annual" && (
-                  <span className="ml-2 rounded-full bg-accent/20 px-2 py-0.5 text-[9px] font-bold text-accent">
+                  <span className={`ml-2 rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wider ${
+                    billing === "annual" ? "bg-background/20 text-primary-foreground" : "bg-accent/20 text-accent"
+                  }`}>
                     -15%
                   </span>
                 )}
@@ -152,20 +185,44 @@ function PricingPage() {
             ))}
           </div>
         </div>
+
+        {/* Marquee */}
+        <div className="reveal-up relative mt-20 overflow-hidden border-y border-border/40 py-5" style={{ animationDelay: "480ms" }}>
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-32 bg-gradient-to-r from-background to-transparent" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-32 bg-gradient-to-l from-background to-transparent" />
+          <div className="marquee-track flex w-max gap-12 whitespace-nowrap">
+            {[...MARQUEE_WORDS, ...MARQUEE_WORDS, ...MARQUEE_WORDS].map((w, i) => (
+              <span
+                key={i}
+                className="flex items-center gap-12 font-display text-3xl italic text-muted-foreground/40 md:text-5xl"
+              >
+                {w}
+                <span className="h-1.5 w-1.5 rounded-full bg-primary/40" />
+              </span>
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* Plans */}
       <section id="plans" className="relative z-10 mx-auto max-w-7xl px-6 pb-24">
+        <SectionHeader
+          index="02"
+          eyebrow="Plans"
+          title={<>The <span className="font-display italic text-primary-glow">tiers</span>.</>}
+          description="Four shapes. One philosophy. Pay only for what your firm actually uses."
+        />
+
         {isLoading && (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-14 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-[480px] animate-pulse rounded-2xl bg-card/40" />
+              <div key={i} className="h-[500px] animate-pulse rounded-2xl bg-card/40" />
             ))}
           </div>
         )}
 
         {!isLoading && plans.length > 0 && (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-14 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {plans.map((p: any, idx: number) => {
               const meta = p.metadata ?? {};
               const minP = meta.price_min_cents ?? p.price_cents;
@@ -183,6 +240,7 @@ function PricingPage() {
               return (
                 <PlanCard
                   key={p.id}
+                  index={String(idx + 1).padStart(2, "0")}
                   featured={isFeatured}
                   name={p.name}
                   tagline={meta.best_for ?? p.description ?? ""}
@@ -193,62 +251,67 @@ function PricingPage() {
                   seats={p.seat_limit >= 999 ? "Custom seats" : `${p.seat_limit} seats included`}
                   highlights={highlights}
                   cta={p.seat_limit >= 999 ? "Talk to sales" : "Get started"}
-                  ctaTo={p.seat_limit >= 999 ? "/contact" : "/signup"}
+                  ctaTo="/auth"
                 />
               );
             })}
           </div>
         )}
 
-        <p className="mt-6 text-center text-xs text-muted-foreground">
-          All prices in AUD, excl. GST. Annual billing saves 15%.
+        <p className="mt-8 text-center font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+          All prices in AUD · excl. GST · Annual saves 15%
         </p>
       </section>
 
       {/* Credit packs */}
       <section id="credits" className="relative z-10 mx-auto max-w-7xl px-6 pb-24">
         <SectionHeader
+          index="03"
           eyebrow="Credits"
-          title="Top up when you need more"
-          description="Generate more reports, scenarios and AI insights with on-demand credit packs. Never expires for active accounts."
-          icon={<Zap className="h-5 w-5" />}
+          title={<>Top up <span className="font-display italic text-accent">on demand</span>.</>}
+          description="Generate more reports, scenarios and AI insights with credit packs. Never expires for active accounts."
+          icon={<Zap className="h-4 w-4" />}
         />
-        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {packs.slice(0, 8).map((pack: any) => {
+        <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {packs.slice(0, 8).map((pack: any, i: number) => {
             const meta = pack.metadata ?? {};
             const popular = !!meta.popular;
             return (
               <div
                 key={pack.id}
-                className={`group relative overflow-hidden rounded-2xl border bg-card/40 p-6 backdrop-blur transition-all hover:-translate-y-1 hover:border-primary/40 hover:bg-card/70 hover:shadow-[0_20px_60px_-20px] hover:shadow-primary/30 ${
-                  popular ? "border-accent/50" : "border-border/50"
+                className={`group relative overflow-hidden rounded-2xl border bg-card/40 p-6 backdrop-blur-xl transition-all duration-500 hover:-translate-y-1.5 hover:border-primary/50 hover:bg-card/70 hover:shadow-[0_30px_80px_-30px] hover:shadow-primary/40 ${
+                  popular ? "border-accent/60" : "border-border/40"
                 }`}
               >
+                <CornerTicks />
                 {popular && (
-                  <Badge className="absolute right-4 top-4 bg-accent text-accent-foreground">
+                  <Badge className="absolute right-4 top-4 border-0 bg-accent text-accent-foreground font-mono text-[9px] uppercase tracking-wider">
                     Popular
                   </Badge>
                 )}
-                <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-                  {pack.name}
+                <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+                  <span>{pack.name}</span>
+                  <span className="text-foreground/30">{String(i + 1).padStart(2, "0")}</span>
                 </div>
-                <div className="mt-3 flex items-baseline gap-1">
-                  <span className="bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-3xl font-semibold tracking-tight text-transparent">
+                <div className="mt-5 flex items-baseline gap-1.5">
+                  <span className="bg-gradient-to-br from-foreground via-foreground to-primary-glow bg-clip-text text-4xl font-semibold tracking-tight text-transparent">
                     {pack.tokens.toLocaleString()}
                   </span>
-                  <span className="text-xs text-muted-foreground">credits</span>
+                  <span className="font-display text-base italic text-muted-foreground">credits</span>
                 </div>
-                <div className="mt-1 text-sm text-muted-foreground">
-                  {aud(pack.price_cents)}
+                <div className="mt-1.5 font-mono text-xs text-muted-foreground">
+                  {aud(pack.price_cents)} AUD
                 </div>
                 {meta.best_for && (
-                  <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
+                  <p className="mt-5 text-xs leading-relaxed text-muted-foreground">
                     {meta.best_for}
                   </p>
                 )}
-                <div className="mt-6 flex items-center text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                  Purchase <ArrowRight className="ml-1 h-3 w-3" />
+                <div className="mt-6 flex items-center font-mono text-[10px] uppercase tracking-[0.25em] text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                  Purchase <ArrowRight className="ml-1.5 h-3 w-3" />
                 </div>
+                {/* hover spotlight */}
+                <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,oklch(0.78_0.16_200/0.12),transparent_60%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
               </div>
             );
           })}
@@ -258,39 +321,41 @@ function PricingPage() {
       {/* Modules / setup / reports */}
       <section id="addons" className="relative z-10 mx-auto max-w-7xl px-6 pb-24">
         <SectionHeader
+          index="04"
           eyebrow="Build your stack"
-          title="Modules, onboarding and report economics"
+          title={<>Modules, onboarding & <span className="font-display italic text-primary-glow">report economics</span>.</>}
           description="Mix and match what your firm actually uses. All optional, all transparent."
-          icon={<Puzzle className="h-5 w-5" />}
+          icon={<Puzzle className="h-4 w-4" />}
         />
 
-        <Tabs defaultValue="addons" className="mt-12">
-          <TabsList className="mx-auto grid w-full max-w-xl grid-cols-3 bg-card/60 backdrop-blur">
-            <TabsTrigger value="addons">Add-ons</TabsTrigger>
-            <TabsTrigger value="setup">Onboarding</TabsTrigger>
-            <TabsTrigger value="reports">Report credits</TabsTrigger>
+        <Tabs defaultValue="addons" className="mt-14">
+          <TabsList className="mx-auto grid w-full max-w-xl grid-cols-3 border border-border/40 bg-card/60 backdrop-blur-xl">
+            <TabsTrigger value="addons" className="font-mono text-[11px] uppercase tracking-[0.2em]">Add-ons</TabsTrigger>
+            <TabsTrigger value="setup" className="font-mono text-[11px] uppercase tracking-[0.2em]">Onboarding</TabsTrigger>
+            <TabsTrigger value="reports" className="font-mono text-[11px] uppercase tracking-[0.2em]">Reports</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="addons" className="mt-8">
+          <TabsContent value="addons" className="mt-10">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {addons.map((a: any) => (
                 <Card
                   key={a.id}
-                  className="border-border/50 bg-card/40 backdrop-blur transition-colors hover:border-primary/40"
+                  className="group relative overflow-hidden border-border/40 bg-card/40 backdrop-blur-xl transition-all hover:-translate-y-1 hover:border-primary/40 hover:bg-card/60"
                 >
+                  <CornerTicks />
                   <CardHeader>
                     <div className="flex items-start justify-between gap-2">
-                      <CardTitle className="text-base">{a.name}</CardTitle>
-                      <Badge variant="outline" className="font-mono text-[9px] uppercase">
+                      <CardTitle className="text-base tracking-tight">{a.name}</CardTitle>
+                      <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-wider">
                         {a.category}
                       </Badge>
                     </div>
                     <CardDescription className="text-xs">{a.description}</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-base font-semibold tracking-tight">
+                    <div className="text-lg font-semibold tracking-tight">
                       {range(a.price_min_cents, a.price_max_cents, a.currency)}
-                      <span className="ml-1 text-xs font-normal text-muted-foreground">
+                      <span className="ml-1.5 font-display text-sm italic font-normal text-muted-foreground">
                         / {a.billing_period}
                       </span>
                     </div>
@@ -300,7 +365,7 @@ function PricingPage() {
                           <Badge
                             key={pl}
                             variant="secondary"
-                            className="text-[10px] capitalize"
+                            className="font-mono text-[9px] uppercase tracking-wider"
                           >
                             included · {pl}
                           </Badge>
@@ -313,29 +378,32 @@ function PricingPage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="setup" className="mt-8">
+          <TabsContent value="setup" className="mt-10">
             <div className="grid gap-4 md:grid-cols-2">
               {setups.map((s: any) => (
                 <Card
                   key={s.id}
-                  className="border-border/50 bg-card/40 backdrop-blur"
+                  className="group relative overflow-hidden border-border/40 bg-card/40 backdrop-blur-xl transition-all hover:border-primary/40"
                 >
+                  <CornerTicks />
                   <CardHeader>
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Wrench className="h-4 w-4 text-primary" />
-                        <CardTitle className="text-base">{s.name}</CardTitle>
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary ring-1 ring-primary/30">
+                          <Wrench className="h-4 w-4" />
+                        </div>
+                        <CardTitle className="text-base tracking-tight">{s.name}</CardTitle>
                       </div>
-                      <Badge variant="secondary">
+                      <Badge variant="secondary" className="font-mono text-[10px] tracking-wider">
                         {range(s.price_min_cents, s.price_max_cents, s.currency)}
                       </Badge>
                     </div>
                     <CardDescription>{s.description}</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <ul className="space-y-2 text-sm">
+                    <ul className="space-y-2.5 text-sm">
                       {(s.deliverables as string[] | null)?.map((d, i) => (
-                        <li key={i} className="flex gap-2">
+                        <li key={i} className="flex gap-2.5">
                           <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                           <span className="text-muted-foreground">{d}</span>
                         </li>
@@ -347,11 +415,12 @@ function PricingPage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="reports" className="mt-8">
-            <Card className="border-border/50 bg-card/40 backdrop-blur">
+          <TabsContent value="reports" className="mt-10">
+            <Card className="relative overflow-hidden border-border/40 bg-card/40 backdrop-blur-xl">
+              <CornerTicks />
               <CardContent className="p-0">
                 <div className="divide-y divide-border/40">
-                  <div className="grid grid-cols-12 gap-2 px-6 py-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                  <div className="grid grid-cols-12 gap-2 px-6 py-4 font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
                     <div className="col-span-6">Report</div>
                     <div className="col-span-3">Category</div>
                     <div className="col-span-3 text-right">Credits</div>
@@ -359,10 +428,10 @@ function PricingPage() {
                   {reports.map((r: any) => (
                     <div
                       key={r.id}
-                      className="grid grid-cols-12 items-center gap-2 px-6 py-4 text-sm transition-colors hover:bg-surface-elevated/30"
+                      className="grid grid-cols-12 items-center gap-2 px-6 py-4 text-sm transition-colors hover:bg-surface-elevated/40"
                     >
-                      <div className="col-span-6 font-medium">{r.name}</div>
-                      <div className="col-span-3 text-xs uppercase tracking-wider text-muted-foreground">
+                      <div className="col-span-6 font-medium tracking-tight">{r.name}</div>
+                      <div className="col-span-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                         {r.category}
                       </div>
                       <div className="col-span-3 text-right font-mono text-primary">
@@ -373,8 +442,8 @@ function PricingPage() {
                 </div>
               </CardContent>
             </Card>
-            <p className="mt-3 text-xs text-muted-foreground">
-              Credits are consumed only when a report is successfully generated.
+            <p className="mt-3 text-center font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+              Credits consumed only on successful generation.
             </p>
           </TabsContent>
         </Tabs>
@@ -382,21 +451,23 @@ function PricingPage() {
 
       {/* Trust strip */}
       <section className="relative z-10 mx-auto max-w-7xl px-6 pb-24">
-        <div className="grid gap-6 rounded-2xl border border-border/50 bg-gradient-to-br from-card/60 via-card/30 to-card/60 p-8 backdrop-blur md:grid-cols-3">
+        <div className="relative grid gap-8 overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-card/70 via-card/30 to-card/70 p-10 backdrop-blur-xl md:grid-cols-3">
+          <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_20%_50%,oklch(0.78_0.16_200/0.08),transparent_60%),radial-gradient(circle_at_80%_50%,oklch(0.86_0.20_130/0.08),transparent_60%)]" />
           <Trust icon={<ShieldCheck className="h-5 w-5" />} title="Enterprise security" body="SSO, audit logs, role-based access and isolated tenancy by default." />
           <Trust icon={<InfinityIcon className="h-5 w-5" />} title="Scales with you" body="Add seats, devices and credits the moment the team needs them." />
-          <Trust icon={<Users className="h-5 w-5" />} title="Hands-on onboarding" body="A real human walks your team through setup, configuration and rollout." />
+          <Trust icon={<Users className="h-5 w-5" />} title="Hands-on onboarding" body="A real human walks your team through setup and rollout." />
         </div>
       </section>
 
       {/* FAQ */}
       <section id="faq" className="relative z-10 mx-auto max-w-3xl px-6 pb-32">
         <SectionHeader
+          index="05"
           eyebrow="FAQ"
-          title="Questions, answered"
-          icon={<FileText className="h-5 w-5" />}
+          title={<>Questions, <span className="font-display italic text-primary-glow">answered</span>.</>}
+          icon={<FileText className="h-4 w-4" />}
         />
-        <Accordion type="single" collapsible className="mt-8">
+        <Accordion type="single" collapsible className="mt-10">
           <FaqItem q="How do credits work?" a="Every AI-generated report or scenario consumes credits based on its complexity. Each plan includes a monthly allowance; you can top up anytime with credit packs that never expire while your account is active." />
           <FaqItem q="Can I change plans later?" a="Absolutely. Upgrade, downgrade or change seat counts whenever your firm changes shape. Pro-rated billing applies on the next cycle." />
           <FaqItem q="What does onboarding include?" a="A dedicated specialist walks your team through configuration, brand setup, workflows and training. Larger packages include migration, integrations and white-label theming." />
@@ -407,23 +478,27 @@ function PricingPage() {
 
       {/* CTA */}
       <section className="relative z-10 mx-auto max-w-5xl px-6 pb-32">
-        <div className="relative overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-accent/10 p-10 text-center md:p-16">
-          <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_center,theme(colors.primary/15),transparent_60%)]" />
-          <h2 className="text-balance text-3xl font-semibold tracking-tight md:text-5xl">
-            Ready when you are.
+        <div className="relative overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-accent/10 p-10 text-center md:p-20">
+          <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_center,theme(colors.primary/20),transparent_60%)]" />
+          <div className="absolute inset-0 -z-10 opacity-[0.04] noise-overlay" />
+          <div className="font-mono text-[10px] uppercase tracking-[0.4em] text-primary/80">
+            06 / Next move
+          </div>
+          <h2 className="mt-6 text-balance text-4xl font-semibold tracking-[-0.02em] md:text-6xl">
+            Ready <span className="font-display italic text-primary-glow">when</span> you are.
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-balance text-muted-foreground">
+          <p className="mx-auto mt-5 max-w-xl text-balance text-muted-foreground md:text-lg">
             Spin up a workspace today, or book a walkthrough with our team to see
             it on your data.
           </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <div className="mt-10 flex flex-wrap justify-center gap-3">
             <Link to="/auth">
-              <Button size="lg" className="shadow-[0_0_40px_-10px] shadow-primary/60">
+              <Button size="lg" className="shadow-[0_0_50px_-10px] shadow-primary/70 font-mono text-[11px] uppercase tracking-[0.25em]">
                 Get started <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
             <Link to="/auth">
-              <Button size="lg" variant="outline" className="border-border/60">
+              <Button size="lg" variant="outline" className="border-border/60 font-mono text-[11px] uppercase tracking-[0.25em]">
                 Talk to sales
               </Button>
             </Link>
@@ -433,15 +508,15 @@ function PricingPage() {
 
       {/* Footer */}
       <footer className="relative z-10 border-t border-border/40 bg-background/60 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-6 py-8 text-xs text-muted-foreground md:flex-row">
-          <div className="flex items-center gap-2">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-6 py-8 font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground md:flex-row">
+          <div className="flex items-center gap-2.5">
             <LogoMark small />
-            <span>© {new Date().getFullYear()} Aurixa. All rights reserved.</span>
+            <span>© {new Date().getFullYear()} Aurixa · All rights reserved</span>
           </div>
           <div className="flex gap-6">
-            <Link to="/" className="hover:text-foreground">Home</Link>
-            <a href="#plans" className="hover:text-foreground">Plans</a>
-            <a href="#faq" className="hover:text-foreground">FAQ</a>
+            <Link to="/" className="hover:text-foreground transition-colors">Home</Link>
+            <a href="#plans" className="hover:text-foreground transition-colors">Plans</a>
+            <a href="#faq" className="hover:text-foreground transition-colors">FAQ</a>
           </div>
         </div>
       </footer>
@@ -451,7 +526,19 @@ function PricingPage() {
 
 /* ---------------- subcomponents ---------------- */
 
+function CornerTicks() {
+  return (
+    <>
+      <span className="pointer-events-none absolute left-2 top-2 h-3 w-3 border-l border-t border-primary/40" />
+      <span className="pointer-events-none absolute right-2 top-2 h-3 w-3 border-r border-t border-primary/40" />
+      <span className="pointer-events-none absolute left-2 bottom-2 h-3 w-3 border-l border-b border-primary/40" />
+      <span className="pointer-events-none absolute right-2 bottom-2 h-3 w-3 border-r border-b border-primary/40" />
+    </>
+  );
+}
+
 function PlanCard({
+  index,
   name,
   tagline,
   price,
@@ -464,6 +551,7 @@ function PlanCard({
   ctaTo,
   featured,
 }: {
+  index: string;
   name: string;
   tagline: string;
   price: number;
@@ -478,49 +566,52 @@ function PlanCard({
 }) {
   return (
     <div
-      className={`group relative flex flex-col overflow-hidden rounded-2xl border p-7 backdrop-blur transition-all duration-300 hover:-translate-y-1 ${
+      className={`group relative flex flex-col overflow-hidden rounded-2xl border p-7 backdrop-blur-xl transition-all duration-500 hover:-translate-y-1.5 ${
         featured
-          ? "border-primary/60 bg-gradient-to-br from-primary/10 via-card/80 to-card/40 shadow-[0_30px_80px_-30px] shadow-primary/40"
-          : "border-border/50 bg-card/40 hover:border-primary/40"
+          ? "border-primary/60 bg-gradient-to-br from-primary/15 via-card/80 to-card/40 shadow-[0_40px_100px_-30px] shadow-primary/50"
+          : "border-border/50 bg-card/40 hover:border-primary/40 hover:shadow-[0_30px_80px_-30px] hover:shadow-primary/30"
       }`}
     >
+      <CornerTicks />
       {featured && (
         <>
           <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
-          <Badge className="absolute right-5 top-5 border-0 bg-gradient-to-r from-primary to-accent text-primary-foreground">
+          <div className="absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-accent to-transparent" />
+          <Badge className="absolute right-5 top-5 border-0 bg-gradient-to-r from-primary to-accent font-mono text-[9px] uppercase tracking-[0.2em] text-primary-foreground">
             {ribbon}
           </Badge>
         </>
       )}
 
-      <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
-        {name}
+      <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+        <span>{name}</span>
+        <span className="text-foreground/30">{index}</span>
       </div>
-      <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{tagline}</p>
+      <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-muted-foreground">{tagline}</p>
 
-      <div className="mt-6">
-        <div className="flex items-baseline gap-1">
-          <span className="bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-4xl font-semibold tracking-tight text-transparent">
+      <div className="mt-7">
+        <div className="flex items-baseline gap-1.5">
+          <span className={`bg-gradient-to-br ${featured ? "from-foreground via-foreground to-primary-glow" : "from-foreground to-foreground/50"} bg-clip-text text-5xl font-semibold tracking-[-0.03em] text-transparent`}>
             {aud(price)}
           </span>
           {showRange && priceMax > price && (
-            <span className="text-sm text-muted-foreground">
+            <span className="font-display text-base italic text-muted-foreground">
               – {aud(priceMax)}
             </span>
           )}
         </div>
-        <div className="mt-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+        <div className="mt-1.5 font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
           AUD / month · ex GST
         </div>
       </div>
 
-      <div className="mt-5 rounded-lg border border-border/40 bg-background/40 px-3 py-2 text-xs font-medium text-foreground/80">
+      <div className="mt-5 rounded-lg border border-border/40 bg-background/40 px-3 py-2 font-mono text-[11px] tracking-wider text-foreground/80">
         {seats}
       </div>
 
       <ul className="mt-6 flex-1 space-y-3 text-sm">
         {highlights.map((h, i) => (
-          <li key={i} className="flex gap-2">
+          <li key={i} className="flex gap-2.5">
             <Check className={`mt-0.5 h-4 w-4 shrink-0 ${featured ? "text-accent" : "text-primary"}`} />
             <span className="text-muted-foreground">{h}</span>
           </li>
@@ -530,9 +621,9 @@ function PlanCard({
       <div className="mt-8">
         <Link to={ctaTo}>
           <Button
-            className={`w-full ${
+            className={`w-full font-mono text-[11px] uppercase tracking-[0.25em] ${
               featured
-                ? "bg-gradient-to-r from-primary to-primary-glow text-primary-foreground shadow-[0_0_30px_-8px] shadow-primary/60"
+                ? "bg-gradient-to-r from-primary to-primary-glow text-primary-foreground shadow-[0_0_40px_-8px] shadow-primary/70"
                 : ""
             }`}
             variant={featured ? "default" : "outline"}
@@ -547,27 +638,31 @@ function PlanCard({
 }
 
 function SectionHeader({
+  index,
   eyebrow,
   title,
   description,
   icon,
 }: {
+  index?: string;
   eyebrow: string;
-  title: string;
+  title: React.ReactNode;
   description?: string;
   icon?: React.ReactNode;
 }) {
   return (
-    <div className="mx-auto max-w-2xl text-center">
-      <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-card/40 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground backdrop-blur">
+    <div className="mx-auto max-w-3xl text-center">
+      <div className="mx-auto inline-flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.35em] text-muted-foreground">
+        {index && <span className="text-foreground/40">{index}</span>}
+        {index && <span className="h-px w-8 bg-border" />}
         {icon}
-        {eyebrow}
+        <span>{eyebrow}</span>
       </div>
-      <h2 className="mt-5 text-balance text-3xl font-semibold tracking-tight md:text-4xl">
+      <h2 className="mt-6 text-balance text-4xl font-semibold tracking-[-0.025em] md:text-6xl">
         {title}
       </h2>
       {description && (
-        <p className="mx-auto mt-3 max-w-xl text-balance text-sm text-muted-foreground md:text-base">
+        <p className="mx-auto mt-4 max-w-xl text-balance text-sm leading-relaxed text-muted-foreground md:text-base">
           {description}
         </p>
       )}
@@ -586,12 +681,12 @@ function Trust({
 }) {
   return (
     <div className="flex gap-4">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/30">
         {icon}
       </div>
       <div>
-        <h4 className="font-semibold">{title}</h4>
-        <p className="mt-1 text-sm text-muted-foreground">{body}</p>
+        <h4 className="font-semibold tracking-tight">{title}</h4>
+        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{body}</p>
       </div>
     </div>
   );
@@ -600,10 +695,10 @@ function Trust({
 function FaqItem({ q, a }: { q: string; a: string }) {
   return (
     <AccordionItem value={q} className="border-border/40">
-      <AccordionTrigger className="text-left text-base font-medium hover:text-primary">
+      <AccordionTrigger className="text-left text-base font-medium tracking-tight hover:text-primary">
         {q}
       </AccordionTrigger>
-      <AccordionContent className="text-sm text-muted-foreground">
+      <AccordionContent className="text-sm leading-relaxed text-muted-foreground">
         {a}
       </AccordionContent>
     </AccordionItem>
@@ -626,23 +721,29 @@ function LogoMark({ small }: { small?: boolean }) {
 function BackgroundFX() {
   return (
     <>
-      {/* radial glows */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -top-32 left-1/2 h-[600px] w-[900px] -translate-x-1/2 rounded-full bg-primary/10 blur-[120px]" />
-        <div className="absolute top-[40%] right-[-10%] h-[500px] w-[500px] rounded-full bg-accent/10 blur-[120px]" />
-        <div className="absolute bottom-[-20%] left-[-10%] h-[500px] w-[500px] rounded-full bg-primary/10 blur-[140px]" />
+      {/* animated aurora */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[1100px]">
+        <div className="aurora absolute inset-0" />
       </div>
-      {/* grid */}
+      {/* lower aurora */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-[700px] opacity-60">
+        <div className="aurora absolute inset-0" style={{ animationDirection: "alternate-reverse" }} />
+      </div>
+      {/* fine grid with vignette */}
       <div
-        className="pointer-events-none absolute inset-0 -z-10 opacity-[0.06]"
+        className="pointer-events-none absolute inset-0 -z-10 opacity-[0.07]"
         style={{
           backgroundImage:
             "linear-gradient(to right, currentColor 1px, transparent 1px), linear-gradient(to bottom, currentColor 1px, transparent 1px)",
-          backgroundSize: "56px 56px",
+          backgroundSize: "64px 64px",
           maskImage:
-            "radial-gradient(ellipse at center, black 40%, transparent 80%)",
+            "radial-gradient(ellipse at center, black 30%, transparent 80%)",
         }}
       />
+      {/* film grain */}
+      <div className="pointer-events-none absolute inset-0 -z-10 opacity-[0.04] noise-overlay" />
+      {/* horizon line */}
+      <div className="pointer-events-none absolute inset-x-0 top-[90vh] -z-10 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
     </>
   );
 }
