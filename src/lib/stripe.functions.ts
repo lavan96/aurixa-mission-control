@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { getStripe } from "@/server/stripe.server";
+import { ensureTenant } from "@/server/clone-api-keys.server";
 import { getRequestHost } from "@tanstack/react-start/server";
 
 type Mode = "topup" | "seat_plan" | "setup_package";
