@@ -11,13 +11,14 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Radio, MailCheck } from "lucide-react";
 import { toast } from "sonner";
 
-type AuthSearch = { redirect?: string; intent?: string };
+type AuthSearch = { redirect?: string; intent?: string; clone?: string };
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
   validateSearch: (s: Record<string, unknown>): AuthSearch => ({
     redirect: typeof s.redirect === "string" ? s.redirect : undefined,
     intent: typeof s.intent === "string" ? s.intent : undefined,
+    clone: typeof s.clone === "string" ? s.clone : undefined,
   }),
   head: () => ({ meta: [{ title: "Sign in — Aurixa Systems Mission Control" }] }),
 });
@@ -34,10 +35,15 @@ function AuthPage() {
   useEffect(() => {
     if (session) {
       const dest = search.redirect && search.redirect.startsWith("/") ? search.redirect : "/dashboard";
-      const qs = search.intent ? `${dest.includes("?") ? "&" : "?"}intent=${encodeURIComponent(search.intent)}` : "";
-      nav({ to: (dest + qs) as never });
+      const params = new URLSearchParams();
+      if (search.intent) params.set("intent", search.intent);
+      if (search.clone) params.set("clone", search.clone);
+      const qs = params.toString();
+      const sep = dest.includes("?") ? "&" : "?";
+      nav({ to: (qs ? `${dest}${sep}${qs}` : dest) as never });
     }
-  }, [session, nav, search.redirect, search.intent]);
+  }, [session, nav, search.redirect, search.intent, search.clone]);
+
 
 
   const handle = async (mode: "in" | "up") => {
