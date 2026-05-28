@@ -163,8 +163,11 @@ function PricingPage() {
     setBusyId(itemId);
     try {
       const cloneId = selectedClone === PRIME_ID ? null : selectedClone;
+      const cancelPath = cloneId
+        ? `/billing/cancel?clone=${encodeURIComponent(cloneId)}`
+        : "/billing/cancel";
       const res = await checkoutFn({
-        data: { mode, itemId, cloneId },
+        data: { mode, itemId, cloneId, cancelPath },
       });
       if (res.ok && res.url) {
         window.location.href = res.url;
