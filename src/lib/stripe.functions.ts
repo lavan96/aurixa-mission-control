@@ -103,7 +103,7 @@ export const createStripeCheckout = createServerFn({ method: "POST" })
         mode: data.mode,
         item_id: data.itemId,
         item_slug: item.slug,
-        tenant_id: data.tenantId ?? "",
+        tenant_id: tenantId ?? "",
         clone_id: data.cloneId ?? "",
         quantity: String(data.quantity),
       },
