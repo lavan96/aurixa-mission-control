@@ -33,16 +33,25 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { getPublicPricing } from "@/lib/public-pricing.functions";
 import { createStripeCheckout } from "@/lib/stripe.functions";
+import { listPurchasableClones } from "@/lib/purchasable-clones.functions";
 import { useAuth } from "@/lib/auth";
 
-type PricingSearch = { intent?: string };
+type PricingSearch = { intent?: string; clone?: string };
 
 export const Route = createFileRoute("/pricing")({
   component: PricingPage,
   validateSearch: (s: Record<string, unknown>): PricingSearch => ({
     intent: typeof s.intent === "string" ? s.intent : undefined,
+    clone: typeof s.clone === "string" ? s.clone : undefined,
   }),
   head: () => ({
     meta: [
@@ -101,36 +110,61 @@ function PricingPage() {
   const nav = useNavigate();
   const search = useSearch({ from: "/pricing" }) as PricingSearch;
   const checkoutFn = useServerFn(createStripeCheckout);
+  const fetchClones = useServerFn(listPurchasableClones);
   const [busyId, setBusyId] = useState<string | null>(null);
   const autoLaunchedRef = useRef(false);
+
+  // PRIME = Mission Control / platform-level purchase (no clone scope).
+  const PRIME_ID = "__prime__";
+  const [selectedClone, setSelectedClone] = useState<string>(
+    search.clone && search.clone.length > 0 ? search.clone : PRIME_ID,
+  );
+
+  // Load clones the signed-in operator can purchase for.
+  const { data: cloneList } = useQuery({
+    queryKey: ["purchasable-clones"],
+    queryFn: () => fetchClones(),
+    enabled: !!session,
+  });
+  const clones = cloneList?.ok ? cloneList.clones : [];
+  const activeClone =
+    selectedClone === PRIME_ID
+      ? null
+      : clones.find((c) => c.id === selectedClone) ?? null;
+
+  // Keep ?clone=… in sync so it survives the auth round-trip.
+  useEffect(() => {
+    const desired = selectedClone === PRIME_ID ? undefined : selectedClone;
+    if ((search.clone ?? undefined) === desired) return;
+    nav({
+      to: "/pricing" as never,
+      search: { ...(search.intent ? { intent: search.intent } : {}), ...(desired ? { clone: desired } : {}) } as never,
+      replace: true,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClone]);
 
   const startCheckout = async (
     mode: "seat_plan" | "topup" | "setup_package",
     itemId: string,
   ) => {
-    // Unauthenticated: route to auth with redirect + intent for auto-launch on return.
+    // Unauthenticated: route to auth with redirect + intent + clone.
     if (!session) {
       nav({
         to: "/auth" as never,
-        search: { redirect: "/pricing", intent: `${mode}:${itemId}` } as never,
+        search: {
+          redirect: "/pricing",
+          intent: `${mode}:${itemId}`,
+          ...(selectedClone !== PRIME_ID ? { clone: selectedClone } : {}),
+        } as never,
       });
       return;
     }
-    // Top-ups & setup packages need a tenant context — send users to the
-    // signed-in billing pages where tenant is resolved.
-    if (mode === "topup") {
-      nav({ to: "/billing/topup" as never });
-      return;
-    }
-    if (mode === "setup_package") {
-      nav({ to: "/billing/catalog" as never });
-      return;
-    }
-    // Seat plan → direct Stripe checkout (Prime entitlement, no clone).
     setBusyId(itemId);
     try {
+      const cloneId = selectedClone === PRIME_ID ? null : selectedClone;
       const res = await checkoutFn({
-        data: { mode, itemId, cloneId: null },
+        data: { mode, itemId, cloneId },
       });
       if (res.ok && res.url) {
         window.location.href = res.url;
@@ -156,11 +190,16 @@ function PricingPage() {
     if (!mode || !itemId) return;
     if (mode !== "seat_plan" && mode !== "topup" && mode !== "setup_package") return;
     autoLaunchedRef.current = true;
-    // Clear the intent param so we don't loop.
-    nav({ to: "/pricing" as never, search: {} as never, replace: true });
+    // Clear the intent param so we don't loop. Preserve clone.
+    nav({
+      to: "/pricing" as never,
+      search: (search.clone ? { clone: search.clone } : {}) as never,
+      replace: true,
+    });
     void startCheckout(mode, itemId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, search.intent]);
+
 
   const plans = useMemo(() => data?.plans ?? [], [data]);
   const packs = data?.packs ?? [];
@@ -259,7 +298,41 @@ function PricingPage() {
               </button>
             ))}
           </div>
+
+          {/* Clone scope selector — purchases land on the selected client */}
+          {session && (
+            <div
+              className="reveal-up mx-auto mt-8 flex max-w-xl flex-col items-center gap-2"
+              style={{ animationDelay: "440ms" }}
+            >
+              <span className="font-mono text-[10px] uppercase tracking-[0.35em] text-muted-foreground">
+                Purchasing for
+              </span>
+              <Select value={selectedClone} onValueChange={setSelectedClone}>
+                <SelectTrigger className="h-11 w-full max-w-sm rounded-full border-border/60 bg-card/60 px-5 font-mono text-[12px] uppercase tracking-[0.18em] backdrop-blur-xl">
+                  <SelectValue placeholder="Select a client" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={PRIME_ID}>
+                    Mission Control · Prime
+                  </SelectItem>
+                  {clones.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground/70">
+                {activeClone
+                  ? `Charges, seats & credits will apply to ${activeClone.name}.`
+                  : "Charges will apply to your Mission Control / Prime account."}
+              </p>
+            </div>
+          )}
         </div>
+
+
 
         {/* Marquee */}
         <div className="reveal-up relative mt-20 overflow-hidden border-y border-border/40 py-5" style={{ animationDelay: "480ms" }}>
