@@ -33,16 +33,25 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { getPublicPricing } from "@/lib/public-pricing.functions";
 import { createStripeCheckout } from "@/lib/stripe.functions";
+import { listPurchasableClones } from "@/lib/purchasable-clones.functions";
 import { useAuth } from "@/lib/auth";
 
-type PricingSearch = { intent?: string };
+type PricingSearch = { intent?: string; clone?: string };
 
 export const Route = createFileRoute("/pricing")({
   component: PricingPage,
   validateSearch: (s: Record<string, unknown>): PricingSearch => ({
     intent: typeof s.intent === "string" ? s.intent : undefined,
+    clone: typeof s.clone === "string" ? s.clone : undefined,
   }),
   head: () => ({
     meta: [
