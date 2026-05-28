@@ -298,7 +298,41 @@ function PricingPage() {
               </button>
             ))}
           </div>
+
+          {/* Clone scope selector — purchases land on the selected client */}
+          {session && (
+            <div
+              className="reveal-up mx-auto mt-8 flex max-w-xl flex-col items-center gap-2"
+              style={{ animationDelay: "440ms" }}
+            >
+              <span className="font-mono text-[10px] uppercase tracking-[0.35em] text-muted-foreground">
+                Purchasing for
+              </span>
+              <Select value={selectedClone} onValueChange={setSelectedClone}>
+                <SelectTrigger className="h-11 w-full max-w-sm rounded-full border-border/60 bg-card/60 px-5 font-mono text-[12px] uppercase tracking-[0.18em] backdrop-blur-xl">
+                  <SelectValue placeholder="Select a client" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={PRIME_ID}>
+                    Mission Control · Prime
+                  </SelectItem>
+                  {clones.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground/70">
+                {activeClone
+                  ? `Charges, seats & credits will apply to ${activeClone.name}.`
+                  : "Charges will apply to your Mission Control / Prime account."}
+              </p>
+            </div>
+          )}
         </div>
+
+
 
         {/* Marquee */}
         <div className="reveal-up relative mt-20 overflow-hidden border-y border-border/40 py-5" style={{ animationDelay: "480ms" }}>
