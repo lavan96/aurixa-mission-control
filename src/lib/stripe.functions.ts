@@ -65,13 +65,27 @@ export const createStripeCheckout = createServerFn({ method: "POST" })
     if (!item.is_active) return { ok: false as const, error: "item_inactive" };
     if (!item.stripe_price_id) return { ok: false as const, error: "stripe_price_not_linked" };
 
-    // Topups + setup packages require a tenant. Seat plans may target Prime (null clone).
-    if ((data.mode === "topup" || data.mode === "setup_package") && !data.tenantId) {
-      return { ok: false as const, error: "tenant_required" };
+    // Topups + setup packages need a tenant. If a cloneId is supplied without
+    // an explicit tenantId, auto-resolve (or provision) the clone's primary
+    // tenant so the pricing page can be fully client-centric.
+    let tenantId = data.tenantId;
+    if ((data.mode === "topup" || data.mode === "setup_package") && !tenantId) {
+      if (!data.cloneId) return { ok: false as const, error: "tenant_or_clone_required" };
+      // Look up clone display name for nicer Stripe customer naming.
+      const { data: clone } = await supabaseAdmin
+        .from("clones")
+        .select("id, name, slug")
+        .eq("id", data.cloneId)
+        .maybeSingle();
+      if (!clone) return { ok: false as const, error: "clone_not_found" };
+      const ensured = await ensureTenant(clone.id, `clone:${clone.slug ?? clone.id}`, clone.name);
+      if (!ensured.ok) return { ok: false as const, error: ensured.error };
+      tenantId = ensured.tenantId;
     }
 
     let customerId: string | undefined;
-    if (data.tenantId) customerId = await ensureStripeCustomer(data.tenantId);
+    if (tenantId) customerId = await ensureStripeCustomer(tenantId);
+
 
     const host = getRequestHost();
     const proto = host.startsWith("localhost") ? "http" : "https";
