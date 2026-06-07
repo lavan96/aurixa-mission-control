@@ -9,7 +9,7 @@ function Index() {
   const { session, loading } = useAuth();
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-dvh items-center justify-center">
         <div className="font-mono text-sm text-muted-foreground">booting…</div>
       </div>
     );
