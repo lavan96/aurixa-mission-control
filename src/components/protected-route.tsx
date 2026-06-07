@@ -26,7 +26,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (loading || hasRole === null) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-dvh items-center justify-center">
         <div className="font-mono text-sm text-muted-foreground">authenticating…</div>
       </div>
     );
@@ -36,7 +36,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!hasRole) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-6">
+      <div className="flex min-h-dvh items-center justify-center p-6">
         <div className="max-w-md rounded-lg border border-border bg-card p-6 text-center">
           <h2 className="font-mono text-lg font-semibold">Access denied</h2>
           <p className="mt-2 text-sm text-muted-foreground">

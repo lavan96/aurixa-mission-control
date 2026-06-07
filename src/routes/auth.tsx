@@ -85,7 +85,7 @@ function AuthPage() {
   };
 
   return (
-    <div className="grid-bg flex min-h-screen items-center justify-center p-6">
+    <div className="grid-bg flex min-h-dvh items-center justify-center p-6">
       <div className="w-full max-w-md space-y-6">
       <Card className="border-border/80 bg-card/90 backdrop-blur">
         <CardHeader className="items-center text-center">
