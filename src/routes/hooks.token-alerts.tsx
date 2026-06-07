@@ -1,25 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { fireTokenWebhook, retryDueDeliveries } from "@/server/token-webhooks.server";
+import { verifyCronAuth } from "@/server/cron-auth.server";
 
 // Cron-invoked. Scans tenants for allowance thresholds and cancel-rate spikes,
 // fans notifications, fires webhooks, and retries failed webhook deliveries.
+// Auth: requires Bearer DRIFT_REFRESH_TOKEN.
 export const Route = createFileRoute("/hooks/token-alerts")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const auth = request.headers.get("authorization");
-        const bearer = auth?.replace("Bearer ", "");
-        const apikey = request.headers.get("apikey");
-        const anon = process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_ANON_KEY;
-        const drift = process.env.DRIFT_REFRESH_TOKEN;
-        const ok = (drift && bearer && bearer === drift) || (anon && apikey && apikey === anon);
-        if (!ok) {
-          return new Response(JSON.stringify({ error: "Unauthorized" }), {
-            status: 401,
-            headers: { "Content-Type": "application/json" },
-          });
-        }
+        const auth = verifyCronAuth(request);
+        if (!auth.ok) return auth.response;
 
         const out = {
           tenants_checked: 0,

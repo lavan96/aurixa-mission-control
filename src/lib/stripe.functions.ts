@@ -91,6 +91,15 @@ export const createStripeCheckout = createServerFn({ method: "POST" })
     const proto = host.startsWith("localhost") ? "http" : "https";
     const origin = `${proto}://${host}`;
 
+    const sharedMeta = {
+      mode: data.mode,
+      item_id: data.itemId,
+      item_slug: item.slug,
+      tenant_id: tenantId ?? "",
+      clone_id: data.cloneId ?? "",
+      quantity: String(data.quantity),
+    };
+
     const session = await getStripe().checkout.sessions.create({
       mode: data.mode === "seat_plan" ? "subscription" : "payment",
       customer: customerId,
@@ -99,14 +108,12 @@ export const createStripeCheckout = createServerFn({ method: "POST" })
       cancel_url: `${origin}${data.cancelPath}`,
       allow_promotion_codes: true,
       automatic_tax: { enabled: true },
-      metadata: {
-        mode: data.mode,
-        item_id: data.itemId,
-        item_slug: item.slug,
-        tenant_id: tenantId ?? "",
-        clone_id: data.cloneId ?? "",
-        quantity: String(data.quantity),
-      },
+      metadata: sharedMeta,
+      // Propagate metadata onto the Subscription so that subsequent
+      // subscription.* / invoice.* webhook events carry tenant/clone context.
+      ...(data.mode === "seat_plan"
+        ? { subscription_data: { metadata: sharedMeta } }
+        : { payment_intent_data: { metadata: sharedMeta } }),
     });
 
     return { ok: true as const, url: session.url, sessionId: session.id };

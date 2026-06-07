@@ -1,34 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { getCloneHealth } from "@/server/clone-health.server";
+import { verifyCronAuth } from "@/server/cron-auth.server";
 
-// Cron-invoked endpoint. pg_cron POSTs here every 5 minutes to pre-warm the
-// clone_health_snapshots cache so /health is always instant — no operator ever
-// waits for the first probe. Auth: requires Supabase publishable key as Bearer.
+// Cron-invoked endpoint. pg_cron POSTs here every 5 minutes.
+// Auth: requires Bearer DRIFT_REFRESH_TOKEN.
 export const Route = createFileRoute("/hooks/warm-health")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const auth = request.headers.get("authorization");
-        const token = auth?.replace("Bearer ", "");
-        const expected =
-          process.env.SUPABASE_PUBLISHABLE_KEY ||
-          process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-        if (!token || !expected || token !== expected) {
-          return new Response(
-            JSON.stringify({ error: "Unauthorized" }),
-            { status: 401, headers: { "Content-Type": "application/json" } },
-          );
-        }
+        const auth = verifyCronAuth(request);
+        if (!auth.ok) return auth.response;
 
         const startedAt = Date.now();
         try {
-          const { data: clones } = await supabaseAdmin
-            .from("clones")
-            .select("id");
+          const { data: clones } = await supabaseAdmin.from("clones").select("id");
           const list = clones ?? [];
-          // Force a fresh probe for every clone in parallel. getCloneHealth
-          // writes the snapshot row at the end; failures are isolated per-clone.
           const results = await Promise.allSettled(
             list.map((c) => getCloneHealth(supabaseAdmin, c.id, { skipCache: true })),
           );
@@ -36,8 +23,6 @@ export const Route = createFileRoute("/hooks/warm-health")({
           const failed = results.length - ok;
           const durationMs = Date.now() - startedAt;
 
-          // Audit-log every cron run so pre-warm regressions are debuggable
-          // from /audit-log instead of poking around cron.job_run_details.
           await supabaseAdmin.from("audit_log").insert({
             action: "warm_health_cron",
             entity_type: "cron",
