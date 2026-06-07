@@ -14,7 +14,8 @@ export const Route = createFileRoute("/hooks/fleet-drift")({
 
         try {
           const result = await runFleetDriftScan(supabaseAdmin);
-          await supabaseAdmin.from("audit_log").insert({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (supabaseAdmin as any).from("audit_log").insert({
             action: "fleet_drift_cron",
             entity_type: "cron",
             metadata: result as Record<string, unknown>,
@@ -26,7 +27,8 @@ export const Route = createFileRoute("/hooks/fleet-drift")({
         } catch (e) {
           const msg = e instanceof Error ? e.message : "Scan failed";
           console.error("Drift scan failed:", msg);
-          await supabaseAdmin.from("audit_log").insert({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (supabaseAdmin as any).from("audit_log").insert({
             action: "fleet_drift_cron",
             entity_type: "cron",
             metadata: { error: msg },

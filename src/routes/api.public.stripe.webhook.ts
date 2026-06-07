@@ -136,9 +136,11 @@ async function handleSubscriptionUpdated(sub: Stripe.Subscription) {
   const md = sub.metadata ?? {};
   const seatPlanId = md.item_id || null;
   const cloneId = md.clone_id || null;
-  const periodEnd = sub.current_period_end
-    ? new Date(sub.current_period_end * 1000).toISOString()
-    : null;
+  // current_period_end is on the subscription's primary item in newer API versions.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const subAny = sub as any;
+  const periodEndTs = subAny.current_period_end ?? subAny.items?.data?.[0]?.current_period_end ?? null;
+  const periodEnd = periodEndTs ? new Date(periodEndTs * 1000).toISOString() : null;
 
   const status = sub.status === "active" || sub.status === "trialing"
     ? "active"

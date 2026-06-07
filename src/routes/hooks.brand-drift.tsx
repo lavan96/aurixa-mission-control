@@ -14,7 +14,8 @@ export const Route = createFileRoute("/hooks/brand-drift")({
 
         try {
           const result = await runBrandDriftScan(supabaseAdmin);
-          await supabaseAdmin.from("audit_log").insert({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (supabaseAdmin as any).from("audit_log").insert({
             action: "brand_drift_cron",
             entity_type: "cron",
             metadata: result as Record<string, unknown>,
@@ -25,7 +26,8 @@ export const Route = createFileRoute("/hooks/brand-drift")({
         } catch (e) {
           const msg = e instanceof Error ? e.message : "Brand drift scan failed";
           console.error("Brand drift scan failed:", msg);
-          await supabaseAdmin.from("audit_log").insert({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (supabaseAdmin as any).from("audit_log").insert({
             action: "brand_drift_cron",
             entity_type: "cron",
             metadata: { error: msg },
