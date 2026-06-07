@@ -2991,6 +2991,13 @@ export type Database = {
       highest_role_level: { Args: { _user_id: string }; Returns: number }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_operator: { Args: { _user_id: string }; Returns: boolean }
+      purge_log_tables: {
+        Args: never
+        Returns: {
+          deleted_rows: number
+          table_name: string
+        }[]
+      }
       recompute_seat_device_count: {
         Args: { _seat_id: string }
         Returns: number
