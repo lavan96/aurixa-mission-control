@@ -1,24 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { runDueSchedules } from "@/server/schedules.server";
+import { verifyCronAuth } from "@/server/cron-auth.server";
 
 // Cron-invoked endpoint. pg_cron schedules a POST here every minute.
-// Auth: requires Supabase publishable key as Bearer token (matches /hooks/fleet-drift).
+// Auth: requires Bearer DRIFT_REFRESH_TOKEN.
 export const Route = createFileRoute("/hooks/run-schedules")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const auth = request.headers.get("authorization");
-        const token = auth?.replace("Bearer ", "");
-        const expected =
-          process.env.SUPABASE_PUBLISHABLE_KEY ||
-          process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-        if (!token || !expected || token !== expected) {
-          return new Response(
-            JSON.stringify({ error: "Unauthorized" }),
-            { status: 401, headers: { "Content-Type": "application/json" } },
-          );
-        }
+        const auth = verifyCronAuth(request);
+        if (!auth.ok) return auth.response;
 
         try {
           const result = await runDueSchedules(supabaseAdmin);
@@ -29,6 +21,11 @@ export const Route = createFileRoute("/hooks/run-schedules")({
         } catch (e) {
           const msg = e instanceof Error ? e.message : "Schedule run failed";
           console.error("Schedule run failed:", msg);
+          await supabaseAdmin.from("audit_log").insert({
+            action: "run_schedules_cron",
+            entity_type: "cron",
+            metadata: { error: msg },
+          });
           return new Response(
             JSON.stringify({ success: false, error: msg }),
             { status: 500, headers: { "Content-Type": "application/json" } },
