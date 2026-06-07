@@ -1,6 +1,6 @@
 // Phase 11 — SLO surface: fleet uptime + per-clone breakdown.
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { ProtectedRoute } from "@/components/protected-route";
@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Activity, RefreshCw, Target } from "lucide-react";
 import { computeFleetSlo } from "@/server/reliability.functions";
 import { brandDriftTimeseries } from "@/server/reliability.functions";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
+
+const SloDriftChart = lazy(() => import("@/components/charts/slo-drift-chart"));
 
 export const Route = createFileRoute("/slo")({
   component: () => (<ProtectedRoute><SloPage /></ProtectedRoute>),
@@ -104,21 +105,9 @@ function SloPage() {
           {series.length === 0 ? (
             <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">No drift data in window.</div>
           ) : (
-            <div className="h-[260px] w-full">
-              <ResponsiveContainer>
-                <BarChart data={series}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 10 }} />
-                  <Tooltip />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Bar dataKey="applied" stackId="a" fill="hsl(var(--success))" />
-                  <Bar dataKey="pending" stackId="a" fill="hsl(var(--info))" />
-                  <Bar dataKey="drifted" stackId="a" fill="hsl(var(--warning))" />
-                  <Bar dataKey="failed" stackId="a" fill="hsl(var(--destructive))" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <Suspense fallback={<div className="flex h-[260px] items-center justify-center text-xs text-muted-foreground">Loading chart…</div>}>
+              <SloDriftChart series={series} />
+            </Suspense>
           )}
         </CardContent>
       </Card>
