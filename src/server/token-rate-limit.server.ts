@@ -9,6 +9,9 @@ export type RateLimitResult =
 /**
  * Increment + check the per-key per-minute rate limit. Backed by
  * `public.check_api_rate_limit` so two replicas share state.
+ *
+ * Fails CLOSED on DB error — better to short-circuit a few legitimate
+ * requests than allow unbounded traffic when the limiter store is down.
  */
 export async function checkRateLimit(keyId: string, limit = DEFAULT_LIMIT): Promise<RateLimitResult> {
   const { data, error } = await supabaseAdmin.rpc("check_api_rate_limit", {
@@ -16,8 +19,8 @@ export async function checkRateLimit(keyId: string, limit = DEFAULT_LIMIT): Prom
     _limit: limit,
   });
   if (error) {
-    // Fail open on DB error — better than blocking legitimate prime-repo traffic
-    return { ok: true, count: 0, limit };
+    console.error("[rate-limit] DB error, failing closed:", error.message);
+    return { ok: false, count: 0, limit, retry_after_seconds: 5 };
   }
   return data as RateLimitResult;
 }
