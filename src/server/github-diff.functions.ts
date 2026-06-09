@@ -6,9 +6,7 @@ import { fetchCompare } from "./github-diff.server";
  * Uses the GitHub App Octokit to call the compare API.
  */
 export const fetchFileDiff = createServerFn({ method: "POST" })
-  .inputValidator(
-    (data: { owner: string; repo: string; base: string; head: string }) => data,
-  )
+  .inputValidator((data: { owner: string; repo: string; base: string; head: string }) => data)
   .handler(async ({ data }) => {
     return fetchCompare(data.owner, data.repo, data.base, data.head);
   });

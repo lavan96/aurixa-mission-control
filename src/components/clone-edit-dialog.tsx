@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,8 +41,13 @@ export function CloneEditDialog({
     if (!clone) return;
     if (!name.trim()) return toast.error("Name required");
     setSaving(true);
-    const tagList = tags.split(",").map((t) => t.trim()).filter(Boolean);
-    const { data: { user } } = await supabase.auth.getUser();
+    const tagList = tags
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     const { error } = await supabase
       .from("clones")
       .update({
@@ -76,7 +87,11 @@ export function CloneEditDialog({
           </div>
           <div className="space-y-2">
             <Label>Tags (comma-separated)</Label>
-            <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="staging, eu-west" />
+            <Input
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              placeholder="staging, eu-west"
+            />
           </div>
           <div className="space-y-2">
             <Label>Notes</Label>
@@ -84,8 +99,12 @@ export function CloneEditDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={save} disabled={saving}>
+            {saving ? "Saving…" : "Save"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

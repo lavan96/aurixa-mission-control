@@ -36,13 +36,16 @@ export const revokeSeatDevice = createServerFn({ method: "POST" })
     z.object({ deviceId: z.string().uuid(), reason: z.string().max(500).optional() }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { data: result, error } = await context.supabase.rpc("release_device" as never, {
-      _device_id: data.deviceId,
-      _clone_id: null,
-      _external_user_id: null,
-      _device_fingerprint: null,
-      _reason: data.reason ?? "manual_mc_revoke",
-    } as never);
+    const { data: result, error } = await context.supabase.rpc(
+      "release_device" as never,
+      {
+        _device_id: data.deviceId,
+        _clone_id: null,
+        _external_user_id: null,
+        _device_fingerprint: null,
+        _reason: data.reason ?? "manual_mc_revoke",
+      } as never,
+    );
     if (error) return { ok: false as const, error: error.message };
     return { ok: true as const, result: result as any };
   });
@@ -66,6 +69,9 @@ export const seatDeviceSummary = createServerFn({ method: "GET" })
     return {
       total_active: rows.filter((r) => r.status === "active").length,
       total_revoked: rows.filter((r) => r.status === "revoked").length,
-      per_clone: Array.from(byClone.entries()).map(([clone_id, counts]) => ({ clone_id, ...counts })),
+      per_clone: Array.from(byClone.entries()).map(([clone_id, counts]) => ({
+        clone_id,
+        ...counts,
+      })),
     };
   });

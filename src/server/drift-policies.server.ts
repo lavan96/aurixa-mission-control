@@ -62,10 +62,7 @@ export async function applyAutoPoliciesForClone(
   const muted = new Set(policy.muted_kinds ?? []);
 
   const eligible = all.filter(
-    (s) =>
-      s.status === "open" &&
-      SEVERITY_RANK[s.risk] <= threshold &&
-      !muted.has(s.category),
+    (s) => s.status === "open" && SEVERITY_RANK[s.risk] <= threshold && !muted.has(s.category),
   );
   if (eligible.length === 0) {
     return { ok: true, applied: [], skipped_reason: "no eligible suggestions" };
@@ -111,9 +108,7 @@ export async function applyAutoPoliciesForClone(
     });
 
     working = working.map((x) =>
-      x.id === s.id
-        ? { ...x, status: "applied" as const, applied_event_id: ev.id }
-        : x,
+      x.id === s.id ? { ...x, status: "applied" as const, applied_event_id: ev.id } : x,
     );
 
     if (blast.requiresApproval) {

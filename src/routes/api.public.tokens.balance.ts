@@ -1,20 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import {
-  ensureTenant,
-  jsonResponse,
-  resolveCloneApiKey,
-} from "@/server/clone-api-keys.server";
+import { ensureTenant, jsonResponse, resolveCloneApiKey } from "@/server/clone-api-keys.server";
 import { checkRateLimit } from "@/server/token-rate-limit.server";
 
 export const Route = createFileRoute("/api/public/tokens/balance")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        const key = await resolveCloneApiKey(
-          request.headers.get("x-clone-api-key"),
-          ["tokens:read", "tokens:meter"],
-        );
+        const key = await resolveCloneApiKey(request.headers.get("x-clone-api-key"), [
+          "tokens:read",
+          "tokens:meter",
+        ]);
         if (!key) return jsonResponse({ ok: false, error: "unauthorized" }, 401);
 
         const url = new URL(request.url);

@@ -131,15 +131,13 @@ export async function executeCascade(
   }
 
   for (const r of queuedRows) {
-    const clone = (r as { clones: unknown }).clones as
-      | {
-          id: string;
-          name: string;
-          github_owner: string;
-          github_repo: string;
-          default_branch: string;
-        }
-      | null;
+    const clone = (r as { clones: unknown }).clones as {
+      id: string;
+      name: string;
+      github_owner: string;
+      github_repo: string;
+      default_branch: string;
+    } | null;
 
     if (!clone) {
       await supabase
@@ -403,7 +401,10 @@ async function processClone(args: {
       `Prime \`${primeRef.owner}/${primeRef.repo}@${shortSha(sourceSha)}\` ` +
       `has **${primeFiles.length}** file(s) in your installed modules that may be behind.\n\n` +
       `_No commits were made. This is notify-only mode._\n\n` +
-      `Files in scope:\n${primeFiles.slice(0, 20).map((p) => `- \`${p}\``).join("\n")}` +
+      `Files in scope:\n${primeFiles
+        .slice(0, 20)
+        .map((p) => `- \`${p}\``)
+        .join("\n")}` +
       (primeFiles.length > 20 ? `\n\n…and ${primeFiles.length - 20} more.` : "");
     const { data: issue } = await octokit.issues.create({
       owner: cloneRef.owner,
@@ -456,8 +457,7 @@ async function processClone(args: {
   // Build the "diff_summary" — first 5 file paths + count of remainder.
   // If any library pins were honored, surface that in the summary too.
   const summaryFiles = treeEntries.slice(0, 5).map((t) => t.path);
-  const summarySuffix =
-    treeEntries.length > 5 ? ` (+${treeEntries.length - 5} more)` : "";
+  const summarySuffix = treeEntries.length > 5 ? ` (+${treeEntries.length - 5} more)` : "";
   const pinSuffix = pinSummary ? ` · ${pinSummary}` : "";
   const fileSummary = `${summaryFiles.join(", ")}${summarySuffix}${pinSuffix}`;
 

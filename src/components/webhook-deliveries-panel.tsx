@@ -65,7 +65,8 @@ export function WebhookDeliveriesPanel() {
             <Webhook className="h-4 w-4" /> Recent webhook deliveries
           </CardTitle>
           <CardDescription>
-            Last 20 GitHub webhook events received at <code className="text-xs">/hooks/github</code>.
+            Last 20 GitHub webhook events received at <code className="text-xs">/hooks/github</code>
+            .
           </CardDescription>
         </div>
         <Button variant="ghost" size="sm" onClick={refresh} disabled={loading}>
@@ -94,16 +95,16 @@ export function WebhookDeliveriesPanel() {
                       <Badge variant={actionVariant(r.action)} className="font-mono text-xs">
                         {r.action.replace("webhook.", "")}
                       </Badge>
-                      {mode && (
-                        <span className="text-xs text-muted-foreground">mode: {mode}</span>
-                      )}
+                      {mode && <span className="text-xs text-muted-foreground">mode: {mode}</span>}
                       {cloneCount !== null && (
                         <span className="text-xs text-muted-foreground">
                           {cloneCount} clone{cloneCount === 1 ? "" : "s"}
                         </span>
                       )}
                     </div>
-                    {reason && <div className="text-xs text-muted-foreground truncate">{reason}</div>}
+                    {reason && (
+                      <div className="text-xs text-muted-foreground truncate">{reason}</div>
+                    )}
                     {delivery && (
                       <div className="text-xs font-mono text-muted-foreground truncate">
                         {delivery}

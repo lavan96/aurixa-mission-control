@@ -25,7 +25,11 @@ export async function validateClonePinsServer(
   if (error) return { ok: false, issues: [], checked: 0, error: error.message };
 
   const pinRows = (pins ?? []) as Array<{
-    id: string; clone_id: string; slug: string; version: number; library_entry_id: string;
+    id: string;
+    clone_id: string;
+    slug: string;
+    version: number;
+    library_entry_id: string;
   }>;
   if (pinRows.length === 0) return { ok: true, issues: [], checked: 0 };
 
@@ -37,7 +41,9 @@ export async function validateClonePinsServer(
 
   const entryMap = new Map<string, { approval_status: string; file_paths: string[] | null }>();
   for (const e of (entries ?? []) as Array<{
-    id: string; approval_status: string; file_paths: string[] | null;
+    id: string;
+    approval_status: string;
+    file_paths: string[] | null;
   }>) {
     entryMap.set(e.id, { approval_status: e.approval_status, file_paths: e.file_paths });
   }
@@ -47,21 +53,30 @@ export async function validateClonePinsServer(
     const e = entryMap.get(p.library_entry_id);
     if (!e) {
       issues.push({
-        cloneId: p.clone_id, slug: p.slug, version: p.version,
-        severity: "error", reason: "Library entry was deleted",
+        cloneId: p.clone_id,
+        slug: p.slug,
+        version: p.version,
+        severity: "error",
+        reason: "Library entry was deleted",
       });
       continue;
     }
     if (e.approval_status !== "approved") {
       issues.push({
-        cloneId: p.clone_id, slug: p.slug, version: p.version,
-        severity: "error", reason: `Entry is now ${e.approval_status}`,
+        cloneId: p.clone_id,
+        slug: p.slug,
+        version: p.version,
+        severity: "error",
+        reason: `Entry is now ${e.approval_status}`,
       });
     }
     if ((e.file_paths ?? []).length === 0) {
       issues.push({
-        cloneId: p.clone_id, slug: p.slug, version: p.version,
-        severity: "error", reason: "Pinned entry has no file paths",
+        cloneId: p.clone_id,
+        slug: p.slug,
+        version: p.version,
+        severity: "error",
+        reason: "Pinned entry has no file paths",
       });
     }
   }

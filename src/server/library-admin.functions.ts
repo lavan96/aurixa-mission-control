@@ -15,11 +15,7 @@ async function isAdmin(supabase: SupabaseClient<Database>, userId: string) {
 export const setLibraryApprovalStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
-    (data: {
-      entryId: string;
-      status: "approved" | "rejected" | "pending";
-      reason?: string;
-    }) => {
+    (data: { entryId: string; status: "approved" | "rejected" | "pending"; reason?: string }) => {
       if (!data?.entryId) throw new Error("entryId required");
       if (!["approved", "rejected", "pending"].includes(data.status))
         throw new Error("status must be approved, rejected, or pending");
@@ -28,7 +24,8 @@ export const setLibraryApprovalStatus = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const admin = await isAdmin(context.supabase, context.userId);
-    if (!admin) return { ok: false as const, error: "Admin role required to approve library entries" };
+    if (!admin)
+      return { ok: false as const, error: "Admin role required to approve library entries" };
 
     const update = {
       approval_status: data.status,
@@ -55,9 +52,7 @@ export const setLibraryApprovalStatus = createServerFn({ method: "POST" })
 
     // Fan-out notification so the fleet sees approval decisions in the bell.
     if (data.status === "approved" || data.status === "rejected") {
-      const label = updated
-        ? `${updated.name} v${updated.version}`
-        : "Library entry";
+      const label = updated ? `${updated.name} v${updated.version}` : "Library entry";
       await context.supabase.from("notifications").insert({
         kind: data.status === "approved" ? "library_entry_approved" : "library_entry_rejected",
         severity: data.status === "approved" ? "success" : "warning",
@@ -103,17 +98,11 @@ export const getCloneLibraryPins = createServerFn({ method: "POST" })
 
 export const setCloneLibraryPin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
-    (data: {
-      cloneId: string;
-      libraryEntryId: string;
-      notes?: string;
-    }) => {
-      if (!data?.cloneId) throw new Error("cloneId required");
-      if (!data?.libraryEntryId) throw new Error("libraryEntryId required");
-      return data;
-    },
-  )
+  .inputValidator((data: { cloneId: string; libraryEntryId: string; notes?: string }) => {
+    if (!data?.cloneId) throw new Error("cloneId required");
+    if (!data?.libraryEntryId) throw new Error("libraryEntryId required");
+    return data;
+  })
   .handler(async ({ data, context }) => {
     // Resolve the library entry → must be approved
     const { data: entry, error: entryErr } = await context.supabase
@@ -121,26 +110,25 @@ export const setCloneLibraryPin = createServerFn({ method: "POST" })
       .select("id, slug, version, approval_status, name")
       .eq("id", data.libraryEntryId)
       .maybeSingle();
-    if (entryErr || !entry) return { ok: false as const, error: entryErr?.message ?? "Library entry not found" };
+    if (entryErr || !entry)
+      return { ok: false as const, error: entryErr?.message ?? "Library entry not found" };
     if ((entry as { approval_status?: string }).approval_status !== "approved") {
       return { ok: false as const, error: "Only approved library entries can be pinned" };
     }
 
     // Upsert per (clone_id, slug)
-    const { error: upErr } = await context.supabase
-      .from("clone_library_pins")
-      .upsert(
-        {
-          clone_id: data.cloneId,
-          library_entry_id: entry.id,
-          slug: entry.slug,
-          version: entry.version,
-          pinned_by: context.userId,
-          pinned_at: new Date().toISOString(),
-          notes: data.notes ?? null,
-        },
-        { onConflict: "clone_id,slug" },
-      );
+    const { error: upErr } = await context.supabase.from("clone_library_pins").upsert(
+      {
+        clone_id: data.cloneId,
+        library_entry_id: entry.id,
+        slug: entry.slug,
+        version: entry.version,
+        pinned_by: context.userId,
+        pinned_at: new Date().toISOString(),
+        notes: data.notes ?? null,
+      },
+      { onConflict: "clone_id,slug" },
+    );
     if (upErr) return { ok: false as const, error: upErr.message };
 
     await context.supabase.from("audit_log").insert({
@@ -185,13 +173,24 @@ export const bulkApplyClonePins = createServerFn({ method: "POST" })
       .in("id", entryIds);
     if (entryErr) return { ok: false as const, error: entryErr.message, results: [] };
 
-    const entryMap = new Map<string, {
-      id: string; slug: string; version: number; approval_status: string;
-      name: string; file_paths: string[] | null;
-    }>();
+    const entryMap = new Map<
+      string,
+      {
+        id: string;
+        slug: string;
+        version: number;
+        approval_status: string;
+        name: string;
+        file_paths: string[] | null;
+      }
+    >();
     for (const e of (entries ?? []) as Array<{
-      id: string; slug: string; version: number; approval_status: string;
-      name: string; file_paths: string[] | null;
+      id: string;
+      slug: string;
+      version: number;
+      approval_status: string;
+      name: string;
+      file_paths: string[] | null;
     }>) {
       entryMap.set(e.id, e);
     }
@@ -207,8 +206,13 @@ export const bulkApplyClonePins = createServerFn({ method: "POST" })
     for (const cloneId of data.cloneIds) {
       const perClone: PerClone = { cloneId, applied: 0, skipped: [] };
       const rows: Array<{
-        clone_id: string; library_entry_id: string; slug: string;
-        version: number; pinned_by: string; pinned_at: string; notes: string | null;
+        clone_id: string;
+        library_entry_id: string;
+        slug: string;
+        version: number;
+        pinned_by: string;
+        pinned_at: string;
+        notes: string | null;
       }> = [];
 
       for (const p of data.pins) {
@@ -278,7 +282,11 @@ export const validateClonePins = createServerFn({ method: "POST" })
     if (error) return { ok: false as const, error: error.message, issues: [] };
 
     const pinRows = (pins ?? []) as Array<{
-      id: string; clone_id: string; slug: string; version: number; library_entry_id: string;
+      id: string;
+      clone_id: string;
+      slug: string;
+      version: number;
+      library_entry_id: string;
     }>;
     if (pinRows.length === 0) {
       return { ok: true as const, issues: [], checked: 0 };
@@ -290,11 +298,22 @@ export const validateClonePins = createServerFn({ method: "POST" })
       .select("id, slug, version, approval_status, file_paths")
       .in("id", entryIds);
 
-    const entryMap = new Map<string, {
-      id: string; slug: string; version: number; approval_status: string; file_paths: string[] | null;
-    }>();
+    const entryMap = new Map<
+      string,
+      {
+        id: string;
+        slug: string;
+        version: number;
+        approval_status: string;
+        file_paths: string[] | null;
+      }
+    >();
     for (const e of (entries ?? []) as Array<{
-      id: string; slug: string; version: number; approval_status: string; file_paths: string[] | null;
+      id: string;
+      slug: string;
+      version: number;
+      approval_status: string;
+      file_paths: string[] | null;
     }>) {
       entryMap.set(e.id, e);
     }
@@ -312,22 +331,31 @@ export const validateClonePins = createServerFn({ method: "POST" })
       const e = entryMap.get(p.library_entry_id);
       if (!e) {
         issues.push({
-          cloneId: p.clone_id, slug: p.slug, version: p.version,
-          severity: "error", reason: "Library entry was deleted",
+          cloneId: p.clone_id,
+          slug: p.slug,
+          version: p.version,
+          severity: "error",
+          reason: "Library entry was deleted",
         });
         continue;
       }
       if (e.approval_status !== "approved") {
         issues.push({
-          cloneId: p.clone_id, slug: p.slug, version: p.version,
-          severity: "error", reason: `Entry is now ${e.approval_status}`,
+          cloneId: p.clone_id,
+          slug: p.slug,
+          version: p.version,
+          severity: "error",
+          reason: `Entry is now ${e.approval_status}`,
         });
       }
       const files = e.file_paths ?? [];
       if (files.length === 0) {
         issues.push({
-          cloneId: p.clone_id, slug: p.slug, version: p.version,
-          severity: "error", reason: "Pinned entry has no file paths",
+          cloneId: p.clone_id,
+          slug: p.slug,
+          version: p.version,
+          severity: "error",
+          reason: "Pinned entry has no file paths",
         });
       }
     }
@@ -379,7 +407,9 @@ export const getModuleDependencyGraph = createServerFn({ method: "POST" })
       .maybeSingle();
     if (modErr || !mod) return { ok: false as const, error: modErr?.message ?? "Module not found" };
 
-    const ownFiles = new Set<string>(((mod.resolved_files as string[]) ?? mod.file_globs ?? []) as string[]);
+    const ownFiles = new Set<string>(
+      ((mod.resolved_files as string[]) ?? mod.file_globs ?? []) as string[],
+    );
     if (ownFiles.size === 0) {
       return {
         ok: true as const,
@@ -403,7 +433,11 @@ export const getModuleDependencyGraph = createServerFn({ method: "POST" })
     const { data: edges, error: edgesErr } = await edgesQuery;
     if (edgesErr) return { ok: false as const, error: edgesErr.message };
 
-    const edgeList = (edges ?? []) as Array<{ source_file: string; target_file: string; import_type: string }>;
+    const edgeList = (edges ?? []) as Array<{
+      source_file: string;
+      target_file: string;
+      import_type: string;
+    }>;
 
     // 3. Identify external targets (files the module imports that are NOT in its own file set)
     const externalTargets = Array.from(

@@ -77,10 +77,7 @@ export function BulkTagDialog({
       for (const t of removes) current.delete(t);
       for (const t of adds) current.add(t);
       const next = Array.from(current).sort();
-      const { error } = await supabase
-        .from("clones")
-        .update({ tags: next })
-        .eq("id", c.id);
+      const { error } = await supabase.from("clones").update({ tags: next }).eq("id", c.id);
       if (error) failed++;
       else ok++;
     }

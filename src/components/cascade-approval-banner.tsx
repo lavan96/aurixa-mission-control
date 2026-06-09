@@ -119,11 +119,7 @@ export function CascadeApprovalBanner({
 
   return (
     <Card
-      className={
-        isApproved
-          ? "border-success/40 bg-success/5"
-          : "border-warning/40 bg-warning/5"
-      }
+      className={isApproved ? "border-success/40 bg-success/5" : "border-warning/40 bg-warning/5"}
     >
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
@@ -137,7 +133,7 @@ export function CascadeApprovalBanner({
         <CardDescription>
           {isApproved
             ? `Approved ${formatDistanceToNow(approvedAt)}${approvedBy ? ` by operator ${approvedBy.slice(0, 8)}` : ""}.`
-            : reasonHint ?? "This cascade exceeds the safety threshold."}
+            : (reasonHint ?? "This cascade exceeds the safety threshold.")}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">

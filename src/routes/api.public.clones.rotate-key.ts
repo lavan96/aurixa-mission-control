@@ -16,17 +16,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import {
-  generateApiKey,
-  jsonResponse,
-  resolveCloneApiKey,
-} from "@/server/clone-api-keys.server";
+import { generateApiKey, jsonResponse, resolveCloneApiKey } from "@/server/clone-api-keys.server";
 import { cascadeApiKeyToRepo } from "@/server/clone-credentials.server";
 import { fireTokenWebhook } from "@/server/token-webhooks.server";
 import { checkRateLimit } from "@/server/token-rate-limit.server";
 
 const BodySchema = z.object({
-  grace_hours: z.number().int().min(0).max(24 * 7).optional().default(1),
+  grace_hours: z
+    .number()
+    .int()
+    .min(0)
+    .max(24 * 7)
+    .optional()
+    .default(1),
   label: z.string().min(1).max(120).optional(),
   reason: z.string().min(1).max(500).optional(),
 });
@@ -44,7 +46,11 @@ export const Route = createFileRoute("/api/public/clones/rotate-key")({
         const rl = await checkRateLimit(current.id, 10).catch(() => ({ ok: true }));
         if (!rl.ok) {
           return jsonResponse(
-            { ok: false, error: "rate_limited", retry_after_seconds: (rl as { retry_after_seconds?: number }).retry_after_seconds },
+            {
+              ok: false,
+              error: "rate_limited",
+              retry_after_seconds: (rl as { retry_after_seconds?: number }).retry_after_seconds,
+            },
             429,
           );
         }
@@ -57,7 +63,10 @@ export const Route = createFileRoute("/api/public/clones/rotate-key")({
         }
         const parsed = BodySchema.safeParse(body);
         if (!parsed.success) {
-          return jsonResponse({ ok: false, error: "invalid_body", details: parsed.error.flatten() }, 400);
+          return jsonResponse(
+            { ok: false, error: "invalid_body", details: parsed.error.flatten() },
+            400,
+          );
         }
 
         if (!current.clone_id) {

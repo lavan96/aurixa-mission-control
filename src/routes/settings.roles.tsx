@@ -87,9 +87,7 @@ export const Route = createFileRoute("/settings/roles")({
 
 function RolesPage() {
   const { user } = useAuth();
-  const [users, setUsers] = useState<
-    Awaited<ReturnType<typeof listUsersWithRoles>>["users"]
-  >([]);
+  const [users, setUsers] = useState<Awaited<ReturnType<typeof listUsersWithRoles>>["users"]>([]);
   const [myLevel, setMyLevel] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -103,10 +101,7 @@ function RolesPage() {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const [usersRes, levelRes] = await Promise.all([
-        listUsersWithRoles(),
-        getMyRoleLevel(),
-      ]);
+      const [usersRes, levelRes] = await Promise.all([listUsersWithRoles(), getMyRoleLevel()]);
       setUsers(usersRes.users);
       setMyLevel(levelRes.level);
     } catch (e) {
@@ -126,27 +121,21 @@ function RolesPage() {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       result = result.filter(
-        (u) =>
-          u.display_name?.toLowerCase().includes(q) ||
-          u.user_id.toLowerCase().includes(q)
+        (u) => u.display_name?.toLowerCase().includes(q) || u.user_id.toLowerCase().includes(q),
       );
     }
     if (roleFilter !== "all") {
-      result = result.filter((u) =>
-        u.roles.some((r) => r.role === roleFilter)
-      );
+      result = result.filter((u) => u.roles.some((r) => r.role === roleFilter));
     }
     return result;
   }, [users, searchQuery, roleFilter]);
 
-  const assignableRoles = ALL_ROLES.filter(
-    (r) => ROLE_META[r].level < myLevel
-  );
+  const assignableRoles = ALL_ROLES.filter((r) => ROLE_META[r].level < myLevel);
 
   const handleAssign = async (
     targetUserId: string,
     role: AppRole,
-    opts?: { displayName?: string; previousLabel?: string; verb?: string }
+    opts?: { displayName?: string; previousLabel?: string; verb?: string },
   ) => {
     const res = await assignRoleFn({ data: { targetUserId, role } });
     const who = opts?.displayName ?? "user";
@@ -156,7 +145,7 @@ function RolesPage() {
         opts?.previousLabel
           ? `${verb} ${who}: ${opts.previousLabel} → ${ROLE_META[role].label}`
           : `${verb} ${ROLE_META[role].label} to ${who}`,
-        { icon: <CheckCircle2 className="h-4 w-4" /> }
+        { icon: <CheckCircle2 className="h-4 w-4" /> },
       );
       refresh();
       return true;
@@ -169,7 +158,7 @@ function RolesPage() {
     roleId: string,
     targetUserId: string,
     role: string,
-    opts?: { displayName?: string; silent?: boolean }
+    opts?: { displayName?: string; silent?: boolean },
   ) => {
     const res = await revokeRoleFn({
       data: { roleId, targetUserId, role },
@@ -177,9 +166,7 @@ function RolesPage() {
     const who = opts?.displayName ?? "user";
     if (res.ok) {
       if (!opts?.silent) {
-        toast.success(
-          `Revoked ${ROLE_META[role as AppRole]?.label ?? role} from ${who}`
-        );
+        toast.success(`Revoked ${ROLE_META[role as AppRole]?.label ?? role} from ${who}`);
         refresh();
       }
       return true;
@@ -199,26 +186,15 @@ function RolesPage() {
             <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
               access control
             </p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-              Role Management
-            </h1>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight">Role Management</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Your level:{" "}
-              <span className="font-mono text-foreground">{myLevel}</span> —
-              you can assign roles below level {myLevel}
+              Your level: <span className="font-mono text-foreground">{myLevel}</span> — you can
+              assign roles below level {myLevel}
             </p>
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={refresh}
-          disabled={loading}
-        >
-          <RefreshCw
-            className={cn("mr-1.5 h-3.5 w-3.5", loading && "animate-spin")}
-          />{" "}
-          Refresh
+        <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
+          <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", loading && "animate-spin")} /> Refresh
         </Button>
       </header>
 
@@ -243,7 +219,7 @@ function RolesPage() {
                     "flex items-center gap-2 rounded-md border px-3 py-2 text-sm",
                     isAssignable
                       ? "border-border bg-surface"
-                      : "border-border/40 bg-muted/30 opacity-60"
+                      : "border-border/40 bg-muted/30 opacity-60",
                   )}
                 >
                   <Icon className={cn("h-4 w-4", meta.color)} />
@@ -251,11 +227,7 @@ function RolesPage() {
                   <Badge variant="outline" className="font-mono text-[10px]">
                     {meta.level}
                   </Badge>
-                  {isAssignable && (
-                    <span className="text-[10px] text-success">
-                      assignable
-                    </span>
-                  )}
+                  {isAssignable && <span className="text-[10px] text-success">assignable</span>}
                 </div>
               );
             })}
@@ -278,10 +250,7 @@ function RolesPage() {
             </div>
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
-              <Select
-                value={roleFilter}
-                onValueChange={(v) => setRoleFilter(v as AppRole | "all")}
-              >
+              <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as AppRole | "all")}>
                 <SelectTrigger className="w-[160px]">
                   <SelectValue placeholder="Filter by role" />
                 </SelectTrigger>
@@ -321,14 +290,10 @@ function RolesPage() {
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <div className="p-8 text-center text-sm text-muted-foreground">
-              Loading users…
-            </div>
+            <div className="p-8 text-center text-sm text-muted-foreground">Loading users…</div>
           ) : filteredUsers.length === 0 ? (
             <div className="p-8 text-center text-sm text-muted-foreground">
-              {users.length === 0
-                ? "No users found."
-                : "No users match your search or filter."}
+              {users.length === 0 ? "No users found." : "No users match your search or filter."}
             </div>
           ) : (
             <div className="divide-y divide-border/60">
@@ -366,18 +331,16 @@ function UserRow({
   onAssign: (
     userId: string,
     role: AppRole,
-    opts?: { displayName?: string; previousLabel?: string; verb?: string }
+    opts?: { displayName?: string; previousLabel?: string; verb?: string },
   ) => Promise<boolean>;
   onRevoke: (
     roleId: string,
     userId: string,
     role: string,
-    opts?: { displayName?: string; silent?: boolean }
+    opts?: { displayName?: string; silent?: boolean },
   ) => Promise<boolean>;
 }) {
-  const [selectedRole, setSelectedRole] = useState<AppRole | "">(
-    assignableRoles[0] ?? ""
-  );
+  const [selectedRole, setSelectedRole] = useState<AppRole | "">(assignableRoles[0] ?? "");
   const [busy, setBusy] = useState<null | "promote" | "demote" | "assign">(null);
   const [confirm, setConfirm] = useState<null | {
     kind: "promote" | "demote";
@@ -392,17 +355,13 @@ function UserRow({
     .map((r) => r.role)
     .sort((a, b) => (ROLE_META[b]?.level ?? 0) - (ROLE_META[a]?.level ?? 0))[0];
   const currentTopMeta = currentTop ? ROLE_META[currentTop] : null;
-  const currentTopEntry = currentTop
-    ? u.roles.find((r) => r.role === currentTop)
-    : undefined;
+  const currentTopEntry = currentTop ? u.roles.find((r) => r.role === currentTop) : undefined;
 
   const userMaxLevel = currentTopMeta?.level ?? 0;
   const canManage = myLevel > userMaxLevel && u.user_id !== myUserId;
   const isSelf = u.user_id === myUserId;
   const existingRoles = new Set(u.roles.map((r) => r.role));
-  const availableToAssign = assignableRoles.filter(
-    (r) => !existingRoles.has(r)
-  );
+  const availableToAssign = assignableRoles.filter((r) => !existingRoles.has(r));
 
   // Promote target = the next role above currentTop that the actor can assign.
   const ladderAsc: AppRole[] = ["user", "operator", "admin", "super_admin"];
@@ -491,9 +450,7 @@ function UserRow({
               </Badge>
             )}
           </div>
-          <div className="font-mono text-[11px] text-muted-foreground truncate">
-            {u.user_id}
-          </div>
+          <div className="font-mono text-[11px] text-muted-foreground truncate">{u.user_id}</div>
         </div>
 
         <div className="flex flex-wrap gap-1.5">
@@ -528,16 +485,13 @@ function UserRow({
                       <AlertDialogHeader>
                         <AlertDialogTitle>Revoke {meta.label}?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This will remove the {meta.label} role from{" "}
-                          {displayName}.
+                          This will remove the {meta.label} role from {displayName}.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
-                          onClick={() =>
-                            onRevoke(r.id, u.user_id, r.role, { displayName })
-                          }
+                          onClick={() => onRevoke(r.id, u.user_id, r.role, { displayName })}
                         >
                           Revoke
                         </AlertDialogAction>
@@ -610,10 +564,7 @@ function UserRow({
                       Select a role below your level ({myLevel}) to assign.
                     </DialogDescription>
                   </DialogHeader>
-                  <Select
-                    value={selectedRole}
-                    onValueChange={(v) => setSelectedRole(v as AppRole)}
-                  >
+                  <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as AppRole)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Choose role" />
                     </SelectTrigger>
@@ -629,12 +580,9 @@ function UserRow({
                     <div className="flex items-center gap-2 rounded-md border border-info/30 bg-info/5 px-3 py-2 text-xs text-info">
                       <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
                       <span>
-                        This grants{" "}
-                        <strong>
-                          {ROLE_META[selectedRole as AppRole]?.label}
-                        </strong>{" "}
-                        privileges. The user will be able to assign roles below
-                        level {ROLE_META[selectedRole as AppRole]?.level}.
+                        This grants <strong>{ROLE_META[selectedRole as AppRole]?.label}</strong>{" "}
+                        privileges. The user will be able to assign roles below level{" "}
+                        {ROLE_META[selectedRole as AppRole]?.level}.
                       </span>
                     </div>
                   )}
@@ -661,10 +609,7 @@ function UserRow({
       </div>
 
       {/* Promote / Demote confirmation */}
-      <AlertDialog
-        open={!!confirm}
-        onOpenChange={(open) => !open && setConfirm(null)}
-      >
+      <AlertDialog open={!!confirm} onOpenChange={(open) => !open && setConfirm(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
@@ -674,9 +619,7 @@ function UserRow({
               <div className="space-y-2">
                 <div className="flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm">
                   <span className="font-mono text-xs text-muted-foreground">
-                    {confirm?.from
-                      ? ROLE_META[confirm.from].label
-                      : "No role"}
+                    {confirm?.from ? ROLE_META[confirm.from].label : "No role"}
                   </span>
                   {confirm?.kind === "promote" ? (
                     <ArrowUp className="h-4 w-4 text-success" />
@@ -711,11 +654,7 @@ function UserRow({
                 else runDemote();
               }}
             >
-              {busy
-                ? "Working…"
-                : confirm?.kind === "promote"
-                  ? "Promote"
-                  : "Demote"}
+              {busy ? "Working…" : confirm?.kind === "promote" ? "Promote" : "Demote"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

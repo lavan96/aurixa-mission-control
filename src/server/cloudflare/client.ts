@@ -27,10 +27,7 @@ function token(): string {
   return t;
 }
 
-async function cf<T>(
-  path: string,
-  init: RequestInit = {},
-): Promise<T> {
+async function cf<T>(path: string, init: RequestInit = {}): Promise<T> {
   return withRetry(
     async () => {
       const res = await fetch(`${CF_BASE}${path}`, {
@@ -74,11 +71,12 @@ export type CFZone = {
 export const cloudflareApi = {
   verifyToken: () => cf<{ id: string; status: string }>("/user/tokens/verify"),
   listZones: (accountId?: string) =>
-    cf<CFZone[]>(
-      `/zones?per_page=50${accountId ? `&account.id=${accountId}` : ""}`,
-    ),
+    cf<CFZone[]>(`/zones?per_page=50${accountId ? `&account.id=${accountId}` : ""}`),
   getZone: (zoneId: string) => cf<CFZone>(`/zones/${zoneId}`),
-  setSecurityLevel: (zoneId: string, value: "off" | "essentially_off" | "low" | "medium" | "high" | "under_attack") =>
+  setSecurityLevel: (
+    zoneId: string,
+    value: "off" | "essentially_off" | "low" | "medium" | "high" | "under_attack",
+  ) =>
     cf(`/zones/${zoneId}/settings/security_level`, {
       method: "PATCH",
       body: JSON.stringify({ value }),
@@ -101,9 +99,7 @@ export const cloudflareApi = {
         threats: { all: number };
         bandwidth: { all: number };
       };
-    }>(
-      `/zones/${zoneId}/analytics/dashboard?since=-${sinceHours * 60}&until=0`,
-    ).catch(() => ({
+    }>(`/zones/${zoneId}/analytics/dashboard?since=-${sinceHours * 60}&until=0`).catch(() => ({
       totals: { requests: { all: 0 }, threats: { all: 0 }, bandwidth: { all: 0 } },
     })),
 };

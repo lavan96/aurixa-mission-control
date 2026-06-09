@@ -5,11 +5,37 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Boxes, Sparkles, Check, X, Pencil, History, Settings2, Zap,
-  AlertTriangle, Search, ChevronDown, BarChart3, GitBranch,
-  FileWarning, CheckCircle2, Archive, Brain, Layers, Target,
-  Rocket, XCircle, Loader2, ExternalLink, Library, BookOpen,
-  FileCode, Upload, Trash2, ShieldCheck, ShieldX, Clock,
+  Boxes,
+  Sparkles,
+  Check,
+  X,
+  Pencil,
+  History,
+  Settings2,
+  Zap,
+  AlertTriangle,
+  Search,
+  ChevronDown,
+  BarChart3,
+  GitBranch,
+  FileWarning,
+  CheckCircle2,
+  Archive,
+  Brain,
+  Layers,
+  Target,
+  Rocket,
+  XCircle,
+  Loader2,
+  ExternalLink,
+  Library,
+  BookOpen,
+  FileCode,
+  Upload,
+  Trash2,
+  ShieldCheck,
+  ShieldX,
+  Clock,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -18,24 +44,48 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
-  Collapsible, CollapsibleContent, CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  detectModules, getDetectionRuns, getDriftAlerts, batchUpdateModuleStatus,
-  resolveDriftAlert, getModuleIntelligence, approveAndDeploy, getModuleCascadeJobs,
-  publishToLibrary, getModuleLibrary, removeFromLibrary,
-  deleteDetectionRun, clearDetectionHistory,
+  detectModules,
+  getDetectionRuns,
+  getDriftAlerts,
+  batchUpdateModuleStatus,
+  resolveDriftAlert,
+  getModuleIntelligence,
+  approveAndDeploy,
+  getModuleCascadeJobs,
+  publishToLibrary,
+  getModuleLibrary,
+  removeFromLibrary,
+  deleteDetectionRun,
+  clearDetectionHistory,
 } from "@/server/ai-detect-modules.functions";
 import { setLibraryApprovalStatus } from "@/server/library-admin.functions";
 import { deprecateLibraryEntry, undeprecateLibraryEntry } from "@/server/reliability.functions";
@@ -113,7 +163,11 @@ function ModulesPage() {
     }
   };
 
-  const setStatus = async (id: string, status: "approved" | "archived" | "rejected", rejectionReason?: string) => {
+  const setStatus = async (
+    id: string,
+    status: "approved" | "archived" | "rejected",
+    rejectionReason?: string,
+  ) => {
     try {
       const res = await batchStatusFn({ data: { moduleIds: [id], status, rejectionReason } });
       if (!res.ok) toast.error(res.error);
@@ -126,10 +180,15 @@ function ModulesPage() {
     }
   };
 
-  const batchAction = async (status: "approved" | "archived" | "rejected", rejectionReason?: string) => {
+  const batchAction = async (
+    status: "approved" | "archived" | "rejected",
+    rejectionReason?: string,
+  ) => {
     if (selectedIds.size === 0) return;
     try {
-      const res = await batchStatusFn({ data: { moduleIds: Array.from(selectedIds), status, rejectionReason } });
+      const res = await batchStatusFn({
+        data: { moduleIds: Array.from(selectedIds), status, rejectionReason },
+      });
       if (!res.ok) toast.error(res.error);
       else {
         toast.success(`${res.count} module(s) ${status}`);
@@ -165,12 +224,15 @@ function ModulesPage() {
     return list;
   }, [modules, filterStatus, searchQ]);
 
-  const counts = useMemo(() => ({
-    total: modules.length,
-    proposed: modules.filter((m) => m.status === "proposed").length,
-    approved: modules.filter((m) => m.status === "approved").length,
-    archived: modules.filter((m) => m.status === "archived").length,
-  }), [modules]);
+  const counts = useMemo(
+    () => ({
+      total: modules.length,
+      proposed: modules.filter((m) => m.status === "proposed").length,
+      approved: modules.filter((m) => m.status === "approved").length,
+      archived: modules.filter((m) => m.status === "archived").length,
+    }),
+    [modules],
+  );
 
   return (
     <div className="space-y-6">
@@ -181,13 +243,22 @@ function ModulesPage() {
           </p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight">Modules</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Route-first detection: each page and its full import tree = one module. Shared files grouped automatically.
+            Route-first detection: each page and its full import tree = one module. Shared files
+            grouped automatically.
           </p>
           <div className="mt-3 flex gap-1">
-            <Button size="sm" variant={activeTab === "modules" ? "default" : "ghost"} onClick={() => setActiveTab("modules")}>
+            <Button
+              size="sm"
+              variant={activeTab === "modules" ? "default" : "ghost"}
+              onClick={() => setActiveTab("modules")}
+            >
               <Boxes className="mr-1.5 h-3.5 w-3.5" /> Modules
             </Button>
-            <Button size="sm" variant={activeTab === "library" ? "default" : "ghost"} onClick={() => setActiveTab("library")}>
+            <Button
+              size="sm"
+              variant={activeTab === "library" ? "default" : "ghost"}
+              onClick={() => setActiveTab("library")}
+            >
               <BookOpen className="mr-1.5 h-3.5 w-3.5" /> Library
             </Button>
           </div>
@@ -199,35 +270,19 @@ function ModulesPage() {
               Builder
             </Button>
           </Link>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowHistory(!showHistory)}
-          >
+          <Button variant="outline" size="sm" onClick={() => setShowHistory(!showHistory)}>
             <History className="mr-2 h-3.5 w-3.5" />
             History
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowDrift(!showDrift)}
-          >
+          <Button variant="outline" size="sm" onClick={() => setShowDrift(!showDrift)}>
             <FileWarning className="mr-2 h-3.5 w-3.5" />
             Drift
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowIntel(!showIntel)}
-          >
+          <Button variant="outline" size="sm" onClick={() => setShowIntel(!showIntel)}>
             <BarChart3 className="mr-2 h-3.5 w-3.5" />
             Intelligence
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowConfig(!showConfig)}
-          >
+          <Button variant="outline" size="sm" onClick={() => setShowConfig(!showConfig)}>
             <Settings2 className="mr-2 h-3.5 w-3.5" />
             Config
           </Button>
@@ -239,9 +294,7 @@ function ModulesPage() {
       </header>
 
       {/* Detection Config Panel */}
-      {showConfig && (
-        <DetectionConfigPanel config={config} onChange={setConfig} />
-      )}
+      {showConfig && <DetectionConfigPanel config={config} onChange={setConfig} />}
 
       {/* Detection History */}
       {showHistory && <DetectionHistoryPanel />}
@@ -299,7 +352,10 @@ function ModulesPage() {
                   </Badge>
                   <ApproveAndDeployButton
                     moduleIds={Array.from(selectedIds)}
-                    onDone={() => { setSelectedIds(new Set()); refresh(); }}
+                    onDone={() => {
+                      setSelectedIds(new Set());
+                      refresh();
+                    }}
                   />
                   <PublishToLibraryButton moduleIds={Array.from(selectedIds)} />
                   <Button size="sm" variant="outline" onClick={() => batchAction("approved")}>
@@ -496,7 +552,9 @@ function DetectionHistoryPanel() {
     setLoadingRuns(false);
   }, [getRunsFn]);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   const handleDelete = async (runId: string) => {
     const res = await deleteFn({ data: { runId } });
@@ -538,7 +596,12 @@ function DetectionHistoryPanel() {
           {runs.length > 0 && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button size="sm" variant="outline" className="h-7 shrink-0 px-2 text-[10px]" disabled={clearing}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 shrink-0 px-2 text-[10px]"
+                  disabled={clearing}
+                >
                   <Trash2 className="mr-1 h-3 w-3" /> clear
                 </Button>
               </AlertDialogTrigger>
@@ -546,8 +609,8 @@ function DetectionHistoryPanel() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Clear detection history?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Deletes detection runs along with their drift alerts and import edges.
-                    Modules created by these runs are kept (unlinked from history). Pick a scope below.
+                    Deletes detection runs along with their drift alerts and import edges. Modules
+                    created by these runs are kept (unlinked from history). Pick a scope below.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="flex flex-wrap gap-2 sm:justify-end">
@@ -604,26 +667,40 @@ function DetectionRunRow({
 }) {
   const [open, setOpen] = useState(false);
   const status = r.status as string;
-  const passes = (r.passes ?? []) as Array<{ pass: number; name: string; model: string; duration_ms: number; modules_proposed: number; summary: string }>;
+  const passes = (r.passes ?? []) as Array<{
+    pass: number;
+    name: string;
+    model: string;
+    duration_ms: number;
+    modules_proposed: number;
+    summary: string;
+  }>;
 
-  const statusCls = status === "completed"
-    ? "text-success border-success/40"
-    : status === "failed"
-      ? "text-destructive border-destructive/40"
-      : "text-warning border-warning/40";
+  const statusCls =
+    status === "completed"
+      ? "text-success border-success/40"
+      : status === "failed"
+        ? "text-destructive border-destructive/40"
+        : "text-warning border-warning/40";
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <div className="flex items-stretch gap-1">
         <CollapsibleTrigger asChild>
           <div className="flex flex-1 cursor-pointer items-center gap-3 rounded-md border border-border px-3 py-2 transition-colors hover:bg-muted/40">
-            <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", open && "rotate-180")} />
+            <ChevronDown
+              className={cn(
+                "h-3.5 w-3.5 text-muted-foreground transition-transform",
+                open && "rotate-180",
+              )}
+            />
             <Badge variant="outline" className={cn("text-[9px] uppercase", statusCls)}>
               {status}
             </Badge>
             <span className="font-mono text-xs">{r.strategy as string}</span>
             <span className="text-[10px] text-muted-foreground">
-              {r.file_count as number} files · {r.proposed_modules as number} proposed · {r.inserted_modules as number} new · {r.updated_modules as number} updated
+              {r.file_count as number} files · {r.proposed_modules as number} proposed ·{" "}
+              {r.inserted_modules as number} new · {r.updated_modules as number} updated
             </span>
             <span className="ml-auto text-[10px] text-muted-foreground">
               {r.created_at ? formatDistanceToNow(r.created_at as string) : ""}
@@ -646,8 +723,8 @@ function DetectionRunRow({
             <AlertDialogHeader>
               <AlertDialogTitle>Delete this detection run?</AlertDialogTitle>
               <AlertDialogDescription>
-                Removes this run plus its drift alerts and import edges.
-                Modules created by it are preserved (unlinked from history).
+                Removes this run plus its drift alerts and import edges. Modules created by it are
+                preserved (unlinked from history).
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -678,10 +755,14 @@ function DetectionRunRow({
               {passes.map((p) => (
                 <div key={p.pass} className="rounded-md border border-border bg-card p-2 text-xs">
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="font-mono text-[9px]">Pass {p.pass}</Badge>
+                    <Badge variant="outline" className="font-mono text-[9px]">
+                      Pass {p.pass}
+                    </Badge>
                     <span className="font-medium">{p.name}</span>
                     <span className="text-muted-foreground">({p.model})</span>
-                    <span className="ml-auto text-muted-foreground">{(p.duration_ms / 1000).toFixed(1)}s</span>
+                    <span className="ml-auto text-muted-foreground">
+                      {(p.duration_ms / 1000).toFixed(1)}s
+                    </span>
                   </div>
                   <div className="mt-1 text-muted-foreground">{p.summary}</div>
                 </div>
@@ -689,11 +770,28 @@ function DetectionRunRow({
             </div>
           )}
           <div className="grid grid-cols-3 gap-2 text-xs">
-            <div><span className="text-muted-foreground">Sampled files:</span> {r.sampled_file_count as number}</div>
-            <div><span className="text-muted-foreground">Import edges:</span> {r.dependency_count as number}</div>
-            <div><span className="text-muted-foreground">Orphan alerts:</span> {r.orphan_files_found as number}</div>
-            <div><span className="text-muted-foreground">Delta mode:</span> {(r.delta_mode as boolean) ? "Yes" : "No"}</div>
-            <div><span className="text-muted-foreground">Tree hash:</span> <code className="font-mono text-[10px]">{(r.tree_hash as string)?.slice(0, 8) ?? "—"}</code></div>
+            <div>
+              <span className="text-muted-foreground">Sampled files:</span>{" "}
+              {r.sampled_file_count as number}
+            </div>
+            <div>
+              <span className="text-muted-foreground">Import edges:</span>{" "}
+              {r.dependency_count as number}
+            </div>
+            <div>
+              <span className="text-muted-foreground">Orphan alerts:</span>{" "}
+              {r.orphan_files_found as number}
+            </div>
+            <div>
+              <span className="text-muted-foreground">Delta mode:</span>{" "}
+              {(r.delta_mode as boolean) ? "Yes" : "No"}
+            </div>
+            <div>
+              <span className="text-muted-foreground">Tree hash:</span>{" "}
+              <code className="font-mono text-[10px]">
+                {(r.tree_hash as string)?.slice(0, 8) ?? "—"}
+              </code>
+            </div>
           </div>
         </div>
       </CollapsibleContent>
@@ -716,7 +814,9 @@ function DriftAlertsPanel() {
     setLoadingAlerts(false);
   }, []);
 
-  useEffect(() => { loadAlerts(); }, [loadAlerts]);
+  useEffect(() => {
+    loadAlerts();
+  }, [loadAlerts]);
 
   const resolve = async (id: string) => {
     const res = await resolveFn({ data: { alertId: id } });
@@ -756,7 +856,10 @@ function DriftAlertsPanel() {
                 <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-[9px] uppercase text-warning border-warning/30">
+                    <Badge
+                      variant="outline"
+                      className="text-[9px] uppercase text-warning border-warning/30"
+                    >
                       {String(a.alert_type)}
                     </Badge>
                     <code className="truncate font-mono text-[10px]">{String(a.file_path)}</code>
@@ -764,7 +867,10 @@ function DriftAlertsPanel() {
                   <div className="mt-1 text-muted-foreground">
                     <span>{String(a.reasoning ?? "")}</span>
                     {typeof a.suggested_module_slug === "string" && a.suggested_module_slug && (
-                      <span> → <code className="font-mono text-primary">{a.suggested_module_slug}</code></span>
+                      <span>
+                        {" "}
+                        → <code className="font-mono text-primary">{a.suggested_module_slug}</code>
+                      </span>
                     )}
                   </div>
                 </div>
@@ -790,7 +896,12 @@ function DriftAlertsPanel() {
 function ModuleIntelligencePanel() {
   const [data, setData] = useState<{
     coInstallation: Array<{ module_a: string; module_b: string; coInstallRate: number }>;
-    healthScores: Array<{ moduleId: string; moduleName: string; score: number; breakdown: Record<string, number> }>;
+    healthScores: Array<{
+      moduleId: string;
+      moduleName: string;
+      score: number;
+      breakdown: Record<string, number>;
+    }>;
   } | null>(null);
   const [loadingIntel, setLoadingIntel] = useState(true);
   const getIntelFn = useServerFn(getModuleIntelligence);
@@ -837,9 +948,11 @@ function ModuleIntelligencePanel() {
                           variant="outline"
                           className={cn(
                             "font-mono text-[10px]",
-                            h.score >= 70 ? "text-success border-success/40" :
-                            h.score >= 40 ? "text-warning border-warning/40" :
-                            "text-destructive border-destructive/40",
+                            h.score >= 70
+                              ? "text-success border-success/40"
+                              : h.score >= 40
+                                ? "text-warning border-warning/40"
+                                : "text-destructive border-destructive/40",
                           )}
                         >
                           {h.score}/100
@@ -849,7 +962,11 @@ function ModuleIntelligencePanel() {
                         <div
                           className={cn(
                             "h-full transition-all",
-                            h.score >= 70 ? "bg-success" : h.score >= 40 ? "bg-warning" : "bg-destructive",
+                            h.score >= 70
+                              ? "bg-success"
+                              : h.score >= 40
+                                ? "bg-warning"
+                                : "bg-destructive",
                           )}
                           style={{ width: `${h.score}%` }}
                         />
@@ -878,7 +995,10 @@ function ModuleIntelligencePanel() {
               ) : (
                 <div className="space-y-1.5">
                   {data.coInstallation.map((p, i) => (
-                    <div key={i} className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs">
+                    <div
+                      key={i}
+                      className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs"
+                    >
                       <code className="font-mono text-[10px]">{p.module_a}</code>
                       <span className="text-muted-foreground">×</span>
                       <code className="font-mono text-[10px]">{p.module_b}</code>
@@ -888,7 +1008,8 @@ function ModuleIntelligencePanel() {
                     </div>
                   ))}
                   <p className="text-[10px] text-muted-foreground">
-                    Modules installed together &gt;30% of the time. Consider merging pairs above 90%.
+                    Modules installed together &gt;30% of the time. Consider merging pairs above
+                    90%.
                   </p>
                 </div>
               )}
@@ -902,12 +1023,29 @@ function ModuleIntelligencePanel() {
 
 // ─── Stat Tile ──────────────────────────────────────────────────────
 
-function StatTile({ label, value, tone }: { label: string; value: number; tone?: "success" | "warning" | "destructive" }) {
-  const toneCls = tone === "success" ? "text-success" : tone === "warning" ? "text-warning" : tone === "destructive" ? "text-destructive" : "text-foreground";
+function StatTile({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone?: "success" | "warning" | "destructive";
+}) {
+  const toneCls =
+    tone === "success"
+      ? "text-success"
+      : tone === "warning"
+        ? "text-warning"
+        : tone === "destructive"
+          ? "text-destructive"
+          : "text-foreground";
   return (
     <Card>
       <CardContent className="p-4">
-        <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+        <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+          {label}
+        </div>
         <div className={`mt-1 text-2xl font-semibold ${toneCls}`}>{value}</div>
       </CardContent>
     </Card>
@@ -957,14 +1095,15 @@ function ModuleRow({
   const reasoning = (m as Record<string, unknown>).ai_reasoning as string | null;
 
   return (
-    <Card className={cn("border-border/80 transition-colors", selected && "border-primary/60 bg-primary/5")}>
+    <Card
+      className={cn(
+        "border-border/80 transition-colors",
+        selected && "border-primary/60 bg-primary/5",
+      )}
+    >
       <CardHeader className="flex flex-row items-start justify-between space-y-0">
         <div className="flex items-start gap-2.5">
-          <Checkbox
-            checked={selected}
-            onCheckedChange={onToggleSelect}
-            className="mt-1"
-          />
+          <Checkbox checked={selected} onCheckedChange={onToggleSelect} className="mt-1" />
           <div className="flex-1">
             {edit ? (
               <Input value={name} onChange={(e) => setName(e.target.value)} />
@@ -989,10 +1128,26 @@ function ModuleRow({
           </div>
           {(cohesion > 0 || coupling > 0) && (
             <div className="flex items-center gap-2 font-mono text-[9px] text-muted-foreground">
-              <span className={cn(cohesion >= 0.7 ? "text-success" : cohesion >= 0.4 ? "text-warning" : "text-destructive")}>
+              <span
+                className={cn(
+                  cohesion >= 0.7
+                    ? "text-success"
+                    : cohesion >= 0.4
+                      ? "text-warning"
+                      : "text-destructive",
+                )}
+              >
                 coh {Math.round(cohesion * 100)}%
               </span>
-              <span className={cn(coupling <= 0.3 ? "text-success" : coupling <= 0.6 ? "text-warning" : "text-destructive")}>
+              <span
+                className={cn(
+                  coupling <= 0.3
+                    ? "text-success"
+                    : coupling <= 0.6
+                      ? "text-warning"
+                      : "text-destructive",
+                )}
+              >
                 cpl {Math.round(coupling * 100)}%
               </span>
             </div>
@@ -1016,7 +1171,9 @@ function ModuleRow({
               >
                 <Brain className="h-3 w-3" />
                 AI reasoning
-                <ChevronDown className={cn("h-3 w-3 transition-transform", showReasoning && "rotate-180")} />
+                <ChevronDown
+                  className={cn("h-3 w-3 transition-transform", showReasoning && "rotate-180")}
+                />
               </button>
             </CollapsibleTrigger>
             <CollapsibleContent>
@@ -1030,21 +1187,31 @@ function ModuleRow({
         <ModuleCoverageStrip moduleId={m.id} moduleSlug={m.slug} />
 
         <div className="space-y-1">
-          <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">routes</div>
+          <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            routes
+          </div>
           <div className="flex flex-wrap gap-1">
             {(m.routes ?? []).map((r) => (
-              <code key={r} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px]">{r}</code>
+              <code key={r} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px]">
+                {r}
+              </code>
             ))}
           </div>
         </div>
         <div className="space-y-1">
-          <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">files</div>
+          <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            files
+          </div>
           <div className="flex flex-wrap gap-1">
             {(m.file_globs ?? []).slice(0, 3).map((f) => (
-              <code key={f} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px]">{f}</code>
+              <code key={f} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px]">
+                {f}
+              </code>
             ))}
             {(m.file_globs ?? []).length > 3 && (
-              <span className="text-[11px] text-muted-foreground">+{(m.file_globs ?? []).length - 3} more</span>
+              <span className="text-[11px] text-muted-foreground">
+                +{(m.file_globs ?? []).length - 3} more
+              </span>
             )}
           </div>
         </div>
@@ -1053,12 +1220,20 @@ function ModuleRow({
         {(m.requires?.length > 0 || m.incompatible_with?.length > 0) && (
           <div className="flex flex-wrap gap-2">
             {m.requires?.map((r) => (
-              <Badge key={r} variant="outline" className="text-[9px] border-primary/30 text-primary">
+              <Badge
+                key={r}
+                variant="outline"
+                className="text-[9px] border-primary/30 text-primary"
+              >
                 requires: {r}
               </Badge>
             ))}
             {m.incompatible_with?.map((r) => (
-              <Badge key={r} variant="outline" className="text-[9px] border-destructive/30 text-destructive">
+              <Badge
+                key={r}
+                variant="outline"
+                className="text-[9px] border-destructive/30 text-destructive"
+              >
                 conflicts: {r}
               </Badge>
             ))}
@@ -1068,8 +1243,12 @@ function ModuleRow({
         <div className="flex flex-wrap justify-end gap-2 pt-2">
           {edit ? (
             <>
-              <Button size="sm" variant="ghost" onClick={() => setEdit(false)}>Cancel</Button>
-              <Button size="sm" onClick={save}>Save</Button>
+              <Button size="sm" variant="ghost" onClick={() => setEdit(false)}>
+                Cancel
+              </Button>
+              <Button size="sm" onClick={save}>
+                Save
+              </Button>
             </>
           ) : (
             <>
@@ -1078,12 +1257,23 @@ function ModuleRow({
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
               {m.status === "rejected" && (
-                <Badge variant="outline" className="text-[9px] border-destructive/30 text-destructive self-center">
-                  rejected{(m as Record<string, unknown>).rejection_reason ? `: ${(m as Record<string, unknown>).rejection_reason}` : ""}
+                <Badge
+                  variant="outline"
+                  className="text-[9px] border-destructive/30 text-destructive self-center"
+                >
+                  rejected
+                  {(m as Record<string, unknown>).rejection_reason
+                    ? `: ${(m as Record<string, unknown>).rejection_reason}`
+                    : ""}
                 </Badge>
               )}
               {m.status !== "approved" && (
-                <Button size="sm" variant="outline" onClick={onApprove} className="border-success/40 text-success hover:bg-success/10">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={onApprove}
+                  className="border-success/40 text-success hover:bg-success/10"
+                >
                   <Check className="mr-1 h-3.5 w-3.5" /> Approve
                 </Button>
               )}
@@ -1119,7 +1309,9 @@ function RejectButton({ onReject }: { onReject: (reason?: string) => void }) {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Reject Module</DialogTitle>
-          <DialogDescription>Optionally provide a reason for rejecting this module boundary.</DialogDescription>
+          <DialogDescription>
+            Optionally provide a reason for rejecting this module boundary.
+          </DialogDescription>
         </DialogHeader>
         <Textarea
           value={reason}
@@ -1129,10 +1321,16 @@ function RejectButton({ onReject }: { onReject: (reason?: string) => void }) {
           className="font-mono text-xs"
         />
         <DialogFooter>
-          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button variant="ghost" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
           <Button
             variant="destructive"
-            onClick={() => { onReject(reason || undefined); setOpen(false); setReason(""); }}
+            onClick={() => {
+              onReject(reason || undefined);
+              setOpen(false);
+              setReason("");
+            }}
           >
             Reject
           </Button>
@@ -1166,8 +1364,17 @@ function BatchRejectButton({ onReject }: { onReject: (reason?: string) => void }
           className="font-mono text-xs"
         />
         <DialogFooter>
-          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button variant="destructive" onClick={() => { onReject(reason || undefined); setOpen(false); setReason(""); }}>
+          <Button variant="ghost" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => {
+              onReject(reason || undefined);
+              setOpen(false);
+              setReason("");
+            }}
+          >
             Reject All
           </Button>
         </DialogFooter>
@@ -1263,14 +1470,19 @@ function ApproveAndDeployButton({
                 <div className="text-xs text-muted-foreground p-2">No clones available</div>
               ) : (
                 clones.map((c) => (
-                  <label key={c.id} className="flex items-center gap-2 rounded px-2 py-1.5 text-xs hover:bg-muted/40 cursor-pointer">
+                  <label
+                    key={c.id}
+                    className="flex items-center gap-2 rounded px-2 py-1.5 text-xs hover:bg-muted/40 cursor-pointer"
+                  >
                     <Checkbox
                       checked={selectedCloneIds.has(c.id)}
                       onCheckedChange={() => toggleClone(c.id)}
                     />
                     <span className="font-mono font-medium">{c.name}</span>
                     <span className="text-muted-foreground">{c.slug}</span>
-                    <Badge variant="outline" className="ml-auto text-[9px]">{c.sync_status}</Badge>
+                    <Badge variant="outline" className="ml-auto text-[9px]">
+                      {c.sync_status}
+                    </Badge>
                   </label>
                 ))
               )}
@@ -1294,12 +1506,18 @@ function ApproveAndDeployButton({
         </div>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button variant="ghost" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
           <Button onClick={run} disabled={deploying || selectedCloneIds.size === 0}>
             {deploying ? (
-              <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> Deploying…</>
+              <>
+                <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> Deploying…
+              </>
             ) : (
-              <><Rocket className="mr-1 h-3.5 w-3.5" /> Approve & Deploy ({selectedCloneIds.size})</>
+              <>
+                <Rocket className="mr-1 h-3.5 w-3.5" /> Approve & Deploy ({selectedCloneIds.size})
+              </>
             )}
           </Button>
         </DialogFooter>
@@ -1319,7 +1537,10 @@ function PublishToLibraryButton({ moduleIds }: { moduleIds: string[] }) {
   const submit = async () => {
     setBusy(true);
     try {
-      const tagList = tags.split(",").map((t) => t.trim()).filter(Boolean);
+      const tagList = tags
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
       const res = await publishFn({ data: { moduleIds, tags: tagList } });
       if (res.ok) {
         toast.success(`Published ${res.published} module(s) to library`);
@@ -1357,9 +1578,19 @@ function PublishToLibraryButton({ moduleIds }: { moduleIds: string[] }) {
           />
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => setOpen(false)} disabled={busy}>Cancel</Button>
+          <Button variant="ghost" onClick={() => setOpen(false)} disabled={busy}>
+            Cancel
+          </Button>
           <Button onClick={submit} disabled={busy}>
-            {busy ? <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> Publishing…</> : <><Upload className="mr-1 h-3.5 w-3.5" /> Publish</>}
+            {busy ? (
+              <>
+                <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> Publishing…
+              </>
+            ) : (
+              <>
+                <Upload className="mr-1 h-3.5 w-3.5" /> Publish
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1377,13 +1608,20 @@ function ModuleLibraryPanel() {
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const toggleSel = (id: string) =>
-    setSelected((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    setSelected((p) => {
+      const n = new Set(p);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
   const getLibraryFn = useServerFn(getModuleLibrary);
   const removeFn = useServerFn(removeFromLibrary);
   const setApprovalFn = useServerFn(setLibraryApprovalStatus);
 
   useEffect(() => {
-    if (!user) { setIsAdmin(false); return; }
+    if (!user) {
+      setIsAdmin(false);
+      return;
+    }
     void supabase
       .from("user_roles")
       .select("role")
@@ -1404,18 +1642,24 @@ function ModuleLibraryPanel() {
     }
   }, [getLibraryFn]);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   const remove = async (id: string) => {
     const res = await removeFn({ data: { entryId: id } });
-    if (res.ok) { toast.success("Removed from library"); refresh(); }
-    else toast.error(res.error ?? "Remove failed");
+    if (res.ok) {
+      toast.success("Removed from library");
+      refresh();
+    } else toast.error(res.error ?? "Remove failed");
   };
 
   const decide = async (id: string, status: "approved" | "rejected", reason?: string) => {
     const res = await setApprovalFn({ data: { entryId: id, status, reason } });
-    if (res.ok) { toast.success(status === "approved" ? "Approved" : "Rejected"); refresh(); }
-    else toast.error(res.error ?? "Action failed");
+    if (res.ok) {
+      toast.success(status === "approved" ? "Approved" : "Rejected");
+      refresh();
+    } else toast.error(res.error ?? "Action failed");
   };
 
   const filtered = entries.filter((e) => {
@@ -1459,15 +1703,22 @@ function ModuleLibraryPanel() {
             {selected.size} entry{selected.size === 1 ? "" : "s"} selected
           </span>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear</Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
+              Clear
+            </Button>
             <Button
               size="sm"
               variant="outline"
               onClick={async () => {
                 const { bulkSetLibraryApproval } = await import("@/server/bulk-ops.functions");
-                const r = await bulkSetLibraryApproval({ data: { ids: Array.from(selected), status: "approved" } });
-                if (r.ok) { toast.success(`Approved ${r.count}`); setSelected(new Set()); refresh(); }
-                else toast.error(r.error);
+                const r = await bulkSetLibraryApproval({
+                  data: { ids: Array.from(selected), status: "approved" },
+                });
+                if (r.ok) {
+                  toast.success(`Approved ${r.count}`);
+                  setSelected(new Set());
+                  refresh();
+                } else toast.error(r.error);
               }}
             >
               <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Approve
@@ -1478,9 +1729,14 @@ function ModuleLibraryPanel() {
               onClick={async () => {
                 const reason = prompt("Rejection reason (optional)") ?? undefined;
                 const { bulkSetLibraryApproval } = await import("@/server/bulk-ops.functions");
-                const r = await bulkSetLibraryApproval({ data: { ids: Array.from(selected), status: "rejected", reason } });
-                if (r.ok) { toast.success(`Rejected ${r.count}`); setSelected(new Set()); refresh(); }
-                else toast.error(r.error);
+                const r = await bulkSetLibraryApproval({
+                  data: { ids: Array.from(selected), status: "rejected", reason },
+                });
+                if (r.ok) {
+                  toast.success(`Rejected ${r.count}`);
+                  setSelected(new Set());
+                  refresh();
+                } else toast.error(r.error);
               }}
             >
               <XCircle className="mr-1 h-3.5 w-3.5" /> Reject
@@ -1492,9 +1748,14 @@ function ModuleLibraryPanel() {
                 const reason = prompt("Deprecation reason (optional)") ?? undefined;
                 const replacementSlug = prompt("Replacement slug (optional)") ?? undefined;
                 const { bulkDeprecateLibrary } = await import("@/server/bulk-ops.functions");
-                const r = await bulkDeprecateLibrary({ data: { ids: Array.from(selected), reason, replacementSlug } });
-                if (r.ok) { toast.success(`Deprecated ${r.count}`); setSelected(new Set()); refresh(); }
-                else toast.error(r.error);
+                const r = await bulkDeprecateLibrary({
+                  data: { ids: Array.from(selected), reason, replacementSlug },
+                });
+                if (r.ok) {
+                  toast.success(`Deprecated ${r.count}`);
+                  setSelected(new Set());
+                  refresh();
+                } else toast.error(r.error);
               }}
             >
               <Clock className="mr-1 h-3.5 w-3.5" /> Deprecate
@@ -1506,8 +1767,11 @@ function ModuleLibraryPanel() {
                 if (!confirm(`Permanently delete ${selected.size} library entries?`)) return;
                 const { bulkDeleteLibraryEntries } = await import("@/server/bulk-ops.functions");
                 const r = await bulkDeleteLibraryEntries({ data: { ids: Array.from(selected) } });
-                if (r.ok) { toast.success(`Deleted ${r.count}`); setSelected(new Set()); refresh(); }
-                else toast.error(r.error);
+                if (r.ok) {
+                  toast.success(`Deleted ${r.count}`);
+                  setSelected(new Set());
+                  refresh();
+                } else toast.error(r.error);
               }}
             >
               <Trash2 className="mr-1 h-3.5 w-3.5" /> Delete
@@ -1529,13 +1793,19 @@ function ModuleLibraryPanel() {
             const fileCount = (e.file_count as number) ?? 0;
             const status = (e.approval_status as string) ?? "pending";
             const statusTone =
-              status === "approved" ? "border-success/40 text-success"
-              : status === "rejected" ? "border-destructive/40 text-destructive"
-              : "border-warning/40 text-warning";
+              status === "approved"
+                ? "border-success/40 text-success"
+                : status === "rejected"
+                  ? "border-destructive/40 text-destructive"
+                  : "border-warning/40 text-warning";
             const statusIcon =
-              status === "approved" ? <CheckCircle2 className="mr-1 h-3 w-3" />
-              : status === "rejected" ? <XCircle className="mr-1 h-3 w-3" />
-              : <Clock className="mr-1 h-3 w-3" />;
+              status === "approved" ? (
+                <CheckCircle2 className="mr-1 h-3 w-3" />
+              ) : status === "rejected" ? (
+                <XCircle className="mr-1 h-3 w-3" />
+              ) : (
+                <Clock className="mr-1 h-3 w-3" />
+              );
             return (
               <Card key={e.id as string}>
                 <CardHeader className="pb-2">
@@ -1551,24 +1821,37 @@ function ModuleLibraryPanel() {
                         />
                       )}
                       <div className="min-w-0">
-                      <CardTitle className="font-mono text-sm flex items-center gap-2">
-                        <BookOpen className="h-3.5 w-3.5 text-primary" />
-                        {e.name as string}
-                        <Badge variant="outline" className="font-mono text-[10px]">v{e.version as number}</Badge>
-                        {(e.is_latest as boolean) && (
-                          <Badge variant="secondary" className="font-mono text-[9px]">latest</Badge>
-                        )}
-                      </CardTitle>
-                      <CardDescription className="mt-1 font-mono text-[11px]">
-                        {(e.entry_file as string) ?? (e.slug as string)}
-                      </CardDescription>
-                    </div>
+                        <CardTitle className="font-mono text-sm flex items-center gap-2">
+                          <BookOpen className="h-3.5 w-3.5 text-primary" />
+                          {e.name as string}
+                          <Badge variant="outline" className="font-mono text-[10px]">
+                            v{e.version as number}
+                          </Badge>
+                          {(e.is_latest as boolean) && (
+                            <Badge variant="secondary" className="font-mono text-[9px]">
+                              latest
+                            </Badge>
+                          )}
+                        </CardTitle>
+                        <CardDescription className="mt-1 font-mono text-[11px]">
+                          {(e.entry_file as string) ?? (e.slug as string)}
+                        </CardDescription>
+                      </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <Badge variant="outline" className={cn("font-mono text-[10px] uppercase", statusTone)}>
-                        {statusIcon}{status}
+                      <Badge
+                        variant="outline"
+                        className={cn("font-mono text-[10px] uppercase", statusTone)}
+                      >
+                        {statusIcon}
+                        {status}
                       </Badge>
-                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => remove(e.id as string)}>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6"
+                        onClick={() => remove(e.id as string)}
+                      >
                         <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
@@ -1576,7 +1859,9 @@ function ModuleLibraryPanel() {
                 </CardHeader>
                 <CardContent className="space-y-2 pt-0">
                   {e.description ? (
-                    <p className="text-xs text-muted-foreground line-clamp-2">{e.description as string}</p>
+                    <p className="text-xs text-muted-foreground line-clamp-2">
+                      {e.description as string}
+                    </p>
                   ) : null}
                   <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono text-muted-foreground">
                     <Badge variant="secondary" className="font-mono text-[10px]">
@@ -1584,34 +1869,69 @@ function ModuleLibraryPanel() {
                       {fileCount} files
                     </Badge>
                     {e.route_path ? (
-                      <Badge variant="outline" className="font-mono text-[10px]">{e.route_path as string}</Badge>
+                      <Badge variant="outline" className="font-mono text-[10px]">
+                        {e.route_path as string}
+                      </Badge>
                     ) : null}
                     {tags.map((t) => (
-                      <Badge key={t} variant="outline" className="font-mono text-[10px]">#{t}</Badge>
+                      <Badge key={t} variant="outline" className="font-mono text-[10px]">
+                        #{t}
+                      </Badge>
                     ))}
                   </div>
                   {status === "rejected" && e.rejection_reason ? (
-                    <p className="text-[11px] text-destructive italic">Reason: {e.rejection_reason as string}</p>
+                    <p className="text-[11px] text-destructive italic">
+                      Reason: {e.rejection_reason as string}
+                    </p>
                   ) : null}
                   {(e.deprecated_at as string | null) ? (
                     <div className="rounded border border-warning/40 bg-warning/5 p-2 text-[11px]">
-                      <div className="font-mono uppercase tracking-wider text-warning">Deprecated</div>
-                      {e.deprecated_reason ? <div className="text-warning/90">{e.deprecated_reason as string}</div> : null}
-                      {e.replacement_slug ? <div className="font-mono text-[10px]">replaced by: {e.replacement_slug as string}</div> : null}
+                      <div className="font-mono uppercase tracking-wider text-warning">
+                        Deprecated
+                      </div>
+                      {e.deprecated_reason ? (
+                        <div className="text-warning/90">{e.deprecated_reason as string}</div>
+                      ) : null}
+                      {e.replacement_slug ? (
+                        <div className="font-mono text-[10px]">
+                          replaced by: {e.replacement_slug as string}
+                        </div>
+                      ) : null}
                       {isAdmin && (
-                        <Button size="sm" variant="ghost" className="mt-1 h-6 text-[10px]" onClick={async () => {
-                          await undeprecateLibraryEntry({ data: { entryId: e.id as string } });
-                          toast.success("Restored"); refresh();
-                        }}>Undeprecate</Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="mt-1 h-6 text-[10px]"
+                          onClick={async () => {
+                            await undeprecateLibraryEntry({ data: { entryId: e.id as string } });
+                            toast.success("Restored");
+                            refresh();
+                          }}
+                        >
+                          Undeprecate
+                        </Button>
                       )}
                     </div>
                   ) : isAdmin && status === "approved" ? (
-                    <Button size="sm" variant="ghost" className="h-6 text-[10px] text-muted-foreground" onClick={async () => {
-                      const reason = prompt("Deprecation reason"); if (!reason) return;
-                      const replacement = prompt("Replacement slug (optional)") || undefined;
-                      const r = await deprecateLibraryEntry({ data: { entryId: e.id as string, reason, replacementSlug: replacement } });
-                      if (r.ok) { toast.success("Marked deprecated"); refresh(); } else toast.error(r.error);
-                    }}>Mark deprecated</Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 text-[10px] text-muted-foreground"
+                      onClick={async () => {
+                        const reason = prompt("Deprecation reason");
+                        if (!reason) return;
+                        const replacement = prompt("Replacement slug (optional)") || undefined;
+                        const r = await deprecateLibraryEntry({
+                          data: { entryId: e.id as string, reason, replacementSlug: replacement },
+                        });
+                        if (r.ok) {
+                          toast.success("Marked deprecated");
+                          refresh();
+                        } else toast.error(r.error);
+                      }}
+                    >
+                      Mark deprecated
+                    </Button>
                   ) : null}
 
                   {isAdmin && status !== "approved" && (

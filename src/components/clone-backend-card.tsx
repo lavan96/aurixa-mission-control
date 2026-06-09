@@ -2,7 +2,14 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Database, RefreshCw, AlertTriangle, CheckCircle2, Loader2, ArrowUpCircle } from "lucide-react";
+import {
+  Database,
+  RefreshCw,
+  AlertTriangle,
+  CheckCircle2,
+  Loader2,
+  ArrowUpCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { getCloneBackendStatus } from "@/server/backend-provisioning.functions";
@@ -54,7 +61,9 @@ export function CloneBackendCard({ cloneId }: { cloneId: string }) {
   // Auto-refresh while provisioning
   useEffect(() => {
     if (!backend) return;
-    const inProgress = ["pending", "provisioning", "migrating", "seeding_admin"].includes(backend.status);
+    const inProgress = ["pending", "provisioning", "migrating", "seeding_admin"].includes(
+      backend.status,
+    );
     if (!inProgress) return;
     const interval = setInterval(load, 5000);
     return () => clearInterval(interval);
@@ -115,7 +124,9 @@ export function CloneBackendCard({ cloneId }: { cloneId: string }) {
 
   const statusCfg = STATUS_CONFIG[backend.status] ?? STATUS_CONFIG.pending;
   const StatusIcon = statusCfg.icon;
-  const isActive = ["pending", "provisioning", "migrating", "seeding_admin"].includes(backend.status);
+  const isActive = ["pending", "provisioning", "migrating", "seeding_admin"].includes(
+    backend.status,
+  );
   const hasPending = migration?.hasBackend && !migration.isUpToDate;
 
   return (
@@ -169,7 +180,9 @@ export function CloneBackendCard({ cloneId }: { cloneId: string }) {
             {backend.supabase_url && (
               <div>
                 <span className="text-muted-foreground">URL:</span>{" "}
-                <span className="font-mono truncate">{backend.supabase_url.replace("https://", "")}</span>
+                <span className="font-mono truncate">
+                  {backend.supabase_url.replace("https://", "")}
+                </span>
               </div>
             )}
           </div>
@@ -195,7 +208,8 @@ export function CloneBackendCard({ cloneId }: { cloneId: string }) {
 
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>
-                Version: <span className="font-mono">{migration.currentVersion ?? "bootstrap"}</span>
+                Version:{" "}
+                <span className="font-mono">{migration.currentVersion ?? "bootstrap"}</span>
               </span>
               <span>
                 Latest: <span className="font-mono">{migration.latestVersion}</span>
@@ -234,8 +248,8 @@ export function CloneBackendCard({ cloneId }: { cloneId: string }) {
                   </>
                 ) : (
                   <>
-                    <ArrowUpCircle className="mr-2 h-3 w-3" /> Apply {migration.pendingCount} pending
-                    migration{migration.pendingCount !== 1 ? "s" : ""}
+                    <ArrowUpCircle className="mr-2 h-3 w-3" /> Apply {migration.pendingCount}{" "}
+                    pending migration{migration.pendingCount !== 1 ? "s" : ""}
                   </>
                 )}
               </Button>

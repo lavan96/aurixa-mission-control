@@ -24,7 +24,11 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "@/lib/format";
-import { fetchFleetHealth, type FleetHealth, type FleetHealthRow } from "@/server/fleet-health.functions";
+import {
+  fetchFleetHealth,
+  type FleetHealth,
+  type FleetHealthRow,
+} from "@/server/fleet-health.functions";
 import { fetchCloneHealth } from "@/server/clone-health.functions";
 import { toast } from "sonner";
 import { useUrlState } from "@/lib/use-url-state";
@@ -57,10 +61,9 @@ function FleetHealthPage() {
   const [loading, setLoading] = useState(false);
   const [refreshedAt, setRefreshedAt] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useUrlState<"all" | "down" | "drift" | "behind" | "failing">(
-    "filter",
-    "all",
-  );
+  const [statusFilter, setStatusFilter] = useUrlState<
+    "all" | "down" | "drift" | "behind" | "failing"
+  >("filter", "all");
   const [search, setSearch] = useUrlState<string>("q", "");
 
   const load = async (force = false) => {
@@ -175,11 +178,7 @@ function FleetHealthPage() {
               icon={<Clock />}
               label="Stale snapshots"
               value={String(staleCount)}
-              detail={
-                staleCount === 0
-                  ? "cron pre-warm healthy"
-                  : "cron pre-warm may be failing"
-              }
+              detail={staleCount === 0 ? "cron pre-warm healthy" : "cron pre-warm may be failing"}
               tone={staleCount > 0 ? "warning" : "success"}
             />
           </div>
@@ -195,9 +194,7 @@ function FleetHealthPage() {
                 prev
                   ? {
                       ...prev,
-                      rows: prev.rows.map((row) =>
-                        row.cloneId === next.cloneId ? next : row,
-                      ),
+                      rows: prev.rows.map((row) => (row.cloneId === next.cloneId ? next : row)),
                     }
                   : prev,
               )
@@ -319,7 +316,9 @@ function FilteredBreakdown({
                 onClick={() => setStatusFilter(f.key)}
                 className={cn(
                   "rounded-full border px-2.5 py-0.5 font-mono text-[10px] uppercase transition-colors",
-                  active ? "bg-foreground text-background border-foreground" : f.tone || "border-border text-muted-foreground hover:bg-muted/40",
+                  active
+                    ? "bg-foreground text-background border-foreground"
+                    : f.tone || "border-border text-muted-foreground hover:bg-muted/40",
                 )}
               >
                 {f.label} · {counts[f.key]}
@@ -344,9 +343,7 @@ function FilteredBreakdown({
               : "No clones match the current filter."}
           </div>
         ) : (
-          filtered.map((r) => (
-            <FleetRow key={r.cloneId} row={r} onUpdated={onRowUpdated} />
-          ))
+          filtered.map((r) => <FleetRow key={r.cloneId} row={r} onUpdated={onRowUpdated} />)
         )}
       </CardContent>
     </Card>
@@ -418,22 +415,34 @@ function FleetRow({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="truncate font-mono text-sm font-medium">{row.name}</span>
-            <Badge variant="outline" className={cn("font-mono text-[10px] uppercase", syncTone(row.syncStatus))}>
+            <Badge
+              variant="outline"
+              className={cn("font-mono text-[10px] uppercase", syncTone(row.syncStatus))}
+            >
               {row.syncStatus}
             </Badge>
             {row.commitsBehind > 0 && (
-              <Badge variant="outline" className="border-warning/40 font-mono text-[10px] uppercase text-warning">
+              <Badge
+                variant="outline"
+                className="border-warning/40 font-mono text-[10px] uppercase text-warning"
+              >
                 {row.commitsBehind} behind
               </Badge>
             )}
             {h.driftSuggestionsOpen > 0 && (
-              <Badge variant="outline" className="border-warning/40 font-mono text-[10px] uppercase text-warning">
+              <Badge
+                variant="outline"
+                className="border-warning/40 font-mono text-[10px] uppercase text-warning"
+              >
                 <AlertTriangle className="mr-1 h-3 w-3" />
                 {h.driftSuggestionsOpen} drift
               </Badge>
             )}
             {h.failureCount7d > 0 && (
-              <Badge variant="outline" className="border-destructive/40 font-mono text-[10px] uppercase text-destructive">
+              <Badge
+                variant="outline"
+                className="border-destructive/40 font-mono text-[10px] uppercase text-destructive"
+              >
                 {h.failureCount7d} fail · 7d
               </Badge>
             )}
@@ -481,13 +490,7 @@ function FleetRow({
   );
 }
 
-function CacheAgeBadge({
-  probedAt,
-  fromCache,
-}: {
-  probedAt: string;
-  fromCache: boolean;
-}) {
+function CacheAgeBadge({ probedAt, fromCache }: { probedAt: string; fromCache: boolean }) {
   const ageMs = Date.now() - new Date(probedAt).getTime();
   const stale = ageMs > 5 * 60 * 1000;
   const label = fromCache ? `probed ${formatDistanceToNow(probedAt)}` : "fresh probe";
@@ -553,7 +556,9 @@ function SummaryTile({
   return (
     <Card>
       <CardContent className="p-4">
-        <div className={cn("mb-1 flex items-center gap-1.5 [&>svg]:h-3.5 [&>svg]:w-3.5", map[tone])}>
+        <div
+          className={cn("mb-1 flex items-center gap-1.5 [&>svg]:h-3.5 [&>svg]:w-3.5", map[tone])}
+        >
           {icon}
           <span className="font-mono text-[10px] uppercase tracking-wider">{label}</span>
         </div>

@@ -22,14 +22,20 @@ export const lookupCheckoutSession = createServerFn({ method: "POST" })
       if (cloneId) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: clone } = await (supabaseAdmin as any)
-          .from("clones").select("name, slug").eq("id", cloneId).maybeSingle();
+          .from("clones")
+          .select("name, slug")
+          .eq("id", cloneId)
+          .maybeSingle();
         cloneName = clone?.name ?? clone?.slug ?? null;
       }
 
       let tenantName: string | null = null;
       if (!cloneName && tenantId) {
         const { data: tenant } = await supabaseAdmin
-          .from("tenants").select("display_name, external_ref").eq("id", tenantId).maybeSingle();
+          .from("tenants")
+          .select("display_name, external_ref")
+          .eq("id", tenantId)
+          .maybeSingle();
         tenantName = tenant?.display_name ?? tenant?.external_ref ?? null;
       }
 

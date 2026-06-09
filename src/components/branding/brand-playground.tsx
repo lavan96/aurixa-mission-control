@@ -61,13 +61,9 @@ export function BrandPlaygroundDialog({
   profiles: Profile[];
   initialProfileId?: string | null;
 }) {
-  const [profileId, setProfileId] = useState<string>(
-    initialProfileId ?? profiles[0]?.id ?? "",
-  );
+  const [profileId, setProfileId] = useState<string>(initialProfileId ?? profiles[0]?.id ?? "");
   const [draft, setDraft] = useState<DraftCfg>({});
-  const [previewVariant, setPreviewVariant] = useState<"both" | "light" | "dark">(
-    "both",
-  );
+  const [previewVariant, setPreviewVariant] = useState<"both" | "light" | "dark">("both");
 
   const profile = useMemo(
     () => profiles.find((p) => p.id === profileId) ?? null,
@@ -103,8 +99,7 @@ export function BrandPlaygroundDialog({
   const setField = (k: string, v: string) =>
     setDraft((prev) => {
       const next = { ...prev };
-      const baseValue =
-        (baseBundle.brand_config as Record<string, string>)[k] ?? "";
+      const baseValue = (baseBundle.brand_config as Record<string, string>)[k] ?? "";
       if (v === baseValue || v === "") delete next[k];
       else next[k] = v;
       return next;
@@ -126,8 +121,8 @@ export function BrandPlaygroundDialog({
             Theme playground
           </DialogTitle>
           <DialogDescription>
-            Experiment with brand variations in real time. Changes are local —
-            this playground does not persist or cascade anything.
+            Experiment with brand variations in real time. Changes are local — this playground does
+            not persist or cascade anything.
           </DialogDescription>
         </DialogHeader>
 
@@ -170,10 +165,7 @@ export function BrandPlaygroundDialog({
             </div>
           </div>
           {draftCount > 0 && (
-            <Badge
-              variant="outline"
-              className="bg-amber-500/10 text-amber-300 border-amber-500/30"
-            >
+            <Badge variant="outline" className="bg-amber-500/10 text-amber-300 border-amber-500/30">
               {draftCount} unsaved tweak{draftCount === 1 ? "" : "s"}
             </Badge>
           )}
@@ -194,8 +186,7 @@ export function BrandPlaygroundDialog({
               </div>
               {COLOR_FIELDS.map(([key, label]) => {
                 const baseValue =
-                  (baseBundle.brand_config as Record<string, string>)[key] ??
-                  "#000000";
+                  (baseBundle.brand_config as Record<string, string>)[key] ?? "#000000";
                 const draftValue = draft[key];
                 const isOverridden = draftValue !== undefined;
                 return (
@@ -203,9 +194,7 @@ export function BrandPlaygroundDialog({
                     key={key}
                     className={cn(
                       "rounded-md border p-2 space-y-1.5",
-                      isOverridden
-                        ? "border-amber-500/40 bg-amber-500/5"
-                        : "border-border",
+                      isOverridden ? "border-amber-500/40 bg-amber-500/5" : "border-border",
                     )}
                   >
                     <div className="flex items-center justify-between">
@@ -244,9 +233,7 @@ export function BrandPlaygroundDialog({
                 Identity
               </div>
               {TEXT_FIELDS.map(([key, label]) => {
-                const baseValue =
-                  (baseBundle.brand_config as Record<string, string>)[key] ??
-                  "";
+                const baseValue = (baseBundle.brand_config as Record<string, string>)[key] ?? "";
                 const draftValue = draft[key];
                 const isOverridden = draftValue !== undefined;
                 return (
@@ -254,9 +241,7 @@ export function BrandPlaygroundDialog({
                     key={key}
                     className={cn(
                       "rounded-md border p-2 space-y-1.5",
-                      isOverridden
-                        ? "border-amber-500/40 bg-amber-500/5"
-                        : "border-border",
+                      isOverridden ? "border-amber-500/40 bg-amber-500/5" : "border-border",
                     )}
                   >
                     <div className="flex items-center justify-between">
@@ -295,15 +280,11 @@ export function BrandPlaygroundDialog({
                   </div>
                   <div className="grid gap-3 md:grid-cols-2">
                     <div>
-                      <div className="text-[10px] text-muted-foreground mb-1">
-                        Published
-                      </div>
+                      <div className="text-[10px] text-muted-foreground mb-1">Published</div>
                       <BrandPreviewFrame bundle={baseBundle} variant="light" />
                     </div>
                     <div>
-                      <div className="text-[10px] text-amber-300 mb-1 font-medium">
-                        Draft
-                      </div>
+                      <div className="text-[10px] text-amber-300 mb-1 font-medium">Draft</div>
                       <BrandPreviewFrame bundle={draftBundle} variant="light" />
                     </div>
                   </div>
@@ -316,15 +297,11 @@ export function BrandPlaygroundDialog({
                   </div>
                   <div className="grid gap-3 md:grid-cols-2">
                     <div>
-                      <div className="text-[10px] text-muted-foreground mb-1">
-                        Published
-                      </div>
+                      <div className="text-[10px] text-muted-foreground mb-1">Published</div>
                       <BrandPreviewFrame bundle={baseBundle} variant="dark" />
                     </div>
                     <div>
-                      <div className="text-[10px] text-amber-300 mb-1 font-medium">
-                        Draft
-                      </div>
+                      <div className="text-[10px] text-amber-300 mb-1 font-medium">Draft</div>
                       <BrandPreviewFrame bundle={draftBundle} variant="dark" />
                     </div>
                   </div>
@@ -336,11 +313,7 @@ export function BrandPlaygroundDialog({
 
         <DialogFooter>
           {draftCount > 0 && (
-            <Button
-              variant="outline"
-              onClick={() => setDraft({})}
-              className="sm:mr-auto"
-            >
+            <Button variant="outline" onClick={() => setDraft({})} className="sm:mr-auto">
               <RotateCcw className="mr-2 h-4 w-4" />
               Reset all tweaks
             </Button>
@@ -357,13 +330,22 @@ export function BrandPlaygroundDialog({
 function BrandAiValidator({ brandConfig }: { brandConfig: Record<string, unknown> }) {
   const fn = useServerFn(aiBrandValidate);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ contrast_issues?: Array<{ pair: string; ratio?: number; min?: number; fix?: string }>; tone_notes?: string[]; color_harmony?: string; recommendations?: string[]; raw?: string } | null>(null);
+  const [result, setResult] = useState<{
+    contrast_issues?: Array<{ pair: string; ratio?: number; min?: number; fix?: string }>;
+    tone_notes?: string[];
+    color_harmony?: string;
+    recommendations?: string[];
+    raw?: string;
+  } | null>(null);
   const run = async () => {
-    setLoading(true); setResult(null);
+    setLoading(true);
+    setResult(null);
     try {
       const r = await fn({ data: { brandConfig } });
       setResult(r.result);
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
   return (
     <div className="rounded-md border border-border/60 bg-surface/50 p-3">
@@ -378,23 +360,37 @@ function BrandAiValidator({ brandConfig }: { brandConfig: Record<string, unknown
       {result && (
         <div className="mt-2 space-y-2 text-xs">
           {result.color_harmony && (
-            <div className="font-mono text-[11px]">harmony: <span className="text-foreground">{result.color_harmony}</span></div>
+            <div className="font-mono text-[11px]">
+              harmony: <span className="text-foreground">{result.color_harmony}</span>
+            </div>
           )}
           {(result.contrast_issues ?? []).length > 0 && (
             <div>
-              <div className="font-mono text-[10px] uppercase text-muted-foreground">Contrast issues</div>
+              <div className="font-mono text-[10px] uppercase text-muted-foreground">
+                Contrast issues
+              </div>
               {result.contrast_issues!.map((c, i) => (
-                <div key={i} className="ml-2 text-[11px] text-amber-300">• {c.pair} — {c.ratio} (min {c.min}). Fix: {c.fix}</div>
+                <div key={i} className="ml-2 text-[11px] text-amber-300">
+                  • {c.pair} — {c.ratio} (min {c.min}). Fix: {c.fix}
+                </div>
               ))}
             </div>
           )}
           {(result.recommendations ?? []).length > 0 && (
             <div>
-              <div className="font-mono text-[10px] uppercase text-muted-foreground">Recommendations</div>
-              {result.recommendations!.map((r, i) => <div key={i} className="ml-2 text-[11px]">• {r}</div>)}
+              <div className="font-mono text-[10px] uppercase text-muted-foreground">
+                Recommendations
+              </div>
+              {result.recommendations!.map((r, i) => (
+                <div key={i} className="ml-2 text-[11px]">
+                  • {r}
+                </div>
+              ))}
             </div>
           )}
-          {result.raw && <pre className="whitespace-pre-wrap font-mono text-[10px]">{result.raw}</pre>}
+          {result.raw && (
+            <pre className="whitespace-pre-wrap font-mono text-[10px]">{result.raw}</pre>
+          )}
         </div>
       )}
     </div>

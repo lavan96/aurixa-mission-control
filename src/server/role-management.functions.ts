@@ -23,9 +23,7 @@ export const listUsersWithRoles = createServerFn({ method: "GET" })
       .from("profiles")
       .select("user_id, display_name, avatar_url");
 
-    const profileMap = new Map(
-      (profiles ?? []).map((p) => [p.user_id, p])
-    );
+    const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
 
     // Group roles by user
     const userMap = new Map<
@@ -80,13 +78,11 @@ export const getMyRoleLevel = createServerFn({ method: "GET" })
 
 export const assignRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
-    (input: { targetUserId: string; role: AppRole }) => {
-      if (!input?.targetUserId) throw new Error("targetUserId required");
-      if (!input?.role) throw new Error("role required");
-      return input;
-    }
-  )
+  .inputValidator((input: { targetUserId: string; role: AppRole }) => {
+    if (!input?.targetUserId) throw new Error("targetUserId required");
+    if (!input?.role) throw new Error("role required");
+    return input;
+  })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
@@ -96,12 +92,18 @@ export const assignRole = createServerFn({ method: "POST" })
       _target_role: data.role,
     });
     if (!canAssign) {
-      return { ok: false as const, error: "You don't have sufficient privileges to assign this role" };
+      return {
+        ok: false as const,
+        error: "You don't have sufficient privileges to assign this role",
+      };
     }
 
     // Double-check: nobody can assign super_admin via this endpoint
     if (data.role === "super_admin") {
-      return { ok: false as const, error: "super_admin can only be assigned by the system seed process" };
+      return {
+        ok: false as const,
+        error: "super_admin can only be assigned by the system seed process",
+      };
     }
 
     // Prevent assigning to self
@@ -140,12 +142,10 @@ export const assignRole = createServerFn({ method: "POST" })
 
 export const revokeRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
-    (input: { roleId: string; targetUserId: string; role: string }) => {
-      if (!input?.roleId) throw new Error("roleId required");
-      return input;
-    }
-  )
+  .inputValidator((input: { roleId: string; targetUserId: string; role: string }) => {
+    if (!input?.roleId) throw new Error("roleId required");
+    return input;
+  })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
@@ -155,7 +155,10 @@ export const revokeRole = createServerFn({ method: "POST" })
       _target_user_id: data.targetUserId,
     });
     if (!canManage) {
-      return { ok: false as const, error: "You don't have sufficient privileges to manage this user" };
+      return {
+        ok: false as const,
+        error: "You don't have sufficient privileges to manage this user",
+      };
     }
 
     // Server-side guardrail: prevent revoking the last super_admin
@@ -171,7 +174,10 @@ export const revokeRole = createServerFn({ method: "POST" })
         .select("*", { count: "exact", head: true })
         .eq("role", "super_admin");
       if ((exactCount ?? 0) <= 1) {
-        return { ok: false as const, error: "Cannot revoke the last super_admin — the system must always have at least one" };
+        return {
+          ok: false as const,
+          error: "Cannot revoke the last super_admin — the system must always have at least one",
+        };
       }
     }
 
@@ -180,17 +186,20 @@ export const revokeRole = createServerFn({ method: "POST" })
       _user_id: userId,
     });
     const roleLevels: Record<string, number> = {
-      super_admin: 100, admin: 80, operator: 50, user: 10,
+      super_admin: 100,
+      admin: 80,
+      operator: 50,
+      user: 10,
     };
     const targetRoleLevel = roleLevels[data.role] ?? 0;
     if ((assignerLevel ?? 0) <= targetRoleLevel) {
-      return { ok: false as const, error: `Insufficient privileges: your level (${assignerLevel}) must exceed the role level (${targetRoleLevel})` };
+      return {
+        ok: false as const,
+        error: `Insufficient privileges: your level (${assignerLevel}) must exceed the role level (${targetRoleLevel})`,
+      };
     }
 
-    const { error } = await supabase
-      .from("user_roles")
-      .delete()
-      .eq("id", data.roleId);
+    const { error } = await supabase.from("user_roles").delete().eq("id", data.roleId);
 
     if (error) {
       return { ok: false as const, error: error.message };
@@ -216,9 +225,7 @@ export const revokeRole = createServerFn({ method: "POST" })
 export const getBootstrapSqlPreview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async () => {
-    const { getCloneBootstrapSql } = await import(
-      "./backend-provisioning.server"
-    );
+    const { getCloneBootstrapSql } = await import("./backend-provisioning.server");
     return { sql: getCloneBootstrapSql() };
   });
 
@@ -251,18 +258,16 @@ export const getRoleAuditLog = createServerFn({ method: "GET" })
       .select("user_id, display_name")
       .in("user_id", Array.from(userIds));
 
-    const nameMap = new Map(
-      (profiles ?? []).map((p) => [p.user_id, p.display_name])
-    );
+    const nameMap = new Map((profiles ?? []).map((p) => [p.user_id, p.display_name]));
 
     return {
       entries: (data ?? []).map((e) => ({
         ...e,
-        actor_name: e.actor_user_id ? nameMap.get(e.actor_user_id) ?? null : null,
+        actor_name: e.actor_user_id ? (nameMap.get(e.actor_user_id) ?? null) : null,
         target_name: (() => {
           const meta = e.metadata as Record<string, unknown>;
           const tid = meta?.target_user_id;
-          return typeof tid === "string" ? nameMap.get(tid) ?? null : null;
+          return typeof tid === "string" ? (nameMap.get(tid) ?? null) : null;
         })(),
       })),
     };

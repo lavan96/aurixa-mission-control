@@ -8,9 +8,7 @@ import { cascadeApiKeyToRepo } from "@/server/clone-credentials.server";
 
 export const listCloneApiKeys = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) =>
-    z.object({ cloneId: z.string().uuid().optional() }).parse(input ?? {}),
-  )
+  .inputValidator((input) => z.object({ cloneId: z.string().uuid().optional() }).parse(input ?? {}))
   .handler(async ({ data, context }) => {
     let q = context.supabase
       .from("clone_api_keys")
@@ -79,7 +77,12 @@ export const rotateCloneApiKey = createServerFn({ method: "POST" })
     z
       .object({
         oldKeyId: z.string().uuid(),
-        graceHours: z.number().int().min(0).max(24 * 30).default(24),
+        graceHours: z
+          .number()
+          .int()
+          .min(0)
+          .max(24 * 30)
+          .default(24),
         label: z.string().min(1).max(120).optional(),
       })
       .parse(input),
@@ -117,7 +120,12 @@ export const rotateCloneApiKey = createServerFn({ method: "POST" })
       .eq("id", old.id);
 
     // Re-cascade the new key to the clone's repo (best effort).
-    let cascadeResult: { ok: boolean; path: string; error?: string; commit_sha?: string | null } | null = null;
+    let cascadeResult: {
+      ok: boolean;
+      path: string;
+      error?: string;
+      commit_sha?: string | null;
+    } | null = null;
     if (old.clone_id) {
       const { data: clone } = await supabaseAdmin
         .from("clones")

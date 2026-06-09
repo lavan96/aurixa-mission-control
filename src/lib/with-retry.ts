@@ -15,10 +15,7 @@ export interface RetryOptions {
   onRetry?: (err: unknown, attempt: number, delayMs: number) => void;
 }
 
-export async function withRetry<T>(
-  fn: () => Promise<T>,
-  opts: RetryOptions = {},
-): Promise<T> {
+export async function withRetry<T>(fn: () => Promise<T>, opts: RetryOptions = {}): Promise<T> {
   const attempts = Math.max(1, opts.attempts ?? 3);
   const baseMs = opts.baseMs ?? 300;
   const maxMs = opts.maxMs ?? 5000;

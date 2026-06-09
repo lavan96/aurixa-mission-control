@@ -14,17 +14,16 @@ export const Route = createFileRoute("/hooks/drift-refresh")({
 
         try {
           const result = await runDriftRefresh(supabaseAdmin);
-          return new Response(
-            JSON.stringify({ success: true, ...result }),
-            { headers: { "Content-Type": "application/json" } },
-          );
+          return new Response(JSON.stringify({ success: true, ...result }), {
+            headers: { "Content-Type": "application/json" },
+          });
         } catch (e) {
           const msg = e instanceof Error ? e.message : "Drift refresh failed";
           console.error("Drift refresh failed:", msg);
-          return new Response(
-            JSON.stringify({ success: false, error: msg }),
-            { status: 500, headers: { "Content-Type": "application/json" } },
-          );
+          return new Response(JSON.stringify({ success: false, error: msg }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
         }
       },
     },

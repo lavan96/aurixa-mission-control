@@ -44,7 +44,11 @@ async function writeSnapshot(
 export type CloneHealth = {
   cloneId: string;
   deployUrl: string | null;
-  uptime: { status: "up" | "down" | "unknown"; httpStatus: number | null; latencyMs: number | null };
+  uptime: {
+    status: "up" | "down" | "unknown";
+    httpStatus: number | null;
+    latencyMs: number | null;
+  };
   lastSuccessfulCascadeAt: string | null;
   lastFailedCascadeAt: string | null;
   cascadeCount7d: number;
@@ -55,7 +59,11 @@ export type CloneHealth = {
 
 const FETCH_TIMEOUT_MS = 4000;
 
-async function pingDeploy(url: string): Promise<{ status: "up" | "down" | "unknown"; httpStatus: number | null; latencyMs: number | null }> {
+async function pingDeploy(url: string): Promise<{
+  status: "up" | "down" | "unknown";
+  httpStatus: number | null;
+  latencyMs: number | null;
+}> {
   try {
     const t0 = Date.now();
     const ctl = new AbortController();

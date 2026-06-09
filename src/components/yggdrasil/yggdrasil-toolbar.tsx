@@ -4,7 +4,19 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Filter, RefreshCw, X, ZoomIn, ZoomOut, Maximize, Info, GitFork, Check, RotateCcw } from "lucide-react";
+import {
+  Search,
+  Filter,
+  RefreshCw,
+  X,
+  ZoomIn,
+  ZoomOut,
+  Maximize,
+  Info,
+  GitFork,
+  Check,
+  RotateCcw,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -46,19 +58,22 @@ const STATUS_OPTIONS: {
     value: "in_sync",
     label: "In Sync",
     color: "oklch(0.78 0.18 150)",
-    description: "Clone is up-to-date with the prime repository. All commits have been successfully cascaded.",
+    description:
+      "Clone is up-to-date with the prime repository. All commits have been successfully cascaded.",
   },
   {
     value: "behind",
     label: "Behind",
     color: "oklch(0.82 0.17 80)",
-    description: "Clone is missing recent commits from the prime. A cascade is needed to bring it current.",
+    description:
+      "Clone is missing recent commits from the prime. A cascade is needed to bring it current.",
   },
   {
     value: "failed",
     label: "Failed",
     color: "oklch(0.66 0.24 25)",
-    description: "Last cascade attempt failed due to merge conflicts or CI errors. Manual intervention required.",
+    description:
+      "Last cascade attempt failed due to merge conflicts or CI errors. Manual intervention required.",
   },
 ];
 
@@ -103,9 +118,7 @@ export function YggdrasilToolbar({
 
   const toggleFilter = (f: StatusFilter) => {
     onFiltersChange(
-      activeFilters.includes(f)
-        ? activeFilters.filter((x) => x !== f)
-        : [...activeFilters, f],
+      activeFilters.includes(f) ? activeFilters.filter((x) => x !== f) : [...activeFilters, f],
     );
   };
 
@@ -123,9 +136,8 @@ export function YggdrasilToolbar({
     selectedNode && selectedNode.id !== "__trunk__" && selectedNode.children.length > 0;
 
   // Count descendants by status for contextual tooltip
-  const descendantCounts = selectedNode && selectedNode.id !== "__trunk__"
-    ? countDescendantsByStatus(selectedNode)
-    : null;
+  const descendantCounts =
+    selectedNode && selectedNode.id !== "__trunk__" ? countDescendantsByStatus(selectedNode) : null;
 
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -245,11 +257,7 @@ export function YggdrasilToolbar({
               <RotateCcw className="mr-1 h-3 w-3" />
               Clear
             </Button>
-            <Button
-              size="sm"
-              onClick={onApplyFilters}
-              className="h-7 font-mono text-[10px]"
-            >
+            <Button size="sm" onClick={onApplyFilters} className="h-7 font-mono text-[10px]">
               <Check className="mr-1 h-3 w-3" />
               Apply
             </Button>
@@ -302,7 +310,13 @@ export function YggdrasilToolbar({
 
       {/* Zoom controls */}
       <div className="flex items-center gap-1 rounded-md border border-border/60 px-1">
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onZoomOut} title="Zoom out">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          onClick={onZoomOut}
+          title="Zoom out"
+        >
           <ZoomOut className="h-3.5 w-3.5" />
         </Button>
         <span className="w-10 text-center font-mono text-[10px] text-muted-foreground">

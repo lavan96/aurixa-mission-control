@@ -51,7 +51,10 @@ export async function callAi(args: AiCallArgs): Promise<{ content: string; token
         total_tokens: total || null,
         user_id: args.userId ?? null,
       })
-      .then(() => undefined, () => undefined);
+      .then(
+        () => undefined,
+        () => undefined,
+      );
   }
   return { content, tokens: total };
 }

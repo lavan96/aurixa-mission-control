@@ -17,7 +17,12 @@ import {
   deleteBrandProfile,
   duplicateBrandProfile,
 } from "@/server/branding.functions";
-import { createSchedule, deleteSchedule, runScheduleNow, updateSchedule } from "@/server/schedules.functions";
+import {
+  createSchedule,
+  deleteSchedule,
+  runScheduleNow,
+  updateSchedule,
+} from "@/server/schedules.functions";
 import { BrandProfileIO } from "@/components/brand-profile-io";
 import { describeCron } from "@/lib/cron";
 import { Button } from "@/components/ui/button";
@@ -26,13 +31,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -41,12 +40,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -216,7 +210,10 @@ function BrandingPage() {
 
   // Phase 6 dialogs
   const [versionsDialog, setVersionsDialog] = useState<BrandProfile | null>(null);
-  const [overridesDialog, setOverridesDialog] = useState<{ cloneId: string; cloneName: string } | null>(null);
+  const [overridesDialog, setOverridesDialog] = useState<{
+    cloneId: string;
+    cloneName: string;
+  } | null>(null);
   const [playgroundOpen, setPlaygroundOpen] = useState(false);
   const [playgroundProfileId, setPlaygroundProfileId] = useState<string | null>(null);
 
@@ -226,7 +223,7 @@ function BrandingPage() {
       .select("id, name, cron_expression, enabled, scope_filter, last_run_at, next_run_at, notes")
       .eq("kind", "brand_sync")
       .order("created_at", { ascending: false });
-    setSchedules(((data as unknown) as BrandSchedule[]) ?? []);
+    setSchedules((data as unknown as BrandSchedule[]) ?? []);
   };
 
   const refresh = async () => {
@@ -304,10 +301,7 @@ function BrandingPage() {
     }
   };
 
-  const profilesById = useMemo(
-    () => new Map(profiles.map((p) => [p.id, p])),
-    [profiles],
-  );
+  const profilesById = useMemo(() => new Map(profiles.map((p) => [p.id, p])), [profiles]);
 
   const driftedClones = assignments.filter((a) => a.status === "drifted");
   const pendingClones = assignments.filter((a) => a.status === "pending");
@@ -414,8 +408,8 @@ function BrandingPage() {
             Branding
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Manage brand profiles, mirror assets, and cascade white-label settings across the
-            clone fleet.
+            Manage brand profiles, mirror assets, and cascade white-label settings across the clone
+            fleet.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -474,9 +468,7 @@ function BrandingPage() {
       <Tabs defaultValue="profiles">
         <TabsList>
           <TabsTrigger value="profiles">Profiles</TabsTrigger>
-          <TabsTrigger value="assignments">
-            Assignments ({assignments.length})
-          </TabsTrigger>
+          <TabsTrigger value="assignments">Assignments ({assignments.length})</TabsTrigger>
           <TabsTrigger value="history">
             <HistoryIcon className="mr-1 h-3.5 w-3.5" /> History
           </TabsTrigger>
@@ -515,8 +507,10 @@ function BrandingPage() {
                 }}
                 onDuplicate={async () => {
                   const r = await duplicateFn({ data: { profileId: p.id } });
-                  if (r.ok) { toast.success("Profile duplicated"); refresh(); }
-                  else toast.error(r.error);
+                  if (r.ok) {
+                    toast.success("Profile duplicated");
+                    refresh();
+                  } else toast.error(r.error);
                 }}
               />
             ))}
@@ -551,15 +545,15 @@ function BrandingPage() {
                   {assignments.map((a) => (
                     <TableRow key={a.id}>
                       <TableCell>
-                        <div className="font-medium">{a.clones?.name ?? a.clone_id.slice(0, 8)}</div>
+                        <div className="font-medium">
+                          {a.clones?.name ?? a.clone_id.slice(0, 8)}
+                        </div>
                         <div className="font-mono text-[10px] text-muted-foreground">
                           {a.clones?.slug}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="font-medium">
-                          {a.clone_brand_profiles?.name ?? "—"}
-                        </div>
+                        <div className="font-medium">{a.clone_brand_profiles?.name ?? "—"}</div>
                         <div className="font-mono text-[10px] text-muted-foreground">
                           v{a.clone_brand_profiles?.version ?? "—"}
                         </div>
@@ -574,15 +568,11 @@ function BrandingPage() {
                           </div>
                         )}
                         {a.error_message && (
-                          <div className="mt-1 text-[10px] text-destructive">
-                            {a.error_message}
-                          </div>
+                          <div className="mt-1 text-[10px] text-destructive">{a.error_message}</div>
                         )}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
-                        {a.applied_at
-                          ? formatDistanceToNow(a.applied_at) + " ago"
-                          : "Never"}
+                        {a.applied_at ? formatDistanceToNow(a.applied_at) + " ago" : "Never"}
                       </TableCell>
                       <TableCell className="text-right space-x-1">
                         <Button
@@ -687,7 +677,8 @@ function BrandingPage() {
         <TabsContent value="schedules" className="mt-4 space-y-3">
           <div className="flex justify-between items-center">
             <p className="text-sm text-muted-foreground">
-              Cron-driven brand syncs. Targets drifted clones by default; use "all" to re-cascade every assigned clone.
+              Cron-driven brand syncs. Targets drifted clones by default; use "all" to re-cascade
+              every assigned clone.
             </p>
             <Button size="sm" onClick={() => setScheduleDialogOpen(true)}>
               <Plus className="mr-1 h-3.5 w-3.5" /> New schedule
@@ -711,7 +702,10 @@ function BrandingPage() {
                 <TableBody>
                   {schedules.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={8} className="py-8 text-center text-sm text-muted-foreground">
+                      <TableCell
+                        colSpan={8}
+                        className="py-8 text-center text-sm text-muted-foreground"
+                      >
                         No brand sync schedules yet.
                       </TableCell>
                     </TableRow>
@@ -728,7 +722,9 @@ function BrandingPage() {
                       <TableRow key={s.id}>
                         <TableCell className="font-medium">{s.name}</TableCell>
                         <TableCell className="text-sm">{profile?.name ?? "—"}</TableCell>
-                        <TableCell className="font-mono text-xs">{describeCron(s.cron_expression)}</TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {describeCron(s.cron_expression)}
+                        </TableCell>
                         <TableCell className="text-xs">{targetLabel}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {s.last_run_at ? formatDistanceToNow(s.last_run_at) + " ago" : "Never"}
@@ -737,13 +733,25 @@ function BrandingPage() {
                           {s.next_run_at ? formatDistanceToNow(s.next_run_at) : "—"}
                         </TableCell>
                         <TableCell>
-                          <Switch checked={s.enabled} onCheckedChange={() => handleToggleSchedule(s)} />
+                          <Switch
+                            checked={s.enabled}
+                            onCheckedChange={() => handleToggleSchedule(s)}
+                          />
                         </TableCell>
                         <TableCell className="text-right space-x-1">
-                          <Button size="sm" variant="outline" disabled={busy} onClick={() => handleRunSchedule(s.id)}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={busy}
+                            onClick={() => handleRunSchedule(s.id)}
+                          >
                             <PlayCircle className="h-3.5 w-3.5" />
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => handleDeleteSchedule(s)}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDeleteSchedule(s)}
+                          >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </TableCell>
@@ -769,28 +777,47 @@ function BrandingPage() {
           <div className="space-y-3">
             <div>
               <Label>Name</Label>
-              <Input value={newSchedName} onChange={(e) => setNewSchedName(e.target.value)} placeholder="Daily brand sync" />
+              <Input
+                value={newSchedName}
+                onChange={(e) => setNewSchedName(e.target.value)}
+                placeholder="Daily brand sync"
+              />
             </div>
             <div>
               <Label>Brand profile</Label>
               <Select value={newSchedProfile} onValueChange={setNewSchedProfile}>
-                <SelectTrigger><SelectValue placeholder="Select profile" /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select profile" />
+                </SelectTrigger>
                 <SelectContent>
-                  {profiles.filter((p) => p.status === "published").map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.name} (v{p.version})</SelectItem>
-                  ))}
+                  {profiles
+                    .filter((p) => p.status === "published")
+                    .map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name} (v{p.version})
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
               <Label>Cron expression (UTC)</Label>
-              <Input value={newSchedCron} onChange={(e) => setNewSchedCron(e.target.value)} placeholder="0 */6 * * *" />
+              <Input
+                value={newSchedCron}
+                onChange={(e) => setNewSchedCron(e.target.value)}
+                placeholder="0 */6 * * *"
+              />
               <p className="mt-1 text-xs text-muted-foreground">{describeCron(newSchedCron)}</p>
             </div>
             <div>
               <Label>Target clones</Label>
-              <Select value={newSchedTarget} onValueChange={(v) => setNewSchedTarget(v as "drifted" | "all")}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select
+                value={newSchedTarget}
+                onValueChange={(v) => setNewSchedTarget(v as "drifted" | "all")}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="drifted">Drifted only (recommended)</SelectItem>
                   <SelectItem value="all">All assigned clones</SelectItem>
@@ -799,7 +826,9 @@ function BrandingPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setScheduleDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setScheduleDialogOpen(false)}>
+              Cancel
+            </Button>
             <Button onClick={handleCreateSchedule}>Create</Button>
           </DialogFooter>
         </DialogContent>
@@ -890,9 +919,7 @@ function BrandingPage() {
                         }}
                       />
                       <span className="flex-1">{c.name}</span>
-                      <span className="font-mono text-[10px] text-muted-foreground">
-                        {c.slug}
-                      </span>
+                      <span className="font-mono text-[10px] text-muted-foreground">{c.slug}</span>
                     </label>
                   );
                 })}
@@ -987,9 +1014,7 @@ function ProfileCard({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <CardTitle className="flex items-center gap-2 text-base">
-              {profile.is_default && (
-                <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-              )}
+              {profile.is_default && <Star className="h-4 w-4 fill-amber-400 text-amber-400" />}
               <span className="truncate">{profile.name}</span>
             </CardTitle>
             <CardDescription className="font-mono text-[10px]">
@@ -1002,9 +1027,7 @@ function ProfileCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        {cfg.brand_name && (
-          <p className="text-sm font-medium">{cfg.brand_name}</p>
-        )}
+        {cfg.brand_name && <p className="text-sm font-medium">{cfg.brand_name}</p>}
         {profile.description && (
           <p className="text-xs text-muted-foreground">{profile.description}</p>
         )}
@@ -1077,20 +1100,14 @@ function StatCard({
   tone?: "default" | "warning" | "danger";
 }) {
   const toneClass =
-    tone === "warning"
-      ? "text-amber-300"
-      : tone === "danger"
-        ? "text-destructive"
-        : "text-primary";
+    tone === "warning" ? "text-amber-300" : tone === "danger" ? "text-destructive" : "text-primary";
   return (
     <Card>
       <CardContent className="flex items-center gap-3 py-4">
         <Icon className={cn("h-5 w-5", toneClass)} />
         <div>
           <div className="text-2xl font-semibold tabular-nums">{value}</div>
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
-            {label}
-          </div>
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
         </div>
       </CardContent>
     </Card>
@@ -1153,8 +1170,7 @@ function ProfileEditor({
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploadField, setUploadField] = useState<string | null>(null);
 
-  const handleField = (k: string, v: string) =>
-    setCfg((prev) => ({ ...prev, [k]: v }));
+  const handleField = (k: string, v: string) => setCfg((prev) => ({ ...prev, [k]: v }));
 
   const handleUpload = async (field: string, target: string, file: File) => {
     const tempId = profile?.id ?? "draft";
@@ -1205,9 +1221,7 @@ function ProfileEditor({
       name: name.trim(),
       slug: slug.trim() || undefined,
       description: description.trim() || null,
-      brand_config: Object.fromEntries(
-        Object.entries(cfg).filter(([, v]) => v?.trim() !== ""),
-      ),
+      brand_config: Object.fromEntries(Object.entries(cfg).filter(([, v]) => v?.trim() !== "")),
       report_contact: Object.fromEntries(
         Object.entries(contact).filter(([, v]) => v?.trim() !== ""),
       ),
@@ -1225,9 +1239,13 @@ function ProfileEditor({
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{profile ? `Edit profile · ${profile.name}` : "New brand profile"}</DialogTitle>
+          <DialogTitle>
+            {profile ? `Edit profile · ${profile.name}` : "New brand profile"}
+          </DialogTitle>
           <DialogDescription>
-            Brand bundle cascades to clones&apos; <code className="font-mono text-xs">whitelabel_settings</code> and report contact details.
+            Brand bundle cascades to clones&apos;{" "}
+            <code className="font-mono text-xs">whitelabel_settings</code> and report contact
+            details.
           </DialogDescription>
         </DialogHeader>
 
@@ -1243,8 +1261,16 @@ function ProfileEditor({
           <TabsContent value="identity" className="mt-4 space-y-3">
             <Field label="Profile name" value={name} onChange={setName} required />
             <Field label="Slug (optional)" value={slug} onChange={setSlug} mono />
-            <Field label="Brand name" value={cfg.brand_name} onChange={(v) => handleField("brand_name", v)} />
-            <Field label="Tagline" value={cfg.tagline} onChange={(v) => handleField("tagline", v)} />
+            <Field
+              label="Brand name"
+              value={cfg.brand_name}
+              onChange={(v) => handleField("brand_name", v)}
+            />
+            <Field
+              label="Tagline"
+              value={cfg.tagline}
+              onChange={(v) => handleField("tagline", v)}
+            />
             <div>
               <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                 Description
@@ -1257,22 +1283,43 @@ function ProfileEditor({
             </div>
             <Field label="Tags (comma-separated)" value={tags} onChange={setTags} />
             <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={isDefault}
-                onCheckedChange={(v) => setIsDefault(Boolean(v))}
-              />
+              <Checkbox checked={isDefault} onCheckedChange={(v) => setIsDefault(Boolean(v))} />
               <Star className="h-4 w-4 text-amber-400" />
               Default profile (auto-assigned to new clones)
             </label>
           </TabsContent>
 
           <TabsContent value="theme" className="mt-4 grid gap-3 md:grid-cols-2">
-            <ColorField label="Primary" value={cfg.primary_color} onChange={(v) => handleField("primary_color", v)} />
-            <ColorField label="Secondary" value={cfg.secondary_color} onChange={(v) => handleField("secondary_color", v)} />
-            <ColorField label="Accent" value={cfg.accent_color} onChange={(v) => handleField("accent_color", v)} />
-            <ColorField label="Background" value={cfg.background_color} onChange={(v) => handleField("background_color", v)} />
-            <ColorField label="Foreground" value={cfg.foreground_color} onChange={(v) => handleField("foreground_color", v)} />
-            <Field label="Font family" value={cfg.font_family} onChange={(v) => handleField("font_family", v)} />
+            <ColorField
+              label="Primary"
+              value={cfg.primary_color}
+              onChange={(v) => handleField("primary_color", v)}
+            />
+            <ColorField
+              label="Secondary"
+              value={cfg.secondary_color}
+              onChange={(v) => handleField("secondary_color", v)}
+            />
+            <ColorField
+              label="Accent"
+              value={cfg.accent_color}
+              onChange={(v) => handleField("accent_color", v)}
+            />
+            <ColorField
+              label="Background"
+              value={cfg.background_color}
+              onChange={(v) => handleField("background_color", v)}
+            />
+            <ColorField
+              label="Foreground"
+              value={cfg.foreground_color}
+              onChange={(v) => handleField("foreground_color", v)}
+            />
+            <Field
+              label="Font family"
+              value={cfg.font_family}
+              onChange={(v) => handleField("font_family", v)}
+            />
           </TabsContent>
 
           <TabsContent value="assets" className="mt-4 space-y-3">
@@ -1323,10 +1370,26 @@ function ProfileEditor({
           </TabsContent>
 
           <TabsContent value="contact" className="mt-4 space-y-3">
-            <Field label="Contact name" value={contact.contact_name} onChange={(v) => setContact((p) => ({ ...p, contact_name: v }))} />
-            <Field label="Email" value={contact.contact_email} onChange={(v) => setContact((p) => ({ ...p, contact_email: v }))} />
-            <Field label="Phone" value={contact.contact_phone} onChange={(v) => setContact((p) => ({ ...p, contact_phone: v }))} />
-            <Field label="Website" value={contact.contact_website} onChange={(v) => setContact((p) => ({ ...p, contact_website: v }))} />
+            <Field
+              label="Contact name"
+              value={contact.contact_name}
+              onChange={(v) => setContact((p) => ({ ...p, contact_name: v }))}
+            />
+            <Field
+              label="Email"
+              value={contact.contact_email}
+              onChange={(v) => setContact((p) => ({ ...p, contact_email: v }))}
+            />
+            <Field
+              label="Phone"
+              value={contact.contact_phone}
+              onChange={(v) => setContact((p) => ({ ...p, contact_phone: v }))}
+            />
+            <Field
+              label="Website"
+              value={contact.contact_website}
+              onChange={(v) => setContact((p) => ({ ...p, contact_website: v }))}
+            />
             <div>
               <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                 Address
@@ -1340,9 +1403,21 @@ function ProfileEditor({
           </TabsContent>
 
           <TabsContent value="legal" className="mt-4 space-y-3">
-            <Field label="Support URL" value={cfg.support_url} onChange={(v) => handleField("support_url", v)} />
-            <Field label="Privacy URL" value={cfg.privacy_url} onChange={(v) => handleField("privacy_url", v)} />
-            <Field label="Terms URL" value={cfg.terms_url} onChange={(v) => handleField("terms_url", v)} />
+            <Field
+              label="Support URL"
+              value={cfg.support_url}
+              onChange={(v) => handleField("support_url", v)}
+            />
+            <Field
+              label="Privacy URL"
+              value={cfg.privacy_url}
+              onChange={(v) => handleField("privacy_url", v)}
+            />
+            <Field
+              label="Terms URL"
+              value={cfg.terms_url}
+              onChange={(v) => handleField("terms_url", v)}
+            />
           </TabsContent>
         </Tabs>
 

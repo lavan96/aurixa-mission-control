@@ -110,7 +110,8 @@ export const applyDriftSuggestion = createServerFn({ method: "POST" })
     await supabase
       .from("clones")
       .update({
-        drift_suggestions: updated as unknown as Database["public"]["Tables"]["clones"]["Update"]["drift_suggestions"],
+        drift_suggestions:
+          updated as unknown as Database["public"]["Tables"]["clones"]["Update"]["drift_suggestions"],
       })
       .eq("id", data.cloneId);
 
@@ -150,7 +151,8 @@ export const dismissDriftSuggestion = createServerFn({ method: "POST" })
     await supabase
       .from("clones")
       .update({
-        drift_suggestions: updated as unknown as Database["public"]["Tables"]["clones"]["Update"]["drift_suggestions"],
+        drift_suggestions:
+          updated as unknown as Database["public"]["Tables"]["clones"]["Update"]["drift_suggestions"],
       })
       .eq("id", data.cloneId);
     return { ok: true as const };

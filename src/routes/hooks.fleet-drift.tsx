@@ -16,10 +16,10 @@ export const Route = createFileRoute("/hooks/fleet-drift")({
         const SUPABASE_URL = process.env.SUPABASE_URL;
         const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
         if (!SUPABASE_URL || !SERVICE_KEY) {
-          return new Response(
-            JSON.stringify({ error: "Server not configured" }),
-            { status: 500, headers: { "Content-Type": "application/json" } },
-          );
+          return new Response(JSON.stringify({ error: "Server not configured" }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
         }
 
         const admin = createClient<Database>(SUPABASE_URL, SERVICE_KEY, {
@@ -28,17 +28,16 @@ export const Route = createFileRoute("/hooks/fleet-drift")({
 
         try {
           const result = await runFleetDriftScan(admin);
-          return new Response(
-            JSON.stringify({ success: true, ...result }),
-            { headers: { "Content-Type": "application/json" } },
-          );
+          return new Response(JSON.stringify({ success: true, ...result }), {
+            headers: { "Content-Type": "application/json" },
+          });
         } catch (e) {
           const msg = e instanceof Error ? e.message : "Scan failed";
           console.error("Drift scan failed:", msg);
-          return new Response(
-            JSON.stringify({ success: false, error: msg }),
-            { status: 500, headers: { "Content-Type": "application/json" } },
-          );
+          return new Response(JSON.stringify({ success: false, error: msg }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
         }
       },
     },

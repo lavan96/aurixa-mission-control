@@ -27,9 +27,7 @@ export type DriftRefreshResult = {
  * so it can be invoked from a server function (with RLS as the operator) OR
  * from a cron-triggered hook (with the service role key).
  */
-export async function runDriftRefresh(
-  supabase: SupabaseLike,
-): Promise<DriftRefreshResult> {
+export async function runDriftRefresh(supabase: SupabaseLike): Promise<DriftRefreshResult> {
   let octokit;
   try {
     octokit = getAppOctokit();
@@ -109,11 +107,7 @@ export async function runDriftRefresh(
         else if (behind === 0) status = "in_sync";
         else status = "behind";
 
-        if (
-          behind !== c.commits_behind ||
-          status !== c.sync_status ||
-          !c.last_drift_check_at
-        ) {
+        if (behind !== c.commits_behind || status !== c.sync_status || !c.last_drift_check_at) {
           await supabase
             .from("clones")
             .update({

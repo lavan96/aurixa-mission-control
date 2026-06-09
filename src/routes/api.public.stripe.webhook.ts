@@ -7,7 +7,8 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 function ok(body: unknown = { received: true }) {
   return new Response(JSON.stringify(body), {
-    status: 200, headers: { "Content-Type": "application/json" },
+    status: 200,
+    headers: { "Content-Type": "application/json" },
   });
 }
 function bad(status: number, msg: string) {
@@ -29,11 +30,14 @@ async function alreadyProcessed(eventId: string): Promise<boolean> {
 }
 
 async function recordEvent(event: Stripe.Event, payload: unknown) {
-  await adminAny.from("stripe_events").upsert({
-    stripe_event_id: event.id,
-    type: event.type,
-    payload,
-  }, { onConflict: "stripe_event_id" });
+  await adminAny.from("stripe_events").upsert(
+    {
+      stripe_event_id: event.id,
+      type: event.type,
+      payload,
+    },
+    { onConflict: "stripe_event_id" },
+  );
 }
 
 async function markProcessed(eventId: string, error?: string) {
@@ -67,30 +71,49 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   if (mode === "setup_package") {
     if (!tenantId) throw new Error("missing_tenant");
-    await adminAny.from("setup_purchases").upsert({
-      tenant_id: tenantId,
-      setup_package_id: itemId,
-      stripe_checkout_session_id: session.id,
-      stripe_payment_intent_id: typeof session.payment_intent === "string"
-        ? session.payment_intent : session.payment_intent?.id ?? null,
-      amount_cents: session.amount_total ?? 0,
-      currency: (session.currency ?? "aud").toUpperCase(),
-      status: session.payment_status === "paid" ? "paid" : "pending",
-      metadata: md,
-    }, { onConflict: "stripe_checkout_session_id" });
+    await adminAny.from("setup_purchases").upsert(
+      {
+        tenant_id: tenantId,
+        setup_package_id: itemId,
+        stripe_checkout_session_id: session.id,
+        stripe_payment_intent_id:
+          typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : (session.payment_intent?.id ?? null),
+        amount_cents: session.amount_total ?? 0,
+        currency: (session.currency ?? "aud").toUpperCase(),
+        status: session.payment_status === "paid" ? "paid" : "pending",
+        metadata: md,
+      },
+      { onConflict: "stripe_checkout_session_id" },
+    );
     return;
   }
 
   if (mode === "seat_plan") {
     // cloneId null = Prime (global) entitlement.
     const existingQ = cloneId
-      ? supabaseAdmin.from("clone_seat_entitlements").select("clone_id").eq("clone_id", cloneId).maybeSingle()
-      : supabaseAdmin.from("clone_seat_entitlements").select("clone_id").is("clone_id", null).maybeSingle();
+      ? supabaseAdmin
+          .from("clone_seat_entitlements")
+          .select("clone_id")
+          .eq("clone_id", cloneId)
+          .maybeSingle()
+      : supabaseAdmin
+          .from("clone_seat_entitlements")
+          .select("clone_id")
+          .is("clone_id", null)
+          .maybeSingle();
     const { data: existing } = await existingQ;
     if (existing) {
       const updQ = cloneId
-        ? supabaseAdmin.from("clone_seat_entitlements").update({ seat_plan_id: itemId, updated_at: new Date().toISOString() }).eq("clone_id", cloneId)
-        : supabaseAdmin.from("clone_seat_entitlements").update({ seat_plan_id: itemId, updated_at: new Date().toISOString() }).is("clone_id", null);
+        ? supabaseAdmin
+            .from("clone_seat_entitlements")
+            .update({ seat_plan_id: itemId, updated_at: new Date().toISOString() })
+            .eq("clone_id", cloneId)
+        : supabaseAdmin
+            .from("clone_seat_entitlements")
+            .update({ seat_plan_id: itemId, updated_at: new Date().toISOString() })
+            .is("clone_id", null);
       await updQ;
     } else {
       await supabaseAdmin
@@ -117,7 +140,11 @@ export const Route = createFileRoute("/api/public/stripe/webhook")({
         let event: Stripe.Event;
         try {
           event = await getStripe().webhooks.constructEventAsync(
-            raw, sig, secret, undefined, getStripeCryptoProvider(),
+            raw,
+            sig,
+            secret,
+            undefined,
+            getStripeCryptoProvider(),
           );
         } catch (err) {
           return bad(400, `signature_verification_failed: ${(err as Error).message}`);

@@ -41,8 +41,8 @@ function ensurePkcs8(pem: string): string {
     } catch (e) {
       throw new Error(
         `Failed to convert PKCS#1 private key to PKCS#8: ${e instanceof Error ? e.message : String(e)}. ` +
-        `Use the PEM Key Helper on the auth page to convert manually, or run: ` +
-        `openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in key.pem -out converted.pem`
+          `Use the PEM Key Helper on the auth page to convert manually, or run: ` +
+          `openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in key.pem -out converted.pem`,
       );
     }
   }
@@ -59,9 +59,7 @@ function ensurePkcs8(pem: string): string {
 export function getAppOctokit(installationId?: string | number): Octokit {
   const appId = readEnv("GITHUB_APP_ID");
   const privateKey = ensurePkcs8(readEnv("GITHUB_APP_PRIVATE_KEY"));
-  const installation = String(
-    installationId ?? readEnv("GITHUB_APP_INSTALLATION_ID"),
-  );
+  const installation = String(installationId ?? readEnv("GITHUB_APP_INSTALLATION_ID"));
   const cacheKey = `${appId}:${installation}`;
   const hit = cache.get(cacheKey);
   if (hit) return hit;
@@ -171,9 +169,7 @@ export async function getFileContent(
     });
     const data = res.data as { type?: string; sha?: string; content?: string };
     if (data.type !== "file" || !data.sha) return null;
-    const content = data.content
-      ? Buffer.from(data.content, "base64").toString("utf8")
-      : "";
+    const content = data.content ? Buffer.from(data.content, "base64").toString("utf8") : "";
     return { sha: data.sha, content };
   } catch (e: unknown) {
     if ((e as { status?: number })?.status === 404) return null;

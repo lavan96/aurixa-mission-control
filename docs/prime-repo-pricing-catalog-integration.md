@@ -10,6 +10,7 @@ setup packages, and per-report credit costs from Mission Control.
 Auth: `x-clone-api-key` header with `tokens:meter` or any active scope.
 
 Response:
+
 ```json
 {
   "roles":   [{ "slug": "viewer", "name": "Viewer", "price_min_cents": 2900, "price_max_cents": 4900, "currency": "AUD", "permissions": [...] }],
@@ -55,8 +56,10 @@ seat-reserve call's metadata:
 
 ```ts
 await reserveSeat({
-  external_user_id, email, display_name,
-  metadata: { role_slug: "standard" }
+  external_user_id,
+  email,
+  display_name,
+  metadata: { role_slug: "standard" },
 });
 ```
 

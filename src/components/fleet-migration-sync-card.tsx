@@ -46,7 +46,9 @@ export function FleetMigrationSyncCard() {
         if (totalFailed > 0) {
           toast.warning(`Applied ${totalApplied} migrations across fleet, ${totalFailed} failures`);
         } else if (totalApplied > 0) {
-          toast.success(`Applied ${totalApplied} migration(s) across ${result.results.length} clone(s)`);
+          toast.success(
+            `Applied ${totalApplied} migration(s) across ${result.results.length} clone(s)`,
+          );
         } else {
           toast.info("All clone backends are already up to date");
         }
@@ -83,9 +85,7 @@ export function FleetMigrationSyncCard() {
         <CardTitle className="flex items-center gap-2 text-base">
           <Database className="h-4 w-4 text-primary" /> Schema Migration Registry
         </CardTitle>
-        <CardDescription>
-          Track and sync database schema across all clone backends.
-        </CardDescription>
+        <CardDescription>Track and sync database schema across all clone backends.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {registry && (
@@ -96,11 +96,15 @@ export function FleetMigrationSyncCard() {
                 <div className="text-[11px] text-muted-foreground">Total migrations</div>
               </div>
               <div className="rounded-md border p-3 text-center">
-                <div className="text-2xl font-semibold text-primary">{registry.cloneApplicable}</div>
+                <div className="text-2xl font-semibold text-primary">
+                  {registry.cloneApplicable}
+                </div>
                 <div className="text-[11px] text-muted-foreground">Clone-applicable</div>
               </div>
               <div className="rounded-md border p-3 text-center">
-                <div className="font-mono text-sm font-semibold truncate">{registry.latestCloneVersion}</div>
+                <div className="font-mono text-sm font-semibold truncate">
+                  {registry.latestCloneVersion}
+                </div>
                 <div className="text-[11px] text-muted-foreground">Latest version</div>
               </div>
             </div>
@@ -125,7 +129,9 @@ export function FleetMigrationSyncCard() {
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-[10px] text-muted-foreground">{m.id}</span>
                         {m.cloneApplicable && (
-                          <Badge variant="outline" className="text-[9px] px-1 py-0">clone</Badge>
+                          <Badge variant="outline" className="text-[9px] px-1 py-0">
+                            clone
+                          </Badge>
                         )}
                       </div>
                       <p className="text-foreground truncate">{m.description}</p>
@@ -168,7 +174,10 @@ export function FleetMigrationSyncCard() {
                     </Badge>
                   )}
                   {r.failures.length > 0 && (
-                    <Badge variant="outline" className="bg-destructive/10 text-destructive text-[10px]">
+                    <Badge
+                      variant="outline"
+                      className="bg-destructive/10 text-destructive text-[10px]"
+                    >
                       <AlertTriangle className="mr-1 h-3 w-3" /> {r.failures.length} failed
                     </Badge>
                   )}

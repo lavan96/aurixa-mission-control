@@ -15,9 +15,7 @@ export const Route = createFileRoute("/hooks/warm-health")({
 
         const startedAt = Date.now();
         try {
-          const { data: clones } = await supabaseAdmin
-            .from("clones")
-            .select("id");
+          const { data: clones } = await supabaseAdmin.from("clones").select("id");
           const list = clones ?? [];
           // Force a fresh probe for every clone in parallel. getCloneHealth
           // writes the snapshot row at the end; failures are isolated per-clone.
@@ -48,10 +46,10 @@ export const Route = createFileRoute("/hooks/warm-health")({
             entity_type: "cron",
             metadata: { error: msg, durationMs: Date.now() - startedAt },
           });
-          return new Response(
-            JSON.stringify({ success: false, error: msg }),
-            { status: 500, headers: { "Content-Type": "application/json" } },
-          );
+          return new Response(JSON.stringify({ success: false, error: msg }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
         }
       },
     },

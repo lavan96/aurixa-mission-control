@@ -63,7 +63,10 @@ export function MultiSelectComparisonPanel({ nodes, onClose, onRemoveNode }: Pro
       </div>
 
       {/* Column headers */}
-      <div className="grid gap-2" style={{ gridTemplateColumns: `auto repeat(${nodes.length}, 1fr)` }}>
+      <div
+        className="grid gap-2"
+        style={{ gridTemplateColumns: `auto repeat(${nodes.length}, 1fr)` }}
+      >
         {/* Header row */}
         <div />
         {stats.map(({ node }) => (
@@ -96,7 +99,10 @@ export function MultiSelectComparisonPanel({ nodes, onClose, onRemoveNode }: Pro
               const pct = total > 0 ? Math.round((count / total) * 100) : 0;
               return (
                 <div key={`${node.id}-${s.key}`} className="text-center py-0.5">
-                  <span className="font-mono text-[11px] font-semibold tabular-nums" style={{ color: s.color }}>
+                  <span
+                    className="font-mono text-[11px] font-semibold tabular-nums"
+                    style={{ color: s.color }}
+                  >
                     {count}
                   </span>
                   <span className="font-mono text-[8px] text-muted-foreground/60 ml-0.5">
@@ -113,7 +119,10 @@ export function MultiSelectComparisonPanel({ nodes, onClose, onRemoveNode }: Pro
           <span className="font-mono text-[9px] text-muted-foreground font-semibold">Total</span>
         </div>
         {stats.map(({ node, total }) => (
-          <div key={`total-${node.id}`} className="text-center py-0.5 border-t border-border/40 mt-1 pt-1.5">
+          <div
+            key={`total-${node.id}`}
+            className="text-center py-0.5 border-t border-border/40 mt-1 pt-1.5"
+          >
             <span className="font-mono text-[11px] font-semibold tabular-nums">{total}</span>
           </div>
         ))}
@@ -130,7 +139,11 @@ export function MultiSelectComparisonPanel({ nodes, onClose, onRemoveNode }: Pro
                 const pct = total > 0 ? (count / total) * 100 : 0;
                 if (pct === 0) return null;
                 return (
-                  <div key={s.key} className="h-full" style={{ width: `${pct}%`, background: s.color }} />
+                  <div
+                    key={s.key}
+                    className="h-full"
+                    style={{ width: `${pct}%`, background: s.color }}
+                  />
                 );
               })}
             </div>

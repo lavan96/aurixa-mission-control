@@ -1,7 +1,13 @@
 // Audit log detail drawer — gives a structured view of a single audit entry:
 // actor profile, entity link, action, timestamp, and pretty-printed metadata.
 import { useEffect, useState } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
@@ -58,8 +64,7 @@ export function AuditLogDetailDrawer({
               <SheetTitle className="font-mono text-base">{log.action}</SheetTitle>
               <SheetDescription className="flex items-center gap-1.5 font-mono text-[11px]">
                 <Clock className="h-3 w-3" />
-                {formatDistanceToNow(log.created_at)} ·{" "}
-                {new Date(log.created_at).toLocaleString()}
+                {formatDistanceToNow(log.created_at)} · {new Date(log.created_at).toLocaleString()}
               </SheetDescription>
             </SheetHeader>
 
@@ -72,7 +77,11 @@ export function AuditLogDetailDrawer({
                 <div className="mt-1.5 flex items-center gap-2">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
                     {actor?.avatar_url ? (
-                      <img src={actor.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
+                      <img
+                        src={actor.avatar_url}
+                        alt=""
+                        className="h-full w-full rounded-full object-cover"
+                      />
                     ) : (
                       <User className="h-4 w-4 text-muted-foreground" />
                     )}
@@ -164,7 +173,9 @@ export function AuditLogDetailDrawer({
   );
 }
 
-function entityLink(log: AuditLog):
+function entityLink(
+  log: AuditLog,
+):
   | { to: "/cascades/$eventId"; params: { eventId: string } }
   | { to: "/clones/$cloneId"; params: { cloneId: string } }
   | null {

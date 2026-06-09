@@ -39,12 +39,23 @@ import { EmptyState } from "@/components/empty-state";
 import { BulkTagDialog } from "@/components/bulk-tag-dialog";
 import { Tag, Trash2, PauseCircle, RefreshCw } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
-import { bulkDeleteClones, bulkPauseClones, bulkReprovisionBackends } from "@/server/operator-ux.functions";
+import {
+  bulkDeleteClones,
+  bulkPauseClones,
+  bulkReprovisionBackends,
+} from "@/server/operator-ux.functions";
 import { toast } from "sonner";
 import { exportRowsAsCSV } from "@/lib/csv";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
 const dashboardSearchSchema = z.object({
@@ -96,7 +107,6 @@ function Dashboard() {
     return null;
   }, [moduleFilter, modulesByClone]);
 
-
   const openSuggestionsCount = (c: (typeof clones)[number]) => {
     const sugg = (c.drift_suggestions as unknown as Array<{ status?: string }> | null) ?? [];
     return sugg.filter((s) => (s?.status ?? "open") === "open").length;
@@ -112,8 +122,7 @@ function Dashboard() {
         filter === "all" ||
         (filter === "ai" ? openSuggestionsCount(c) > 0 : c.sync_status === filter);
       const matchM =
-        !moduleFilter ||
-        (modulesByClone[c.id]?.some((m) => m.module_id === moduleFilter) ?? false);
+        !moduleFilter || (modulesByClone[c.id]?.some((m) => m.module_id === moduleFilter) ?? false);
       return matchQ && matchF && matchM;
     });
     const sorted = [...list];
@@ -161,7 +170,9 @@ function Dashboard() {
           <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
             fleet overview
           </p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight">Aurixa Systems Mission Control</h1>
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight">
+            Aurixa Systems Mission Control
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {prime ? (
               <>
@@ -244,7 +255,9 @@ function Dashboard() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {k === "ai" ? `ai${stats.ai_clones ? ` (${stats.ai_clones})` : ""}` : k.replace("_", " ")}
+              {k === "ai"
+                ? `ai${stats.ai_clones ? ` (${stats.ai_clones})` : ""}`
+                : k.replace("_", " ")}
             </button>
           ))}
         </div>
@@ -254,7 +267,9 @@ function Dashboard() {
             <SelectValue placeholder="Sort by…" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="name" className="font-mono text-xs">name (a→z)</SelectItem>
+            <SelectItem value="name" className="font-mono text-xs">
+              name (a→z)
+            </SelectItem>
             <SelectItem value="commits_behind" className="font-mono text-xs">
               commits behind (high→low)
             </SelectItem>
@@ -285,9 +300,27 @@ function Dashboard() {
             <Button size="sm" variant="outline" onClick={() => setBulkTagOpen(true)}>
               <Tag className="mr-1.5 h-3.5 w-3.5" /> Edit tags
             </Button>
-            <BulkPauseButton ids={Array.from(selected)} onDone={() => { setSelected(new Set()); refreshClones(); }} />
-            <BulkReprovisionButton ids={Array.from(selected)} onDone={() => { setSelected(new Set()); refreshClones(); }} />
-            <BulkDeleteButton ids={Array.from(selected)} onDone={() => { setSelected(new Set()); refreshClones(); }} />
+            <BulkPauseButton
+              ids={Array.from(selected)}
+              onDone={() => {
+                setSelected(new Set());
+                refreshClones();
+              }}
+            />
+            <BulkReprovisionButton
+              ids={Array.from(selected)}
+              onDone={() => {
+                setSelected(new Set());
+                refreshClones();
+              }}
+            />
+            <BulkDeleteButton
+              ids={Array.from(selected)}
+              onDone={() => {
+                setSelected(new Set());
+                refreshClones();
+              }}
+            />
           </div>
         )}
       </section>
@@ -307,7 +340,10 @@ function Dashboard() {
       ) : (
         <section className="grid gap-3 lg:grid-cols-2">
           {filtered.map((c) => (
-            <Card key={c.id} className="border-border/80 bg-card transition-colors hover:border-primary/40">
+            <Card
+              key={c.id}
+              className="border-border/80 bg-card transition-colors hover:border-primary/40"
+            >
               <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 p-5 pb-3">
                 <div className="flex items-start gap-3">
                   <Checkbox
@@ -384,11 +420,7 @@ function Dashboard() {
                         <button
                           key={m.module_id}
                           onClick={() => setModuleFilter(active ? "" : m.module_id)}
-                          title={
-                            active
-                              ? "Clear filter"
-                              : `Filter fleet by ${m.module_name}`
-                          }
+                          title={active ? "Clear filter" : `Filter fleet by ${m.module_name}`}
                           className={`rounded border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider transition-colors ${
                             active
                               ? "border-primary/60 bg-primary/15 text-primary"
@@ -511,13 +543,20 @@ function BulkPauseButton({ ids, onDone }: { ids: string[]; onDone: () => void })
   const fn = useServerFn(bulkPauseClones);
   const [busy, setBusy] = useState(false);
   return (
-    <Button size="sm" variant="outline" disabled={busy} onClick={async () => {
-      setBusy(true);
-      const r = await fn({ data: { cloneIds: ids, pause: true } });
-      setBusy(false);
-      if (r.ok) { toast.success(`Paused ${r.count} clone${r.count === 1 ? "" : "s"}`); onDone(); }
-      else toast.error("Pause failed");
-    }}>
+    <Button
+      size="sm"
+      variant="outline"
+      disabled={busy}
+      onClick={async () => {
+        setBusy(true);
+        const r = await fn({ data: { cloneIds: ids, pause: true } });
+        setBusy(false);
+        if (r.ok) {
+          toast.success(`Paused ${r.count} clone${r.count === 1 ? "" : "s"}`);
+          onDone();
+        } else toast.error("Pause failed");
+      }}
+    >
       <PauseCircle className="mr-1.5 h-3.5 w-3.5" /> Pause
     </Button>
   );
@@ -527,13 +566,20 @@ function BulkReprovisionButton({ ids, onDone }: { ids: string[]; onDone: () => v
   const fn = useServerFn(bulkReprovisionBackends);
   const [busy, setBusy] = useState(false);
   return (
-    <Button size="sm" variant="outline" disabled={busy} onClick={async () => {
-      setBusy(true);
-      const r = await fn({ data: { cloneIds: ids } });
-      setBusy(false);
-      if (r.ok) { toast.success(`Re-queued ${r.count} backend${r.count === 1 ? "" : "s"}`); onDone(); }
-      else toast.error(r.error ?? "Reprovision failed");
-    }}>
+    <Button
+      size="sm"
+      variant="outline"
+      disabled={busy}
+      onClick={async () => {
+        setBusy(true);
+        const r = await fn({ data: { cloneIds: ids } });
+        setBusy(false);
+        if (r.ok) {
+          toast.success(`Re-queued ${r.count} backend${r.count === 1 ? "" : "s"}`);
+          onDone();
+        } else toast.error(r.error ?? "Reprovision failed");
+      }}
+    >
       <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Reprovision
     </Button>
   );
@@ -551,9 +597,13 @@ function BulkDeleteButton({ ids, onDone }: { ids: string[]; onDone: () => void }
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete {ids.length} clone{ids.length === 1 ? "" : "s"}?</AlertDialogTitle>
+          <AlertDialogTitle>
+            Delete {ids.length} clone{ids.length === 1 ? "" : "s"}?
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            This permanently removes the clone records and all related cascade results, drift policies, and brand assignments. The underlying GitHub repos and backends are NOT affected. This cannot be undone.
+            This permanently removes the clone records and all related cascade results, drift
+            policies, and brand assignments. The underlying GitHub repos and backends are NOT
+            affected. This cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

@@ -6,7 +6,13 @@ import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -64,13 +70,24 @@ const PRESETS_KEY = "aurixa:bulk-cascade-presets";
 function classifyError(err?: string): ErrorTypeFilter {
   if (!err) return "other";
   const lower = err.toLowerCase();
-  if (lower.includes("401") || lower.includes("403") || lower.includes("auth") || lower.includes("permission") || lower.includes("token"))
+  if (
+    lower.includes("401") ||
+    lower.includes("403") ||
+    lower.includes("auth") ||
+    lower.includes("permission") ||
+    lower.includes("token")
+  )
     return "auth";
   if (lower.includes("conflict") || lower.includes("merge") || lower.includes("422"))
     return "conflict";
   if (lower.includes("timeout") || lower.includes("timed out") || lower.includes("deadline"))
     return "timeout";
-  if (lower.includes("network") || lower.includes("fetch") || lower.includes("econnrefused") || lower.includes("dns"))
+  if (
+    lower.includes("network") ||
+    lower.includes("fetch") ||
+    lower.includes("econnrefused") ||
+    lower.includes("dns")
+  )
     return "network";
   return "other";
 }
@@ -147,7 +164,11 @@ export function BulkCascadeCard() {
   const [showSelectAllConfirm, setShowSelectAllConfirm] = useState(false);
 
   // Rollback confirmation
-  const [rollbackTarget, setRollbackTarget] = useState<{ clone_id: string; name: string; previous_sha: string } | null>(null);
+  const [rollbackTarget, setRollbackTarget] = useState<{
+    clone_id: string;
+    name: string;
+    previous_sha: string;
+  } | null>(null);
   const [rollbackConfirmText, setRollbackConfirmText] = useState("");
   const [rollbackReason, setRollbackReason] = useState("");
 
@@ -161,7 +182,9 @@ export function BulkCascadeCard() {
   const [nameFilter, setNameFilter] = useState(saved?.nameFilter ?? "");
   const [statusFilter, setStatusFilter] = useState<SyncFilter>(saved?.statusFilter ?? "all");
   const [timeFilter, setTimeFilter] = useState<TimeFilter>(saved?.timeFilter ?? "all");
-  const [errorTypeFilter, setErrorTypeFilter] = useState<ErrorTypeFilter>(saved?.errorTypeFilter ?? "all");
+  const [errorTypeFilter, setErrorTypeFilter] = useState<ErrorTypeFilter>(
+    saved?.errorTypeFilter ?? "all",
+  );
 
   // Persist filters on change
   useEffect(() => {
@@ -220,7 +243,14 @@ export function BulkCascadeCard() {
 
   // Error type breakdown
   const errorBreakdown = useMemo(() => {
-    const counts: Record<ErrorTypeFilter, number> = { all: 0, auth: 0, conflict: 0, timeout: 0, network: 0, other: 0 };
+    const counts: Record<ErrorTypeFilter, number> = {
+      all: 0,
+      auth: 0,
+      conflict: 0,
+      timeout: 0,
+      network: 0,
+      other: 0,
+    };
     for (const p of failedClones) {
       const t = classifyError(p.error);
       counts[t]++;
@@ -273,7 +303,8 @@ export function BulkCascadeCard() {
 
   const fireBulk = async () => {
     const targets = targetClones;
-    if (targets.length === 0) return toast.error("No clones selected — check your filters or enable 'Select all filtered'");
+    if (targets.length === 0)
+      return toast.error("No clones selected — check your filters or enable 'Select all filtered'");
     setRunning(true);
     setExpanded(true);
 
@@ -403,7 +434,10 @@ export function BulkCascadeCard() {
     try {
       const res = await runCascadeFn({ data: { cascadeEventId: eventId } });
       if (!res.ok) toast.error(res.error);
-      else toast.success(`Retry complete: ${res.counts.succeeded} succeeded, ${res.counts.failed} failed`);
+      else
+        toast.success(
+          `Retry complete: ${res.counts.succeeded} succeeded, ${res.counts.failed} failed`,
+        );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Retry failed");
     }
@@ -455,10 +489,7 @@ export function BulkCascadeCard() {
         reason: rollbackReason.trim(),
       },
     });
-    await supabase
-      .from("clones")
-      .update({ last_synced_sha: previousSha })
-      .eq("id", cloneId);
+    await supabase.from("clones").update({ last_synced_sha: previousSha }).eq("id", cloneId);
     setProgress((prev) =>
       prev.map((p) =>
         p.clone_id === cloneId ? { ...p, status: "skipped", error: "Rolled back" } : p,
@@ -524,8 +555,8 @@ export function BulkCascadeCard() {
                 <Rocket className="h-4 w-4" /> Bulk cascade
               </CardTitle>
               <CardDescription>
-                Push prime codebase upgrades to filtered clones. Track per-clone progress and failures
-                in real time.
+                Push prime codebase upgrades to filtered clones. Track per-clone progress and
+                failures in real time.
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -557,7 +588,11 @@ export function BulkCascadeCard() {
                     ? `${targetClones.length} clones`
                     : `${targetClones.length} of ${clones.length} selected`}
                 </span>
-                <Button onClick={fireBulk} disabled={running || targetClones.length === 0} size="sm">
+                <Button
+                  onClick={fireBulk}
+                  disabled={running || targetClones.length === 0}
+                  size="sm"
+                >
                   {running ? (
                     <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
                   ) : (
@@ -590,7 +625,8 @@ export function BulkCascadeCard() {
                       if (p.dryRun) details.push("dry-run");
                       if (p.statusFilter !== "all") details.push(p.statusFilter);
                       if (p.timeFilter !== "all") details.push(p.timeFilter);
-                      if (p.errorTypeFilter !== "all") details.push(ERROR_TYPE_LABELS[p.errorTypeFilter]);
+                      if (p.errorTypeFilter !== "all")
+                        details.push(ERROR_TYPE_LABELS[p.errorTypeFilter]);
                       if (p.nameFilter) details.push(`"${p.nameFilter}"`);
                       return (
                         <SelectItem key={p.id} value={p.id}>
@@ -632,15 +668,33 @@ export function BulkCascadeCard() {
                     onKeyDown={(e) => e.key === "Enter" && saveCurrentPreset()}
                     autoFocus
                   />
-                  <Button size="sm" variant="default" className="h-8 px-2" onClick={saveCurrentPreset}>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="h-8 px-2"
+                    onClick={saveCurrentPreset}
+                  >
                     <Save className="h-3 w-3" />
                   </Button>
-                  <Button size="sm" variant="ghost" className="h-8 px-2" onClick={() => { setShowPresetSave(false); setNewPresetName(""); }}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 px-2"
+                    onClick={() => {
+                      setShowPresetSave(false);
+                      setNewPresetName("");
+                    }}
+                  >
                     ✕
                   </Button>
                 </div>
               ) : (
-                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setShowPresetSave(true)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs"
+                  onClick={() => setShowPresetSave(true)}
+                >
                   <Save className="mr-1 h-3 w-3" />
                   Save preset
                 </Button>
@@ -666,7 +720,10 @@ export function BulkCascadeCard() {
                 <label className="mb-1 block font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                   Sync status
                 </label>
-                <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as SyncFilter)}>
+                <Select
+                  value={statusFilter}
+                  onValueChange={(v) => setStatusFilter(v as SyncFilter)}
+                >
                   <SelectTrigger className="h-9 text-sm">
                     <SelectValue />
                   </SelectTrigger>
@@ -699,13 +756,20 @@ export function BulkCascadeCard() {
                 <label className="mb-1 block font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                   Error type
                 </label>
-                <Select value={errorTypeFilter} onValueChange={(v) => setErrorTypeFilter(v as ErrorTypeFilter)}>
+                <Select
+                  value={errorTypeFilter}
+                  onValueChange={(v) => setErrorTypeFilter(v as ErrorTypeFilter)}
+                >
                   <SelectTrigger className="h-9 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {(Object.keys(ERROR_TYPE_LABELS) as ErrorTypeFilter[]).map((k) => (
-                      <SelectItem key={k} value={k} disabled={k !== "all" && errorBreakdown[k] === 0}>
+                      <SelectItem
+                        key={k}
+                        value={k}
+                        disabled={k !== "all" && errorBreakdown[k] === 0}
+                      >
                         {ERROR_TYPE_LABELS[k]}
                         {k !== "all" && errorBreakdown[k] > 0 && (
                           <span className="ml-1 text-muted-foreground">({errorBreakdown[k]})</span>
@@ -766,7 +830,8 @@ export function BulkCascadeCard() {
                   <div className="flex items-center gap-2 rounded-md border border-warning/40 bg-warning/5 px-2.5 py-1.5 animate-in fade-in slide-in-from-left-2">
                     <AlertTriangle className="h-3.5 w-3.5 text-warning shrink-0" />
                     <span className="font-mono text-[10px] text-warning">
-                      Include <strong>{filteredClones.length}</strong> clone{filteredClones.length !== 1 ? "s" : ""} in cascade?
+                      Include <strong>{filteredClones.length}</strong> clone
+                      {filteredClones.length !== 1 ? "s" : ""} in cascade?
                     </span>
                     <Button
                       size="sm"
@@ -819,8 +884,8 @@ export function BulkCascadeCard() {
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mb-2">
-                These {progress.length} clones would be updated. Disable dry-run and click Cascade to
-                execute.
+                These {progress.length} clones would be updated. Disable dry-run and click Cascade
+                to execute.
               </p>
               <ul className="space-y-1">
                 {progress.map((p) => (
@@ -853,7 +918,13 @@ export function BulkCascadeCard() {
                     </span>
                   )}
                   {eventId && (
-                    <CopyButton value={eventId} label="cascade event id" size="xs" showValue truncate={10} />
+                    <CopyButton
+                      value={eventId}
+                      label="cascade event id"
+                      size="xs"
+                      showValue
+                      truncate={10}
+                    />
                   )}
                 </div>
                 <div className="flex items-center gap-3 font-mono text-[11px]">
@@ -916,7 +987,10 @@ export function BulkCascadeCard() {
                             {p.error}
                           </div>
                           {p.status === "failed" && (
-                            <Badge variant="outline" className="text-[8px] uppercase shrink-0 border-destructive/30 text-destructive">
+                            <Badge
+                              variant="outline"
+                              className="text-[8px] uppercase shrink-0 border-destructive/30 text-destructive"
+                            >
                               {classifyError(p.error)}
                             </Badge>
                           )}
@@ -995,8 +1069,12 @@ export function BulkCascadeCard() {
             <AlertDialogDescription asChild>
               <div className="space-y-3">
                 <p>
-                  This will revert <strong className="text-foreground">{rollbackTarget?.name}</strong> to
-                  SHA <code className="rounded bg-muted px-1 py-0.5 text-[11px]">{rollbackTarget?.previous_sha?.slice(0, 12)}</code>.
+                  This will revert{" "}
+                  <strong className="text-foreground">{rollbackTarget?.name}</strong> to SHA{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 text-[11px]">
+                    {rollbackTarget?.previous_sha?.slice(0, 12)}
+                  </code>
+                  .
                 </p>
                 <div>
                   <label className="mb-1 block font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -1013,13 +1091,16 @@ export function BulkCascadeCard() {
                     }}
                     className={cn(
                       "text-sm min-h-[60px]",
-                      rollbackReason.trim().length > 0 && rollbackReason.trim().length < 10 && "border-destructive focus-visible:ring-destructive",
+                      rollbackReason.trim().length > 0 &&
+                        rollbackReason.trim().length < 10 &&
+                        "border-destructive focus-visible:ring-destructive",
                     )}
                     rows={2}
                   />
                   {rollbackReason.trim().length > 0 && rollbackReason.trim().length < 10 && (
                     <p className="mt-1 font-mono text-[10px] text-destructive">
-                      Reason must be at least 10 characters ({10 - rollbackReason.trim().length} more needed)
+                      Reason must be at least 10 characters ({10 - rollbackReason.trim().length}{" "}
+                      more needed)
                     </p>
                   )}
                 </div>

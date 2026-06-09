@@ -14,11 +14,7 @@ import {
   Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -132,10 +128,7 @@ export function NotificationsBell() {
 
   const markOneRead = async (id: string) => {
     if (items.find((n) => n.id === id)?.read_at) return;
-    await supabase
-      .from("notifications")
-      .update({ read_at: new Date().toISOString() })
-      .eq("id", id);
+    await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", id);
   };
 
   if (!session) return null;
@@ -157,11 +150,7 @@ export function NotificationsBell() {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        sideOffset={8}
-        className="w-[360px] p-0"
-      >
+      <PopoverContent align="end" sideOffset={8} className="w-[360px] p-0">
         <div className="flex items-center justify-between border-b border-border px-3 py-2">
           <div className="flex items-center gap-2">
             <Inbox className="h-3.5 w-3.5 text-muted-foreground" />
@@ -249,11 +238,7 @@ export function NotificationsBell() {
                 if (n.url) {
                   return (
                     <li key={n.id}>
-                      <Link
-                        to={n.url}
-                        onClick={handleClick}
-                        className="block"
-                      >
+                      <Link to={n.url} onClick={handleClick} className="block">
                         {inner}
                       </Link>
                     </li>
@@ -261,11 +246,7 @@ export function NotificationsBell() {
                 }
                 return (
                   <li key={n.id}>
-                    <button
-                      type="button"
-                      onClick={handleClick}
-                      className="block w-full text-left"
-                    >
+                    <button type="button" onClick={handleClick} className="block w-full text-left">
                       {inner}
                     </button>
                   </li>

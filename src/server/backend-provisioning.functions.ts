@@ -24,7 +24,7 @@ export const provisionBackend = createServerFn({ method: "POST" })
         throw new Error("adminPassword must be at least 8 characters");
       }
       return input;
-    }
+    },
   )
   .handler(async ({ data, context }): Promise<{ ok: true } | { ok: false; error: string }> => {
     const { supabase, userId } = context;
@@ -64,19 +64,17 @@ export const provisionBackend = createServerFn({ method: "POST" })
     }
 
     // Upsert a pending row
-    const { error: upsertErr } = await supabase
-      .from("clone_backends")
-      .upsert(
-        {
-          clone_id: data.cloneId,
-          status: "pending" as const,
-          region: data.region || "us-east-1",
-          admin_email: data.adminEmail,
-          error_message: null,
-          status_detail: "Queued for provisioning",
-        },
-        { onConflict: "clone_id" }
-      );
+    const { error: upsertErr } = await supabase.from("clone_backends").upsert(
+      {
+        clone_id: data.cloneId,
+        status: "pending" as const,
+        region: data.region || "us-east-1",
+        admin_email: data.adminEmail,
+        error_message: null,
+        status_detail: "Queued for provisioning",
+      },
+      { onConflict: "clone_id" },
+    );
 
     if (upsertErr) {
       return { ok: false, error: upsertErr.message };
@@ -101,7 +99,7 @@ export const provisionBackend = createServerFn({ method: "POST" })
           adminEmail: data.adminEmail,
           adminPassword: data.adminPassword,
         },
-        updateStatus
+        updateStatus,
       );
 
       // Store credentials and mark ready
@@ -187,20 +185,14 @@ export const getCloneBackendStatus = createServerFn({ method: "POST" })
  */
 export const retryBackendProvisioning = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
-    (input: {
-      cloneId: string;
-      adminEmail: string;
-      adminPassword: string;
-    }) => {
-      if (!input?.cloneId?.trim()) throw new Error("cloneId is required");
-      if (!input?.adminEmail?.trim()) throw new Error("adminEmail is required");
-      if (!input?.adminPassword || input.adminPassword.length < 8) {
-        throw new Error("adminPassword must be at least 8 characters");
-      }
-      return input;
+  .inputValidator((input: { cloneId: string; adminEmail: string; adminPassword: string }) => {
+    if (!input?.cloneId?.trim()) throw new Error("cloneId is required");
+    if (!input?.adminEmail?.trim()) throw new Error("adminEmail is required");
+    if (!input?.adminPassword || input.adminPassword.length < 8) {
+      throw new Error("adminPassword must be at least 8 characters");
     }
-  )
+    return input;
+  })
   .handler(async ({ data, context }): Promise<{ ok: true } | { ok: false; error: string }> => {
     const { supabase } = context;
 
@@ -246,7 +238,7 @@ export const retryBackendProvisioning = createServerFn({ method: "POST" })
           adminEmail: data.adminEmail,
           adminPassword: data.adminPassword,
         },
-        updateStatus
+        updateStatus,
       );
 
       await supabase

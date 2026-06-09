@@ -122,11 +122,7 @@ export function usePrimeConfig() {
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const { data, error } = await supabase
-      .from("prime_config")
-      .select("*")
-      .limit(1)
-      .maybeSingle();
+    const { data, error } = await supabase.from("prime_config").select("*").limit(1).maybeSingle();
     if (error) {
       console.error("usePrimeConfig load failed:", error);
       setError(error.message);

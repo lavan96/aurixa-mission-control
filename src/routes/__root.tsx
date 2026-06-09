@@ -39,13 +39,30 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Aurixa Systems - Mission Control" },
-      { name: "description", content: "Operate a fleet of cloned codebases with cascade-driven updates." },
+      {
+        name: "description",
+        content: "Operate a fleet of cloned codebases with cascade-driven updates.",
+      },
       { property: "og:title", content: "Aurixa Systems - Mission Control" },
       { name: "twitter:title", content: "Aurixa Systems - Mission Control" },
-      { property: "og:description", content: "Operate a fleet of cloned codebases with cascade-driven updates." },
-      { name: "twitter:description", content: "Operate a fleet of cloned codebases with cascade-driven updates." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/b0e1b502-dd5b-4d05-9849-da602a137a42/id-preview-090a6f95--0fb4d803-5071-4093-be25-5afbcf116476.lovable.app-1776642305633.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/b0e1b502-dd5b-4d05-9849-da602a137a42/id-preview-090a6f95--0fb4d803-5071-4093-be25-5afbcf116476.lovable.app-1776642305633.png" },
+      {
+        property: "og:description",
+        content: "Operate a fleet of cloned codebases with cascade-driven updates.",
+      },
+      {
+        name: "twitter:description",
+        content: "Operate a fleet of cloned codebases with cascade-driven updates.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/b0e1b502-dd5b-4d05-9849-da602a137a42/id-preview-090a6f95--0fb4d803-5071-4093-be25-5afbcf116476.lovable.app-1776642305633.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/b0e1b502-dd5b-4d05-9849-da602a137a42/id-preview-090a6f95--0fb4d803-5071-4093-be25-5afbcf116476.lovable.app-1776642305633.png",
+      },
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
     ],
@@ -53,7 +70,10 @@ export const Route = createRootRoute({
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap",
+      },
     ],
   }),
   shellComponent: RootShell,

@@ -89,8 +89,10 @@ export async function registerAssetVariants(
     const variants = variantsForAsset(asset);
     for (const spec of variants) {
       const variantPath = `${asset.source_path}__${spec.kind}`;
-      const url = buildTransformUrl(args.storageBaseUrl, bucket, asset.source_path, spec) +
-        (variantPath.includes("?") ? "&" : "?") + `v=${cacheBust}`;
+      const url =
+        buildTransformUrl(args.storageBaseUrl, bucket, asset.source_path, spec) +
+        (variantPath.includes("?") ? "&" : "?") +
+        `v=${cacheBust}`;
       rows.push({
         profile_id: args.profileId,
         source_path: asset.source_path,
@@ -119,12 +121,6 @@ export async function registerAssetVariants(
  * Delete all variants for a profile (used on profile delete cascade or
  * when assets are entirely re-uploaded).
  */
-export async function clearAssetVariants(
-  supabase: SupabaseLike,
-  profileId: string,
-): Promise<void> {
-  await supabase
-    .from("clone_brand_asset_variants")
-    .delete()
-    .eq("profile_id", profileId);
+export async function clearAssetVariants(supabase: SupabaseLike, profileId: string): Promise<void> {
+  await supabase.from("clone_brand_asset_variants").delete().eq("profile_id", profileId);
 }

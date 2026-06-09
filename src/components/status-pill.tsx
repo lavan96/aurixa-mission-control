@@ -15,7 +15,10 @@ const META: Record<SyncStatus, { label: string; cls: string }> = {
 export function StatusPill({ status, behind }: { status: SyncStatus; behind?: number }) {
   const m = META[status];
   return (
-    <Badge variant="outline" className={cn("font-mono text-[10px] uppercase tracking-wider", m.cls)}>
+    <Badge
+      variant="outline"
+      className={cn("font-mono text-[10px] uppercase tracking-wider", m.cls)}
+    >
       <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-current" />
       {m.label}
       {status === "behind" && behind ? ` · ${behind}` : ""}

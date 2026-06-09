@@ -10,7 +10,10 @@ export type RateLimitResult =
  * Increment + check the per-key per-minute rate limit. Backed by
  * `public.check_api_rate_limit` so two replicas share state.
  */
-export async function checkRateLimit(keyId: string, limit = DEFAULT_LIMIT): Promise<RateLimitResult> {
+export async function checkRateLimit(
+  keyId: string,
+  limit = DEFAULT_LIMIT,
+): Promise<RateLimitResult> {
   const { data, error } = await supabaseAdmin.rpc("check_api_rate_limit", {
     _key_id: keyId,
     _limit: limit,

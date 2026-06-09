@@ -10,8 +10,7 @@ import { executeCascade } from "@/server/cascade-engine.server";
 
 function verifySignature(secret: string, payload: string, signature: string | null): boolean {
   if (!signature) return false;
-  const expected =
-    "sha256=" + crypto.createHmac("sha256", secret).update(payload).digest("hex");
+  const expected = "sha256=" + crypto.createHmac("sha256", secret).update(payload).digest("hex");
   // timing-safe compare
   const a = Buffer.from(expected);
   const b = Buffer.from(signature);
@@ -25,19 +24,19 @@ export const Route = createFileRoute("/hooks/github")({
       POST: async ({ request }) => {
         const secret = process.env.GITHUB_WEBHOOK_SECRET;
         if (!secret) {
-          return new Response(
-            JSON.stringify({ error: "Webhook secret not configured" }),
-            { status: 500, headers: { "Content-Type": "application/json" } },
-          );
+          return new Response(JSON.stringify({ error: "Webhook secret not configured" }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
         }
 
         const rawBody = await request.text();
         const signature = request.headers.get("x-hub-signature-256");
         if (!verifySignature(secret, rawBody, signature)) {
-          return new Response(
-            JSON.stringify({ error: "Invalid signature" }),
-            { status: 401, headers: { "Content-Type": "application/json" } },
-          );
+          return new Response(JSON.stringify({ error: "Invalid signature" }), {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
+          });
         }
 
         const eventType = request.headers.get("x-github-event");
@@ -45,10 +44,9 @@ export const Route = createFileRoute("/hooks/github")({
 
         // Respond fast to ping
         if (eventType === "ping") {
-          return new Response(
-            JSON.stringify({ pong: true, delivery: deliveryId }),
-            { headers: { "Content-Type": "application/json" } },
-          );
+          return new Response(JSON.stringify({ pong: true, delivery: deliveryId }), {
+            headers: { "Content-Type": "application/json" },
+          });
         }
 
         if (eventType !== "push") {
@@ -69,14 +67,13 @@ export const Route = createFileRoute("/hooks/github")({
         try {
           payload = JSON.parse(rawBody) as PushPayload;
         } catch {
-          return new Response(
-            JSON.stringify({ error: "Invalid JSON" }),
-            { status: 400, headers: { "Content-Type": "application/json" } },
-          );
+          return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          });
         }
 
-        const repoOwner =
-          payload.repository?.owner?.login ?? payload.repository?.owner?.name ?? "";
+        const repoOwner = payload.repository?.owner?.login ?? payload.repository?.owner?.name ?? "";
         const repoName = payload.repository?.name ?? "";
         const ref = payload.ref ?? "";
         const sourceSha = payload.after ?? null;
@@ -88,10 +85,9 @@ export const Route = createFileRoute("/hooks/github")({
           .limit(1)
           .maybeSingle();
         if (!prime) {
-          return new Response(
-            JSON.stringify({ skipped: true, reason: "Prime not configured" }),
-            { headers: { "Content-Type": "application/json" } },
-          );
+          return new Response(JSON.stringify({ skipped: true, reason: "Prime not configured" }), {
+            headers: { "Content-Type": "application/json" },
+          });
         }
 
         const isPrimeRepo =
@@ -128,10 +124,9 @@ export const Route = createFileRoute("/hooks/github")({
             entity_type: "cascade_event",
             metadata: { delivery: deliveryId, reason: error ?? "no event" },
           });
-          return new Response(
-            JSON.stringify({ skipped: true, reason: error ?? "no clones" }),
-            { headers: { "Content-Type": "application/json" } },
-          );
+          return new Response(JSON.stringify({ skipped: true, reason: error ?? "no clones" }), {
+            headers: { "Content-Type": "application/json" },
+          });
         }
 
         await supabaseAdmin.from("audit_log").insert({

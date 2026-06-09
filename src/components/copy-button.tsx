@@ -39,11 +39,7 @@ export function CopyButton({
   };
 
   const display =
-    showValue && value
-      ? value.length > truncate
-        ? `${value.slice(0, truncate)}…`
-        : value
-      : null;
+    showValue && value ? (value.length > truncate ? `${value.slice(0, truncate)}…` : value) : null;
 
   if (size === "icon") {
     return (

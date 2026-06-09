@@ -86,7 +86,7 @@ export function YggdrasilTree({
   const layout = useTreeLayout(clones, dimensions.width, dimensions.height);
 
   const selectedNode = selectedNodeId
-    ? layout.nodes.find((n) => n.id === selectedNodeId) ?? null
+    ? (layout.nodes.find((n) => n.id === selectedNodeId) ?? null)
     : null;
 
   const multiSelectedNodes = layout.nodes.filter((n) => multiSelectedSet.has(n.id));
@@ -95,63 +95,69 @@ export function YggdrasilTree({
     onLayoutReady?.(layout.nodes, dimensions);
   }, [layout.nodes, dimensions, onLayoutReady]);
 
-  const handleNodeSelect = useCallback((n: TreeNode, event: React.MouseEvent) => {
-    const isTrunk = n.id === "__trunk__";
-    if (isTrunk) {
-      onNodeSelect?.(null);
-      onMultiSelectChange?.([]);
-      shiftAnchorRef.current = null;
-      return;
-    }
+  const handleNodeSelect = useCallback(
+    (n: TreeNode, event: React.MouseEvent) => {
+      const isTrunk = n.id === "__trunk__";
+      if (isTrunk) {
+        onNodeSelect?.(null);
+        onMultiSelectChange?.([]);
+        shiftAnchorRef.current = null;
+        return;
+      }
 
-    if (event.shiftKey) {
-      // Range selection: select all siblings between anchor and this node
-      const anchor = shiftAnchorRef.current;
-      if (anchor) {
-        const anchorNode = layout.nodes.find((nd) => nd.id === anchor);
-        if (anchorNode) {
-          const rangeIds = getSiblingRange(anchorNode, n, layout.nodes);
-          // Merge with existing selection (union)
-          const merged = new Set(multiSelectedIds);
-          for (const id of rangeIds) merged.add(id);
-          onMultiSelectChange?.([...merged]);
-          return;
+      if (event.shiftKey) {
+        // Range selection: select all siblings between anchor and this node
+        const anchor = shiftAnchorRef.current;
+        if (anchor) {
+          const anchorNode = layout.nodes.find((nd) => nd.id === anchor);
+          if (anchorNode) {
+            const rangeIds = getSiblingRange(anchorNode, n, layout.nodes);
+            // Merge with existing selection (union)
+            const merged = new Set(multiSelectedIds);
+            for (const id of rangeIds) merged.add(id);
+            onMultiSelectChange?.([...merged]);
+            return;
+          }
         }
+        // No anchor yet — start multi-select with this node as anchor
+        shiftAnchorRef.current = n.id;
+        const merged = new Set(multiSelectedIds);
+        if (merged.has(n.id)) {
+          merged.delete(n.id);
+        } else {
+          merged.add(n.id);
+        }
+        onMultiSelectChange?.([...merged]);
+        return;
       }
-      // No anchor yet — start multi-select with this node as anchor
-      shiftAnchorRef.current = n.id;
-      const merged = new Set(multiSelectedIds);
-      if (merged.has(n.id)) {
-        merged.delete(n.id);
-      } else {
-        merged.add(n.id);
+
+      if (event.ctrlKey || event.metaKey) {
+        // Toggle single node in multi-select
+        shiftAnchorRef.current = n.id;
+        const merged = new Set(multiSelectedIds);
+        if (merged.has(n.id)) {
+          merged.delete(n.id);
+        } else {
+          merged.add(n.id);
+        }
+        onMultiSelectChange?.([...merged]);
+        return;
       }
-      onMultiSelectChange?.([...merged]);
-      return;
-    }
 
-    if (event.ctrlKey || event.metaKey) {
-      // Toggle single node in multi-select
-      shiftAnchorRef.current = n.id;
-      const merged = new Set(multiSelectedIds);
-      if (merged.has(n.id)) {
-        merged.delete(n.id);
-      } else {
-        merged.add(n.id);
-      }
-      onMultiSelectChange?.([...merged]);
-      return;
-    }
+      // Normal click — single select, clear multi-select
+      shiftAnchorRef.current = null;
+      onMultiSelectChange?.([]);
+      onNodeSelect?.(n);
+    },
+    [onNodeSelect, onMultiSelectChange, multiSelectedIds, layout.nodes],
+  );
 
-    // Normal click — single select, clear multi-select
-    shiftAnchorRef.current = null;
-    onMultiSelectChange?.([]);
-    onNodeSelect?.(n);
-  }, [onNodeSelect, onMultiSelectChange, multiSelectedIds, layout.nodes]);
-
-  const handleRemoveFromMultiSelect = useCallback((id: string) => {
-    onMultiSelectChange?.(multiSelectedIds.filter((x) => x !== id));
-  }, [onMultiSelectChange, multiSelectedIds]);
+  const handleRemoveFromMultiSelect = useCallback(
+    (id: string) => {
+      onMultiSelectChange?.(multiSelectedIds.filter((x) => x !== id));
+    },
+    [onMultiSelectChange, multiSelectedIds],
+  );
 
   const handleCloseComparison = useCallback(() => {
     onMultiSelectChange?.([]);
@@ -180,12 +186,9 @@ export function YggdrasilTree({
   );
   const onPointerUp = useCallback(() => setDragging(false), []);
 
-  const onWheel = useCallback(
-    (e: React.WheelEvent) => {
-      e.stopPropagation();
-    },
-    [],
-  );
+  const onWheel = useCallback((e: React.WheelEvent) => {
+    e.stopPropagation();
+  }, []);
 
   const showSinglePanel = selectedNode && multiSelectedIds.length === 0;
   const showComparisonPanel = multiSelectedNodes.length >= 2;
@@ -320,8 +323,12 @@ export function YggdrasilTree({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 2, duration: 0.8 }}
           >
-            <p className="font-mono text-lg text-muted-foreground">The tree awaits its first roots.</p>
-            <p className="mt-2 font-mono text-xs text-muted-foreground/60">Add clones to watch Yggdrasil grow.</p>
+            <p className="font-mono text-lg text-muted-foreground">
+              The tree awaits its first roots.
+            </p>
+            <p className="mt-2 font-mono text-xs text-muted-foreground/60">
+              Add clones to watch Yggdrasil grow.
+            </p>
           </motion.div>
         </div>
       )}

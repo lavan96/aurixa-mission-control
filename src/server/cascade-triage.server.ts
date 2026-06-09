@@ -38,7 +38,9 @@ export async function triageCascadeFailures(
       .maybeSingle(),
     supabase
       .from("cascade_results")
-      .select("id, status, error_message, diff_summary, files_changed, clone:clones(id, name, github_owner, github_repo)")
+      .select(
+        "id, status, error_message, diff_summary, files_changed, clone:clones(id, name, github_owner, github_repo)",
+      )
       .eq("cascade_event_id", cascadeEventId)
       .eq("status", "failed")
       .limit(MAX_FAILURES),
@@ -50,7 +52,9 @@ export async function triageCascadeFailures(
 
   const failuresPayload = results
     .map((r) => {
-      const clone = (r as { clone: { name: string; github_owner: string; github_repo: string } | null }).clone;
+      const clone = (
+        r as { clone: { name: string; github_owner: string; github_repo: string } | null }
+      ).clone;
       return {
         result_id: r.id,
         clone: clone ? `${clone.name} (${clone.github_owner}/${clone.github_repo})` : "unknown",
@@ -97,7 +101,16 @@ export async function triageCascadeFailures(
                 steps: { type: "array", items: { type: "string" } },
                 rationale: { type: "string" },
               },
-              required: ["clone_id", "result_id", "clone_name", "category", "risk", "title", "steps", "rationale"],
+              required: [
+                "clone_id",
+                "result_id",
+                "clone_name",
+                "category",
+                "risk",
+                "title",
+                "steps",
+                "rationale",
+              ],
               additionalProperties: false,
             },
           },
@@ -126,9 +139,13 @@ export async function triageCascadeFailures(
   });
 
   if (!aiRes.ok) {
-    if (aiRes.status === 429) return { ok: false, error: "AI rate limit reached — try again in a minute." };
+    if (aiRes.status === 429)
+      return { ok: false, error: "AI rate limit reached — try again in a minute." };
     if (aiRes.status === 402) {
-      return { ok: false, error: "Lovable AI credits exhausted — top up under Settings → Workspace → Usage." };
+      return {
+        ok: false,
+        error: "Lovable AI credits exhausted — top up under Settings → Workspace → Usage.",
+      };
     }
     const txt = await aiRes.text();
     return { ok: false, error: `AI error ${aiRes.status}: ${txt.slice(0, 200)}` };
@@ -142,11 +159,15 @@ export async function triageCascadeFailures(
   const argStr = json.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
   if (!argStr) return { ok: false, error: "AI returned no triage" };
 
-  let parsed: { proposals?: Array<Omit<TriageProposal, "cloneName" | "cloneId" | "resultId"> & {
-    clone_id: string;
-    result_id: string;
-    clone_name: string;
-  }> };
+  let parsed: {
+    proposals?: Array<
+      Omit<TriageProposal, "cloneName" | "cloneId" | "resultId"> & {
+        clone_id: string;
+        result_id: string;
+        clone_name: string;
+      }
+    >;
+  };
   try {
     parsed = JSON.parse(argStr);
   } catch {

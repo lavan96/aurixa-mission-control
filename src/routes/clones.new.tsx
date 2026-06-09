@@ -110,11 +110,14 @@ function NewClone() {
       toast.error("Admin password must be at least 8 characters");
       return;
     }
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const slug = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
     const targetOwner =
       ownerMode === "transfer"
         ? transferTarget.trim()
-        : (prime?.default_clone_org?.trim() || prime?.github_owner?.trim() || "");
+        : prime?.default_clone_org?.trim() || prime?.github_owner?.trim() || "";
 
     if ((method === "fork" || method === "template") && !targetOwner) {
       toast.error(
@@ -133,7 +136,10 @@ function NewClone() {
           slug: `${slug}-${Math.random().toString(36).slice(2, 6)}`,
           method,
           targetOwner: targetOwner || "manual",
-          tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
+          tags: tags
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean),
           cloudflareEnabled: cloudflare,
           notes,
           moduleIds: Array.from(picked),
@@ -163,15 +169,17 @@ function NewClone() {
             adminEmail,
             adminPassword,
           },
-        }).then((backendResult) => {
-          if ("ok" in backendResult && backendResult.ok) {
-            toast.success("Dedicated backend is ready!");
-          } else if ("error" in backendResult) {
-            toast.error(`Backend provisioning failed: ${backendResult.error}`);
-          }
-        }).catch(() => {
-          toast.error("Backend provisioning encountered an error");
-        });
+        })
+          .then((backendResult) => {
+            if ("ok" in backendResult && backendResult.ok) {
+              toast.success("Dedicated backend is ready!");
+            } else if ("error" in backendResult) {
+              toast.error(`Backend provisioning failed: ${backendResult.error}`);
+            }
+          })
+          .catch(() => {
+            toast.error("Backend provisioning encountered an error");
+          });
       }
 
       setBusy(false);
@@ -205,7 +213,11 @@ function NewClone() {
           </div>
           <div className="space-y-2">
             <Label>Tags (comma-separated)</Label>
-            <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="client, eu-west, prod" />
+            <Input
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              placeholder="client, eu-west, prod"
+            />
           </div>
         </CardContent>
       </Card>
@@ -237,7 +249,9 @@ function NewClone() {
                   </Badge>
                 )}
                 <div className="flex items-center justify-between">
-                  <Icon className={cn("h-5 w-5", active ? "text-primary" : "text-muted-foreground")} />
+                  <Icon
+                    className={cn("h-5 w-5", active ? "text-primary" : "text-muted-foreground")}
+                  />
                   {active && <Check className="h-4 w-4 text-primary" />}
                 </div>
                 <div className="mt-3 font-mono font-semibold">{m.title}</div>
@@ -255,13 +269,17 @@ function NewClone() {
                       <div>
                         <div className="font-mono uppercase text-success">pros</div>
                         <ul className="mt-1 list-disc pl-4">
-                          {m.pros.map((p) => <li key={p}>{p}</li>)}
+                          {m.pros.map((p) => (
+                            <li key={p}>{p}</li>
+                          ))}
                         </ul>
                       </div>
                       <div>
                         <div className="font-mono uppercase text-warning">cons</div>
                         <ul className="mt-1 list-disc pl-4">
-                          {m.cons.map((p) => <li key={p}>{p}</li>)}
+                          {m.cons.map((p) => (
+                            <li key={p}>{p}</li>
+                          ))}
                         </ul>
                       </div>
                     </div>
@@ -336,14 +354,22 @@ function NewClone() {
                     key={m.id}
                     className={cn(
                       "flex cursor-pointer items-start gap-3 rounded-md border p-3 transition-colors",
-                      active ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
+                      active
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/40",
                     )}
                   >
-                    <Checkbox checked={active} onCheckedChange={() => togglePick(m.id)} className="mt-0.5" />
+                    <Checkbox
+                      checked={active}
+                      onCheckedChange={() => togglePick(m.id)}
+                      className="mt-0.5"
+                    />
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-sm font-semibold">{m.name}</span>
-                        <Badge variant="outline" className="text-[10px]">{m.status}</Badge>
+                        <Badge variant="outline" className="text-[10px]">
+                          {m.status}
+                        </Badge>
                       </div>
                       {m.description && (
                         <div className="mt-1 text-xs text-muted-foreground">{m.description}</div>
@@ -363,13 +389,16 @@ function NewClone() {
             <Database className="h-4 w-4 text-primary" /> 5 · Dedicated backend
           </CardTitle>
           <CardDescription>
-            Provision an isolated database and auth system for this clone. The admin user
-            will be auto-created with full access.
+            Provision an isolated database and auth system for this clone. The admin user will be
+            auto-created with full access.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <label className="flex cursor-pointer items-center gap-3">
-            <Checkbox checked={dedicatedBackend} onCheckedChange={(v) => setDedicatedBackend(!!v)} />
+            <Checkbox
+              checked={dedicatedBackend}
+              onCheckedChange={(v) => setDedicatedBackend(!!v)}
+            />
             <span className="text-sm">Provision a dedicated backend for this clone</span>
           </label>
           {dedicatedBackend && (

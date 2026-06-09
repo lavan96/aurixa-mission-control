@@ -60,9 +60,7 @@ export type ApiKey = {
 /**
  * Create a new Supabase project under the configured organization.
  */
-export async function createSupabaseProject(
-  input: CreateProjectInput
-): Promise<SupabaseProject> {
+export async function createSupabaseProject(input: CreateProjectInput): Promise<SupabaseProject> {
   const res = await fetch(`${MGMT_API}/projects`, {
     method: "POST",
     headers: headers(),
@@ -89,7 +87,7 @@ export async function createSupabaseProject(
 export async function waitForProjectReady(
   projectRef: string,
   maxWaitMs = 120_000,
-  pollIntervalMs = 5_000
+  pollIntervalMs = 5_000,
 ): Promise<SupabaseProject> {
   const deadline = Date.now() + maxWaitMs;
 
@@ -137,10 +135,7 @@ export function getProjectUrl(projectRef: string): string {
 /**
  * Run a SQL query against a project's database via the Management API.
  */
-export async function runSqlOnProject(
-  projectRef: string,
-  sql: string
-): Promise<unknown> {
+export async function runSqlOnProject(projectRef: string, sql: string): Promise<unknown> {
   const res = await fetch(`${MGMT_API}/projects/${projectRef}/database/query`, {
     method: "POST",
     headers: headers(),
@@ -415,7 +410,7 @@ export async function seedAdminUser(
   serviceRoleKey: string,
   projectUrl: string,
   adminEmail: string,
-  adminPassword: string
+  adminPassword: string,
 ): Promise<{ userId: string }> {
   // Create user via Supabase Auth Admin API (using service role key)
   const createRes = await fetch(`${projectUrl}/auth/v1/admin/users`, {
@@ -444,7 +439,7 @@ export async function seedAdminUser(
   // Insert super_admin role via SQL (system-seeded, assigned_by = NULL)
   await runSqlOnProject(
     projectRef,
-    `INSERT INTO public.user_roles (user_id, role) VALUES ('${userId}', 'super_admin') ON CONFLICT DO NOTHING;`
+    `INSERT INTO public.user_roles (user_id, role) VALUES ('${userId}', 'super_admin') ON CONFLICT DO NOTHING;`,
   );
 
   return { userId };
@@ -473,7 +468,7 @@ export type ProvisionBackendResult = {
  */
 export async function provisionCloneBackend(
   input: ProvisionBackendInput,
-  onStatusUpdate?: (status: string, detail: string) => Promise<void>
+  onStatusUpdate?: (status: string, detail: string) => Promise<void>,
 ): Promise<ProvisionBackendResult> {
   const dbPass = generateSecurePassword();
 
@@ -508,11 +503,14 @@ export async function provisionCloneBackend(
 
   // Step 4b: Apply clone-applicable migrations from registry
   await onStatusUpdate?.("migrating", "Applying clone-applicable migrations...");
-  const { applyPendingMigrations, getLatestCloneMigrationId } = await import("./migration-replication.server");
+  const { applyPendingMigrations, getLatestCloneMigrationId } =
+    await import("./migration-replication.server");
   const { results: migResults } = await applyPendingMigrations(project.id, null);
   const migFailures = migResults.filter((r) => !r.success);
   if (migFailures.length > 0) {
-    console.warn(`Migration warnings during provisioning: ${migFailures.map((f) => f.migrationId).join(", ")}`);
+    console.warn(
+      `Migration warnings during provisioning: ${migFailures.map((f) => f.migrationId).join(", ")}`,
+    );
   }
 
   // Step 5: Seed admin
@@ -522,7 +520,7 @@ export async function provisionCloneBackend(
     serviceRoleKey,
     projectUrl,
     input.adminEmail,
-    input.adminPassword
+    input.adminPassword,
   );
 
   return {

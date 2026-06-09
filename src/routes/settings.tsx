@@ -35,9 +35,7 @@ function SettingsLayout() {
 
       <nav className="flex gap-1 overflow-x-auto rounded-md border border-border bg-surface p-1">
         {TABS.map((t) => {
-          const active = t.exact
-            ? loc.pathname === t.to
-            : loc.pathname.startsWith(t.to);
+          const active = t.exact ? loc.pathname === t.to : loc.pathname.startsWith(t.to);
           const Icon = t.icon;
           return (
             <Link

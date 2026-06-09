@@ -73,12 +73,12 @@ export function SubtreeStatsPanel({ node, zoom, pan, dimensions }: Props) {
           const pct = stats.total > 0 ? Math.round((count / stats.total) * 100) : 0;
           return (
             <div key={s.key} className="flex items-center gap-1.5">
-              <span
-                className="h-1.5 w-1.5 rounded-full shrink-0"
-                style={{ background: s.color }}
-              />
+              <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: s.color }} />
               <span className="flex-1 font-mono text-[9px] text-muted-foreground">{s.label}</span>
-              <span className="font-mono text-[9px] font-medium tabular-nums" style={{ color: s.color }}>
+              <span
+                className="font-mono text-[9px] font-medium tabular-nums"
+                style={{ color: s.color }}
+              >
                 {count}
               </span>
               <span className="font-mono text-[8px] text-muted-foreground/60 tabular-nums w-7 text-right">
@@ -95,11 +95,7 @@ export function SubtreeStatsPanel({ node, zoom, pan, dimensions }: Props) {
           const pct = stats.total > 0 ? (count / stats.total) * 100 : 0;
           if (pct === 0) return null;
           return (
-            <div
-              key={s.key}
-              className="h-full"
-              style={{ width: `${pct}%`, background: s.color }}
-            />
+            <div key={s.key} className="h-full" style={{ width: `${pct}%`, background: s.color }} />
           );
         })}
       </div>

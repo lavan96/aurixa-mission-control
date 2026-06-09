@@ -20,12 +20,18 @@ function CancelPage() {
           <CardTitle>Checkout canceled</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
-          <p>No charge was made. You can return to pricing any time and pick up where you left off.</p>
+          <p>
+            No charge was made. You can return to pricing any time and pick up where you left off.
+          </p>
           <div className="flex flex-wrap gap-2 pt-2">
             <Button asChild>
-              <Link to="/pricing" search={clone ? { clone } : undefined}>Back to pricing</Link>
+              <Link to="/pricing" search={clone ? { clone } : undefined}>
+                Back to pricing
+              </Link>
             </Button>
-            <Button asChild variant="outline"><Link to="/billing/catalog">View catalog</Link></Button>
+            <Button asChild variant="outline">
+              <Link to="/billing/catalog">View catalog</Link>
+            </Button>
           </div>
         </CardContent>
       </Card>

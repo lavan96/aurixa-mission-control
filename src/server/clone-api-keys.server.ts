@@ -29,7 +29,6 @@ export type ResolvedKey = {
 export { CLONE_API_SCOPES, DEFAULT_SCOPES, SCOPE_VALUES } from "@/lib/clone-api-scopes";
 export type { CloneApiScope } from "@/lib/clone-api-scopes";
 
-
 export async function resolveCloneApiKey(
   rawKey: string | null,
   requiredScope: string | string[],
@@ -80,10 +79,7 @@ export async function ensureTenant(
   externalRef: string,
   displayName?: string | null,
 ): Promise<{ ok: true; tenantId: string } | { ok: false; error: string }> {
-  let q = supabaseAdmin
-    .from("tenants")
-    .select("id, plan_id")
-    .eq("external_ref", externalRef);
+  let q = supabaseAdmin.from("tenants").select("id, plan_id").eq("external_ref", externalRef);
   q = cloneId == null ? q.is("clone_id", null) : q.eq("clone_id", cloneId);
   const existing = await q.maybeSingle();
   if (existing.error) return { ok: false, error: existing.error.message };

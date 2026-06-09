@@ -42,11 +42,7 @@ export const provisionClone = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<ProvisionCloneResult> => {
     const { supabase, userId } = context;
 
-    const { data: prime } = await supabase
-      .from("prime_config")
-      .select("*")
-      .limit(1)
-      .maybeSingle();
+    const { data: prime } = await supabase.from("prime_config").select("*").limit(1).maybeSingle();
     if (!prime) {
       return { ok: false, error: "Prime not configured — set it up in Settings first" };
     }
@@ -157,7 +153,12 @@ export const provisionClone = createServerFn({ method: "POST" })
     // clone's frontend can read it at build time. Failure here is non-fatal:
     // the clone is still considered created and the operator can re-issue.
     let issuedApiKey: { raw: string; prefix: string; id: string } | null = null;
-    let cascadeResult: { ok: boolean; path: string; commit_sha?: string | null; error?: string } | null = null;
+    let cascadeResult: {
+      ok: boolean;
+      path: string;
+      commit_sha?: string | null;
+      error?: string;
+    } | null = null;
     try {
       const { raw, hash, prefix } = generateApiKey();
       const keyInsert = await supabaseAdmin

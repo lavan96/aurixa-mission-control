@@ -19,7 +19,9 @@ export function RouteError({ error, reset }: { error: Error; reset: () => void }
     reportedRef.current = true;
     void (async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         await supabase.from("route_errors").insert({
           route_path: loc.pathname,
           message: error?.message?.slice(0, 2000) ?? "Unknown error",
@@ -40,7 +42,9 @@ export function RouteError({ error, reset }: { error: Error; reset: () => void }
         <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10 ring-1 ring-destructive/30">
           <AlertTriangle className="h-6 w-6 text-destructive" />
         </div>
-        <h1 className="font-mono text-xl font-semibold tracking-tight">This screen failed to load</h1>
+        <h1 className="font-mono text-xl font-semibold tracking-tight">
+          This screen failed to load
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Something went wrong rendering this route. The rest of the app is still working.
         </p>

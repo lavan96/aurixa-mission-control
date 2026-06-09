@@ -10,9 +10,7 @@ type DiffFile = {
   newContent?: string;
 };
 
-type CompareResult =
-  | { ok: true; files: DiffFile[] }
-  | { ok: false; error: string };
+type CompareResult = { ok: true; files: DiffFile[] } | { ok: false; error: string };
 
 /**
  * Fetch comparison between two SHAs using GitHub's compare API.
@@ -74,14 +72,22 @@ export async function fetchCompare(
           .filter((f) => f.status === "added")
           .map(async (f) => {
             try {
-              const res = await octokit.repos.getContent({ owner, repo, path: f.filename, ref: head });
+              const res = await octokit.repos.getContent({
+                owner,
+                repo,
+                path: f.filename,
+                ref: head,
+              });
               const d = res.data as { content?: string; size?: number };
               if ((d.size ?? 0) > 50_000) return;
               if (d.content) {
                 f.oldContent = "";
                 f.newContent = Buffer.from(d.content, "base64").toString("utf8");
               }
-            } catch {}
+            } catch {
+              // Best-effort content enrichment: skip files whose blob can't be
+              // fetched (binary, too large, permissions). The diff still renders.
+            }
           }),
       );
 
@@ -91,14 +97,22 @@ export async function fetchCompare(
           .filter((f) => f.status === "removed")
           .map(async (f) => {
             try {
-              const res = await octokit.repos.getContent({ owner, repo, path: f.filename, ref: base });
+              const res = await octokit.repos.getContent({
+                owner,
+                repo,
+                path: f.filename,
+                ref: base,
+              });
               const d = res.data as { content?: string; size?: number };
               if ((d.size ?? 0) > 50_000) return;
               if (d.content) {
                 f.oldContent = Buffer.from(d.content, "base64").toString("utf8");
                 f.newContent = "";
               }
-            } catch {}
+            } catch {
+              // Best-effort content enrichment: skip files whose blob can't be
+              // fetched (binary, too large, permissions). The diff still renders.
+            }
           }),
       );
     }

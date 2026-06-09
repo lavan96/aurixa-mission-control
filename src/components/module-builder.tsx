@@ -2,7 +2,13 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Boxes,
   GripVertical,
@@ -168,7 +174,9 @@ export function ModuleBuilder() {
       const item: DragItem = JSON.parse(e.dataTransfer.getData("application/json"));
       if (target === "attached" && item.source === "available") attachModule(item.moduleId);
       else if (target === "available" && item.source === "attached") detachModule(item.moduleId);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   };
 
   const handleDragOver = (e: React.DragEvent, zone: "available" | "attached") => {
@@ -184,7 +192,9 @@ export function ModuleBuilder() {
     setSaving(true);
     try {
       // Snapshot the current config before overwriting
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
       await supabase.from("module_config_snapshots").insert({
         clone_id: selectedCloneId,
@@ -256,21 +266,13 @@ export function ModuleBuilder() {
           </div>
           <div className="flex gap-2">
             {selectedCloneId && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowHistory(!showHistory)}
-              >
+              <Button variant="ghost" size="sm" onClick={() => setShowHistory(!showHistory)}>
                 <History className="mr-2 h-3.5 w-3.5" />
                 {showHistory ? "Hide history" : "History"}
               </Button>
             )}
             {dirty && (
-              <Button
-                onClick={save}
-                disabled={saving || hasBlockingIssues}
-                size="sm"
-              >
+              <Button onClick={save} disabled={saving || hasBlockingIssues} size="sm">
                 {saving ? (
                   <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
                 ) : (
@@ -429,7 +431,10 @@ export function ModuleBuilder() {
                           {s.module_ids.length} modules
                         </Badge>
                         {s.is_active && (
-                          <Badge variant="outline" className="border-success/40 text-success text-[9px]">
+                          <Badge
+                            variant="outline"
+                            className="border-success/40 text-success text-[9px]"
+                          >
                             active
                           </Badge>
                         )}
@@ -438,11 +443,7 @@ export function ModuleBuilder() {
                         {formatDistanceToNow(s.created_at)}
                       </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => revertToSnapshot(s)}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => revertToSnapshot(s)}>
                       <RotateCcw className="mr-1 h-3 w-3" /> Revert
                     </Button>
                   </div>
@@ -509,7 +510,10 @@ function ModuleChip({
         </Badge>
       )}
       <button
-        onClick={(e) => { e.stopPropagation(); onAction(); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onAction();
+        }}
         className={cn(
           "shrink-0 rounded-sm p-1 opacity-0 transition-opacity group-hover:opacity-100",
           source === "available"

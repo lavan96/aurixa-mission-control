@@ -36,13 +36,25 @@ function statusTone(s: CascadeEvent["status"]) {
 function relationMeta(rel: LineageNode["relation"]) {
   switch (rel) {
     case "self":
-      return { Icon: Dot, label: "current", tone: "text-foreground bg-foreground/10 border-foreground/30" };
+      return {
+        Icon: Dot,
+        label: "current",
+        tone: "text-foreground bg-foreground/10 border-foreground/30",
+      };
     case "retry":
       return { Icon: RotateCcw, label: "retry", tone: "text-info bg-info/10 border-info/40" };
     case "rollback":
-      return { Icon: History, label: "rollback", tone: "text-warning bg-warning/10 border-warning/40" };
+      return {
+        Icon: History,
+        label: "rollback",
+        tone: "text-warning bg-warning/10 border-warning/40",
+      };
     case "ancestor":
-      return { Icon: GitBranch, label: "ancestor", tone: "text-muted-foreground bg-muted/40 border-border" };
+      return {
+        Icon: GitBranch,
+        label: "ancestor",
+        tone: "text-muted-foreground bg-muted/40 border-border",
+      };
   }
 }
 
@@ -191,11 +203,7 @@ export function CascadeLineagePanel({ event }: { event: CascadeEvent }) {
                   {isSelf ? (
                     content
                   ) : (
-                    <Link
-                      to="/cascades/$eventId"
-                      params={{ eventId: n.id }}
-                      className="block"
-                    >
+                    <Link to="/cascades/$eventId" params={{ eventId: n.id }} className="block">
                       {content}
                     </Link>
                   )}

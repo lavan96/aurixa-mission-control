@@ -9,7 +9,7 @@ async function fanBalanceUpdated(tenantId: string, source: string, cloneId?: str
     await fireTokenWebhook(
       "tokens.balance.updated",
       { ...snap, source },
-      cloneId ?? (snap.tenant?.clone_id ?? null),
+      cloneId ?? snap.tenant?.clone_id ?? null,
     );
   } catch {
     // best-effort
@@ -35,7 +35,11 @@ export const upsertPlan = createServerFn({ method: "POST" })
     z
       .object({
         id: z.string().uuid().optional(),
-        slug: z.string().min(1).max(64).regex(/^[a-z0-9-]+$/),
+        slug: z
+          .string()
+          .min(1)
+          .max(64)
+          .regex(/^[a-z0-9-]+$/),
         name: z.string().min(1).max(120),
         monthly_allowance: z.number().int().min(0),
         rollover_cap: z.number().int().min(0).default(0),
@@ -44,15 +48,12 @@ export const upsertPlan = createServerFn({ method: "POST" })
         currency: z.string().length(3).default("USD"),
         is_active: z.boolean().default(true),
       })
-      .parse(input)
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { id, ...rest } = data;
     if (id) {
-      const { error } = await context.supabase
-        .from("billing_plans")
-        .update(rest)
-        .eq("id", id);
+      const { error } = await context.supabase.from("billing_plans").update(rest).eq("id", id);
       if (error) return { ok: false as const, error: error.message };
     } else {
       const { error } = await context.supabase.from("billing_plans").insert(rest);
@@ -80,7 +81,11 @@ export const upsertPack = createServerFn({ method: "POST" })
     z
       .object({
         id: z.string().uuid().optional(),
-        slug: z.string().min(1).max(64).regex(/^[a-z0-9-]+$/),
+        slug: z
+          .string()
+          .min(1)
+          .max(64)
+          .regex(/^[a-z0-9-]+$/),
         name: z.string().min(1).max(120),
         tokens: z.number().int().positive(),
         price_cents: z.number().int().min(0),
@@ -88,15 +93,12 @@ export const upsertPack = createServerFn({ method: "POST" })
         expires_after_days: z.number().int().positive().nullable().optional(),
         is_active: z.boolean().default(true),
       })
-      .parse(input)
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { id, ...rest } = data;
     if (id) {
-      const { error } = await context.supabase
-        .from("topup_packs")
-        .update(rest)
-        .eq("id", id);
+      const { error } = await context.supabase.from("topup_packs").update(rest).eq("id", id);
       if (error) return { ok: false as const, error: error.message };
     } else {
       const { error } = await context.supabase.from("topup_packs").insert(rest);
@@ -130,15 +132,12 @@ export const upsertRate = createServerFn({ method: "POST" })
         per_unit: z.record(z.string(), z.number()).default({}),
         notes: z.string().max(500).nullable().optional(),
       })
-      .parse(input)
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { id, ...rest } = data;
     if (id) {
-      const { error } = await context.supabase
-        .from("token_rates")
-        .update(rest)
-        .eq("id", id);
+      const { error } = await context.supabase.from("token_rates").update(rest).eq("id", id);
       if (error) return { ok: false as const, error: error.message };
     } else {
       const { error } = await context.supabase.from("token_rates").insert(rest);
@@ -159,7 +158,7 @@ export const listTenants = createServerFn({ method: "GET" })
         status: z.enum(["active", "past_due", "canceled"]).optional(),
         limit: z.number().int().min(1).max(500).default(100),
       })
-      .parse(input ?? {})
+      .parse(input ?? {}),
   )
   .handler(async ({ data, context }) => {
     let q = context.supabase
@@ -168,16 +167,14 @@ export const listTenants = createServerFn({ method: "GET" })
         `id, clone_id, external_ref, display_name, status, current_period_end,
          plan_id, plan_started_at,
          billing_plans:plan_id(slug, name, monthly_allowance),
-         token_balances(available, reserved, lifetime_spent)`
+         token_balances(available, reserved, lifetime_spent)`,
       )
       .order("created_at", { ascending: false })
       .limit(data.limit);
     if (data.cloneId) q = q.eq("clone_id", data.cloneId);
     if (data.status) q = q.eq("status", data.status);
     if (data.search) {
-      q = q.or(
-        `display_name.ilike.%${data.search}%,external_ref.ilike.%${data.search}%`
-      );
+      q = q.or(`display_name.ilike.%${data.search}%,external_ref.ilike.%${data.search}%`);
     }
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
@@ -186,24 +183,16 @@ export const listTenants = createServerFn({ method: "GET" })
 
 export const getTenant = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) =>
-    z.object({ id: z.string().uuid() }).parse(input)
-  )
+  .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const [tenantRes, balanceRes, ledgerRes, jobsRes] = await Promise.all([
       supabase
         .from("tenants")
-        .select(
-          `*, billing_plans:plan_id(*), clones:clone_id(id, name, slug)`
-        )
+        .select(`*, billing_plans:plan_id(*), clones:clone_id(id, name, slug)`)
         .eq("id", data.id)
         .maybeSingle(),
-      supabase
-        .from("token_balances")
-        .select("*")
-        .eq("tenant_id", data.id)
-        .maybeSingle(),
+      supabase.from("token_balances").select("*").eq("tenant_id", data.id).maybeSingle(),
       supabase
         .from("token_ledger")
         .select("*")
@@ -234,7 +223,7 @@ export const assignTenantPlan = createServerFn({ method: "POST" })
         tenantId: z.string().uuid(),
         planId: z.string().uuid(),
       })
-      .parse(input)
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const now = new Date();
@@ -264,7 +253,7 @@ export const grantTenantTokens = createServerFn({ method: "POST" })
         reason: z.string().min(1).max(300),
         expiresAt: z.string().datetime().nullable().optional(),
       })
-      .parse(input)
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { data: result, error } = await context.supabase.rpc("grant_tokens", {
@@ -288,7 +277,7 @@ export const applyTenantTopup = createServerFn({ method: "POST" })
         sourceRef: z.string().max(200).nullable().optional(),
         idempotencyKey: z.string().min(8).max(120).optional(),
       })
-      .parse(input)
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     // Client-generated idempotency: if a ledger row already exists with this
@@ -331,7 +320,7 @@ export const refundReportJob = createServerFn({ method: "POST" })
         jobId: z.string().uuid(),
         reason: z.string().min(1).max(300),
       })
-      .parse(input)
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { data: result, error } = await context.supabase.rpc("refund_job", {
@@ -359,27 +348,20 @@ export const getTokenUsageSummary = createServerFn({ method: "GET" })
     const since = new Date();
     since.setDate(since.getDate() - 30);
     const [tenantsRes, jobsRes, balancesRes] = await Promise.all([
-      context.supabase
-        .from("tenants")
-        .select("id, status", { count: "exact" }),
+      context.supabase.from("tenants").select("id, status", { count: "exact" }),
       context.supabase
         .from("report_jobs")
         .select("kind, charged_tokens, started_at, status")
         .gte("started_at", since.toISOString())
         .eq("status", "completed")
         .limit(5000),
-      context.supabase
-        .from("token_balances")
-        .select("available, lifetime_granted, lifetime_spent"),
+      context.supabase.from("token_balances").select("available, lifetime_granted, lifetime_spent"),
     ]);
     const jobs = jobsRes.data ?? [];
     const balances = balancesRes.data ?? [];
     const totalSpent30d = jobs.reduce((s, j) => s + (j.charged_tokens ?? 0), 0);
     const totalAvailable = balances.reduce((s, b) => s + (b.available ?? 0), 0);
-    const totalGranted = balances.reduce(
-      (s, b) => s + (b.lifetime_granted ?? 0),
-      0
-    );
+    const totalGranted = balances.reduce((s, b) => s + (b.lifetime_granted ?? 0), 0);
     // Group by kind
     const byKind = new Map<string, number>();
     for (const j of jobs) {
@@ -428,7 +410,7 @@ export const listReportJobs = createServerFn({ method: "GET" })
         limit: z.number().int().min(1).max(500).default(50),
         page: z.number().int().min(1).default(1),
       })
-      .parse(input ?? {})
+      .parse(input ?? {}),
   )
   .handler(async ({ data, context }) => {
     const offset = (data.page - 1) * data.limit;
@@ -440,7 +422,7 @@ export const listReportJobs = createServerFn({ method: "GET" })
          idempotency_key, error, started_at, completed_at, reservation_expires_at,
          tenants:tenant_id(display_name, external_ref),
          clones:clone_id(name, slug)`,
-        { count: "exact" }
+        { count: "exact" },
       )
       .order("started_at", { ascending: false })
       .range(offset, offset + data.limit - 1);
@@ -451,9 +433,7 @@ export const listReportJobs = createServerFn({ method: "GET" })
     if (data.from) q = q.gte("started_at", data.from);
     if (data.to) q = q.lte("started_at", data.to);
     if (data.search) {
-      q = q.or(
-        `idempotency_key.ilike.%${data.search}%,kind.ilike.%${data.search}%`
-      );
+      q = q.or(`idempotency_key.ilike.%${data.search}%,kind.ilike.%${data.search}%`);
     }
     const { data: rows, error, count } = await q;
     if (error) throw new Error(error.message);
@@ -506,7 +486,7 @@ export const getReportJob = createServerFn({ method: "GET" })
         .select(
           `*,
            tenants:tenant_id(id, display_name, external_ref),
-           clones:clone_id(id, name, slug)`
+           clones:clone_id(id, name, slug)`,
         )
         .eq("id", data.id)
         .maybeSingle(),
@@ -520,4 +500,3 @@ export const getReportJob = createServerFn({ method: "GET" })
     if (!jobRes.data) throw new Error("Job not found");
     return { job: jobRes.data, ledger: ledgerRes.data ?? [] };
   });
-

@@ -58,9 +58,7 @@ type DriftSuggestion = {
   recommended_action: "cascade_pr" | "cascade_auto_merge" | "notify" | "review";
 };
 
-function actionToMode(
-  action: DriftSuggestion["recommended_action"],
-): CascadeMode | null {
+function actionToMode(action: DriftSuggestion["recommended_action"]): CascadeMode | null {
   if (action === "cascade_pr") return "pr";
   if (action === "cascade_auto_merge") return "auto_merge";
   if (action === "notify") return "notify";
@@ -109,10 +107,7 @@ function FleetManager() {
   const driftIds = useMemo(() => drift.map((c) => c.id), [drift]);
 
   const selected = useMemo<Set<string>>(
-    () =>
-      new Set(
-        (search.selected as string[]).filter((id) => driftIds.includes(id)),
-      ),
+    () => new Set((search.selected as string[]).filter((id) => driftIds.includes(id))),
     [search.selected, driftIds],
   );
   const bulkMode = search.mode;
@@ -201,7 +196,9 @@ function FleetManager() {
 
     setApplyingKey(key);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       const { data: ev, error } = await supabase
         .from("cascade_events")
         .insert({
@@ -241,7 +238,9 @@ function FleetManager() {
     if (ids.length === 0) return;
     setBulkApplying(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       const { data: ev, error } = await supabase
         .from("cascade_events")
         .insert({
@@ -306,10 +305,7 @@ function FleetManager() {
             <span className="mr-1.5 h-1.5 w-1.5 animate-pulse rounded-full bg-success" />
             background sweep active
           </Badge>
-          <BulkLibraryPinsDialog
-            clones={clones}
-            defaultSelected={Array.from(selected)}
-          />
+          <BulkLibraryPinsDialog clones={clones} defaultSelected={Array.from(selected)} />
           <Button size="sm" onClick={runScan} disabled={scanning}>
             <RefreshCw className={cn("mr-2 h-3.5 w-3.5", scanning && "animate-spin")} />
             {scanning ? "Scanning…" : "Scan now"}
@@ -504,9 +500,7 @@ function DriftCloneRow({
               <Button
                 size="sm"
                 variant={s.recommended_action === "review" ? "ghost" : "outline"}
-                disabled={
-                  applyingKey === `${clone.id}:${i}` || s.recommended_action === "review"
-                }
+                disabled={applyingKey === `${clone.id}:${i}` || s.recommended_action === "review"}
                 onClick={() => onApply(clone.id, clone.name, i, s.recommended_action)}
                 className="shrink-0"
               >
@@ -547,7 +541,9 @@ function SignalCard({
           </div>
           <div className={`mt-2 font-mono text-2xl font-semibold ${c}`}>{value}</div>
         </div>
-        <div className={`flex h-9 w-9 items-center justify-center rounded-md bg-muted ${c} [&>svg]:h-4 [&>svg]:w-4`}>
+        <div
+          className={`flex h-9 w-9 items-center justify-center rounded-md bg-muted ${c} [&>svg]:h-4 [&>svg]:w-4`}
+        >
           {icon}
         </div>
       </CardContent>

@@ -20,10 +20,10 @@ export const Route = createFileRoute("/hooks/brand-drift")({
         } catch (e) {
           const msg = e instanceof Error ? e.message : "Brand drift scan failed";
           console.error("Brand drift scan failed:", msg);
-          return new Response(
-            JSON.stringify({ success: false, error: msg }),
-            { status: 500, headers: { "Content-Type": "application/json" } },
-          );
+          return new Response(JSON.stringify({ success: false, error: msg }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
         }
       },
     },

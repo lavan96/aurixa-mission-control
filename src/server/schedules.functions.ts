@@ -1,9 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import {
-  runScheduleNow as runScheduleNowImpl,
-  type ScheduleRunOutcome,
-} from "./schedules.server";
+import { runScheduleNow as runScheduleNowImpl, type ScheduleRunOutcome } from "./schedules.server";
 import { nextCronTick, parseCron } from "@/lib/cron";
 import type { Database } from "@/integrations/supabase/types";
 import { unknownTable, type CascadeScheduleRow } from "./_phase3d-types";

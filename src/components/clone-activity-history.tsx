@@ -1,12 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -120,9 +114,7 @@ export function CloneActivityHistory({ cloneId }: { cloneId: string }) {
       </CardHeader>
       <CardContent className="p-0">
         {loading ? (
-          <div className="px-6 py-8 text-center text-sm text-muted-foreground">
-            Loading…
-          </div>
+          <div className="px-6 py-8 text-center text-sm text-muted-foreground">Loading…</div>
         ) : items.length === 0 ? (
           <div className="px-6 py-8 text-center text-sm text-muted-foreground">
             No activity recorded yet for this clone.
@@ -130,18 +122,13 @@ export function CloneActivityHistory({ cloneId }: { cloneId: string }) {
         ) : (
           <ScrollArea className="h-[420px]">
             <ol className="relative px-6 py-4">
-              <span
-                aria-hidden
-                className="absolute bottom-4 left-[33px] top-4 w-px bg-border/60"
-              />
+              <span aria-hidden className="absolute bottom-4 left-[33px] top-4 w-px bg-border/60" />
               {items.map((n) => {
                 const Icon = iconFor(n.kind);
                 const inner = (
                   <div className="ml-12 rounded-md border border-border/60 bg-surface p-3 transition-colors hover:bg-muted/30">
                     <div className="flex items-start gap-2">
-                      <span className="text-sm font-medium text-foreground">
-                        {n.title}
-                      </span>
+                      <span className="text-sm font-medium text-foreground">{n.title}</span>
                       <Badge
                         variant="outline"
                         className="ml-auto shrink-0 font-mono text-[9px] uppercase tracking-wider"
@@ -149,9 +136,7 @@ export function CloneActivityHistory({ cloneId }: { cloneId: string }) {
                         {n.kind.replace(/_/g, " ")}
                       </Badge>
                     </div>
-                    {n.body && (
-                      <p className="mt-1 text-xs text-muted-foreground">{n.body}</p>
-                    )}
+                    {n.body && <p className="mt-1 text-xs text-muted-foreground">{n.body}</p>}
                     <div className="mt-1 flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                       {formatDistanceToNow(n.created_at)}
                       {n.url && (

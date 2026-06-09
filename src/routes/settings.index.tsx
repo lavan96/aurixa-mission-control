@@ -4,7 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import { usePrimeConfig } from "@/lib/queries";
 import { supabase } from "@/integrations/supabase/client";
@@ -61,13 +67,15 @@ function SettingsGeneralPage() {
     let cleanRepo = repo.trim();
     try {
       const parsed = new URL(cleanRepo);
-      cleanRepo = parsed.pathname.replace(/^\//, "").replace(/\/$/, "").split("/").pop() || cleanRepo;
+      cleanRepo =
+        parsed.pathname.replace(/^\//, "").replace(/\/$/, "").split("/").pop() || cleanRepo;
       setRepo(cleanRepo);
       toast.info(`Extracted repo name: ${cleanRepo}`);
     } catch {
       // Not a URL — good
     }
-    if (cleanRepo.includes("://") || cleanRepo.includes(".")) return toast.error("Repo should be the repository name only (e.g. 'my-repo'), not a URL");
+    if (cleanRepo.includes("://") || cleanRepo.includes("."))
+      return toast.error("Repo should be the repository name only (e.g. 'my-repo'), not a URL");
     if (!branch.trim()) return toast.error("Default branch required");
     setSaving(true);
     const payload = {
@@ -134,7 +142,9 @@ function SettingsGeneralPage() {
           </CardTitle>
           <CardDescription>
             The single source-of-truth codebase that all clones cascade from.
-            {!canEditPrime && canViewPrime ? " View-only — ask an admin to change these values." : ""}
+            {!canEditPrime && canViewPrime
+              ? " View-only — ask an admin to change these values."
+              : ""}
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
@@ -144,9 +154,8 @@ function SettingsGeneralPage() {
             </div>
           ) : !canViewPrime ? (
             <div className="md:col-span-2 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 font-mono text-xs text-warning">
-              Your account does not have operator access. Ask an admin to grant
-              you the operator or admin role to view or edit the Prime
-              repository configuration.
+              Your account does not have operator access. Ask an admin to grant you the operator or
+              admin role to view or edit the Prime repository configuration.
             </div>
           ) : (
             <>
@@ -172,25 +181,48 @@ function SettingsGeneralPage() {
               ) : null}
               <div className="space-y-2">
                 <Label>GitHub owner</Label>
-                <Input value={owner} onChange={(e) => setOwner(e.target.value)} placeholder="my-org" disabled={!canEditPrime} />
+                <Input
+                  value={owner}
+                  onChange={(e) => setOwner(e.target.value)}
+                  placeholder="my-org"
+                  disabled={!canEditPrime}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Repo</Label>
-                <Input value={repo} onChange={(e) => setRepo(e.target.value)} placeholder="prime-codebase" disabled={!canEditPrime} />
+                <Input
+                  value={repo}
+                  onChange={(e) => setRepo(e.target.value)}
+                  placeholder="prime-codebase"
+                  disabled={!canEditPrime}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Default branch</Label>
-                <Input value={branch} onChange={(e) => setBranch(e.target.value)} disabled={!canEditPrime} />
+                <Input
+                  value={branch}
+                  onChange={(e) => setBranch(e.target.value)}
+                  disabled={!canEditPrime}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Default org for new clones</Label>
-                <Input value={defaultOrg} onChange={(e) => setDefaultOrg(e.target.value)} placeholder="my-org" disabled={!canEditPrime} />
+                <Input
+                  value={defaultOrg}
+                  onChange={(e) => setDefaultOrg(e.target.value)}
+                  placeholder="my-org"
+                  disabled={!canEditPrime}
+                />
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label className="flex items-center gap-2">
                   <Zap className="h-3.5 w-3.5" /> Default cascade mode (used on commit webhooks)
                 </Label>
-                <Select value={cascadeMode} onValueChange={(v) => setCascadeMode(v as CascadeMode)} disabled={!canEditPrime}>
+                <Select
+                  value={cascadeMode}
+                  onValueChange={(v) => setCascadeMode(v as CascadeMode)}
+                  disabled={!canEditPrime}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -218,7 +250,6 @@ function SettingsGeneralPage() {
           )}
         </CardContent>
       </Card>
-
 
       <GitHubSetupWizard />
 
@@ -253,9 +284,15 @@ function SettingsGeneralPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <div>· Module detection: <span className="font-mono text-foreground">enabled</span></div>
-          <div>· Code automation: <span className="font-mono text-foreground">enabled</span></div>
-          <div>· Autonomous fleet manager: <span className="font-mono text-foreground">enabled</span></div>
+          <div>
+            · Module detection: <span className="font-mono text-foreground">enabled</span>
+          </div>
+          <div>
+            · Code automation: <span className="font-mono text-foreground">enabled</span>
+          </div>
+          <div>
+            · Autonomous fleet manager: <span className="font-mono text-foreground">enabled</span>
+          </div>
         </CardContent>
       </Card>
 

@@ -56,7 +56,12 @@ export function CloneSyncStatusCard({ clone }: { clone: Clone }) {
       .channel(`clone-sync-${clone.id}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "cascade_results", filter: `clone_id=eq.${clone.id}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "cascade_results",
+          filter: `clone_id=eq.${clone.id}`,
+        },
         () => void load(),
       )
       .subscribe();
@@ -85,8 +90,7 @@ export function CloneSyncStatusCard({ clone }: { clone: Clone }) {
     }
   };
 
-  const isInFlight =
-    latest?.status === "pushing" || latest?.status === "queued";
+  const isInFlight = latest?.status === "pushing" || latest?.status === "queued";
   const StatusIcon =
     latest?.status === "succeeded" || latest?.status === "pr_opened"
       ? CheckCircle2
@@ -118,7 +122,10 @@ export function CloneSyncStatusCard({ clone }: { clone: Clone }) {
             <div className="flex items-center gap-2">
               <StatusPill status={clone.sync_status} behind={clone.commits_behind} />
               {clone.commits_behind > 0 && (
-                <Badge variant="outline" className="border-warning/40 font-mono text-[10px] uppercase text-warning">
+                <Badge
+                  variant="outline"
+                  className="border-warning/40 font-mono text-[10px] uppercase text-warning"
+                >
                   {clone.commits_behind} behind
                 </Badge>
               )}
@@ -152,7 +159,13 @@ export function CloneSyncStatusCard({ clone }: { clone: Clone }) {
               latest cascade run
             </span>
             {latest?.event && (
-              <CopyButton value={latest.event.id} label="cascade event id" size="xs" showValue truncate={10} />
+              <CopyButton
+                value={latest.event.id}
+                label="cascade event id"
+                size="xs"
+                showValue
+                truncate={10}
+              />
             )}
           </div>
           {loading ? (
@@ -173,7 +186,10 @@ export function CloneSyncStatusCard({ clone }: { clone: Clone }) {
                 />
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="outline" className={cn("font-mono text-[10px] uppercase", statusBorder(latest.status))}>
+                    <Badge
+                      variant="outline"
+                      className={cn("font-mono text-[10px] uppercase", statusBorder(latest.status))}
+                    >
                       {latest.status}
                     </Badge>
                     {latest.event?.mode && (

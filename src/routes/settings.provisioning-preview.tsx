@@ -45,11 +45,7 @@ function ProvisioningPreviewPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [
-        { data: cloneData },
-        { data: backendData },
-        sqlRes,
-      ] = await Promise.all([
+      const [{ data: cloneData }, { data: backendData }, sqlRes] = await Promise.all([
         supabase.from("clones").select("*").order("name"),
         // clone_backends_safe is the credential-free view (no service_role_key /
         // db_pass / anon_key), so selecting all of its columns is safe.
@@ -118,12 +114,9 @@ function ProvisioningPreviewPage() {
             <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
               schema preview
             </p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-              Provisioning Preview
-            </h1>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight">Provisioning Preview</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Inspect the exact bootstrap SQL and seeded admin configuration for
-              any clone.
+              Inspect the exact bootstrap SQL and seeded admin configuration for any clone.
             </p>
           </div>
         </div>
@@ -150,9 +143,7 @@ function ProvisioningPreviewPage() {
               {clones.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.name}{" "}
-                  <span className="text-muted-foreground ml-1">
-                    ({c.provisioning_method})
-                  </span>
+                  <span className="text-muted-foreground ml-1">({c.provisioning_method})</span>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -164,12 +155,9 @@ function ProvisioningPreviewPage() {
       {selectedClone && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm">
-              Schema Highlights — {selectedClone.name}
-            </CardTitle>
+            <CardTitle className="text-sm">Schema Highlights — {selectedClone.name}</CardTitle>
             <CardDescription>
-              Method:{" "}
-              <Badge variant="outline">{selectedClone.provisioning_method}</Badge>
+              Method: <Badge variant="outline">{selectedClone.provisioning_method}</Badge>
               {selectedBackend && (
                 <>
                   {" "}
@@ -177,9 +165,7 @@ function ProvisioningPreviewPage() {
                   <Badge
                     variant="outline"
                     className={cn(
-                      selectedBackend.status === "ready"
-                        ? "text-success"
-                        : "text-warning"
+                      selectedBackend.status === "ready" ? "text-success" : "text-warning",
                     )}
                   >
                     {selectedBackend.status}
@@ -200,9 +186,7 @@ function ProvisioningPreviewPage() {
                     <Icon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                     <div>
                       <div className="text-sm font-medium">{h.label}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {h.detail}
-                      </div>
+                      <div className="text-xs text-muted-foreground">{h.detail}</div>
                     </div>
                   </div>
                 );
@@ -247,21 +231,17 @@ function ProvisioningPreviewPage() {
             Seed Admin Account
           </CardTitle>
           <CardDescription>
-            Every clone is born with one super_admin seed account. This account
-            can then cascade the admin hierarchy downward.
+            Every clone is born with one super_admin seed account. This account can then cascade the
+            admin hierarchy downward.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3 text-sm">
             <div className="grid grid-cols-[120px_1fr] gap-2 rounded-md border border-border/60 bg-surface p-3">
               <span className="text-muted-foreground">Role</span>
-              <span className="font-mono font-medium text-warning">
-                super_admin (level 100)
-              </span>
+              <span className="font-mono font-medium text-warning">super_admin (level 100)</span>
               <span className="text-muted-foreground">assigned_by</span>
-              <span className="font-mono text-muted-foreground/70">
-                NULL (system-seeded)
-              </span>
+              <span className="font-mono text-muted-foreground/70">NULL (system-seeded)</span>
               <span className="text-muted-foreground">Email</span>
               <span className="font-mono">
                 {selectedBackend?.admin_email ?? "Specified during provisioning"}
@@ -269,9 +249,7 @@ function ProvisioningPreviewPage() {
               <span className="text-muted-foreground">Can assign</span>
               <span>admin, operator, user</span>
               <span className="text-muted-foreground">Protection</span>
-              <span>
-                Cannot be removed if last super_admin (guardrail trigger)
-              </span>
+              <span>Cannot be removed if last super_admin (guardrail trigger)</span>
             </div>
           </div>
         </CardContent>

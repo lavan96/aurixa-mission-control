@@ -6,7 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { CalendarClock, Play, Trash2, Plus, Power, PowerOff } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -57,7 +63,11 @@ function SchedulesPage() {
   const bulkDeleteFn = useServerFn(bulkDeleteSchedules);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const toggleSel = (id: string) =>
-    setSelected((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    setSelected((p) => {
+      const n = new Set(p);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -110,21 +120,32 @@ function SchedulesPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">New schedule</CardTitle>
-          <CardDescription>5-field cron, e.g. <code className="font-mono">0 9 * * 1</code> = Mondays 09:00 UTC.</CardDescription>
+          <CardDescription>
+            5-field cron, e.g. <code className="font-mono">0 9 * * 1</code> = Mondays 09:00 UTC.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 md:grid-cols-5">
             <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
-            <Input placeholder="0 * * * *" value={cron} onChange={(e) => setCron(e.target.value)} className="font-mono" />
+            <Input
+              placeholder="0 * * * *"
+              value={cron}
+              onChange={(e) => setCron(e.target.value)}
+              className="font-mono"
+            />
             <Select value={kind} onValueChange={(v) => setKind(v as any)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="fleet_cascade">Fleet cascade</SelectItem>
                 <SelectItem value="module_sync">Module sync</SelectItem>
               </SelectContent>
             </Select>
             <Select value={mode} onValueChange={(v) => setMode(v as any)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="pr">PR</SelectItem>
                 <SelectItem value="auto_merge">Auto-merge</SelectItem>
@@ -141,18 +162,17 @@ function SchedulesPage() {
         </CardContent>
       </Card>
 
-      <BulkActionBar
-        count={selected.size}
-        noun="schedule"
-        onClear={() => setSelected(new Set())}
-      >
+      <BulkActionBar count={selected.size} noun="schedule" onClear={() => setSelected(new Set())}>
         <Button
           size="sm"
           variant="outline"
           onClick={async () => {
             const r = await bulkToggleFn({ data: { ids: Array.from(selected), enabled: true } });
-            if (r.ok) { toast.success(`Enabled ${r.count}`); setSelected(new Set()); refresh(); }
-            else toast.error(r.error);
+            if (r.ok) {
+              toast.success(`Enabled ${r.count}`);
+              setSelected(new Set());
+              refresh();
+            } else toast.error(r.error);
           }}
         >
           <Power className="mr-1 h-3.5 w-3.5" /> Enable
@@ -162,8 +182,11 @@ function SchedulesPage() {
           variant="outline"
           onClick={async () => {
             const r = await bulkToggleFn({ data: { ids: Array.from(selected), enabled: false } });
-            if (r.ok) { toast.success(`Disabled ${r.count}`); setSelected(new Set()); refresh(); }
-            else toast.error(r.error);
+            if (r.ok) {
+              toast.success(`Disabled ${r.count}`);
+              setSelected(new Set());
+              refresh();
+            } else toast.error(r.error);
           }}
         >
           <PowerOff className="mr-1 h-3.5 w-3.5" /> Disable
@@ -174,8 +197,11 @@ function SchedulesPage() {
           onClick={async () => {
             if (!confirm(`Delete ${selected.size} schedule(s)?`)) return;
             const r = await bulkDeleteFn({ data: { ids: Array.from(selected) } });
-            if (r.ok) { toast.success(`Deleted ${r.count}`); setSelected(new Set()); refresh(); }
-            else toast.error(r.error);
+            if (r.ok) {
+              toast.success(`Deleted ${r.count}`);
+              setSelected(new Set());
+              refresh();
+            } else toast.error(r.error);
           }}
         >
           <Trash2 className="mr-1 h-3.5 w-3.5" /> Delete
@@ -204,17 +230,23 @@ function SchedulesPage() {
                       className="mt-1"
                     />
                     <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-sm font-semibold">{s.name}</span>
-                      <Badge variant="outline" className="text-[10px] uppercase">{s.kind.replace("_", " ")}</Badge>
-                      <Badge variant="outline" className="text-[10px] uppercase">{s.mode.replace("_", " ")}</Badge>
-                      <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px]">{s.cron_expression}</code>
-                    </div>
-                    <div className="mt-1 font-mono text-[11px] text-muted-foreground">
-                      {describeCron(s.cron_expression)}
-                      {s.last_run_at && <> · last {formatDistanceToNow(s.last_run_at)}</>}
-                      {s.next_run_at && <> · next {formatDistanceToNow(s.next_run_at)}</>}
-                    </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono text-sm font-semibold">{s.name}</span>
+                        <Badge variant="outline" className="text-[10px] uppercase">
+                          {s.kind.replace("_", " ")}
+                        </Badge>
+                        <Badge variant="outline" className="text-[10px] uppercase">
+                          {s.mode.replace("_", " ")}
+                        </Badge>
+                        <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px]">
+                          {s.cron_expression}
+                        </code>
+                      </div>
+                      <div className="mt-1 font-mono text-[11px] text-muted-foreground">
+                        {describeCron(s.cron_expression)}
+                        {s.last_run_at && <> · last {formatDistanceToNow(s.last_run_at)}</>}
+                        {s.next_run_at && <> · next {formatDistanceToNow(s.next_run_at)}</>}
+                      </div>
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
@@ -236,7 +268,9 @@ function SchedulesPage() {
                           toast.success("Schedule executed", {
                             action: {
                               label: "View",
-                              onClick: () => { window.location.href = `/cascades/${out.cascade_event_id}`; },
+                              onClick: () => {
+                                window.location.href = `/cascades/${out.cascade_event_id}`;
+                              },
                             },
                           });
                         } else toast.success("Schedule executed");
@@ -252,7 +286,10 @@ function SchedulesPage() {
                         if (!confirm("Delete this schedule?")) return;
                         const res = await del({ data: { id: s.id } });
                         if (!res.ok) toast.error(res.error);
-                        else { toast.success("Deleted"); refresh(); }
+                        else {
+                          toast.success("Deleted");
+                          refresh();
+                        }
                       }}
                       className="text-destructive"
                     >
@@ -270,7 +307,11 @@ function SchedulesPage() {
       </section>
 
       <p className="font-mono text-[11px] text-muted-foreground">
-        Tip: Schedules tick every minute via the <Link to="/audit-log" className="underline">/hooks/run-schedules</Link> cron job.
+        Tip: Schedules tick every minute via the{" "}
+        <Link to="/audit-log" className="underline">
+          /hooks/run-schedules
+        </Link>{" "}
+        cron job.
       </p>
     </div>
   );
