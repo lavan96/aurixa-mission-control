@@ -31,15 +31,14 @@ type CatalogItem = {
 };
 
 async function resolveItem(mode: Mode, itemId: string): Promise<CatalogItem | null> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const adminAny = supabaseAdmin as any;
-  const table =
-    mode === "topup" ? "topup_packs" : mode === "seat_plan" ? "seat_plans" : "setup_packages";
-  const { data } = await adminAny
-    .from(table)
-    .select("id, slug, name, stripe_price_id, currency, is_active")
-    .eq("id", itemId)
-    .maybeSingle();
+  const cols = "id, slug, name, stripe_price_id, currency, is_active";
+  const query =
+    mode === "topup"
+      ? supabaseAdmin.from("topup_packs").select(cols).eq("id", itemId).maybeSingle()
+      : mode === "seat_plan"
+        ? supabaseAdmin.from("seat_plans").select(cols).eq("id", itemId).maybeSingle()
+        : supabaseAdmin.from("setup_packages").select(cols).eq("id", itemId).maybeSingle();
+  const { data } = await query;
   return (data as CatalogItem | null) ?? null;
 }
 

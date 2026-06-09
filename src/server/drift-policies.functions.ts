@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { unknownTable } from "./_phase3d-types";
 import type { Database } from "@/integrations/supabase/types";
 
 type DriftSeverity = "low" | "medium" | "high";
@@ -31,7 +30,7 @@ export const upsertDriftPolicy = createServerFn({ method: "POST" })
     return data;
   })
   .handler(async ({ data, context }) => {
-    const { error } = await unknownTable(context.supabase, "clone_drift_policies").upsert(
+    const { error } = await context.supabase.from("clone_drift_policies").upsert(
       {
         clone_id: data.cloneId,
         enabled: data.enabled,
