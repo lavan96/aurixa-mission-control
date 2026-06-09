@@ -20,7 +20,7 @@ import {
   updateSchedule,
 } from "@/server/schedules.functions";
 import { bulkDeleteSchedules, bulkUpdateSchedules } from "@/server/bulk-ops.functions";
-import { describeCron } from "@/server/cron";
+import { describeCron } from "@/lib/cron";
 import { formatDistanceToNow } from "@/lib/format";
 import { ScheduleRecentFires } from "@/components/schedule-recent-fires";
 

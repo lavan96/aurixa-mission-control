@@ -19,7 +19,7 @@ import {
 } from "@/server/branding.functions";
 import { createSchedule, deleteSchedule, runScheduleNow, updateSchedule } from "@/server/schedules.functions";
 import { BrandProfileIO } from "@/components/brand-profile-io";
-import { describeCron } from "@/server/cron";
+import { describeCron } from "@/lib/cron";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

@@ -7,7 +7,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { executeCascade } from "./cascade-engine.server";
 import { bulkSyncModule } from "./module-sync.server";
 import { applyBrandToClone } from "./branding.server";
-import { nextCronTick } from "./cron";
+import { nextCronTick } from "@/lib/cron";
 import { assessBlastRadius } from "./cascade-approvals.server";
 import { unknownTable, type CascadeScheduleRow } from "./_phase3d-types";
 

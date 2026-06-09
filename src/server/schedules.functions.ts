@@ -4,7 +4,7 @@ import {
   runScheduleNow as runScheduleNowImpl,
   type ScheduleRunOutcome,
 } from "./schedules.server";
-import { nextCronTick, parseCron } from "./cron";
+import { nextCronTick, parseCron } from "@/lib/cron";
 import type { Database } from "@/integrations/supabase/types";
 import { unknownTable, type CascadeScheduleRow } from "./_phase3d-types";
 
