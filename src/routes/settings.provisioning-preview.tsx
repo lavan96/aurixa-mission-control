@@ -20,7 +20,9 @@ import { cn } from "@/lib/utils";
 import type { Database as DbTypes } from "@/integrations/supabase/types";
 
 type Clone = DbTypes["public"]["Tables"]["clones"]["Row"];
-type CloneBackend = DbTypes["public"]["Tables"]["clone_backends"]["Row"];
+// Non-secret projection: clone_backends holds service_role_key / db_pass / anon_key,
+// which operators must never receive. Read the credential-free view instead.
+type CloneBackend = DbTypes["public"]["Views"]["clone_backends_safe"]["Row"];
 
 export const Route = createFileRoute("/settings/provisioning-preview")({
   component: () => (
@@ -49,7 +51,9 @@ function ProvisioningPreviewPage() {
         sqlRes,
       ] = await Promise.all([
         supabase.from("clones").select("*").order("name"),
-        supabase.from("clone_backends").select("*"),
+        // clone_backends_safe is the credential-free view (no service_role_key /
+        // db_pass / anon_key), so selecting all of its columns is safe.
+        supabase.from("clone_backends_safe").select("*"),
         getBootstrapSqlPreview(),
       ]);
       setClones(cloneData ?? []);

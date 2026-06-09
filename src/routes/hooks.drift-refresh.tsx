@@ -1,22 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { runDriftRefresh } from "@/server/drift-refresh.server";
+import { verifyCronAuth } from "@/server/cron-auth.server";
 
 // Cron-invoked endpoint. pg_cron schedules a POST here every 5 min.
-// Auth: requires DRIFT_REFRESH_TOKEN as Bearer token.
+// Auth: requires the shared CRON_SECRET as a Bearer token.
 export const Route = createFileRoute("/hooks/drift-refresh")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const auth = request.headers.get("authorization");
-        const token = auth?.replace("Bearer ", "");
-        const expected = process.env.DRIFT_REFRESH_TOKEN;
-        if (!token || !expected || token !== expected) {
-          return new Response(
-            JSON.stringify({ error: "Unauthorized" }),
-            { status: 401, headers: { "Content-Type": "application/json" } },
-          );
-        }
+        const unauthorized = verifyCronAuth(request);
+        if (unauthorized) return unauthorized;
 
         try {
           const result = await runDriftRefresh(supabaseAdmin);

@@ -1,24 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { runDueSchedules } from "@/server/schedules.server";
+import { verifyCronAuth } from "@/server/cron-auth.server";
 
 // Cron-invoked endpoint. pg_cron schedules a POST here every minute.
-// Auth: requires Supabase publishable key as Bearer token (matches /hooks/fleet-drift).
+// Auth: requires the shared CRON_SECRET as a Bearer token.
 export const Route = createFileRoute("/hooks/run-schedules")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const auth = request.headers.get("authorization");
-        const token = auth?.replace("Bearer ", "");
-        const expected =
-          process.env.SUPABASE_PUBLISHABLE_KEY ||
-          process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-        if (!token || !expected || token !== expected) {
-          return new Response(
-            JSON.stringify({ error: "Unauthorized" }),
-            { status: 401, headers: { "Content-Type": "application/json" } },
-          );
-        }
+        const unauthorized = verifyCronAuth(request);
+        if (unauthorized) return unauthorized;
 
         try {
           const result = await runDueSchedules(supabaseAdmin);
