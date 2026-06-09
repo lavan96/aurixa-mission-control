@@ -172,7 +172,9 @@ function ReportJobsPage() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-6">
           <Select value={tenantId} onValueChange={(v) => setTenantId(v as string)}>
-            <SelectTrigger><SelectValue placeholder="Tenant" /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder="Tenant" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All tenants</SelectItem>
               {(tenantsQ.data?.tenants ?? []).map((t: any) => (
@@ -183,7 +185,9 @@ function ReportJobsPage() {
             </SelectContent>
           </Select>
           <Select value={status} onValueChange={(v) => setStatus(v as Status | "all")}>
-            <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All statuses</SelectItem>
               <SelectItem value="reserved">Reserved</SelectItem>
@@ -203,10 +207,14 @@ function ReportJobsPage() {
           />
           <div className="flex gap-2">
             <Select value={String(limit)} onValueChange={(v) => setLimit(Number(v))}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {[25, 50, 100, 250].map((n) => (
-                  <SelectItem key={n} value={String(n)}>{n} / page</SelectItem>
+                  <SelectItem key={n} value={String(n)}>
+                    {n} / page
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -268,9 +276,7 @@ function ReportJobsPage() {
                         {j.status}
                       </Badge>
                       {j.error && (
-                        <p className="mt-1 line-clamp-1 text-[10px] text-destructive">
-                          {j.error}
-                        </p>
+                        <p className="mt-1 line-clamp-1 text-[10px] text-destructive">{j.error}</p>
                       )}
                     </TableCell>
                     <TableCell className="text-right font-mono text-xs">
@@ -294,8 +300,8 @@ function ReportJobsPage() {
           {count > 0 && (
             <div className="flex items-center justify-between border-t border-border p-3 text-xs text-muted-foreground">
               <span>
-                Showing <strong className="text-foreground">{startRow.toLocaleString()}</strong>
-                –<strong className="text-foreground">{endRow.toLocaleString()}</strong> of{" "}
+                Showing <strong className="text-foreground">{startRow.toLocaleString()}</strong>–
+                <strong className="text-foreground">{endRow.toLocaleString()}</strong> of{" "}
                 <strong className="text-foreground">{count.toLocaleString()}</strong>
               </span>
               <div className="flex items-center gap-2">
@@ -325,10 +331,7 @@ function ReportJobsPage() {
         </CardContent>
       </Card>
 
-      <JobDetailDrawer
-        jobId={openJobId}
-        onOpenChange={(open) => !open && setOpenJobId(null)}
-      />
+      <JobDetailDrawer jobId={openJobId} onOpenChange={(open) => !open && setOpenJobId(null)} />
     </div>
   );
 }
@@ -392,13 +395,9 @@ function JobDetailDrawer({
     <Sheet open={!!jobId} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
         <SheetHeader>
-          <SheetTitle className="font-mono text-sm">
-            {job ? job.kind : "Report job"}
-          </SheetTitle>
+          <SheetTitle className="font-mono text-sm">{job ? job.kind : "Report job"}</SheetTitle>
           <SheetDescription>
-            {jobId && (
-              <span className="font-mono text-[10px]">{jobId}</span>
-            )}
+            {jobId && <span className="font-mono text-[10px]">{jobId}</span>}
           </SheetDescription>
         </SheetHeader>
 
@@ -414,9 +413,7 @@ function JobDetailDrawer({
                 </Badge>
               </Field>
               <Field label="Tenant">
-                {job.tenants?.display_name ??
-                  job.tenants?.external_ref ??
-                  job.tenant_id}
+                {job.tenants?.display_name ?? job.tenants?.external_ref ?? job.tenant_id}
               </Field>
               <Field label="Clone">{job.clones?.name ?? job.clone_id}</Field>
               <Field label="Idempotency key">
@@ -428,9 +425,7 @@ function JobDetailDrawer({
               </Field>
               <Field label="Started">{fmtDateTime(job.started_at)}</Field>
               <Field label="Completed">{fmtDateTime(job.completed_at)}</Field>
-              <Field label="Reservation expires">
-                {fmtDateTime(job.reservation_expires_at)}
-              </Field>
+              <Field label="Reservation expires">{fmtDateTime(job.reservation_expires_at)}</Field>
             </section>
 
             {/* Timeline */}
@@ -455,9 +450,7 @@ function JobDetailDrawer({
                           <Icon className="h-3 w-3 text-muted-foreground" />
                         </span>
                         <div className="flex items-baseline justify-between gap-3">
-                          <p className="text-sm font-medium">
-                            {LEDGER_LABEL[e.kind] ?? e.kind}
-                          </p>
+                          <p className="text-sm font-medium">{LEDGER_LABEL[e.kind] ?? e.kind}</p>
                           <span
                             className={
                               "font-mono text-xs tabular-nums " +

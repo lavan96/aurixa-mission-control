@@ -6,12 +6,18 @@ export const Route = createFileRoute("/api/public/seats/devices/list")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        const key = await resolveCloneApiKey(request.headers.get("x-clone-api-key"), ["devices:manage", "seats:manage"]);
+        const key = await resolveCloneApiKey(request.headers.get("x-clone-api-key"), [
+          "devices:manage",
+          "seats:manage",
+        ]);
         if (!key) return jsonResponse({ ok: false, error: "unauthorized" }, 401);
         const url = new URL(request.url);
         const externalUserId = url.searchParams.get("external_user_id");
         const status = url.searchParams.get("status") ?? "active";
-        const limit = Math.min(Math.max(parseInt(url.searchParams.get("limit") ?? "100", 10) || 100, 1), 500);
+        const limit = Math.min(
+          Math.max(parseInt(url.searchParams.get("limit") ?? "100", 10) || 100, 1),
+          500,
+        );
         const offset = Math.max(parseInt(url.searchParams.get("offset") ?? "0", 10) || 0, 0);
 
         let q = supabaseAdmin

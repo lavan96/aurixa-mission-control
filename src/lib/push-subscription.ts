@@ -31,11 +31,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 }
 
 export function isPushSupported(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    "serviceWorker" in navigator &&
-    "PushManager" in window
-  );
+  return typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window;
 }
 
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
@@ -93,7 +89,7 @@ export async function subscribeToPush(userId: string): Promise<PushSubscription 
       user_agent: navigator.userAgent,
       last_used_at: new Date().toISOString(),
     },
-    { onConflict: "endpoint" }
+    { onConflict: "endpoint" },
   );
 
   if (error) {

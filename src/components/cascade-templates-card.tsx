@@ -64,7 +64,11 @@ export function CascadeTemplatesCard({
   const [saving, setSaving] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const toggleSel = (id: string) =>
-    setSelected((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    setSelected((p) => {
+      const n = new Set(p);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
   const bulkDelete = async () => {
     if (selected.size === 0) return;
     if (!confirm(`Delete ${selected.size} template(s)?`)) return;
@@ -72,7 +76,10 @@ export function CascadeTemplatesCard({
       .from("cascade_templates")
       .delete()
       .in("id", Array.from(selected));
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success(`Deleted ${selected.size}`);
     setSelected(new Set());
     refresh();
@@ -101,7 +108,9 @@ export function CascadeTemplatesCard({
       return;
     }
     setSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     const { error } = await supabase.from("cascade_templates").insert({
       name: trimmed,
       description: description.trim() || null,
@@ -159,9 +168,7 @@ export function CascadeTemplatesCard({
           <CardTitle className="flex items-center gap-2 text-base">
             <Bookmark className="h-4 w-4 text-primary" /> Saved templates
           </CardTitle>
-          <CardDescription>
-            Reuse common scope + mode combos in one click.
-          </CardDescription>
+          <CardDescription>Reuse common scope + mode combos in one click.</CardDescription>
         </div>
         <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
           <DialogTrigger asChild>
@@ -210,11 +217,7 @@ export function CascadeTemplatesCard({
               </div>
             </div>
             <DialogFooter>
-              <Button
-                variant="ghost"
-                onClick={() => setSaveOpen(false)}
-                disabled={saving}
-              >
+              <Button variant="ghost" onClick={() => setSaveOpen(false)} disabled={saving}>
                 Cancel
               </Button>
               <Button onClick={save} disabled={saving}>
@@ -228,9 +231,13 @@ export function CascadeTemplatesCard({
       <CardContent className="space-y-2">
         {selected.size > 0 && (
           <div className="flex items-center justify-between rounded-md border border-primary/40 bg-primary/5 p-2">
-            <span className="font-mono text-xs text-muted-foreground">{selected.size} selected</span>
+            <span className="font-mono text-xs text-muted-foreground">
+              {selected.size} selected
+            </span>
             <div className="flex gap-2">
-              <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear</Button>
+              <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
+                Clear
+              </Button>
               <Button size="sm" variant="destructive" onClick={bulkDelete}>
                 <Trash2 className="mr-1 h-3 w-3" /> Delete
               </Button>

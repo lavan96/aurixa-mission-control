@@ -25,11 +25,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "@/lib/format";
 import {
@@ -58,14 +54,8 @@ export function CloneDriftSuggestionsCard({
   const [analyzing, setAnalyzing] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const open = useMemo(
-    () => suggestions.filter((s) => s.status === "open"),
-    [suggestions],
-  );
-  const closed = useMemo(
-    () => suggestions.filter((s) => s.status !== "open"),
-    [suggestions],
-  );
+  const open = useMemo(() => suggestions.filter((s) => s.status === "open"), [suggestions]);
+  const closed = useMemo(() => suggestions.filter((s) => s.status !== "open"), [suggestions]);
 
   const analyze = async () => {
     setAnalyzing(true);
@@ -132,8 +122,8 @@ export function CloneDriftSuggestionsCard({
             <Sparkles className="h-4 w-4 text-accent" /> AI drift suggestions
           </CardTitle>
           <CardDescription className="mt-1">
-            Lovable AI compares this clone&rsquo;s installed modules against prime and
-            proposes one-click fixes.
+            Lovable AI compares this clone&rsquo;s installed modules against prime and proposes
+            one-click fixes.
             {lastCheckedAt && (
               <span className="ml-1 font-mono text-[11px]">
                 · last analyzed {formatDistanceToNow(lastCheckedAt)}
@@ -153,8 +143,8 @@ export function CloneDriftSuggestionsCard({
       <CardContent className="space-y-2">
         {open.length === 0 && closed.length === 0 && (
           <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-            No suggestions yet. Click <span className="font-mono">Analyze drift</span> to
-            ask the AI for fix proposals.
+            No suggestions yet. Click <span className="font-mono">Analyze drift</span> to ask the AI
+            for fix proposals.
           </div>
         )}
         {open.map((s) => (
@@ -229,17 +219,26 @@ function SuggestionRow({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-medium">{suggestion.summary}</span>
-              <Badge variant="outline" className={cn("text-[10px] uppercase", riskTone(suggestion.risk))}>
+              <Badge
+                variant="outline"
+                className={cn("text-[10px] uppercase", riskTone(suggestion.risk))}
+              >
                 {suggestion.risk}
               </Badge>
               <Badge variant="outline" className="font-mono text-[10px] uppercase">
                 {suggestion.category}
               </Badge>
-              <Badge variant="outline" className={cn("text-[10px] uppercase", modeTone(suggestion.recommended_mode))}>
+              <Badge
+                variant="outline"
+                className={cn("text-[10px] uppercase", modeTone(suggestion.recommended_mode))}
+              >
                 {suggestion.recommended_mode.replace("_", " ")}
               </Badge>
               {suggestion.status === "applied" && (
-                <Badge variant="outline" className="border-success/40 text-success text-[10px] uppercase">
+                <Badge
+                  variant="outline"
+                  className="border-success/40 text-success text-[10px] uppercase"
+                >
                   applied
                 </Badge>
               )}
@@ -278,21 +277,27 @@ function SuggestionRow({
                   <GitMerge className="mr-2 h-3.5 w-3.5" />
                   <span className="flex-1">Open PR</span>
                   {suggestion.recommended_mode === "pr" && (
-                    <span className="font-mono text-[9px] uppercase text-muted-foreground">rec</span>
+                    <span className="font-mono text-[9px] uppercase text-muted-foreground">
+                      rec
+                    </span>
                   )}
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => onApply("auto_merge")}>
                   <Send className="mr-2 h-3.5 w-3.5" />
                   <span className="flex-1">Auto-merge</span>
                   {suggestion.recommended_mode === "auto_merge" && (
-                    <span className="font-mono text-[9px] uppercase text-muted-foreground">rec</span>
+                    <span className="font-mono text-[9px] uppercase text-muted-foreground">
+                      rec
+                    </span>
                   )}
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => onApply("notify")}>
                   <Bell className="mr-2 h-3.5 w-3.5" />
                   <span className="flex-1">Notify only</span>
                   {suggestion.recommended_mode === "notify" && (
-                    <span className="font-mono text-[9px] uppercase text-muted-foreground">rec</span>
+                    <span className="font-mono text-[9px] uppercase text-muted-foreground">
+                      rec
+                    </span>
                   )}
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -331,7 +336,8 @@ function SuggestionRow({
             </ul>
           </div>
           <div className="font-mono text-[10px] text-muted-foreground">
-            prime@{suggestion.source_sha.slice(0, 7)} · suggested {formatDistanceToNow(suggestion.created_at)}
+            prime@{suggestion.source_sha.slice(0, 7)} · suggested{" "}
+            {formatDistanceToNow(suggestion.created_at)}
           </div>
         </div>
       )}

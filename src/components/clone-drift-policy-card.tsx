@@ -63,19 +63,17 @@ export function CloneDriftPolicyCard({ cloneId }: { cloneId: string }) {
       last_applied_count: policy?.last_applied_count ?? 0,
       ...patch,
     };
-    const { error } = await supabase
-      .from("clone_drift_policies")
-      .upsert(
-        {
-          clone_id: cloneId,
-          enabled: next.enabled,
-          auto_apply_severity: next.auto_apply_severity,
-          max_per_run: next.max_per_run,
-          cascade_mode: next.cascade_mode,
-          muted_kinds: next.muted_kinds,
-        },
-        { onConflict: "clone_id" },
-      );
+    const { error } = await supabase.from("clone_drift_policies").upsert(
+      {
+        clone_id: cloneId,
+        enabled: next.enabled,
+        auto_apply_severity: next.auto_apply_severity,
+        max_per_run: next.max_per_run,
+        cascade_mode: next.cascade_mode,
+        muted_kinds: next.muted_kinds,
+      },
+      { onConflict: "clone_id" },
+    );
     setSaving(false);
     if (error) {
       toast.error(error.message);
@@ -113,14 +111,11 @@ export function CloneDriftPolicyCard({ cloneId }: { cloneId: string }) {
             <Bot className="h-4 w-4 text-accent" /> AI auto-apply policy
           </CardTitle>
           <CardDescription>
-            Drift suggestions matching these rules fire scoped cascades automatically after each analyze.
+            Drift suggestions matching these rules fire scoped cascades automatically after each
+            analyze.
           </CardDescription>
         </div>
-        <Switch
-          checked={enabled}
-          disabled={saving}
-          onCheckedChange={(v) => save({ enabled: v })}
-        />
+        <Switch checked={enabled} disabled={saving} onCheckedChange={(v) => save({ enabled: v })} />
       </CardHeader>
       <CardContent className="space-y-5">
         <div>
@@ -185,9 +180,7 @@ export function CloneDriftPolicyCard({ cloneId }: { cloneId: string }) {
               value={maxPerRun}
               disabled={!enabled || saving}
               onChange={(e) =>
-                setPolicy((p) =>
-                  p ? { ...p, max_per_run: Number(e.target.value) } : p,
-                )
+                setPolicy((p) => (p ? { ...p, max_per_run: Number(e.target.value) } : p))
               }
               className="w-24 font-mono"
             />

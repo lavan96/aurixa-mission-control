@@ -1,14 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { bulkApplyClonePins, validateClonePins } from "@/server/library-admin.functions";
@@ -193,8 +203,8 @@ export function BulkLibraryPinsDialog({
             <Pin className="h-4 w-4 text-primary" /> Bulk apply library version pins
           </DialogTitle>
           <DialogDescription>
-            Pin the same approved library versions across multiple clones in one shot.
-            Only admin-approved entries are listed.
+            Pin the same approved library versions across multiple clones in one shot. Only
+            admin-approved entries are listed.
           </DialogDescription>
         </DialogHeader>
 
@@ -249,7 +259,9 @@ export function BulkLibraryPinsDialog({
                                 className="flex items-start gap-1 text-[10px] text-warning"
                               >
                                 <AlertTriangle className="mt-0.5 h-2.5 w-2.5 shrink-0" />
-                                <span>{i.slug}@v{i.version}: {i.reason}</span>
+                                <span>
+                                  {i.slug}@v{i.version}: {i.reason}
+                                </span>
                               </div>
                             ))}
                           </div>
@@ -291,13 +303,8 @@ export function BulkLibraryPinsDialog({
                     const versions = bySlug.get(slug) ?? [];
                     const value = picks[slug] ?? "";
                     return (
-                      <div
-                        key={slug}
-                        className="flex items-center gap-2 rounded px-1.5 py-1"
-                      >
-                        <code className="min-w-0 flex-1 truncate font-mono text-xs">
-                          {slug}
-                        </code>
+                      <div key={slug} className="flex items-center gap-2 rounded px-1.5 py-1">
+                        <code className="min-w-0 flex-1 truncate font-mono text-xs">{slug}</code>
                         <Select
                           value={value}
                           onValueChange={(v) => setPick(slug, v === "_skip" ? "" : v)}
@@ -306,12 +313,16 @@ export function BulkLibraryPinsDialog({
                             <SelectValue placeholder="skip" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="_skip" className="font-mono text-xs text-muted-foreground">
+                            <SelectItem
+                              value="_skip"
+                              className="font-mono text-xs text-muted-foreground"
+                            >
                               skip
                             </SelectItem>
                             {versions.map((v) => (
                               <SelectItem key={v.id} value={v.id} className="font-mono text-xs">
-                                v{v.version}{v.is_latest && " (latest)"}
+                                v{v.version}
+                                {v.is_latest && " (latest)"}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -331,7 +342,10 @@ export function BulkLibraryPinsDialog({
             <div className="space-y-0.5">
               {issues.slice(0, 6).map((i, idx) => (
                 <div key={idx}>
-                  <Badge variant="outline" className="mr-1 font-mono text-[9px] border-warning/40 text-warning">
+                  <Badge
+                    variant="outline"
+                    className="mr-1 font-mono text-[9px] border-warning/40 text-warning"
+                  >
                     {cloneNameFor(i.cloneId)}
                   </Badge>
                   {i.slug}@v{i.version}: {i.reason}
@@ -349,7 +363,11 @@ export function BulkLibraryPinsDialog({
             onClick={handleValidate}
             disabled={validating || selectedClones.size === 0}
           >
-            {validating ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="mr-1 h-3.5 w-3.5" />}
+            {validating ? (
+              <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+            )}
             Validate existing pins
           </Button>
           <Button
@@ -357,8 +375,13 @@ export function BulkLibraryPinsDialog({
             onClick={handleApply}
             disabled={submitting || selectedClones.size === 0 || activePicks.length === 0}
           >
-            {submitting ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Pin className="mr-1 h-3.5 w-3.5" />}
-            Apply {activePicks.length} pin{activePicks.length === 1 ? "" : "s"} × {selectedClones.size} clone{selectedClones.size === 1 ? "" : "s"}
+            {submitting ? (
+              <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Pin className="mr-1 h-3.5 w-3.5" />
+            )}
+            Apply {activePicks.length} pin{activePicks.length === 1 ? "" : "s"} ×{" "}
+            {selectedClones.size} clone{selectedClones.size === 1 ? "" : "s"}
           </Button>
         </DialogFooter>
       </DialogContent>

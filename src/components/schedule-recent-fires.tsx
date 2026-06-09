@@ -61,16 +61,11 @@ export function ScheduleRecentFires({ scheduleId }: { scheduleId: string }) {
         return;
       }
 
-      const { data: evs } = await supabase
-        .from("cascade_events")
-        .select("*")
-        .in("id", eventIds);
+      const { data: evs } = await supabase.from("cascade_events").select("*").in("id", eventIds);
 
       // Preserve audit order (most recent first).
       const byId = new Map((evs ?? []).map((e) => [e.id, e]));
-      const ordered = eventIds
-        .map((id) => byId.get(id))
-        .filter((e): e is EventRow => Boolean(e));
+      const ordered = eventIds.map((id) => byId.get(id)).filter((e): e is EventRow => Boolean(e));
 
       if (!cancelled) {
         setEvents(ordered);
@@ -83,11 +78,7 @@ export function ScheduleRecentFires({ scheduleId }: { scheduleId: string }) {
   }, [scheduleId]);
 
   if (loading) {
-    return (
-      <div className="font-mono text-[11px] text-muted-foreground">
-        loading recent fires…
-      </div>
-    );
+    return <div className="font-mono text-[11px] text-muted-foreground">loading recent fires…</div>;
   }
 
   if (events.length === 0) {

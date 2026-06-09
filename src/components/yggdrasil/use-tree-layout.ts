@@ -105,7 +105,13 @@ export function useTreeLayout(
 ): TreeLayout {
   return useMemo(() => {
     if (clones.length === 0) {
-      return { nodes: [], branches: [], width: containerWidth, height: containerHeight, trunkNode: null };
+      return {
+        nodes: [],
+        branches: [],
+        width: containerWidth,
+        height: containerHeight,
+        trunkNode: null,
+      };
     }
 
     const childMap = inferHierarchy(clones);
@@ -165,15 +171,15 @@ export function useTreeLayout(
       let x: number;
       if (depth === 1) {
         // First level: spread evenly
-        x = totalSiblings === 1
-          ? centerX
-          : startX + (indexInSiblings / (totalSiblings - 1)) * spreadWidth;
+        x =
+          totalSiblings === 1
+            ? centerX
+            : startX + (indexInSiblings / (totalSiblings - 1)) * spreadWidth;
       } else {
         // Deeper levels: offset from parent with some spread
         const offsetRange = Math.max(60, 160 / depth);
-        const offset = totalSiblings === 1
-          ? 0
-          : (indexInSiblings / (totalSiblings - 1) - 0.5) * offsetRange * 2;
+        const offset =
+          totalSiblings === 1 ? 0 : (indexInSiblings / (totalSiblings - 1) - 0.5) * offsetRange * 2;
         x = parentX + offset;
       }
 

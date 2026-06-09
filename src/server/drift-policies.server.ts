@@ -7,10 +7,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { executeCascade } from "./cascade-engine.server";
 import { assessBlastRadius } from "./cascade-approvals.server";
-import { unknownTable, type CloneDriftPolicyRow, type DriftSeverity } from "./_phase3d-types";
-
 type SupabaseLike = SupabaseClient<Database>;
 type CascadeMode = Database["public"]["Enums"]["cascade_mode"];
+type DriftSeverity = Database["public"]["Enums"]["drift_severity"];
+type CloneDriftPolicyRow = Database["public"]["Tables"]["clone_drift_policies"]["Row"];
 
 export type AppliedAuto = {
   suggestion_id: string;
@@ -41,7 +41,8 @@ export async function applyAutoPoliciesForClone(
   supabase: SupabaseLike,
   cloneId: string,
 ): Promise<AutoApplyResult> {
-  const { data: policyData } = await unknownTable(supabase, "clone_drift_policies")
+  const { data: policyData } = await supabase
+    .from("clone_drift_policies")
     .select("*")
     .eq("clone_id", cloneId)
     .maybeSingle();
@@ -62,10 +63,7 @@ export async function applyAutoPoliciesForClone(
   const muted = new Set(policy.muted_kinds ?? []);
 
   const eligible = all.filter(
-    (s) =>
-      s.status === "open" &&
-      SEVERITY_RANK[s.risk] <= threshold &&
-      !muted.has(s.category),
+    (s) => s.status === "open" && SEVERITY_RANK[s.risk] <= threshold && !muted.has(s.category),
   );
   if (eligible.length === 0) {
     return { ok: true, applied: [], skipped_reason: "no eligible suggestions" };
@@ -111,9 +109,7 @@ export async function applyAutoPoliciesForClone(
     });
 
     working = working.map((x) =>
-      x.id === s.id
-        ? { ...x, status: "applied" as const, applied_event_id: ev.id }
-        : x,
+      x.id === s.id ? { ...x, status: "applied" as const, applied_event_id: ev.id } : x,
     );
 
     if (blast.requiresApproval) {
@@ -147,7 +143,8 @@ export async function applyAutoPoliciesForClone(
       })
       .eq("id", cloneId);
 
-    await unknownTable(supabase, "clone_drift_policies")
+    await supabase
+      .from("clone_drift_policies")
       .update({
         last_applied_at: new Date().toISOString(),
         last_applied_count: applied.length,

@@ -5,11 +5,7 @@ import { Sparkles, Loader2, Wrench, ArrowUpCircle, ChevronDown } from "lucide-re
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { triageCascade, type TriageProposal } from "@/server/cascade-triage.functions";
 
@@ -55,8 +51,7 @@ export function CascadeTriageCard({
             <Sparkles className="h-4 w-4 text-accent" /> AI conflict triage
           </CardTitle>
           <CardDescription className="mt-1">
-            Lovable AI inspects each failed clone and proposes a fix-up or
-            escalation path.
+            Lovable AI inspects each failed clone and proposes a fix-up or escalation path.
           </CardDescription>
         </div>
         <Button size="sm" onClick={run} disabled={running}>
@@ -65,7 +60,11 @@ export function CascadeTriageCard({
           ) : (
             <Sparkles className="mr-1.5 h-3.5 w-3.5" />
           )}
-          {running ? "Analyzing…" : proposals ? "Re-triage" : `Triage ${failureCount} failure${failureCount === 1 ? "" : "s"}`}
+          {running
+            ? "Analyzing…"
+            : proposals
+              ? "Re-triage"
+              : `Triage ${failureCount} failure${failureCount === 1 ? "" : "s"}`}
         </Button>
       </CardHeader>
       <CardContent className="space-y-2">
@@ -79,7 +78,9 @@ export function CascadeTriageCard({
             AI returned no actionable proposals.
           </div>
         )}
-        {proposals?.map((p) => <ProposalRow key={p.resultId} proposal={p} />)}
+        {proposals?.map((p) => (
+          <ProposalRow key={p.resultId} proposal={p} />
+        ))}
       </CardContent>
     </Card>
   );
@@ -102,7 +103,10 @@ function ProposalRow({ proposal }: { proposal: TriageProposal }) {
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-sm font-medium">{proposal.title}</span>
-                <Badge variant="outline" className={cn("text-[10px] uppercase", riskTone(proposal.risk))}>
+                <Badge
+                  variant="outline"
+                  className={cn("text-[10px] uppercase", riskTone(proposal.risk))}
+                >
                   {proposal.risk}
                 </Badge>
                 <Badge variant="outline" className="font-mono text-[10px] uppercase">
@@ -125,9 +129,7 @@ function ProposalRow({ proposal }: { proposal: TriageProposal }) {
           <p className="text-sm text-muted-foreground">{proposal.rationale}</p>
           {proposal.steps.length > 0 && (
             <div className="font-mono text-xs">
-              <div className="mb-1 uppercase tracking-wider text-muted-foreground">
-                Steps
-              </div>
+              <div className="mb-1 uppercase tracking-wider text-muted-foreground">Steps</div>
               <ol className="space-y-0.5 pl-4">
                 {proposal.steps.map((s, i) => (
                   <li key={i} className="list-decimal">

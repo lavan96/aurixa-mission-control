@@ -15,7 +15,11 @@ import {
   Copy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getGitHubStatus, type GitHubStatus, type RepoReachability } from "@/server/github-status.functions";
+import {
+  getGitHubStatus,
+  type GitHubStatus,
+  type RepoReachability,
+} from "@/server/github-status.functions";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 
@@ -78,7 +82,8 @@ export function GitHubStatusCard() {
               <Github className="h-4 w-4" /> GitHub App connection
             </CardTitle>
             <CardDescription>
-              Live status of the Aurixa GitHub App — installation, accessible repos, and per-clone reachability.
+              Live status of the Aurixa GitHub App — installation, accessible repos, and per-clone
+              reachability.
             </CardDescription>
           </div>
           <Button size="sm" variant="outline" onClick={refresh} disabled={loading}>
@@ -97,11 +102,18 @@ export function GitHubStatusCard() {
               <div className="font-medium text-destructive">Not configured</div>
               <div className="text-muted-foreground">{status.error}</div>
               <div className="text-xs text-muted-foreground space-y-1">
-                <p>Set <strong>GITHUB_APP_ID</strong>, <strong>GITHUB_APP_PRIVATE_KEY</strong>, and <strong>GITHUB_APP_INSTALLATION_ID</strong> secrets.</p>
+                <p>
+                  Set <strong>GITHUB_APP_ID</strong>, <strong>GITHUB_APP_PRIVATE_KEY</strong>, and{" "}
+                  <strong>GITHUB_APP_INSTALLATION_ID</strong> secrets.
+                </p>
                 <p className="text-[11px] italic text-muted-foreground/70">
-                  <strong>App ID</strong> — found in your GitHub App's General settings (numeric, e.g. 123456).{" "}
-                  <strong>Installation ID</strong> — the number at the end of the URL when you click <em>Configure</em> on the installed app
-                  (<code className="rounded bg-muted px-1">github.com/settings/installations/<strong>{"<ID>"}</strong></code>).
+                  <strong>App ID</strong> — found in your GitHub App's General settings (numeric,
+                  e.g. 123456). <strong>Installation ID</strong> — the number at the end of the URL
+                  when you click <em>Configure</em> on the installed app (
+                  <code className="rounded bg-muted px-1">
+                    github.com/settings/installations/<strong>{"<ID>"}</strong>
+                  </code>
+                  ).
                 </p>
               </div>
             </div>
@@ -148,10 +160,12 @@ export function GitHubStatusCard() {
                 <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 space-y-2">
                   <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-destructive">
                     <AlertTriangle className="h-3.5 w-3.5" />
-                    {failedRepos.length} repo{failedRepos.length > 1 ? "s" : ""} failed authorization
+                    {failedRepos.length} repo{failedRepos.length > 1 ? "s" : ""} failed
+                    authorization
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    Click on a failed repo below to see the exact GitHub API error and remediation steps.
+                    Click on a failed repo below to see the exact GitHub API error and remediation
+                    steps.
                   </div>
                 </div>
               )}
@@ -167,9 +181,7 @@ export function GitHubStatusCard() {
                       key={r.id}
                       repo={r}
                       expanded={expandedRepoId === r.id}
-                      onToggle={() =>
-                        setExpandedRepoId(expandedRepoId === r.id ? null : r.id)
-                      }
+                      onToggle={() => setExpandedRepoId(expandedRepoId === r.id ? null : r.id)}
                     />
                   ))}
                 </ul>
@@ -225,13 +237,12 @@ function RepoRow({
             {!r.ok && r.error && <> · {r.error}</>}
           </div>
         </div>
-        {!r.ok && (
-          expanded ? (
+        {!r.ok &&
+          (expanded ? (
             <ChevronUp className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           ) : (
             <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-          )
-        )}
+          ))}
       </button>
 
       {/* Drilldown panel */}
@@ -258,22 +269,26 @@ function RepoRow({
                 <>
                   <li className="flex items-start gap-1.5">
                     <span className="mt-0.5 text-warning">•</span>
-                    GitHub App is not installed on the <code className="rounded bg-muted px-1">{r.owner}</code> organization/account.
+                    GitHub App is not installed on the{" "}
+                    <code className="rounded bg-muted px-1">{r.owner}</code> organization/account.
                   </li>
                   <li className="flex items-start gap-1.5">
                     <span className="mt-0.5 text-warning">•</span>
-                    Repository <code className="rounded bg-muted px-1">{r.repo}</code> is not included in the app's repository access list.
+                    Repository <code className="rounded bg-muted px-1">{r.repo}</code> is not
+                    included in the app's repository access list.
                   </li>
                   <li className="flex items-start gap-1.5">
                     <span className="mt-0.5 text-warning">•</span>
-                    Branch <code className="rounded bg-muted px-1">{r.branch}</code> does not exist in the repository.
+                    Branch <code className="rounded bg-muted px-1">{r.branch}</code> does not exist
+                    in the repository.
                   </li>
                 </>
               ) : r.error?.includes("401") || r.error?.includes("Bad credentials") ? (
                 <>
                   <li className="flex items-start gap-1.5">
                     <span className="mt-0.5 text-destructive">•</span>
-                    Private key does not match the GitHub App ID — regenerate the key in app settings.
+                    Private key does not match the GitHub App ID — regenerate the key in app
+                    settings.
                   </li>
                   <li className="flex items-start gap-1.5">
                     <span className="mt-0.5 text-destructive">•</span>

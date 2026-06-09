@@ -14,10 +14,9 @@ export const Route = createFileRoute("/hooks/run-schedules")({
 
         try {
           const result = await runDueSchedules(supabaseAdmin);
-          return new Response(
-            JSON.stringify({ success: true, ...result }),
-            { headers: { "Content-Type": "application/json" } },
-          );
+          return new Response(JSON.stringify({ success: true, ...result }), {
+            headers: { "Content-Type": "application/json" },
+          });
         } catch (e) {
           const msg = e instanceof Error ? e.message : "Schedule run failed";
           console.error("Schedule run failed:", msg);
@@ -26,10 +25,10 @@ export const Route = createFileRoute("/hooks/run-schedules")({
             entity_type: "cron",
             metadata: { error: msg },
           });
-          return new Response(
-            JSON.stringify({ success: false, error: msg }),
-            { status: 500, headers: { "Content-Type": "application/json" } },
-          );
+          return new Response(JSON.stringify({ success: false, error: msg }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
         }
       },
     },

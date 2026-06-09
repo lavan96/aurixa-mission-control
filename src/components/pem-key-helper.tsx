@@ -45,8 +45,7 @@ function deepVerify(pem: string): VerifyResult {
       ok: false,
       algorithm: "unknown",
       bitLength: 0,
-      message:
-        "Key is not in PKCS#8 format. Expected header: -----BEGIN PRIVATE KEY-----",
+      message: "Key is not in PKCS#8 format. Expected header: -----BEGIN PRIVATE KEY-----",
     };
   }
 
@@ -103,8 +102,7 @@ function deepVerify(pem: string): VerifyResult {
         ok: false,
         algorithm: "RSA",
         bitLength,
-        message:
-          "Key sign/verify self-test failed. The key may be corrupted or truncated.",
+        message: "Key sign/verify self-test failed. The key may be corrupted or truncated.",
       };
     }
   } catch {
@@ -112,8 +110,7 @@ function deepVerify(pem: string): VerifyResult {
       ok: false,
       algorithm: "RSA",
       bitLength,
-      message:
-        "Key sign/verify self-test threw an error. The key may be corrupted.",
+      message: "Key sign/verify self-test threw an error. The key may be corrupted.",
     };
   }
 
@@ -205,11 +202,11 @@ export function PemKeyHelper() {
           {"PRIVATE KEY CONVERTER & VALIDATOR"}
         </CardTitle>
         <CardDescription className="text-xs">
-          GitHub App keys are often downloaded in <strong>PKCS#1</strong> format
-          (<code className="rounded bg-muted px-1">BEGIN RSA PRIVATE KEY</code>). Our system
-          requires <strong>PKCS#8</strong> format
-          (<code className="rounded bg-muted px-1">BEGIN PRIVATE KEY</code>). Convert and verify
-          here before saving.
+          GitHub App keys are often downloaded in <strong>PKCS#1</strong> format (
+          <code className="rounded bg-muted px-1">BEGIN RSA PRIVATE KEY</code>). Our system requires{" "}
+          <strong>PKCS#8</strong> format (
+          <code className="rounded bg-muted px-1">BEGIN PRIVATE KEY</code>). Convert and verify here
+          before saving.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -220,7 +217,7 @@ export function PemKeyHelper() {
             OpenSSL command (alternative)
           </div>
           <pre className="overflow-x-auto rounded bg-background/80 p-2 font-mono text-[11px] leading-relaxed text-foreground/90 select-all">
-{`openssl pkcs8 -topk8 -inform PEM \\
+            {`openssl pkcs8 -topk8 -inform PEM \\
   -outform PEM -nocrypt \\
   -in your-github-app-key.pem \\
   -out converted-key.pem`}
@@ -232,11 +229,7 @@ export function PemKeyHelper() {
 
         {/* Auto-convert toggle */}
         <div className="flex items-center gap-3">
-          <Switch
-            id="auto-convert"
-            checked={autoConvert}
-            onCheckedChange={setAutoConvert}
-          />
+          <Switch id="auto-convert" checked={autoConvert} onCheckedChange={setAutoConvert} />
           <Label htmlFor="auto-convert" className="text-xs cursor-pointer">
             Auto-convert PKCS#1 to PKCS#8 on paste
           </Label>
@@ -250,7 +243,9 @@ export function PemKeyHelper() {
           <Textarea
             rows={6}
             className="font-mono text-[11px] leading-relaxed"
-            placeholder={"-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA...\n-----END RSA PRIVATE KEY-----"}
+            placeholder={
+              "-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA...\n-----END RSA PRIVATE KEY-----"
+            }
             value={input}
             onChange={(e) => handleInput(e.target.value)}
           />
@@ -267,7 +262,8 @@ export function PemKeyHelper() {
                 )}
               >
                 {format === "pkcs1" && "PKCS#1 detected — click Convert below"}
-                {format === "pkcs8" && (converted ? "Auto-converted to PKCS#8 ✓" : "PKCS#8 format ✓")}
+                {format === "pkcs8" &&
+                  (converted ? "Auto-converted to PKCS#8 ✓" : "PKCS#8 format ✓")}
                 {format === "other-pem" && "Unrecognised PEM type — expected RSA private key"}
                 {format === "invalid" && "Invalid or unrecognised key"}
               </Badge>

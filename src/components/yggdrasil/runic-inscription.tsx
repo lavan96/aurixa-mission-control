@@ -25,8 +25,8 @@ export function RunicInscription({ x, y, count = 5, vertical = true }: Props) {
     <g>
       {Array.from({ length: count }, (_, i) => {
         const rune = seededChar(x * 7 + y * 13 + i * 31);
-        const rx = vertical ? x + (Math.sin(i * 2.3) * 4) : x + i * 14;
-        const ry = vertical ? y + i * 16 : y + (Math.sin(i * 1.7) * 4);
+        const rx = vertical ? x + Math.sin(i * 2.3) * 4 : x + i * 14;
+        const ry = vertical ? y + i * 16 : y + Math.sin(i * 1.7) * 4;
 
         return (
           <motion.text

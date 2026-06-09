@@ -41,10 +41,10 @@ export const Route = createFileRoute("/hooks/warm-health")({
             entity_type: "cron",
             metadata: { error: msg, durationMs: Date.now() - startedAt },
           });
-          return new Response(
-            JSON.stringify({ success: false, error: msg }),
-            { status: 500, headers: { "Content-Type": "application/json" } },
-          );
+          return new Response(JSON.stringify({ success: false, error: msg }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
         }
       },
     },

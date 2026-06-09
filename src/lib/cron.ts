@@ -107,17 +107,50 @@ export function describeCron(expr: string): string {
   if (!p) return expr;
   const parts = expr.trim().split(/\s+/);
   // Recognize a few common patterns for friendlier text
-  if (parts[0] === "0" && parts[1] === "*" && parts[2] === "*" && parts[3] === "*" && parts[4] === "*")
+  if (
+    parts[0] === "0" &&
+    parts[1] === "*" &&
+    parts[2] === "*" &&
+    parts[3] === "*" &&
+    parts[4] === "*"
+  )
     return "Every hour";
-  if (parts[0].startsWith("*/") && parts[1] === "*" && parts[2] === "*" && parts[3] === "*" && parts[4] === "*")
+  if (
+    parts[0].startsWith("*/") &&
+    parts[1] === "*" &&
+    parts[2] === "*" &&
+    parts[3] === "*" &&
+    parts[4] === "*"
+  )
     return `Every ${parts[0].slice(2)} minutes`;
-  if (parts[1].startsWith("*/") && parts[0] === "0" && parts[2] === "*" && parts[3] === "*" && parts[4] === "*")
+  if (
+    parts[1].startsWith("*/") &&
+    parts[0] === "0" &&
+    parts[2] === "*" &&
+    parts[3] === "*" &&
+    parts[4] === "*"
+  )
     return `Every ${parts[1].slice(2)} hours`;
-  if (parts[0] === "0" && parts[1] === "0" && parts[2] === "*" && parts[3] === "*" && parts[4] === "*")
+  if (
+    parts[0] === "0" &&
+    parts[1] === "0" &&
+    parts[2] === "*" &&
+    parts[3] === "*" &&
+    parts[4] === "*"
+  )
     return "Daily at 00:00 UTC";
-  if (parts[2] === "*" && parts[3] === "*" && parts[4] !== "*" && /^\d+$/.test(parts[0]) && /^\d+$/.test(parts[1])) {
+  if (
+    parts[2] === "*" &&
+    parts[3] === "*" &&
+    parts[4] !== "*" &&
+    /^\d+$/.test(parts[0]) &&
+    /^\d+$/.test(parts[1])
+  ) {
     const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const dows = parts[4].split(",").map((d) => days[parseInt(d, 10)] ?? d).join("/");
+    const dows = parts[4]
+      .split(",")
+      .map((d) => days[parseInt(d, 10)] ?? d)
+      .join("/");
     return `Weekly on ${dows} at ${parts[1].padStart(2, "0")}:${parts[0].padStart(2, "0")} UTC`;
   }
   return expr;

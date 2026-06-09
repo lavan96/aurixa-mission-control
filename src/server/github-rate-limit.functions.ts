@@ -19,6 +19,9 @@ export const getGitHubRateLimit = createServerFn({ method: "GET" })
         reset: core.reset, // epoch seconds
       };
     } catch (e) {
-      return { ok: false as const, error: e instanceof Error ? e.message : "rate limit unavailable" };
+      return {
+        ok: false as const,
+        error: e instanceof Error ? e.message : "rate limit unavailable",
+      };
     }
   });

@@ -23,10 +23,12 @@ export const runCascade = createServerFn({ method: "POST" })
 export const cancelCascade = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { cascadeEventId: string; reason?: string }) =>
-    z.object({
-      cascadeEventId: z.string().uuid(),
-      reason: z.string().max(500).optional(),
-    }).parse(d),
+    z
+      .object({
+        cascadeEventId: z.string().uuid(),
+        reason: z.string().max(500).optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
@@ -67,4 +69,3 @@ export const cancelCascade = createServerFn({ method: "POST" })
     });
     return { ok: true as const };
   });
-

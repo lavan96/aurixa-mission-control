@@ -10,9 +10,19 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 // ─── Brand version diff ──────────────────────────────────────────────
 type Json = Record<string, unknown> | unknown[] | string | number | boolean | null;
 
-function diffJson(a: unknown, b: unknown, path = ""): Array<{ path: string; before: unknown; after: unknown; kind: "added" | "removed" | "changed" }> {
-  const out: Array<{ path: string; before: unknown; after: unknown; kind: "added" | "removed" | "changed" }> = [];
-  const isObj = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === "object" && !Array.isArray(v);
+function diffJson(
+  a: unknown,
+  b: unknown,
+  path = "",
+): Array<{ path: string; before: unknown; after: unknown; kind: "added" | "removed" | "changed" }> {
+  const out: Array<{
+    path: string;
+    before: unknown;
+    after: unknown;
+    kind: "added" | "removed" | "changed";
+  }> = [];
+  const isObj = (v: unknown): v is Record<string, unknown> =>
+    v !== null && typeof v === "object" && !Array.isArray(v);
   if (isObj(a) && isObj(b)) {
     const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
     for (const k of keys) {
@@ -30,11 +40,13 @@ function diffJson(a: unknown, b: unknown, path = ""): Array<{ path: string; befo
 export const diffBrandVersions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { profileId: string; versionA: string; versionB: string }) =>
-    z.object({
-      profileId: z.string().uuid(),
-      versionA: z.string().uuid(),
-      versionB: z.string().uuid(),
-    }).parse(d),
+    z
+      .object({
+        profileId: z.string().uuid(),
+        versionA: z.string().uuid(),
+        versionB: z.string().uuid(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
@@ -44,7 +56,8 @@ export const diffBrandVersions = createServerFn({ method: "POST" })
       .eq("profile_id", data.profileId)
       .in("id", [data.versionA, data.versionB]);
     if (error) return { ok: false as const, error: error.message };
-    if (!rows || rows.length !== 2) return { ok: false as const, error: "Could not load both versions" };
+    if (!rows || rows.length !== 2)
+      return { ok: false as const, error: "Could not load both versions" };
     const a = rows.find((r) => r.id === data.versionA)!;
     const b = rows.find((r) => r.id === data.versionB)!;
     const diff = [
@@ -58,7 +71,12 @@ export const diffBrandVersions = createServerFn({ method: "POST" })
       before: d.before === undefined ? null : (JSON.stringify(d.before) ?? "null"),
       after: d.after === undefined ? null : (JSON.stringify(d.after) ?? "null"),
     }));
-    return { ok: true as const, a: { id: a.id, version: a.version, published_at: a.published_at }, b: { id: b.id, version: b.version, published_at: b.published_at }, diff: safeDiff };
+    return {
+      ok: true as const,
+      a: { id: a.id, version: a.version, published_at: a.published_at },
+      b: { id: b.id, version: b.version, published_at: b.published_at },
+      diff: safeDiff,
+    };
   });
 
 // ─── Pending cascade approvals (queue) ────────────────────────────────
@@ -69,7 +87,9 @@ export const listPendingApprovals = createServerFn({ method: "GET" })
     const { supabase } = context;
     const { data, error } = await supabase
       .from("cascade_events")
-      .select("id, mode, summary, source_branch, source_sha, initiated_by, created_at, requires_approval, approved_at, scope_filter")
+      .select(
+        "id, mode, summary, source_branch, source_sha, initiated_by, created_at, requires_approval, approved_at, scope_filter",
+      )
       .eq("requires_approval", true)
       .is("approved_at", null)
       .neq("status", "failed")
@@ -122,7 +142,10 @@ export const bulkPauseClones = createServerFn({ method: "POST" })
     const updates = (clones ?? []).map(async (c) => {
       const existing = (c.notes ?? "").replace(PAUSE_TAG, "").trim();
       const next = data.pause ? `${PAUSE_TAG} ${existing}`.trim() : existing;
-      await supabase.from("clones").update({ notes: next || null }).eq("id", c.id);
+      await supabase
+        .from("clones")
+        .update({ notes: next || null })
+        .eq("id", c.id);
     });
     await Promise.all(updates);
     await supabase.from("audit_log").insert({
@@ -143,7 +166,11 @@ export const bulkReprovisionBackends = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { error } = await supabase
       .from("clone_backends")
-      .update({ status: "pending" as const, error_message: null, status_detail: "Re-queued by bulk reprovision" })
+      .update({
+        status: "pending" as const,
+        error_message: null,
+        status_detail: "Re-queued by bulk reprovision",
+      })
       .in("clone_id", data.cloneIds)
       .in("status", ["failed", "ready"] as const);
     await supabase.from("audit_log").insert({
@@ -160,14 +187,23 @@ export const bulkReprovisionBackends = createServerFn({ method: "POST" })
 
 export const exportAuditLog = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { sinceIso?: string; untilIso?: string; action?: string; entity?: string; limit?: number }) =>
-    z.object({
-      sinceIso: z.string().optional(),
-      untilIso: z.string().optional(),
-      action: z.string().optional(),
-      entity: z.string().optional(),
-      limit: z.number().int().min(1).max(5000).optional(),
-    }).parse(d),
+  .inputValidator(
+    (d: {
+      sinceIso?: string;
+      untilIso?: string;
+      action?: string;
+      entity?: string;
+      limit?: number;
+    }) =>
+      z
+        .object({
+          sinceIso: z.string().optional(),
+          untilIso: z.string().optional(),
+          action: z.string().optional(),
+          entity: z.string().optional(),
+          limit: z.number().int().min(1).max(5000).optional(),
+        })
+        .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;

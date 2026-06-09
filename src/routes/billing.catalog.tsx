@@ -7,7 +7,14 @@ import { ProtectedRoute } from "@/components/protected-route";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { ArrowLeft, Receipt, Puzzle, UserCog, Wrench, FileText } from "lucide-react";
 import { listPricingCatalog } from "@/lib/pricing-catalog.functions";
 import { createStripeCheckout } from "@/lib/stripe.functions";
@@ -25,7 +32,11 @@ export const Route = createFileRoute("/billing/catalog")({
 });
 
 function money(cents: number, currency = "AUD") {
-  return new Intl.NumberFormat("en-AU", { style: "currency", currency, maximumFractionDigits: 0 }).format(cents / 100);
+  return new Intl.NumberFormat("en-AU", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(cents / 100);
 }
 
 function priceRange(min: number, max: number, currency = "AUD") {
@@ -43,13 +54,26 @@ function CatalogPage() {
   });
 
   async function buySetup(setupId: string, stripePriceId: string | null) {
-    if (!tenant) { toast.error("Open with ?tenant=<id> to purchase"); return; }
-    if (!stripePriceId) { toast.error("Setup package not linked to Stripe yet"); return; }
+    if (!tenant) {
+      toast.error("Open with ?tenant=<id> to purchase");
+      return;
+    }
+    if (!stripePriceId) {
+      toast.error("Setup package not linked to Stripe yet");
+      return;
+    }
     try {
-      const r = await checkoutFn({ data: { mode: "setup_package", itemId: setupId, tenantId: tenant } });
-      if (!r.ok) { toast.error(r.error); return; }
+      const r = await checkoutFn({
+        data: { mode: "setup_package", itemId: setupId, tenantId: tenant },
+      });
+      if (!r.ok) {
+        toast.error(r.error);
+        return;
+      }
       if (r.url) window.location.href = r.url;
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Checkout failed"); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Checkout failed");
+    }
   }
 
   return (
@@ -61,12 +85,16 @@ function CatalogPage() {
             <h1 className="text-3xl font-bold">Pricing Catalog</h1>
           </div>
           <p className="text-muted-foreground">
-            Aurixa Systems — seat roles, add-on modules, setup packages, and per-report credit costs.
+            Aurixa Systems — seat roles, add-on modules, setup packages, and per-report credit
+            costs.
           </p>
         </div>
         <div className="flex gap-2">
           <Button asChild variant="outline" size="sm">
-            <Link to="/billing/seats"><ArrowLeft className="h-4 w-4 mr-2" />Seats</Link>
+            <Link to="/billing/seats">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Seats
+            </Link>
           </Button>
           <Button asChild variant="outline" size="sm">
             <Link to="/billing/topup">Credit Packs</Link>
@@ -85,7 +113,8 @@ function CatalogPage() {
               <h2 className="text-xl font-semibold">Per-Seat Role Pricing</h2>
             </div>
             <p className="text-sm text-muted-foreground">
-              Each seat in a plan can be assigned a role tier. Role pricing is in addition to the plan's base fee.
+              Each seat in a plan can be assigned a role tier. Role pricing is in addition to the
+              plan's base fee.
             </p>
             <div className="grid gap-4 md:grid-cols-3">
               {data.roles.map((r: any) => (
@@ -93,17 +122,24 @@ function CatalogPage() {
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle>{r.name}</CardTitle>
-                      <Badge variant="secondary">{priceRange(r.price_min_cents, r.price_max_cents, r.currency)}/mo</Badge>
+                      <Badge variant="secondary">
+                        {priceRange(r.price_min_cents, r.price_max_cents, r.currency)}/mo
+                      </Badge>
                     </div>
                     <CardDescription>{r.description}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-2">
                     {r.metadata?.best_for && (
-                      <p className="text-xs text-muted-foreground"><span className="font-medium">Best for:</span> {r.metadata.best_for}</p>
+                      <p className="text-xs text-muted-foreground">
+                        <span className="font-medium">Best for:</span> {r.metadata.best_for}
+                      </p>
                     )}
                     <ul className="text-sm space-y-1">
                       {(r.permissions as string[]).map((p, i) => (
-                        <li key={i} className="flex gap-2"><span className="text-primary">•</span>{p}</li>
+                        <li key={i} className="flex gap-2">
+                          <span className="text-primary">•</span>
+                          {p}
+                        </li>
                       ))}
                     </ul>
                   </CardContent>
@@ -127,7 +163,9 @@ function CatalogPage() {
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base">{a.name}</CardTitle>
-                      <Badge variant="outline" className="capitalize">{a.category}</Badge>
+                      <Badge variant="outline" className="capitalize">
+                        {a.category}
+                      </Badge>
                     </div>
                     <CardDescription>{a.description}</CardDescription>
                   </CardHeader>
@@ -140,7 +178,9 @@ function CatalogPage() {
                       <div className="flex flex-wrap gap-1">
                         <span className="text-xs text-muted-foreground mr-1">Included in:</span>
                         {a.included_in_plans.map((p: string) => (
-                          <Badge key={p} variant="secondary" className="text-xs capitalize">{p}</Badge>
+                          <Badge key={p} variant="secondary" className="text-xs capitalize">
+                            {p}
+                          </Badge>
                         ))}
                       </div>
                     )}
@@ -156,14 +196,18 @@ function CatalogPage() {
               <Wrench className="h-5 w-5" />
               <h2 className="text-xl font-semibold">Setup & Onboarding</h2>
             </div>
-            <p className="text-sm text-muted-foreground">One-time fees paid alongside the first month of a plan.</p>
+            <p className="text-sm text-muted-foreground">
+              One-time fees paid alongside the first month of a plan.
+            </p>
             <div className="grid gap-4 md:grid-cols-2">
               {data.setups.map((s: any) => (
                 <Card key={s.id}>
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base">{s.name}</CardTitle>
-                      <Badge variant="secondary">{priceRange(s.price_min_cents, s.price_max_cents, s.currency)}</Badge>
+                      <Badge variant="secondary">
+                        {priceRange(s.price_min_cents, s.price_max_cents, s.currency)}
+                      </Badge>
                     </div>
                     <CardDescription>
                       {s.description}
@@ -173,17 +217,30 @@ function CatalogPage() {
                   <CardContent className="space-y-3">
                     <ul className="text-sm space-y-1">
                       {(s.deliverables as string[]).map((d, i) => (
-                        <li key={i} className="flex gap-2"><span className="text-primary">✓</span>{d}</li>
+                        <li key={i} className="flex gap-2">
+                          <span className="text-primary">✓</span>
+                          {d}
+                        </li>
                       ))}
                     </ul>
                     <Button
                       size="sm"
                       className="w-full"
                       disabled={!tenant || !s.stripe_price_id}
-                      title={!s.stripe_price_id ? "Stripe price not linked" : (!tenant ? "Open with ?tenant=<id>" : undefined)}
+                      title={
+                        !s.stripe_price_id
+                          ? "Stripe price not linked"
+                          : !tenant
+                            ? "Open with ?tenant=<id>"
+                            : undefined
+                      }
                       onClick={() => buySetup(s.id, s.stripe_price_id)}
                     >
-                      {!tenant ? "Select tenant to purchase" : (s.stripe_price_id ? "Purchase (Stripe)" : "Stripe not linked")}
+                      {!tenant
+                        ? "Select tenant to purchase"
+                        : s.stripe_price_id
+                          ? "Purchase (Stripe)"
+                          : "Stripe not linked"}
                     </Button>
                   </CardContent>
                 </Card>
@@ -198,7 +255,8 @@ function CatalogPage() {
               <h2 className="text-xl font-semibold">Report Credit Costs</h2>
             </div>
             <p className="text-sm text-muted-foreground">
-              Credits deducted per generated report. Clones meter these via the token reservation API.
+              Credits deducted per generated report. Clones meter these via the token reservation
+              API.
             </p>
             <Card>
               <CardContent className="p-0">
@@ -218,8 +276,14 @@ function CatalogPage() {
                           <div className="font-medium">{r.name}</div>
                           <div className="text-xs text-muted-foreground">{r.description}</div>
                         </TableCell>
-                        <TableCell><Badge variant="outline" className="capitalize">{r.category}</Badge></TableCell>
-                        <TableCell className="capitalize text-sm text-muted-foreground">{r.metadata?.complexity ?? "—"}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">
+                            {r.category}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="capitalize text-sm text-muted-foreground">
+                          {r.metadata?.complexity ?? "—"}
+                        </TableCell>
                         <TableCell className="text-right font-semibold">{r.credit_cost}</TableCell>
                       </TableRow>
                     ))}

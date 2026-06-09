@@ -52,10 +52,7 @@ export async function analyzeCloneDrift(
   const [cloneRes, primeRes, modulesRes] = await Promise.all([
     supabase.from("clones").select("*").eq("id", cloneId).maybeSingle(),
     supabase.from("prime_config").select("*").limit(1).maybeSingle(),
-    supabase
-      .from("clone_modules")
-      .select("modules(name, file_globs)")
-      .eq("clone_id", cloneId),
+    supabase.from("clone_modules").select("modules(name, file_globs)").eq("clone_id", cloneId),
   ]);
   const clone = cloneRes.data;
   const prime = primeRes.data;
@@ -63,8 +60,7 @@ export async function analyzeCloneDrift(
   if (!prime) return { ok: false, error: "Prime not configured" };
 
   const installedGlobs: string[] = (modulesRes.data ?? []).flatMap(
-    (cm: { modules: { file_globs: string[] | null } | null }) =>
-      cm.modules?.file_globs ?? [],
+    (cm: { modules: { file_globs: string[] | null } | null }) => cm.modules?.file_globs ?? [],
   );
   if (installedGlobs.length === 0) {
     return { ok: false, error: "No modules installed — nothing to analyze" };
@@ -227,7 +223,9 @@ export async function analyzeCloneDrift(
   const argStr = aiData.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
   if (!argStr) return { ok: false, error: "AI returned no suggestions" };
 
-  let parsed: { suggestions?: Array<Omit<DriftSuggestion, "id" | "created_at" | "source_sha" | "status">> };
+  let parsed: {
+    suggestions?: Array<Omit<DriftSuggestion, "id" | "created_at" | "source_sha" | "status">>;
+  };
   try {
     parsed = JSON.parse(argStr);
   } catch {
@@ -258,7 +256,8 @@ export async function analyzeCloneDrift(
   await supabase
     .from("clones")
     .update({
-      drift_suggestions: merged as unknown as Database["public"]["Tables"]["clones"]["Update"]["drift_suggestions"],
+      drift_suggestions:
+        merged as unknown as Database["public"]["Tables"]["clones"]["Update"]["drift_suggestions"],
       last_drift_check_at: now,
     })
     .eq("id", cloneId);

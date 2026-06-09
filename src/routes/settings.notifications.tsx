@@ -1,12 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/protected-route";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -175,8 +169,8 @@ function SettingsNotificationsPage() {
             <BellRing className="h-4 w-4 text-primary" /> Delivery channels
           </CardTitle>
           <CardDescription>
-            Mute entire channels without losing the inbox history. Notifications still appear in
-            the bell and on the /notifications page.
+            Mute entire channels without losing the inbox history. Notifications still appear in the
+            bell and on the /notifications page.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -197,15 +191,26 @@ function SettingsNotificationsPage() {
             disabled={loading}
           />
           <div className="rounded-md border border-border/60 p-3">
-            <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Digest mode</Label>
+            <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
+              Digest mode
+            </Label>
             <div className="mt-2 flex gap-1">
               {(["realtime", "hourly", "daily"] as const).map((m) => (
-                <Button key={m} size="sm" variant={prefs.digest_mode === m ? "default" : "outline"} disabled={loading} onClick={() => void setDigestMode(m)}>
+                <Button
+                  key={m}
+                  size="sm"
+                  variant={prefs.digest_mode === m ? "default" : "outline"}
+                  disabled={loading}
+                  onClick={() => void setDigestMode(m)}
+                >
                   {m}
                 </Button>
               ))}
             </div>
-            <p className="mt-2 text-[11px] text-muted-foreground">Batch non-critical notifications into rolled-up summaries instead of firing them in real time.</p>
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Batch non-critical notifications into rolled-up summaries instead of firing them in
+              real time.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -241,14 +246,18 @@ function SettingsNotificationsPage() {
                   )}
                 >
                   <div className="flex items-center gap-2">
-                    <Icon className={cn("h-4 w-4", muted ? "text-muted-foreground" : s.className)} />
+                    <Icon
+                      className={cn("h-4 w-4", muted ? "text-muted-foreground" : s.className)}
+                    />
                     <span className="font-mono text-sm">{s.label}</span>
                   </div>
                   <Badge
                     variant="outline"
                     className={cn(
                       "text-[10px] uppercase",
-                      muted ? "border-muted text-muted-foreground" : "border-success/40 text-success",
+                      muted
+                        ? "border-muted text-muted-foreground"
+                        : "border-success/40 text-success",
                     )}
                   >
                     {muted ? "muted" : "on"}
@@ -511,12 +520,7 @@ function ChannelToggle({
         </Label>
         <p className="mt-1 text-xs text-muted-foreground">{description}</p>
       </div>
-      <Switch
-        id={id}
-        checked={checked}
-        onCheckedChange={onCheckedChange}
-        disabled={disabled}
-      />
+      <Switch id={id} checked={checked} onCheckedChange={onCheckedChange} disabled={disabled} />
     </div>
   );
 }

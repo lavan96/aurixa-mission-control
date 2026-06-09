@@ -57,8 +57,7 @@ export function useOptimisticMutation<TData = unknown, TVars = void, TSnapshot =
         const msg =
           typeof opts.errorMessage === "function"
             ? opts.errorMessage(err, vars)
-            : (opts.errorMessage ??
-              (err instanceof Error ? err.message : "Something went wrong"));
+            : (opts.errorMessage ?? (err instanceof Error ? err.message : "Something went wrong"));
         if (msg) toast.error(msg);
       }
       opts.onError?.(err, vars);

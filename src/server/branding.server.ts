@@ -7,6 +7,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { runSqlOnProject } from "./backend-provisioning.server";
+import { decryptSecret } from "./crypto.server";
 
 import { hashBrandBundle } from "./branding/hash";
 import { buildApplySql } from "./branding/sql";
@@ -14,12 +15,7 @@ import { mirrorAssetsToClone } from "./branding/mirror";
 import { runBrandDriftScan } from "./branding/drift";
 import { mergeOverrides, sanitizeOverrides } from "./branding/overrides";
 import { registerAssetVariants } from "./branding/variants";
-import type {
-  ApplyBrandResult,
-  BrandAsset,
-  BrandConfig,
-  ReportContact,
-} from "./branding/types";
+import type { ApplyBrandResult, BrandAsset, BrandConfig, ReportContact } from "./branding/types";
 
 type SupabaseLike = SupabaseClient<Database>;
 
@@ -37,10 +33,7 @@ export {
   buildTransformUrl,
 } from "./branding/variants";
 export type { VariantSpec } from "./branding/variants";
-export {
-  listVersionsForProfile,
-  rollbackProfileToVersion,
-} from "./branding/versions";
+export { listVersionsForProfile, rollbackProfileToVersion } from "./branding/versions";
 export type { BrandVersion } from "./branding/versions";
 export type {
   ApplyBrandResult,
@@ -98,18 +91,16 @@ export async function applyBrandToClone(
 
   const fail = async (error: string): Promise<ApplyBrandResult> => {
     const durationMs = Date.now() - startedAt;
-    await supabase
-      .from("clone_brand_assignments")
-      .upsert(
-        {
-          clone_id: args.cloneId,
-          profile_id: args.profileId,
-          status: "failed",
-          error_message: error,
-          last_drift_check_at: new Date().toISOString(),
-        },
-        { onConflict: "clone_id" },
-      );
+    await supabase.from("clone_brand_assignments").upsert(
+      {
+        clone_id: args.cloneId,
+        profile_id: args.profileId,
+        status: "failed",
+        error_message: error,
+        last_drift_check_at: new Date().toISOString(),
+      },
+      { onConflict: "clone_id" },
+    );
     await supabase.from("clone_brand_history").insert({
       clone_id: args.cloneId,
       profile_id: args.profileId,
@@ -144,7 +135,7 @@ export async function applyBrandToClone(
   const assets = (profile.asset_manifest as unknown as BrandAsset[]) ?? [];
   const mirror = await mirrorAssetsToClone({
     cloneSupabaseUrl: backend.supabase_url,
-    cloneServiceRoleKey: backend.service_role_key,
+    cloneServiceRoleKey: decryptSecret(backend.service_role_key),
     cloneBucket: "branding",
     assets,
   });
@@ -186,23 +177,21 @@ export async function applyBrandToClone(
   // 5. Update assignment + append history
   const durationMs = Date.now() - startedAt;
   const nowIso = new Date().toISOString();
-  await supabase
-    .from("clone_brand_assignments")
-    .upsert(
-      {
-        clone_id: args.cloneId,
-        profile_id: args.profileId,
-        status: "applied",
-        applied_at: nowIso,
-        applied_by: args.actorUserId,
-        applied_config_hash: finalHash,
-        last_drift_check_at: nowIso,
-        drift_summary: null,
-        error_message: null,
-        override_keys: merged.overrideKeys,
-      },
-      { onConflict: "clone_id" },
-    );
+  await supabase.from("clone_brand_assignments").upsert(
+    {
+      clone_id: args.cloneId,
+      profile_id: args.profileId,
+      status: "applied",
+      applied_at: nowIso,
+      applied_by: args.actorUserId,
+      applied_config_hash: finalHash,
+      last_drift_check_at: nowIso,
+      drift_summary: null,
+      error_message: null,
+      override_keys: merged.overrideKeys,
+    },
+    { onConflict: "clone_id" },
+  );
   await supabase.from("clone_brand_history").insert({
     clone_id: args.cloneId,
     profile_id: args.profileId,

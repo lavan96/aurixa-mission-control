@@ -27,10 +27,7 @@ export function FleetModuleSyncCard() {
   const { data: clones, loading: clonesLoading, refresh: refreshClones } = useClones();
   const sync = useServerFn(bulkSyncModuleFn);
 
-  const approvedModules = useMemo(
-    () => modules.filter((m) => m.status === "approved"),
-    [modules],
-  );
+  const approvedModules = useMemo(() => modules.filter((m) => m.status === "approved"), [modules]);
 
   const [moduleId, setModuleId] = useState<string>("");
   const [action, setAction] = useState<Action>("install");

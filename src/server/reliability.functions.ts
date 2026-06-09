@@ -54,7 +54,8 @@ export const computeFleetSlo = createServerFn({ method: "POST" })
       const st = String(p.status ?? p.health ?? "").toLowerCase();
       return ["ok", "up", "healthy", "ready", "active"].includes(st);
     }).length;
-    const fleetUptime = samplesTotal > 0 ? Math.round((upTotal / samplesTotal) * 10000) / 100 : null;
+    const fleetUptime =
+      samplesTotal > 0 ? Math.round((upTotal / samplesTotal) * 10000) / 100 : null;
 
     return {
       ok: true as const,
@@ -70,11 +71,13 @@ export const computeFleetSlo = createServerFn({ method: "POST" })
 export const deprecateLibraryEntry = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { entryId: string; reason: string; replacementSlug?: string }) =>
-    z.object({
-      entryId: z.string().uuid(),
-      reason: z.string().min(2).max(500),
-      replacementSlug: z.string().optional(),
-    }).parse(d),
+    z
+      .object({
+        entryId: z.string().uuid(),
+        reason: z.string().min(2).max(500),
+        replacementSlug: z.string().optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
@@ -132,7 +135,10 @@ export const brandDriftTimeseries = createServerFn({ method: "POST" })
       .select("status, last_drift_check_at, updated_at")
       .gte("updated_at", since);
     // bucket by day, severity ~= status mapping
-    const buckets = new Map<string, { date: string; pending: number; drifted: number; failed: number; applied: number }>();
+    const buckets = new Map<
+      string,
+      { date: string; pending: number; drifted: number; failed: number; applied: number }
+    >();
     for (const r of rows ?? []) {
       const ts = r.last_drift_check_at ?? r.updated_at;
       if (!ts) continue;

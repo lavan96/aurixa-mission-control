@@ -13,7 +13,10 @@ export type RateLimitResult =
  * Fails CLOSED on DB error — better to short-circuit a few legitimate
  * requests than allow unbounded traffic when the limiter store is down.
  */
-export async function checkRateLimit(keyId: string, limit = DEFAULT_LIMIT): Promise<RateLimitResult> {
+export async function checkRateLimit(
+  keyId: string,
+  limit = DEFAULT_LIMIT,
+): Promise<RateLimitResult> {
   const { data, error } = await supabaseAdmin.rpc("check_api_rate_limit", {
     _key_id: keyId,
     _limit: limit,

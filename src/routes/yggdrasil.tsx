@@ -39,7 +39,10 @@ export const Route = createFileRoute("/yggdrasil")({
   head: () => ({
     meta: [
       { title: "Yggdrasil — Aurixa Systems Mission Control" },
-      { name: "description", content: "The World Tree — a living visualization of your clone fleet." },
+      {
+        name: "description",
+        content: "The World Tree — a living visualization of your clone fleet.",
+      },
     ],
   }),
 });
@@ -160,7 +163,10 @@ function YggdrasilPage() {
   // Helper to update search params (for non-staged things like zoom/pan/selected)
   const updateSearch = useCallback(
     (updates: Partial<z.infer<typeof yggdrasilSearchSchema>>) => {
-      navigate({ search: (prev: z.infer<typeof yggdrasilSearchSchema>) => ({ ...prev, ...updates }), replace: true });
+      navigate({
+        search: (prev: z.infer<typeof yggdrasilSearchSchema>) => ({ ...prev, ...updates }),
+        replace: true,
+      });
     },
     [navigate],
   );
@@ -215,13 +221,10 @@ function YggdrasilPage() {
   );
 
   // Multi-select handler — called from tree component
-  const handleMultiSelectChange = useCallback(
-    (ids: string[]) => {
-      setStagedCompare(ids);
-      setHasUncommittedChanges(true);
-    },
-    [],
-  );
+  const handleMultiSelectChange = useCallback((ids: string[]) => {
+    setStagedCompare(ids);
+    setHasUncommittedChanges(true);
+  }, []);
 
   // Staged filter handlers
   const handleStagedFiltersChange = useCallback((filters: StatusFilter[]) => {
@@ -359,8 +362,8 @@ function YggdrasilPage() {
           </div>
         </div>
         <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-          A living map of the Aurixa fleet. Each root represents a clone cascading from
-          the prime repository — the trunk. Watch the tree grow as you add more clones.
+          A living map of the Aurixa fleet. Each root represents a clone cascading from the prime
+          repository — the trunk. Watch the tree grow as you add more clones.
         </p>
       </header>
 
@@ -399,7 +402,13 @@ function YggdrasilPage() {
           </div>
         </div>
       ) : (
-        <Suspense fallback={<div className="flex items-center justify-center py-24 text-xs text-muted-foreground">Loading tree…</div>}>
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center py-24 text-xs text-muted-foreground">
+              Loading tree…
+            </div>
+          }
+        >
           <YggdrasilTree
             clones={filteredClones}
             primeName={primeName}

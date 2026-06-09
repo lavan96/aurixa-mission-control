@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import crypto from "crypto";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireOperator } from "@/integrations/supabase/role-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { retryDueDeliveries } from "@/server/token-webhooks.server";
 
@@ -13,7 +13,7 @@ const DEFAULT_EVENTS = [
 ] as const;
 
 export const listWebhookEndpoints = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOperator])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("token_webhook_endpoints")
@@ -24,14 +24,18 @@ export const listWebhookEndpoints = createServerFn({ method: "GET" })
   });
 
 export const upsertWebhookEndpoint = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOperator])
   .inputValidator((input) =>
     z
       .object({
         id: z.string().uuid().optional(),
         cloneId: z.string().uuid().nullable().optional(),
         url: z.string().url().max(500),
-        events: z.array(z.string().min(1).max(64)).min(1).max(10).default([...DEFAULT_EVENTS]),
+        events: z
+          .array(z.string().min(1).max(64))
+          .min(1)
+          .max(10)
+          .default([...DEFAULT_EVENTS]),
         isActive: z.boolean().default(true),
         rotateSecret: z.boolean().default(false),
       })
@@ -39,7 +43,9 @@ export const upsertWebhookEndpoint = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     if (data.id) {
-      const newSecret = data.rotateSecret ? crypto.randomBytes(32).toString("base64url") : undefined;
+      const newSecret = data.rotateSecret
+        ? crypto.randomBytes(32).toString("base64url")
+        : undefined;
       const patch = {
         url: data.url,
         events: data.events,
@@ -48,7 +54,10 @@ export const upsertWebhookEndpoint = createServerFn({ method: "POST" })
         updated_at: new Date().toISOString(),
         ...(newSecret ? { secret: newSecret } : {}),
       };
-      const { error } = await supabaseAdmin.from("token_webhook_endpoints").update(patch).eq("id", data.id);
+      const { error } = await supabaseAdmin
+        .from("token_webhook_endpoints")
+        .update(patch)
+        .eq("id", data.id);
       if (error) return { ok: false as const, error: error.message };
       return { ok: true as const, secret: newSecret ?? null };
     }
@@ -66,16 +75,19 @@ export const upsertWebhookEndpoint = createServerFn({ method: "POST" })
   });
 
 export const deleteWebhookEndpoint = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOperator])
   .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data }) => {
-    const { error } = await supabaseAdmin.from("token_webhook_endpoints").delete().eq("id", data.id);
+    const { error } = await supabaseAdmin
+      .from("token_webhook_endpoints")
+      .delete()
+      .eq("id", data.id);
     if (error) return { ok: false as const, error: error.message };
     return { ok: true as const };
   });
 
 export const listWebhookDeliveries = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOperator])
   .inputValidator((input) =>
     z
       .object({
@@ -101,14 +113,14 @@ export const listWebhookDeliveries = createServerFn({ method: "GET" })
   });
 
 export const retryWebhookDeliveriesNow = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOperator])
   .handler(async () => {
     const r = await retryDueDeliveries();
     return { ok: true as const, ...r };
   });
 
 export const redriveWebhookDelivery = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOperator])
   .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data }) => {
     const { error } = await supabaseAdmin
@@ -126,7 +138,7 @@ export const redriveWebhookDelivery = createServerFn({ method: "POST" })
  * subscription matching — always delivers to the specified endpoint.
  */
 export const sendTestWebhook = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOperator])
   .inputValidator((input) => z.object({ endpointId: z.string().uuid() }).parse(input))
   .handler(async ({ data }) => {
     const { data: ep, error } = await supabaseAdmin

@@ -23,9 +23,9 @@ That means the report pipeline is generating reports without ever calling
 
 ## Required secrets (already set, verify)
 
-| Name | Value |
-| --- | --- |
-| `MISSION_CONTROL_URL` | `https://aurixa-mission-control.lovable.app` |
+| Name                            | Value                                                  |
+| ------------------------------- | ------------------------------------------------------ |
+| `MISSION_CONTROL_URL`           | `https://aurixa-mission-control.lovable.app`           |
 | `MISSION_CONTROL_CLONE_API_KEY` | Starts with `mck_` (scope must include `tokens:meter`) |
 
 ## Step 1 — Ensure the token client exists
@@ -122,6 +122,7 @@ export const generateInvestmentReport = createServerFn({ method: "POST" })
 ```
 
 ### Notes
+
 - `idempotencyKey` MUST be deterministic per logical attempt — reuse it on
   retries so the user is never double-charged.
 - If your pipeline doesn't return real token usage, fall back to `estimate`
@@ -134,14 +135,14 @@ export const generateInvestmentReport = createServerFn({ method: "POST" })
 Repeat Step 3 for every other report entry point, using the matching catalog
 slug:
 
-| Catalog slug | Use for |
-| --- | --- |
-| `property-snapshot` | quick single-property snapshots |
-| `comparative-market` | CMA reports |
-| `investment-analysis` | investment / yield reports |
-| `portfolio-report` | multi-property portfolio rollups |
-| `due-diligence` | deep DD reports |
-| ...etc. | (see `/api/public/pricing/catalog` → `reports`) |
+| Catalog slug          | Use for                                         |
+| --------------------- | ----------------------------------------------- |
+| `property-snapshot`   | quick single-property snapshots                 |
+| `comparative-market`  | CMA reports                                     |
+| `investment-analysis` | investment / yield reports                      |
+| `portfolio-report`    | multi-property portfolio rollups                |
+| `due-diligence`       | deep DD reports                                 |
+| ...etc.               | (see `/api/public/pricing/catalog` → `reports`) |
 
 Any report that runs without reserve+commit will not move the meter.
 

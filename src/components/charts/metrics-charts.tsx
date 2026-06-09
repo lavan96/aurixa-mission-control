@@ -3,7 +3,11 @@ import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "rec
 type Point = { date: string; count: number };
 
 function Empty() {
-  return <div className="flex h-full items-center justify-center text-xs text-muted-foreground">No data yet</div>;
+  return (
+    <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+      No data yet
+    </div>
+  );
 }
 
 export function CascadesByDayChart({ data }: { data?: Point[] }) {
@@ -14,7 +18,13 @@ export function CascadesByDayChart({ data }: { data?: Point[] }) {
         <XAxis dataKey="date" tick={{ fontSize: 10 }} />
         <YAxis tick={{ fontSize: 10 }} />
         <Tooltip />
-        <Line type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+        <Line
+          type="monotone"
+          dataKey="count"
+          stroke="hsl(var(--primary))"
+          strokeWidth={2}
+          dot={false}
+        />
       </LineChart>
     </ResponsiveContainer>
   );
@@ -28,7 +38,13 @@ export function DriftByDayChart({ data }: { data?: Point[] }) {
         <XAxis dataKey="date" tick={{ fontSize: 10 }} />
         <YAxis tick={{ fontSize: 10 }} />
         <Tooltip />
-        <Line type="monotone" dataKey="count" stroke="hsl(var(--warning))" strokeWidth={2} dot={false} />
+        <Line
+          type="monotone"
+          dataKey="count"
+          stroke="hsl(var(--warning))"
+          strokeWidth={2}
+          dot={false}
+        />
       </LineChart>
     </ResponsiveContainer>
   );
@@ -42,7 +58,13 @@ export function AiByDayChart({ data }: { data?: Point[] }) {
         <XAxis dataKey="date" tick={{ fontSize: 10 }} />
         <YAxis tick={{ fontSize: 10 }} />
         <Tooltip />
-        <Line type="monotone" dataKey="count" stroke="hsl(var(--accent))" strokeWidth={2} dot={false} />
+        <Line
+          type="monotone"
+          dataKey="count"
+          stroke="hsl(var(--accent))"
+          strokeWidth={2}
+          dot={false}
+        />
       </LineChart>
     </ResponsiveContainer>
   );

@@ -1,15 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import {
-  runScheduleNow as runScheduleNowImpl,
-  type ScheduleRunOutcome,
-} from "./schedules.server";
-import { nextCronTick, parseCron } from "./cron";
-import type { Database } from "@/integrations/supabase/types";
-import { unknownTable, type CascadeScheduleRow } from "./_phase3d-types";
+import { runScheduleNow as runScheduleNowImpl, type ScheduleRunOutcome } from "./schedules.server";
+import { nextCronTick, parseCron } from "@/lib/cron";
+import type { Database, Json } from "@/integrations/supabase/types";
 
 type CascadeMode = Database["public"]["Enums"]["cascade_mode"];
 type ScheduleKind = "fleet_cascade" | "module_sync" | "brand_sync";
+type CascadeScheduleRow = Database["public"]["Tables"]["cascade_schedules"]["Row"];
 
 export type CreateScheduleInput = {
   name: string;
@@ -44,13 +41,14 @@ export const createSchedule = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }) => {
     const next = nextCronTick(data.cron_expression);
-    const { data: row, error } = await unknownTable(context.supabase, "cascade_schedules")
+    const { data: row, error } = await context.supabase
+      .from("cascade_schedules")
       .insert({
         name: data.name,
         kind: data.kind,
         cron_expression: data.cron_expression,
         mode: data.mode,
-        scope_filter: data.scope_filter ?? {},
+        scope_filter: (data.scope_filter ?? {}) as Json,
         enabled: data.enabled ?? true,
         notes: data.notes ?? null,
         next_run_at: next ? next.toISOString() : null,
@@ -82,12 +80,15 @@ export const updateSchedule = createServerFn({ method: "POST" })
     },
   )
   .handler(async ({ data, context }) => {
-    const patch: Record<string, unknown> = { ...data.patch };
+    const patch = {
+      ...data.patch,
+    } as Database["public"]["Tables"]["cascade_schedules"]["Update"];
     if (data.patch.cron_expression) {
       const next = nextCronTick(data.patch.cron_expression);
       patch.next_run_at = next ? next.toISOString() : null;
     }
-    const { error } = await unknownTable(context.supabase, "cascade_schedules")
+    const { error } = await context.supabase
+      .from("cascade_schedules")
       .update(patch)
       .eq("id", data.id);
     if (error) return { ok: false as const, error: error.message as string };
@@ -101,9 +102,7 @@ export const deleteSchedule = createServerFn({ method: "POST" })
     return data;
   })
   .handler(async ({ data, context }) => {
-    const { error } = await unknownTable(context.supabase, "cascade_schedules")
-      .delete()
-      .eq("id", data.id);
+    const { error } = await context.supabase.from("cascade_schedules").delete().eq("id", data.id);
     if (error) return { ok: false as const, error: error.message as string };
     await context.supabase.from("audit_log").insert({
       action: "schedule.deleted",

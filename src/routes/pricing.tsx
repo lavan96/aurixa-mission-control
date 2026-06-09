@@ -19,13 +19,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Accordion,
@@ -70,7 +64,6 @@ export const Route = createFileRoute("/pricing")({
     ],
   }),
 });
-
 
 const aud = (cents: number) =>
   new Intl.NumberFormat("en-AU", {
@@ -128,9 +121,7 @@ function PricingPage() {
   });
   const clones = cloneList?.ok ? cloneList.clones : [];
   const activeClone =
-    selectedClone === PRIME_ID
-      ? null
-      : clones.find((c) => c.id === selectedClone) ?? null;
+    selectedClone === PRIME_ID ? null : (clones.find((c) => c.id === selectedClone) ?? null);
 
   // Keep ?clone=… in sync so it survives the auth round-trip.
   useEffect(() => {
@@ -138,16 +129,16 @@ function PricingPage() {
     if ((search.clone ?? undefined) === desired) return;
     nav({
       to: "/pricing" as never,
-      search: { ...(search.intent ? { intent: search.intent } : {}), ...(desired ? { clone: desired } : {}) } as never,
+      search: {
+        ...(search.intent ? { intent: search.intent } : {}),
+        ...(desired ? { clone: desired } : {}),
+      } as never,
       replace: true,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedClone]);
 
-  const startCheckout = async (
-    mode: "seat_plan" | "topup" | "setup_package",
-    itemId: string,
-  ) => {
+  const startCheckout = async (mode: "seat_plan" | "topup" | "setup_package", itemId: string) => {
     // Unauthenticated: route to auth with redirect + intent + clone.
     if (!session) {
       nav({
@@ -203,13 +194,11 @@ function PricingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, search.intent]);
 
-
   const plans = useMemo(() => data?.plans ?? [], [data]);
   const packs = data?.packs ?? [];
   const setups = data?.setups ?? [];
   const addons = data?.addons ?? [];
   const reports = data?.reports ?? [];
-
 
   return (
     <div className="relative min-h-dvh overflow-hidden bg-background text-foreground">
@@ -219,18 +208,28 @@ function PricingPage() {
       <header className="relative z-20 mx-auto flex max-w-7xl items-center justify-between px-6 py-6">
         <Link to="/" className="flex items-center gap-2.5">
           <LogoMark />
-          <span className="font-mono text-[11px] tracking-[0.4em] text-foreground/90">
-            AURIXA
-          </span>
+          <span className="font-mono text-[11px] tracking-[0.4em] text-foreground/90">AURIXA</span>
         </Link>
         <nav className="hidden items-center gap-8 font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground md:flex">
-          <a href="#plans" className="hover:text-foreground transition-colors">Plans</a>
-          <a href="#credits" className="hover:text-foreground transition-colors">Credits</a>
-          <a href="#addons" className="hover:text-foreground transition-colors">Add-ons</a>
-          <a href="#faq" className="hover:text-foreground transition-colors">FAQ</a>
+          <a href="#plans" className="hover:text-foreground transition-colors">
+            Plans
+          </a>
+          <a href="#credits" className="hover:text-foreground transition-colors">
+            Credits
+          </a>
+          <a href="#addons" className="hover:text-foreground transition-colors">
+            Add-ons
+          </a>
+          <a href="#faq" className="hover:text-foreground transition-colors">
+            FAQ
+          </a>
         </nav>
         <Link to="/auth">
-          <Button variant="outline" size="sm" className="border-border/60 font-mono text-[11px] uppercase tracking-[0.2em]">
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-border/60 font-mono text-[11px] uppercase tracking-[0.2em]"
+          >
             Sign in
           </Button>
         </Link>
@@ -244,9 +243,7 @@ function PricingPage() {
             <span className="h-1 w-1 animate-pulse rounded-full bg-accent" />
             Index · 001 / Pricing
           </span>
-          <span className="hidden md:inline">
-            v.2026 · AUD · ex GST
-          </span>
+          <span className="hidden md:inline">v.2026 · AUD · ex GST</span>
         </div>
 
         <div className="mx-auto max-w-5xl text-center">
@@ -270,8 +267,8 @@ function PricingPage() {
             className="reveal-up mx-auto mt-8 max-w-2xl text-balance text-[15px] leading-relaxed text-muted-foreground md:text-lg"
             style={{ animationDelay: "240ms" }}
           >
-            Pick a plan. Scale seats. Top up credits as you grow. Every tier,
-            module and add-on — laid bare below, with{" "}
+            Pick a plan. Scale seats. Top up credits as you grow. Every tier, module and add-on —
+            laid bare below, with{" "}
             <span className="font-display italic text-foreground">no surprises</span>.
           </p>
 
@@ -292,9 +289,13 @@ function PricingPage() {
               >
                 {b}
                 {b === "annual" && (
-                  <span className={`ml-2 rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wider ${
-                    billing === "annual" ? "bg-background/20 text-primary-foreground" : "bg-accent/20 text-accent"
-                  }`}>
+                  <span
+                    className={`ml-2 rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wider ${
+                      billing === "annual"
+                        ? "bg-background/20 text-primary-foreground"
+                        : "bg-accent/20 text-accent"
+                    }`}
+                  >
                     -15%
                   </span>
                 )}
@@ -316,9 +317,7 @@ function PricingPage() {
                   <SelectValue placeholder="Select a client" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={PRIME_ID}>
-                    Mission Control · Prime
-                  </SelectItem>
+                  <SelectItem value={PRIME_ID}>Mission Control · Prime</SelectItem>
                   {clones.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.name}
@@ -335,10 +334,11 @@ function PricingPage() {
           )}
         </div>
 
-
-
         {/* Marquee */}
-        <div className="reveal-up relative mt-20 overflow-hidden border-y border-border/40 py-5" style={{ animationDelay: "480ms" }}>
+        <div
+          className="reveal-up relative mt-20 overflow-hidden border-y border-border/40 py-5"
+          style={{ animationDelay: "480ms" }}
+        >
           <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-32 bg-gradient-to-r from-background to-transparent" />
           <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-32 bg-gradient-to-l from-background to-transparent" />
           <div className="marquee-track flex w-max gap-12 whitespace-nowrap">
@@ -360,7 +360,11 @@ function PricingPage() {
         <SectionHeader
           index="02"
           eyebrow="Plans"
-          title={<>The <span className="font-display italic text-primary-glow">tiers</span>.</>}
+          title={
+            <>
+              The <span className="font-display italic text-primary-glow">tiers</span>.
+            </>
+          }
           description="Four shapes. One philosophy. Pay only for what your firm actually uses."
         />
 
@@ -383,10 +387,13 @@ function PricingPage() {
               const isFeatured = idx === plans.length - 2 || meta.tier === 3;
               const highlights: string[] = meta.highlights ?? [];
               const tierName =
-                meta.tier === 4 ? "Enterprise" :
-                meta.tier === 3 ? "Most popular" :
-                meta.tier === 2 ? "Recommended" :
-                "Starter";
+                meta.tier === 4
+                  ? "Enterprise"
+                  : meta.tier === 3
+                    ? "Most popular"
+                    : meta.tier === 2
+                      ? "Recommended"
+                      : "Starter";
 
               const isEnterprise = p.seat_limit >= 999;
               return (
@@ -412,7 +419,6 @@ function PricingPage() {
                 />
               );
             })}
-
           </div>
         )}
 
@@ -426,7 +432,11 @@ function PricingPage() {
         <SectionHeader
           index="03"
           eyebrow="Credits"
-          title={<>Top up <span className="font-display italic text-accent">on demand</span>.</>}
+          title={
+            <>
+              Top up <span className="font-display italic text-accent">on demand</span>.
+            </>
+          }
           description="Generate more reports, scenarios and AI insights with credit packs. Never expires for active accounts."
           icon={<Zap className="h-4 w-4" />}
         />
@@ -459,7 +469,9 @@ function PricingPage() {
                   <span className="bg-gradient-to-br from-foreground via-foreground to-primary-glow bg-clip-text text-4xl font-semibold tracking-tight text-transparent">
                     {pack.tokens.toLocaleString()}
                   </span>
-                  <span className="font-display text-base italic text-muted-foreground">credits</span>
+                  <span className="font-display text-base italic text-muted-foreground">
+                    credits
+                  </span>
                 </div>
                 <div className="mt-1.5 font-mono text-xs text-muted-foreground">
                   {aud(pack.price_cents)} AUD
@@ -484,7 +496,6 @@ function PricingPage() {
               </button>
             );
           })}
-
         </div>
       </section>
 
@@ -493,16 +504,33 @@ function PricingPage() {
         <SectionHeader
           index="04"
           eyebrow="Build your stack"
-          title={<>Modules, onboarding & <span className="font-display italic text-primary-glow">report economics</span>.</>}
+          title={
+            <>
+              Modules, onboarding &{" "}
+              <span className="font-display italic text-primary-glow">report economics</span>.
+            </>
+          }
           description="Mix and match what your firm actually uses. All optional, all transparent."
           icon={<Puzzle className="h-4 w-4" />}
         />
 
         <Tabs defaultValue="addons" className="mt-14">
           <TabsList className="mx-auto grid w-full max-w-xl grid-cols-3 border border-border/40 bg-card/60 backdrop-blur-xl">
-            <TabsTrigger value="addons" className="font-mono text-[11px] uppercase tracking-[0.2em]">Add-ons</TabsTrigger>
-            <TabsTrigger value="setup" className="font-mono text-[11px] uppercase tracking-[0.2em]">Onboarding</TabsTrigger>
-            <TabsTrigger value="reports" className="font-mono text-[11px] uppercase tracking-[0.2em]">Reports</TabsTrigger>
+            <TabsTrigger
+              value="addons"
+              className="font-mono text-[11px] uppercase tracking-[0.2em]"
+            >
+              Add-ons
+            </TabsTrigger>
+            <TabsTrigger value="setup" className="font-mono text-[11px] uppercase tracking-[0.2em]">
+              Onboarding
+            </TabsTrigger>
+            <TabsTrigger
+              value="reports"
+              className="font-mono text-[11px] uppercase tracking-[0.2em]"
+            >
+              Reports
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="addons" className="mt-10">
@@ -516,7 +544,10 @@ function PricingPage() {
                   <CardHeader>
                     <div className="flex items-start justify-between gap-2">
                       <CardTitle className="text-base tracking-tight">{a.name}</CardTitle>
-                      <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-wider">
+                      <Badge
+                        variant="outline"
+                        className="font-mono text-[9px] uppercase tracking-wider"
+                      >
                         {a.category}
                       </Badge>
                     </div>
@@ -623,9 +654,21 @@ function PricingPage() {
       <section className="relative z-10 mx-auto max-w-7xl px-6 pb-24">
         <div className="relative grid gap-8 overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-card/70 via-card/30 to-card/70 p-10 backdrop-blur-xl md:grid-cols-3">
           <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_20%_50%,oklch(0.78_0.16_200/0.08),transparent_60%),radial-gradient(circle_at_80%_50%,oklch(0.86_0.20_130/0.08),transparent_60%)]" />
-          <Trust icon={<ShieldCheck className="h-5 w-5" />} title="Enterprise security" body="SSO, audit logs, role-based access and isolated tenancy by default." />
-          <Trust icon={<InfinityIcon className="h-5 w-5" />} title="Scales with you" body="Add seats, devices and credits the moment the team needs them." />
-          <Trust icon={<Users className="h-5 w-5" />} title="Hands-on onboarding" body="A real human walks your team through setup and rollout." />
+          <Trust
+            icon={<ShieldCheck className="h-5 w-5" />}
+            title="Enterprise security"
+            body="SSO, audit logs, role-based access and isolated tenancy by default."
+          />
+          <Trust
+            icon={<InfinityIcon className="h-5 w-5" />}
+            title="Scales with you"
+            body="Add seats, devices and credits the moment the team needs them."
+          />
+          <Trust
+            icon={<Users className="h-5 w-5" />}
+            title="Hands-on onboarding"
+            body="A real human walks your team through setup and rollout."
+          />
         </div>
       </section>
 
@@ -634,15 +677,34 @@ function PricingPage() {
         <SectionHeader
           index="05"
           eyebrow="FAQ"
-          title={<>Questions, <span className="font-display italic text-primary-glow">answered</span>.</>}
+          title={
+            <>
+              Questions, <span className="font-display italic text-primary-glow">answered</span>.
+            </>
+          }
           icon={<FileText className="h-4 w-4" />}
         />
         <Accordion type="single" collapsible className="mt-10">
-          <FaqItem q="How do credits work?" a="Every AI-generated report or scenario consumes credits based on its complexity. Each plan includes a monthly allowance; you can top up anytime with credit packs that never expire while your account is active." />
-          <FaqItem q="Can I change plans later?" a="Absolutely. Upgrade, downgrade or change seat counts whenever your firm changes shape. Pro-rated billing applies on the next cycle." />
-          <FaqItem q="What does onboarding include?" a="A dedicated specialist walks your team through configuration, brand setup, workflows and training. Larger packages include migration, integrations and white-label theming." />
-          <FaqItem q="Do you offer annual billing?" a="Yes — flip the toggle at the top of the page for a 15% discount on annual prepayment. We also offer multi-year terms for Enterprise customers." />
-          <FaqItem q="Is there a free trial?" a="Reach out through the Get started flow. We'll set up a sandbox environment so your team can road-test the platform with sample data." />
+          <FaqItem
+            q="How do credits work?"
+            a="Every AI-generated report or scenario consumes credits based on its complexity. Each plan includes a monthly allowance; you can top up anytime with credit packs that never expire while your account is active."
+          />
+          <FaqItem
+            q="Can I change plans later?"
+            a="Absolutely. Upgrade, downgrade or change seat counts whenever your firm changes shape. Pro-rated billing applies on the next cycle."
+          />
+          <FaqItem
+            q="What does onboarding include?"
+            a="A dedicated specialist walks your team through configuration, brand setup, workflows and training. Larger packages include migration, integrations and white-label theming."
+          />
+          <FaqItem
+            q="Do you offer annual billing?"
+            a="Yes — flip the toggle at the top of the page for a 15% discount on annual prepayment. We also offer multi-year terms for Enterprise customers."
+          />
+          <FaqItem
+            q="Is there a free trial?"
+            a="Reach out through the Get started flow. We'll set up a sandbox environment so your team can road-test the platform with sample data."
+          />
         </Accordion>
       </section>
 
@@ -658,17 +720,23 @@ function PricingPage() {
             Ready <span className="font-display italic text-primary-glow">when</span> you are.
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-balance text-muted-foreground md:text-lg">
-            Spin up a workspace today, or book a walkthrough with our team to see
-            it on your data.
+            Spin up a workspace today, or book a walkthrough with our team to see it on your data.
           </p>
           <div className="mt-10 flex flex-wrap justify-center gap-3">
             <Link to="/auth">
-              <Button size="lg" className="shadow-[0_0_50px_-10px] shadow-primary/70 font-mono text-[11px] uppercase tracking-[0.25em]">
+              <Button
+                size="lg"
+                className="shadow-[0_0_50px_-10px] shadow-primary/70 font-mono text-[11px] uppercase tracking-[0.25em]"
+              >
                 Get started <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
             <Link to="/auth">
-              <Button size="lg" variant="outline" className="border-border/60 font-mono text-[11px] uppercase tracking-[0.25em]">
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-border/60 font-mono text-[11px] uppercase tracking-[0.25em]"
+              >
                 Talk to sales
               </Button>
             </Link>
@@ -684,9 +752,15 @@ function PricingPage() {
             <span>© {new Date().getFullYear()} Aurixa · All rights reserved</span>
           </div>
           <div className="flex gap-6">
-            <Link to="/" className="hover:text-foreground transition-colors">Home</Link>
-            <a href="#plans" className="hover:text-foreground transition-colors">Plans</a>
-            <a href="#faq" className="hover:text-foreground transition-colors">FAQ</a>
+            <Link to="/" className="hover:text-foreground transition-colors">
+              Home
+            </Link>
+            <a href="#plans" className="hover:text-foreground transition-colors">
+              Plans
+            </a>
+            <a href="#faq" className="hover:text-foreground transition-colors">
+              FAQ
+            </a>
           </div>
         </div>
       </footer>
@@ -763,7 +837,9 @@ function PlanCard({
 
       <div className="mt-7">
         <div className="flex items-baseline gap-1.5">
-          <span className={`bg-gradient-to-br ${featured ? "from-foreground via-foreground to-primary-glow" : "from-foreground to-foreground/50"} bg-clip-text text-5xl font-semibold tracking-[-0.03em] text-transparent`}>
+          <span
+            className={`bg-gradient-to-br ${featured ? "from-foreground via-foreground to-primary-glow" : "from-foreground to-foreground/50"} bg-clip-text text-5xl font-semibold tracking-[-0.03em] text-transparent`}
+          >
             {aud(price)}
           </span>
           {showRange && priceMax > price && (
@@ -784,7 +860,9 @@ function PlanCard({
       <ul className="mt-6 flex-1 space-y-3 text-sm">
         {highlights.map((h, i) => (
           <li key={i} className="flex gap-2.5">
-            <Check className={`mt-0.5 h-4 w-4 shrink-0 ${featured ? "text-accent" : "text-primary"}`} />
+            <Check
+              className={`mt-0.5 h-4 w-4 shrink-0 ${featured ? "text-accent" : "text-primary"}`}
+            />
             <span className="text-muted-foreground">{h}</span>
           </li>
         ))}
@@ -813,7 +891,6 @@ function PlanCard({
             </>
           )}
         </Button>
-
       </div>
     </div>
   );
@@ -852,15 +929,7 @@ function SectionHeader({
   );
 }
 
-function Trust({
-  icon,
-  title,
-  body,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  body: string;
-}) {
+function Trust({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
   return (
     <div className="flex gap-4">
       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/30">
@@ -909,7 +978,10 @@ function BackgroundFX() {
       </div>
       {/* lower aurora */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-[700px] opacity-60">
-        <div className="aurora absolute inset-0" style={{ animationDirection: "alternate-reverse" }} />
+        <div
+          className="aurora absolute inset-0"
+          style={{ animationDirection: "alternate-reverse" }}
+        />
       </div>
       {/* fine grid with vignette */}
       <div
@@ -918,8 +990,7 @@ function BackgroundFX() {
           backgroundImage:
             "linear-gradient(to right, currentColor 1px, transparent 1px), linear-gradient(to bottom, currentColor 1px, transparent 1px)",
           backgroundSize: "64px 64px",
-          maskImage:
-            "radial-gradient(ellipse at center, black 30%, transparent 80%)",
+          maskImage: "radial-gradient(ellipse at center, black 30%, transparent 80%)",
         }}
       />
       {/* film grain */}

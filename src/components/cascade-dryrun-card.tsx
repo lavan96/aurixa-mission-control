@@ -1,14 +1,7 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import {
-  Sparkles,
-  Loader2,
-  CircleCheck,
-  CircleAlert,
-  TriangleAlert,
-  Activity,
-} from "lucide-react";
+import { Sparkles, Loader2, CircleCheck, CircleAlert, TriangleAlert, Activity } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,8 +42,8 @@ export function CascadeDryRunCard({ cloneIds }: { cloneIds?: string[] }) {
             <Activity className="h-4 w-4 text-info" /> Dry-run impact matrix
           </CardTitle>
           <CardDescription className="mt-1">
-            Probe each clone's installed modules to see who&rsquo;ll actually be
-            touched. AI summarizes the riskiest blasts.
+            Probe each clone's installed modules to see who&rsquo;ll actually be touched. AI
+            summarizes the riskiest blasts.
           </CardDescription>
         </div>
         <Button size="sm" onClick={run} disabled={running}>

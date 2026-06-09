@@ -1,28 +1,19 @@
 // Look up a Stripe Checkout Session and resolve the associated clone/item
 // so the success page can confirm which client was billed.
 //
-// Access: callers must be a Mission Control operator. This prevents any
-// authenticated user from arbitrarily enumerating other tenants' sessions
-// by guessing or harvesting `cs_…` IDs.
+// Access: callers must be a Mission Control operator (requireOperator). This
+// prevents any authenticated user from arbitrarily enumerating other tenants'
+// sessions by guessing or harvesting `cs_…` IDs.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireOperator } from "@/integrations/supabase/role-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { getStripe } from "@/server/stripe.server";
 
-async function ensureOperator(userId: string): Promise<boolean> {
-  const { data, error } = await supabaseAdmin.rpc("is_operator", { _user_id: userId });
-  if (error) return false;
-  return !!data;
-}
-
 export const lookupCheckoutSession = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOperator])
   .inputValidator((input) => z.object({ sessionId: z.string().min(1).max(200) }).parse(input))
-  .handler(async ({ data, context }) => {
-    if (!(await ensureOperator(context.userId))) {
-      return { ok: false as const, error: "forbidden" };
-    }
+  .handler(async ({ data }) => {
     try {
       const session = await getStripe().checkout.sessions.retrieve(data.sessionId);
       const meta = (session.metadata ?? {}) as Record<string, string>;
@@ -35,14 +26,20 @@ export const lookupCheckoutSession = createServerFn({ method: "POST" })
       if (cloneId) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: clone } = await (supabaseAdmin as any)
-          .from("clones").select("name, slug").eq("id", cloneId).maybeSingle();
+          .from("clones")
+          .select("name, slug")
+          .eq("id", cloneId)
+          .maybeSingle();
         cloneName = clone?.name ?? clone?.slug ?? null;
       }
 
       let tenantName: string | null = null;
       if (!cloneName && tenantId) {
         const { data: tenant } = await supabaseAdmin
-          .from("tenants").select("display_name, external_ref").eq("id", tenantId).maybeSingle();
+          .from("tenants")
+          .select("display_name, external_ref")
+          .eq("id", tenantId)
+          .maybeSingle();
         tenantName = tenant?.display_name ?? tenant?.external_ref ?? null;
       }
 
@@ -67,12 +64,9 @@ export const lookupCheckoutSession = createServerFn({ method: "POST" })
 // Polled by /billing/success to detect when the webhook has finalised
 // fulfilment, so the UI can stop showing "your purchase is being finalised".
 export const getCheckoutFulfillmentStatus = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOperator])
   .inputValidator((input) => z.object({ sessionId: z.string().min(1).max(200) }).parse(input))
-  .handler(async ({ data, context }) => {
-    if (!(await ensureOperator(context.userId))) {
-      return { ok: false as const, error: "forbidden" };
-    }
+  .handler(async ({ data }) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const adminAny = supabaseAdmin as any;
 

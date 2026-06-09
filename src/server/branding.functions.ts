@@ -200,14 +200,12 @@ export const duplicateBrandProfile = createServerFn({ method: "POST" })
 
 export const setBrandProfileStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
-    (data: { profileId: string; status: "draft" | "published" | "archived" }) => {
-      if (!data?.profileId) throw new Error("profileId required");
-      if (!["draft", "published", "archived"].includes(data.status))
-        throw new Error("invalid status");
-      return data;
-    },
-  )
+  .inputValidator((data: { profileId: string; status: "draft" | "published" | "archived" }) => {
+    if (!data?.profileId) throw new Error("profileId required");
+    if (!["draft", "published", "archived"].includes(data.status))
+      throw new Error("invalid status");
+    return data;
+  })
   .handler(async ({ data, context }) => {
     const update: Database["public"]["Tables"]["clone_brand_profiles"]["Update"] = {
       status: data.status,
@@ -270,11 +268,7 @@ export const assignBrandProfile = createServerFn({ method: "POST" })
 export const applyBrandProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
-    (data: {
-      cloneIds: string[];
-      profileId: string;
-      cascadeEventId?: string | null;
-    }) => {
+    (data: { cloneIds: string[]; profileId: string; cascadeEventId?: string | null }) => {
       if (!Array.isArray(data?.cloneIds) || data.cloneIds.length === 0)
         throw new Error("cloneIds required");
       if (!data?.profileId) throw new Error("profileId required");
@@ -361,8 +355,7 @@ export const applyBrandProfile = createServerFn({ method: "POST" })
     const failed = results.length - succeeded;
 
     if (cascadeEventId) {
-      const finalStatus =
-        failed === 0 ? "completed" : succeeded === 0 ? "failed" : "partial";
+      const finalStatus = failed === 0 ? "completed" : succeeded === 0 ? "failed" : "partial";
       await context.supabase
         .from("cascade_events")
         .update({
@@ -405,7 +398,9 @@ export const checkBrandDrift = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     let q = context.supabase
       .from("clone_brand_assignments")
-      .select("clone_id, profile_id, applied_config_hash, clone_brand_profiles(config_hash, version)");
+      .select(
+        "clone_id, profile_id, applied_config_hash, clone_brand_profiles(config_hash, version)",
+      );
     if (data.cloneIds && data.cloneIds.length > 0) q = q.in("clone_id", data.cloneIds);
     const { data: rows, error } = await q;
     if (error) return { ok: false as const, error: error.message, drifted: [] };

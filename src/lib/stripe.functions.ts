@@ -3,7 +3,7 @@
 // The webhook (api/public/stripe/webhook) finalises the purchase server-side.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireOperator } from "@/integrations/supabase/role-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { getStripe } from "@/server/stripe.server";
 import { ensureTenant } from "@/server/clone-api-keys.server";
@@ -22,20 +22,23 @@ const InputSchema = z.object({
 });
 
 type CatalogItem = {
-  id: string; slug: string; name: string;
-  stripe_price_id: string | null; currency: string; is_active: boolean;
+  id: string;
+  slug: string;
+  name: string;
+  stripe_price_id: string | null;
+  currency: string;
+  is_active: boolean;
 };
 
 async function resolveItem(mode: Mode, itemId: string): Promise<CatalogItem | null> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const adminAny = supabaseAdmin as any;
-  const table = mode === "topup" ? "topup_packs"
-    : mode === "seat_plan" ? "seat_plans"
-    : "setup_packages";
-  const { data } = await adminAny
-    .from(table)
-    .select("id, slug, name, stripe_price_id, currency, is_active")
-    .eq("id", itemId).maybeSingle();
+  const cols = "id, slug, name, stripe_price_id, currency, is_active";
+  const query =
+    mode === "topup"
+      ? supabaseAdmin.from("topup_packs").select(cols).eq("id", itemId).maybeSingle()
+      : mode === "seat_plan"
+        ? supabaseAdmin.from("seat_plans").select(cols).eq("id", itemId).maybeSingle()
+        : supabaseAdmin.from("setup_packages").select(cols).eq("id", itemId).maybeSingle();
+  const { data } = await query;
   return (data as CatalogItem | null) ?? null;
 }
 
@@ -43,7 +46,8 @@ async function ensureStripeCustomer(tenantId: string): Promise<string> {
   const { data: tenant } = await supabaseAdmin
     .from("tenants")
     .select("id, display_name, external_ref, stripe_customer_id")
-    .eq("id", tenantId).maybeSingle();
+    .eq("id", tenantId)
+    .maybeSingle();
   if (!tenant) throw new Error("tenant_not_found");
   if (tenant.stripe_customer_id) return tenant.stripe_customer_id;
 
@@ -52,12 +56,14 @@ async function ensureStripeCustomer(tenantId: string): Promise<string> {
     metadata: { tenant_id: tenantId, external_ref: tenant.external_ref ?? "" },
   });
   await supabaseAdmin
-    .from("tenants").update({ stripe_customer_id: customer.id }).eq("id", tenantId);
+    .from("tenants")
+    .update({ stripe_customer_id: customer.id })
+    .eq("id", tenantId);
   return customer.id;
 }
 
 export const createStripeCheckout = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOperator])
   .inputValidator((input) => InputSchema.parse(input))
   .handler(async ({ data }) => {
     const item = await resolveItem(data.mode, data.itemId);
@@ -85,7 +91,6 @@ export const createStripeCheckout = createServerFn({ method: "POST" })
 
     let customerId: string | undefined;
     if (tenantId) customerId = await ensureStripeCustomer(tenantId);
-
 
     const host = getRequestHost();
     const proto = host.startsWith("localhost") ? "http" : "https";

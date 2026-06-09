@@ -34,9 +34,7 @@ export function SavedViewsBar<T>({
     <div className="flex flex-wrap items-center gap-1.5">
       <Bookmark className="h-3.5 w-3.5 text-muted-foreground" />
       {views.length === 0 && !naming && (
-        <span className="font-mono text-[10px] uppercase text-muted-foreground">
-          {emptyLabel}
-        </span>
+        <span className="font-mono text-[10px] uppercase text-muted-foreground">{emptyLabel}</span>
       )}
       {views.map((v: SavedView<T>) => (
         <span

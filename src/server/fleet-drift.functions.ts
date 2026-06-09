@@ -61,20 +61,10 @@ Installed modules: ${cloneSummary.installed_modules.join(", ") || "(none)"}`,
                     rationale: { type: "string" },
                     recommended_action: {
                       type: "string",
-                      enum: [
-                        "cascade_pr",
-                        "cascade_auto_merge",
-                        "notify",
-                        "review",
-                      ],
+                      enum: ["cascade_pr", "cascade_auto_merge", "notify", "review"],
                     },
                   },
-                  required: [
-                    "severity",
-                    "title",
-                    "rationale",
-                    "recommended_action",
-                  ],
+                  required: ["severity", "title", "rationale", "recommended_action"],
                   additionalProperties: false,
                 },
               },
@@ -91,17 +81,14 @@ Installed modules: ${cloneSummary.installed_modules.join(", ") || "(none)"}`,
     },
   };
 
-  const res = await fetch(
-    "https://ai.gateway.lovable.dev/v1/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
     },
-  );
+    body: JSON.stringify(body),
+  });
   if (!res.ok) {
     console.error("Fleet AI error", res.status, await res.text());
     return [];
@@ -134,12 +121,8 @@ export async function runFleetDriftScan(
     const minutesSinceCascade = c.last_cascade_at
       ? (Date.now() - new Date(c.last_cascade_at).getTime()) / 60000
       : 99999;
-    const drift = Math.min(
-      40,
-      Math.max(0, Math.floor(minutesSinceCascade / 30)),
-    );
-    const newCommitsBehind =
-      c.sync_status === "in_sync" && drift < 2 ? 0 : drift;
+    const drift = Math.min(40, Math.max(0, Math.floor(minutesSinceCascade / 30)));
+    const newCommitsBehind = c.sync_status === "in_sync" && drift < 2 ? 0 : drift;
 
     let newStatus = c.sync_status;
     if (newCommitsBehind === 0) newStatus = "in_sync";
@@ -150,12 +133,9 @@ export async function runFleetDriftScan(
       .from("clone_modules")
       .select("modules(name)")
       .eq("clone_id", c.id);
-    const installedNames = (cmods ?? [])
-      .map((m: any) => m.modules?.name)
-      .filter(Boolean);
+    const installedNames = (cmods ?? []).map((m: any) => m.modules?.name).filter(Boolean);
 
-    const previousSuggestions =
-      (c.drift_suggestions as DriftSuggestion[] | null) ?? [];
+    const previousSuggestions = (c.drift_suggestions as DriftSuggestion[] | null) ?? [];
     const previousHighTitles = new Set(
       previousSuggestions.filter((s) => s.severity === "high").map((s) => s.title),
     );

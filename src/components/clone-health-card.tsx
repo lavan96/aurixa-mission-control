@@ -91,11 +91,7 @@ export function CloneHealthCard({ cloneId }: { cloneId: string }) {
                 icon={<Zap className="h-4 w-4" />}
                 label="Cascades · 7d"
                 value={String(health.cascadeCount7d)}
-                detail={
-                  health.failureCount7d > 0
-                    ? `${health.failureCount7d} failed`
-                    : "all clean"
-                }
+                detail={health.failureCount7d > 0 ? `${health.failureCount7d} failed` : "all clean"}
                 tone={health.failureCount7d > 0 ? "warning" : "success"}
               />
               <Stat

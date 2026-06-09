@@ -155,7 +155,10 @@ export function YggdrasilNodePanel({ node, allNodes, onClose }: Props) {
 
       <div className="mt-4 space-y-3">
         <div className="flex items-center gap-2">
-          <StatusPill status={node.syncStatus as "in_sync" | "behind" | "failed" | "unknown" | "cascading"} behind={node.commitsBehind} />
+          <StatusPill
+            status={node.syncStatus as "in_sync" | "behind" | "failed" | "unknown" | "cascading"}
+            behind={node.commitsBehind}
+          />
           {node.commitsBehind > 0 && (
             <span className="font-mono text-xs text-warning">
               {node.commitsBehind} commit{node.commitsBehind === 1 ? "" : "s"} behind

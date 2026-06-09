@@ -40,7 +40,8 @@ const MIGRATION_REGISTRY: Omit<MigrationEntry, "sql">[] = [
   {
     id: "20260419215311",
     filename: "20260419215311_091021d2-99de-4fc1-b893-0cfa0ddf8f6c.sql",
-    description: "Base schema: enums, profiles, user_roles, prime_config, clones, modules, cascade tables, audit_log",
+    description:
+      "Base schema: enums, profiles, user_roles, prime_config, clones, modules, cascade tables, audit_log",
     cloneApplicable: false, // Contains prime_config, clones — prime-only infrastructure
   },
   {
@@ -207,9 +208,9 @@ async function loadMigrationSql(filename: string): Promise<string> {
  * Get all clone-applicable migrations sorted by ID (chronological).
  */
 export function getCloneApplicableMigrations(): Omit<MigrationEntry, "sql">[] {
-  return MIGRATION_REGISTRY
-    .filter((m) => m.cloneApplicable)
-    .sort((a, b) => a.id.localeCompare(b.id));
+  return MIGRATION_REGISTRY.filter((m) => m.cloneApplicable).sort((a, b) =>
+    a.id.localeCompare(b.id),
+  );
 }
 
 /**
@@ -248,7 +249,7 @@ export type MigrationResult = {
  */
 export async function applyMigration(
   projectRef: string,
-  migration: Omit<MigrationEntry, "sql">
+  migration: Omit<MigrationEntry, "sql">,
 ): Promise<MigrationResult> {
   try {
     const sql = await loadMigrationSql(migration.filename);
@@ -269,7 +270,7 @@ export async function applyMigration(
  */
 export async function applyPendingMigrations(
   projectRef: string,
-  lastAppliedId: string | null
+  lastAppliedId: string | null,
 ): Promise<{
   results: MigrationResult[];
   newVersion: string;
@@ -277,9 +278,7 @@ export async function applyPendingMigrations(
   const applicable = getCloneApplicableMigrations();
 
   // Filter to only migrations newer than lastAppliedId
-  const pending = lastAppliedId
-    ? applicable.filter((m) => m.id > lastAppliedId)
-    : applicable;
+  const pending = lastAppliedId ? applicable.filter((m) => m.id > lastAppliedId) : applicable;
 
   if (pending.length === 0) {
     return {
@@ -317,9 +316,7 @@ export function getPendingMigrationCount(lastAppliedId: string | null): number {
 /**
  * Get detailed pending migration info for a clone.
  */
-export function getPendingMigrations(
-  lastAppliedId: string | null
-): Omit<MigrationEntry, "sql">[] {
+export function getPendingMigrations(lastAppliedId: string | null): Omit<MigrationEntry, "sql">[] {
   const applicable = getCloneApplicableMigrations();
   if (!lastAppliedId) return applicable;
   return applicable.filter((m) => m.id > lastAppliedId);

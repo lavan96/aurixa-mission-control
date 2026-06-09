@@ -47,13 +47,20 @@ export function ProfileEditorCard() {
       if (profileId) {
         const { error } = await supabase
           .from("profiles")
-          .update({ display_name: displayName.trim() || null, avatar_url: avatarUrl.trim() || null })
+          .update({
+            display_name: displayName.trim() || null,
+            avatar_url: avatarUrl.trim() || null,
+          })
           .eq("id", profileId);
         if (error) throw error;
       } else {
         const { data, error } = await supabase
           .from("profiles")
-          .insert({ user_id: userId, display_name: displayName.trim() || null, avatar_url: avatarUrl.trim() || null })
+          .insert({
+            user_id: userId,
+            display_name: displayName.trim() || null,
+            avatar_url: avatarUrl.trim() || null,
+          })
           .select("id")
           .maybeSingle();
         if (error) throw error;

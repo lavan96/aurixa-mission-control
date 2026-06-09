@@ -7,11 +7,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -202,7 +198,9 @@ function CascadeDetailPage() {
         toast.info("No clones to act on");
         return null;
       }
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       const { data: ev, error } = await supabase
         .from("cascade_events")
         .insert({
@@ -306,7 +304,10 @@ function CascadeDetailPage() {
   if (!event) {
     return (
       <div className="space-y-3">
-        <Link to="/cascades" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
+        <Link
+          to="/cascades"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+        >
           <ArrowLeft className="mr-1 h-3.5 w-3.5" /> Back to cascades
         </Link>
         <Card>
@@ -330,9 +331,7 @@ function CascadeDetailPage() {
   const inFlight = event.status === "running" || event.status === "pending";
   const touchedCount = counts.succeeded + counts.pr_opened;
   const canRollback =
-    !inFlight &&
-    touchedCount > 0 &&
-    (event.status === "completed" || event.status === "partial");
+    !inFlight && touchedCount > 0 && (event.status === "completed" || event.status === "partial");
 
   const scopeMeta = (event.scope_filter ?? {}) as {
     rollback_of?: string;
@@ -347,7 +346,10 @@ function CascadeDetailPage() {
 
   return (
     <div className="space-y-6">
-      <Link to="/cascades" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
+      <Link
+        to="/cascades"
+        className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+      >
         <ArrowLeft className="mr-1 h-3.5 w-3.5" /> Back to cascades
       </Link>
 
@@ -369,11 +371,14 @@ function CascadeDetailPage() {
               <CopyButton value={eventId} label="cascade event id" />
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              <Badge variant="outline" className={cn("text-[10px] uppercase", statusTone(event.status))}>
+              <Badge
+                variant="outline"
+                className={cn("text-[10px] uppercase", statusTone(event.status))}
+              >
                 {event.status}
               </Badge>
-              {event.source_sha && (
-                prime ? (
+              {event.source_sha &&
+                (prime ? (
                   <a
                     href={`https://github.com/${prime.github_owner}/${prime.github_repo}/commit/${event.source_sha}`}
                     target="_blank"
@@ -385,10 +390,9 @@ function CascadeDetailPage() {
                   </a>
                 ) : (
                   <code className="font-mono">prime@{event.source_sha.slice(0, 7)}</code>
-                )
-              )}
-              {event.source_branch && (
-                prime ? (
+                ))}
+              {event.source_branch &&
+                (prime ? (
                   <a
                     href={`https://github.com/${prime.github_owner}/${prime.github_repo}/tree/${event.source_branch}`}
                     target="_blank"
@@ -400,8 +404,7 @@ function CascadeDetailPage() {
                   </a>
                 ) : (
                   <code className="font-mono">({event.source_branch})</code>
-                )
-              )}
+                ))}
               <span>· started {formatDistanceToNow(event.created_at)}</span>
               {event.completed_at && (
                 <span>· finished {formatDistanceToNow(event.completed_at)}</span>
@@ -442,9 +445,13 @@ function CascadeDetailPage() {
                 setCancelling(true);
                 try {
                   const r = await cancelCascadeFn({ data: { cascadeEventId: eventId } });
-                  if (r.ok) { toast.success("Cascade cancelled"); refresh(); }
-                  else toast.error(r.error);
-                } finally { setCancelling(false); }
+                  if (r.ok) {
+                    toast.success("Cascade cancelled");
+                    refresh();
+                  } else toast.error(r.error);
+                } finally {
+                  setCancelling(false);
+                }
               }}
             >
               <XCircle className={cn("mr-1.5 h-3.5 w-3.5", cancelling && "animate-spin")} /> Cancel
@@ -473,10 +480,10 @@ function CascadeDetailPage() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Roll back this cascade?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This creates a <strong>reverse cascade event</strong> against{" "}
-                    {touchedCount} clone{touchedCount === 1 ? "" : "s"} that were
-                    updated by this run. Pick a delivery mode — PR is recommended
-                    so the rollback diff is reviewable before landing.
+                    This creates a <strong>reverse cascade event</strong> against {touchedCount}{" "}
+                    clone{touchedCount === 1 ? "" : "s"} that were updated by this run. Pick a
+                    delivery mode — PR is recommended so the rollback diff is reviewable before
+                    landing.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="flex-col gap-2 sm:flex-row">
@@ -497,10 +504,7 @@ function CascadeDetailPage() {
                   >
                     <Send className="mr-1.5 h-3.5 w-3.5" /> Auto-merge
                   </Button>
-                  <AlertDialogAction
-                    disabled={rolling}
-                    onClick={() => void rollbackEvent("pr")}
-                  >
+                  <AlertDialogAction disabled={rolling} onClick={() => void rollbackEvent("pr")}>
                     <GitMerge className="mr-1.5 h-3.5 w-3.5" /> Open PRs
                   </AlertDialogAction>
                 </AlertDialogFooter>
@@ -509,7 +513,6 @@ function CascadeDetailPage() {
           )}
         </div>
       </header>
-
 
       {event.summary && (
         <Card className="border-border/80">
@@ -528,7 +531,7 @@ function CascadeDetailPage() {
                 Scoped module sync · {scopeMeta.module_name ?? "module"}
               </CardTitle>
               <Badge variant="outline" className="ml-auto font-mono text-[10px] uppercase">
-                {(scopeMeta.clone_ids?.length ?? results.length)} clone
+                {scopeMeta.clone_ids?.length ?? results.length} clone
                 {(scopeMeta.clone_ids?.length ?? results.length) === 1 ? "" : "s"}
               </Badge>
             </div>
@@ -538,9 +541,7 @@ function CascadeDetailPage() {
           </CardHeader>
           <CardContent className="p-4 pt-2">
             {(scopeMeta.module_globs ?? []).length === 0 ? (
-              <div className="font-mono text-[11px] text-muted-foreground">
-                No globs recorded.
-              </div>
+              <div className="font-mono text-[11px] text-muted-foreground">No globs recorded.</div>
             ) : (
               <div className="flex flex-wrap gap-1.5">
                 {(scopeMeta.module_globs ?? []).map((g) => (
@@ -576,7 +577,12 @@ function CascadeDetailPage() {
 
       <div className="grid gap-2 md:grid-cols-6">
         <CountTile label="Queued" value={counts.queued} icon={<CircleDot />} tone="muted" />
-        <CountTile label="Pushing" value={counts.pushing} icon={<Loader2 className="animate-spin" />} tone="info" />
+        <CountTile
+          label="Pushing"
+          value={counts.pushing}
+          icon={<Loader2 className="animate-spin" />}
+          tone="info"
+        />
         <CountTile label="Merged" value={counts.succeeded} icon={<CheckCircle2 />} tone="success" />
         <CountTile label="PRs" value={counts.pr_opened} icon={<GitPullRequest />} tone="accent" />
         <CountTile label="Failed" value={counts.failed} icon={<XCircle />} tone="destructive" />
@@ -653,9 +659,7 @@ function GroupedResults({
           label={g.label}
           tone={g.tone}
           items={g.items}
-          defaultOpen={
-            g.status === "failed" || g.status === "queued" || g.status === "pushing"
-          }
+          defaultOpen={g.status === "failed" || g.status === "queued" || g.status === "pushing"}
           eventInFlight={eventInFlight}
           eventMode={eventMode}
           onChange={onChange}
@@ -696,9 +700,7 @@ function ResultsGroup({
           className="flex w-full items-center gap-3 rounded-md border border-border/80 bg-card px-3 py-2 text-left transition-colors hover:bg-muted/40"
         >
           <ResultStatusIcon status={status} />
-          <span className={cn("font-mono text-xs uppercase tracking-wider", tone)}>
-            {label}
-          </span>
+          <span className={cn("font-mono text-xs uppercase tracking-wider", tone)}>{label}</span>
           <Badge variant="outline" className="border-border/60 font-mono text-[10px]">
             {items.length}
           </Badge>
@@ -815,7 +817,9 @@ function ResultRow({
           )}
           {clone && result.previous_sha && result.commit_sha && (
             <div className="mt-2">
-              <Suspense fallback={<div className="text-xs text-muted-foreground">Loading diff viewer…</div>}>
+              <Suspense
+                fallback={<div className="text-xs text-muted-foreground">Loading diff viewer…</div>}
+              >
                 <RichDiffViewer
                   cloneOwner={clone.github_owner}
                   cloneRepo={clone.github_repo}
@@ -906,16 +910,11 @@ function ResultRow({
                 Re-run with mode
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onSelect={() => void handleRetry("pr")}
-                disabled={retryBusy}
-              >
+              <DropdownMenuItem onSelect={() => void handleRetry("pr")} disabled={retryBusy}>
                 <GitMerge className="mr-2 h-3.5 w-3.5" />
                 <span className="flex-1">Open PR</span>
                 {eventMode === "pr" && (
-                  <span className="font-mono text-[9px] uppercase text-muted-foreground">
-                    same
-                  </span>
+                  <span className="font-mono text-[9px] uppercase text-muted-foreground">same</span>
                 )}
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -925,21 +924,14 @@ function ResultRow({
                 <Send className="mr-2 h-3.5 w-3.5" />
                 <span className="flex-1">Auto-merge</span>
                 {eventMode === "auto_merge" && (
-                  <span className="font-mono text-[9px] uppercase text-muted-foreground">
-                    same
-                  </span>
+                  <span className="font-mono text-[9px] uppercase text-muted-foreground">same</span>
                 )}
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() => void handleRetry("notify")}
-                disabled={retryBusy}
-              >
+              <DropdownMenuItem onSelect={() => void handleRetry("notify")} disabled={retryBusy}>
                 <Bell className="mr-2 h-3.5 w-3.5" />
                 <span className="flex-1">Notify only</span>
                 {eventMode === "notify" && (
-                  <span className="font-mono text-[9px] uppercase text-muted-foreground">
-                    same
-                  </span>
+                  <span className="font-mono text-[9px] uppercase text-muted-foreground">same</span>
                 )}
               </DropdownMenuItem>
             </DropdownMenuContent>

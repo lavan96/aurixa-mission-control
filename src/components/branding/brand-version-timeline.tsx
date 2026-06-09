@@ -2,10 +2,7 @@
 // snapshot with diff vs current published version + one-click rollback.
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import {
-  listBrandVersions,
-  rollbackBrandProfile,
-} from "@/server/branding-extensions.functions";
+import { listBrandVersions, rollbackBrandProfile } from "@/server/branding-extensions.functions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -65,9 +62,7 @@ export function BrandVersionTimelineDialog({
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        toast.error(
-          err instanceof Error ? err.message : "Failed to load versions",
-        );
+        toast.error(err instanceof Error ? err.message : "Failed to load versions");
         setLoading(false);
       });
     return () => {
@@ -103,8 +98,8 @@ export function BrandVersionTimelineDialog({
             Version history · {profileName}
           </DialogTitle>
           <DialogDescription>
-            Every publish creates an immutable snapshot. Rollbacks copy the
-            payload forward as a new version — history is never mutated.
+            Every publish creates an immutable snapshot. Rollbacks copy the payload forward as a new
+            version — history is never mutated.
           </DialogDescription>
         </DialogHeader>
 
@@ -125,16 +120,13 @@ export function BrandVersionTimelineDialog({
             versions.map((v, idx) => {
               const isCurrent = v.version === currentVersion;
               const prev = versions[idx + 1];
-              const hashChanged =
-                prev && prev.config_hash !== v.config_hash;
+              const hashChanged = prev && prev.config_hash !== v.config_hash;
               return (
                 <div
                   key={v.id}
                   className={cn(
                     "relative flex items-start gap-3 rounded-lg border bg-card p-3",
-                    isCurrent
-                      ? "border-primary/40 bg-primary/5"
-                      : "border-border",
+                    isCurrent ? "border-primary/40 bg-primary/5" : "border-border",
                   )}
                 >
                   <div className="flex flex-col items-center pt-1">
@@ -158,9 +150,7 @@ export function BrandVersionTimelineDialog({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-sm">
-                        Version {v.version}
-                      </span>
+                      <span className="font-semibold text-sm">Version {v.version}</span>
                       {isCurrent && (
                         <Badge
                           variant="outline"
@@ -186,9 +176,7 @@ export function BrandVersionTimelineDialog({
                         hash: {v.config_hash.slice(0, 16)}…
                       </div>
                     )}
-                    {v.notes && (
-                      <div className="text-xs mt-1 italic">{v.notes}</div>
-                    )}
+                    {v.notes && <div className="text-xs mt-1 italic">{v.notes}</div>}
                   </div>
                   {!isCurrent && (
                     <Button

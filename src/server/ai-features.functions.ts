@@ -5,16 +5,23 @@ import { callAi } from "./ai-gateway.server";
 
 export const aiCascadeSummary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { scope: string; mode: string; cloneCount: number; affectedModules: string[]; recentCommits?: string[] }) =>
-    z
-      .object({
-        scope: z.string(),
-        mode: z.string(),
-        cloneCount: z.number().int(),
-        affectedModules: z.array(z.string()),
-        recentCommits: z.array(z.string()).optional(),
-      })
-      .parse(d),
+  .inputValidator(
+    (d: {
+      scope: string;
+      mode: string;
+      cloneCount: number;
+      affectedModules: string[];
+      recentCommits?: string[];
+    }) =>
+      z
+        .object({
+          scope: z.string(),
+          mode: z.string(),
+          cloneCount: z.number().int(),
+          affectedModules: z.array(z.string()),
+          recentCommits: z.array(z.string()).optional(),
+        })
+        .parse(d),
   )
   .handler(async ({ data, context }) => {
     const prompt = `You are reviewing a fleet cascade about to fire.
@@ -152,7 +159,9 @@ export const listFleetDigests = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data } = await context.supabase
       .from("fleet_digests")
-      .select("id, period_start, period_end, summary_markdown, metrics, generated_by_model, created_at")
+      .select(
+        "id, period_start, period_end, summary_markdown, metrics, generated_by_model, created_at",
+      )
       .order("created_at", { ascending: false })
       .limit(20);
     return { digests: data ?? [] };

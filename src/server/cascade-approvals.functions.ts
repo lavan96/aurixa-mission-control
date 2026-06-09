@@ -10,13 +10,11 @@ type CascadeMode = Database["public"]["Enums"]["cascade_mode"];
 // Quick blast-radius probe — no auth gate beyond the standard middleware.
 export const assessCascadeBlast = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
-    (data: { mode: CascadeMode; cloneCount: number }) => {
-      if (typeof data?.cloneCount !== "number") throw new Error("cloneCount required");
-      if (!data?.mode) throw new Error("mode required");
-      return data;
-    },
-  )
+  .inputValidator((data: { mode: CascadeMode; cloneCount: number }) => {
+    if (typeof data?.cloneCount !== "number") throw new Error("cloneCount required");
+    if (!data?.mode) throw new Error("mode required");
+    return data;
+  })
   .handler(async ({ data }): Promise<BlastAssessment> => {
     return assessBlastRadius(data.mode, data.cloneCount);
   });

@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { getModuleDependencyGraph } from "@/server/library-admin.functions";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,7 +51,9 @@ export function ModuleDependencyGraphButton({
         if (res.ok) setData(res as GraphData);
       })
       .finally(() => !cancelled && setLoading(false));
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [open, data, fn, moduleId]);
 
   return (
@@ -52,18 +61,24 @@ export function ModuleDependencyGraphButton({
       <DialogTrigger asChild>
         <Button size={size} variant={variant} title="View dependency graph">
           <GitFork className="h-3.5 w-3.5" />
-          {size !== "icon" && <span className="ml-1 font-mono text-[10px] uppercase tracking-wider">deps</span>}
+          {size !== "icon" && (
+            <span className="ml-1 font-mono text-[10px] uppercase tracking-wider">deps</span>
+          )}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 font-mono">
             <GitFork className="h-4 w-4" /> Dependency graph
-            {data && <Badge variant="outline" className="font-mono text-[10px]">{data.module.name}</Badge>}
+            {data && (
+              <Badge variant="outline" className="font-mono text-[10px]">
+                {data.module.name}
+              </Badge>
+            )}
           </DialogTitle>
           <DialogDescription>
-            Files this module owns, files it imports from elsewhere, and which other modules it depends on.
-            Review this before syncing to clones to understand the blast radius.
+            Files this module owns, files it imports from elsewhere, and which other modules it
+            depends on. Review this before syncing to clones to understand the blast radius.
           </DialogDescription>
         </DialogHeader>
 
@@ -76,9 +91,21 @@ export function ModuleDependencyGraphButton({
         {!loading && data && (
           <div className="space-y-4">
             <div className="grid gap-3 md:grid-cols-3">
-              <Stat label="own files" value={data.ownFiles.length} icon={<FileCode className="h-3 w-3" />} />
-              <Stat label="external imports" value={data.externalTargets.length} icon={<ArrowRight className="h-3 w-3" />} />
-              <Stat label="module deps" value={data.moduleDependencies.length} icon={<Layers className="h-3 w-3" />} />
+              <Stat
+                label="own files"
+                value={data.ownFiles.length}
+                icon={<FileCode className="h-3 w-3" />}
+              />
+              <Stat
+                label="external imports"
+                value={data.externalTargets.length}
+                icon={<ArrowRight className="h-3 w-3" />}
+              />
+              <Stat
+                label="module deps"
+                value={data.moduleDependencies.length}
+                icon={<Layers className="h-3 w-3" />}
+              />
             </div>
 
             {data.moduleDependencies.length > 0 && (
@@ -93,7 +120,9 @@ export function ModuleDependencyGraphButton({
                         <div className="flex items-center justify-between">
                           <div className="font-mono text-sm">
                             {d.module_name}
-                            <span className="ml-2 text-[11px] text-muted-foreground">{d.module_slug}</span>
+                            <span className="ml-2 text-[11px] text-muted-foreground">
+                              {d.module_slug}
+                            </span>
                           </div>
                           <Badge variant="secondary" className="font-mono text-[10px]">
                             {d.shared_files.length} file{d.shared_files.length === 1 ? "" : "s"}
@@ -101,12 +130,17 @@ export function ModuleDependencyGraphButton({
                         </div>
                         <div className="mt-2 flex flex-wrap gap-1">
                           {d.shared_files.slice(0, 6).map((f) => (
-                            <code key={f} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
+                            <code
+                              key={f}
+                              className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]"
+                            >
                               {f}
                             </code>
                           ))}
                           {d.shared_files.length > 6 && (
-                            <span className="text-[10px] text-muted-foreground">+{d.shared_files.length - 6} more</span>
+                            <span className="text-[10px] text-muted-foreground">
+                              +{d.shared_files.length - 6} more
+                            </span>
                           )}
                         </div>
                       </CardContent>
@@ -146,7 +180,8 @@ export function ModuleDependencyGraphButton({
 
             {data.edges.length === 0 && (
               <p className="text-xs text-muted-foreground italic">
-                No import-edge data found. Run a fresh detection with “Analyze imports” enabled to populate the graph.
+                No import-edge data found. Run a fresh detection with “Analyze imports” enabled to
+                populate the graph.
               </p>
             )}
           </div>

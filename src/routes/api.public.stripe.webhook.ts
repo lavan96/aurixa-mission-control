@@ -13,27 +13,39 @@ function json(body: unknown, status = 200) {
   });
 }
 
+// Raised for events that can never succeed (bad/missing metadata, unknown mode,
+// inactive pack). These are acked with 200 so Stripe stops retrying and the
+// reason is recorded on the event row. Anything else is transient → 5xx so
+// Stripe retries, and we leave the event unprocessed for the next attempt.
+class PermanentError extends Error {}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const adminAny = supabaseAdmin as any;
 
 /**
- * Atomic idempotency lock.
- * Returns true if this call won the right to process the event;
- * returns false if another caller already inserted the row (Stripe replay,
- * concurrent worker, etc.). We rely on the unique constraint on
- * stripe_events.stripe_event_id rather than a TOCTOU read-then-write.
+ * Atomic idempotency claim using the unique constraint on
+ * stripe_events.stripe_event_id (no TOCTOU read-then-write):
+ *   - "claimed":   we inserted the row; we own first processing.
+ *   - "duplicate": row exists AND was already processed → skip.
+ *   - "retry":     row exists but processing never completed (a prior attempt
+ *                  failed transiently) → reprocess (handlers are idempotent).
  */
-async function claimEvent(event: Stripe.Event): Promise<boolean> {
-  const { error } = await adminAny
-    .from("stripe_events")
-    .insert({
-      stripe_event_id: event.id,
-      type: event.type,
-      payload: event,
-    });
-  if (!error) return true;
-  // 23505 = unique_violation → already claimed; treat as duplicate.
-  if (error.code === "23505") return false;
+async function claimEvent(event: Stripe.Event): Promise<"claimed" | "duplicate" | "retry"> {
+  const { error } = await adminAny.from("stripe_events").insert({
+    stripe_event_id: event.id,
+    type: event.type,
+    payload: event,
+  });
+  if (!error) return "claimed";
+  // 23505 = unique_violation → already inserted by a prior delivery/worker.
+  if (error.code === "23505") {
+    const { data } = await adminAny
+      .from("stripe_events")
+      .select("processed_at")
+      .eq("stripe_event_id", event.id)
+      .maybeSingle();
+    return data?.processed_at ? "duplicate" : "retry";
+  }
   // Any other error is a real DB problem — let the caller fail with 5xx.
   throw new Error(`claim_event_failed: ${error.message}`);
 }
@@ -46,11 +58,7 @@ async function markProcessed(eventId: string, error?: string) {
 }
 
 async function audit(action: string, metadata: Record<string, unknown>) {
-  await adminAny.from("audit_log").insert({
-    action,
-    entity_type: "stripe",
-    metadata,
-  });
+  await adminAny.from("audit_log").insert({ action, entity_type: "stripe", metadata });
 }
 
 // ---------- Event handlers ----------
@@ -61,49 +69,57 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const itemId = md.item_id;
   const tenantId = md.tenant_id || null;
   const cloneId = md.clone_id || null;
-  if (!mode || !itemId) throw new Error("missing_metadata");
+  if (!mode || !itemId) throw new PermanentError("missing_metadata");
 
   if (mode === "topup") {
-    if (!tenantId) throw new Error("missing_tenant");
+    if (!tenantId) throw new PermanentError("missing_tenant");
     const { data, error } = await supabaseAdmin.rpc("apply_topup", {
       _tenant_id: tenantId,
       _pack_id: itemId,
       _source_ref: `stripe:${session.id}`,
     });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(error.message); // transient (DB / RPC failure)
     if (data && typeof data === "object" && (data as { ok?: boolean }).ok === false) {
-      throw new Error((data as { error?: string }).error ?? "apply_topup_failed");
+      // Logical failure from the RPC (e.g. pack_not_found) — retrying won't help.
+      throw new PermanentError((data as { error?: string }).error ?? "apply_topup_failed");
     }
     return;
   }
 
   if (mode === "setup_package") {
-    if (!tenantId) throw new Error("missing_tenant");
-    await adminAny.from("setup_purchases").upsert({
-      tenant_id: tenantId,
-      setup_package_id: itemId,
-      stripe_checkout_session_id: session.id,
-      stripe_payment_intent_id: typeof session.payment_intent === "string"
-        ? session.payment_intent : session.payment_intent?.id ?? null,
-      amount_cents: session.amount_total ?? 0,
-      currency: (session.currency ?? "aud").toUpperCase(),
-      status: session.payment_status === "paid" ? "paid" : "pending",
-      fulfilled_at: session.payment_status === "paid" ? new Date().toISOString() : null,
-      metadata: md,
-    }, { onConflict: "stripe_checkout_session_id" });
+    if (!tenantId) throw new PermanentError("missing_tenant");
+    await adminAny.from("setup_purchases").upsert(
+      {
+        tenant_id: tenantId,
+        setup_package_id: itemId,
+        stripe_checkout_session_id: session.id,
+        stripe_payment_intent_id:
+          typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : (session.payment_intent?.id ?? null),
+        amount_cents: session.amount_total ?? 0,
+        currency: (session.currency ?? "aud").toUpperCase(),
+        status: session.payment_status === "paid" ? "paid" : "pending",
+        fulfilled_at: session.payment_status === "paid" ? new Date().toISOString() : null,
+        metadata: md,
+      },
+      { onConflict: "stripe_checkout_session_id" },
+    );
     return;
   }
 
   if (mode === "seat_plan") {
-    const subscriptionId = typeof session.subscription === "string"
-      ? session.subscription : session.subscription?.id ?? null;
-    const customerId = typeof session.customer === "string"
-      ? session.customer : session.customer?.id ?? null;
+    const subscriptionId =
+      typeof session.subscription === "string"
+        ? session.subscription
+        : (session.subscription?.id ?? null);
+    const customerId =
+      typeof session.customer === "string" ? session.customer : (session.customer?.id ?? null);
 
     // cloneId null = Prime (global) entitlement.
     const existingQ = cloneId
-      ? supabaseAdmin.from("clone_seat_entitlements").select("id").eq("clone_id", cloneId).maybeSingle()
-      : supabaseAdmin.from("clone_seat_entitlements").select("id").is("clone_id", null).maybeSingle();
+      ? adminAny.from("clone_seat_entitlements").select("id").eq("clone_id", cloneId).maybeSingle()
+      : adminAny.from("clone_seat_entitlements").select("id").is("clone_id", null).maybeSingle();
     const { data: existing } = await existingQ;
     const patch: Record<string, unknown> = {
       seat_plan_id: itemId,
@@ -120,16 +136,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         : adminAny.from("clone_seat_entitlements").update(patch).is("clone_id", null);
       await updQ;
     } else {
-      await adminAny.from("clone_seat_entitlements").insert({
-        clone_id: cloneId,
-        seats_used: 0,
-        ...patch,
-      });
+      await adminAny
+        .from("clone_seat_entitlements")
+        .insert({ clone_id: cloneId, seats_used: 0, ...patch });
     }
     return;
   }
 
-  throw new Error(`unsupported_mode:${mode}`);
+  throw new PermanentError(`unsupported_mode:${mode}`);
 }
 
 async function handleSubscriptionUpdated(sub: Stripe.Subscription) {
@@ -139,16 +153,18 @@ async function handleSubscriptionUpdated(sub: Stripe.Subscription) {
   // current_period_end is on the subscription's primary item in newer API versions.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const subAny = sub as any;
-  const periodEndTs = subAny.current_period_end ?? subAny.items?.data?.[0]?.current_period_end ?? null;
+  const periodEndTs =
+    subAny.current_period_end ?? subAny.items?.data?.[0]?.current_period_end ?? null;
   const periodEnd = periodEndTs ? new Date(periodEndTs * 1000).toISOString() : null;
 
-  const status = sub.status === "active" || sub.status === "trialing"
-    ? "active"
-    : sub.status === "past_due" || sub.status === "unpaid"
-      ? "past_due"
-      : sub.status === "canceled" || sub.status === "incomplete_expired"
-        ? "canceled"
-        : sub.status;
+  const status =
+    sub.status === "active" || sub.status === "trialing"
+      ? "active"
+      : sub.status === "past_due" || sub.status === "unpaid"
+        ? "past_due"
+        : sub.status === "canceled" || sub.status === "incomplete_expired"
+          ? "canceled"
+          : sub.status;
 
   const patch: Record<string, unknown> = {
     status,
@@ -264,21 +280,29 @@ export const Route = createFileRoute("/api/public/stripe/webhook")({
         let event: Stripe.Event;
         try {
           event = await getStripe().webhooks.constructEventAsync(
-            raw, sig, secret, undefined, getStripeCryptoProvider(),
+            raw,
+            sig,
+            secret,
+            undefined,
+            getStripeCryptoProvider(),
           );
         } catch (err) {
-          return json({ error: "signature_verification_failed", detail: (err as Error).message }, 400);
+          return json(
+            { error: "signature_verification_failed", detail: (err as Error).message },
+            400,
+          );
         }
 
-        // Atomic idempotency claim. Returns false if already inserted.
-        let claimed: boolean;
+        // Atomic idempotency claim. "duplicate" = already fully processed;
+        // "retry" = a prior attempt claimed it but failed before finishing.
+        let claim: "claimed" | "duplicate" | "retry";
         try {
-          claimed = await claimEvent(event);
+          claim = await claimEvent(event);
         } catch (err) {
           // DB hiccup → 5xx so Stripe retries.
           return json({ error: "claim_failed", detail: (err as Error).message }, 500);
         }
-        if (!claimed) return json({ received: true, duplicate: true });
+        if (claim === "duplicate") return json({ received: true, duplicate: true });
 
         try {
           switch (event.type) {
@@ -307,8 +331,8 @@ export const Route = createFileRoute("/api/public/stripe/webhook")({
               await handleChargeRefunded(event.data.object as Stripe.Charge);
               break;
             default:
-              // Acknowledge but mark un-handled. Stripe won't retry; we have
-              // a complete row in stripe_events for inspection.
+              // Acknowledge but mark un-handled. Stripe won't retry; we have a
+              // complete row in stripe_events for inspection.
               await markProcessed(event.id, `unhandled_event_type:${event.type}`);
               await audit("stripe.event.unhandled", { type: event.type, id: event.id });
               return json({ received: true, unhandled: event.type });
@@ -319,9 +343,25 @@ export const Route = createFileRoute("/api/public/stripe/webhook")({
           return json({ received: true });
         } catch (err) {
           const msg = (err as Error).message ?? "handler_error";
-          await markProcessed(event.id, msg);
-          await audit("stripe.event.error", { type: event.type, id: event.id, error: msg });
-          // 5xx → Stripe retries with backoff (up to 3 days).
+          if (err instanceof PermanentError) {
+            // Unprocessable event: ack with 200 so Stripe stops retrying, and
+            // record the reason on the event row.
+            await markProcessed(event.id, msg);
+            await audit("stripe.event.permanent_error", {
+              type: event.type,
+              id: event.id,
+              error: msg,
+            });
+            return json({ received: true, error: msg });
+          }
+          // Transient failure (DB/RPC/network): do NOT mark processed, so the
+          // next Stripe retry re-claims it as "retry" and reprocesses. Handlers
+          // are idempotent (apply_topup dedupes on source_ref; the rest upsert).
+          await audit("stripe.event.transient_error", {
+            type: event.type,
+            id: event.id,
+            error: msg,
+          });
           return json({ error: msg }, 500);
         }
       },

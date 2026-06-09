@@ -19,7 +19,7 @@ async function sendWebPush(
   payload: string,
   vapidPublicKey: string,
   vapidPrivateKey: string,
-  vapidSubject: string
+  vapidSubject: string,
 ): Promise<{ ok: boolean; gone: boolean }> {
   try {
     const audience = new URL(subscription.endpoint).origin;
@@ -87,7 +87,7 @@ async function createVapidJwt(
   audience: string,
   subject: string,
   privateKeyBase64url: string,
-  _publicKeyBase64url: string
+  _publicKeyBase64url: string,
 ): Promise<string> {
   const header = { typ: "JWT", alg: "ES256" };
   const now = Math.floor(Date.now() / 1000);
@@ -108,13 +108,13 @@ async function createVapidJwt(
     buildPkcs8FromRaw(privateKeyBytes),
     { name: "ECDSA", namedCurve: "P-256" },
     false,
-    ["sign"]
+    ["sign"],
   );
 
   const signature = await crypto.subtle.sign(
     { name: "ECDSA", hash: "SHA-256" },
     key,
-    new TextEncoder().encode(unsigned)
+    new TextEncoder().encode(unsigned),
   );
 
   // Convert DER signature to raw r||s format
@@ -125,19 +125,17 @@ async function createVapidJwt(
 function buildPkcs8FromRaw(rawPrivateKey: Uint8Array): ArrayBuffer {
   // PKCS8 wrapper for P-256 private key
   const prefix = new Uint8Array([
-    0x30, 0x81, 0x87, 0x02, 0x01, 0x00, 0x30, 0x13, 0x06, 0x07, 0x2a, 0x86,
-    0x48, 0xce, 0x3d, 0x02, 0x01, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d,
-    0x03, 0x01, 0x07, 0x04, 0x6d, 0x30, 0x6b, 0x02, 0x01, 0x01, 0x04, 0x20,
+    0x30, 0x81, 0x87, 0x02, 0x01, 0x00, 0x30, 0x13, 0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02,
+    0x01, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07, 0x04, 0x6d, 0x30, 0x6b, 0x02,
+    0x01, 0x01, 0x04, 0x20,
   ]);
-  const suffix = new Uint8Array([
-    0xa1, 0x44, 0x03, 0x42, 0x00,
-  ]);
+  const suffix = new Uint8Array([0xa1, 0x44, 0x03, 0x42, 0x00]);
   // We need the public key too, but for signing we can omit it
   // Use a simpler PKCS8 format without the public key
   const simplePrefix = new Uint8Array([
-    0x30, 0x41, 0x02, 0x01, 0x00, 0x30, 0x13, 0x06, 0x07, 0x2a, 0x86, 0x48,
-    0xce, 0x3d, 0x02, 0x01, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03,
-    0x01, 0x07, 0x04, 0x27, 0x30, 0x25, 0x02, 0x01, 0x01, 0x04, 0x20,
+    0x30, 0x41, 0x02, 0x01, 0x00, 0x30, 0x13, 0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01,
+    0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07, 0x04, 0x27, 0x30, 0x25, 0x02, 0x01,
+    0x01, 0x04, 0x20,
   ]);
   const result = new Uint8Array(simplePrefix.length + rawPrivateKey.length);
   result.set(simplePrefix);
@@ -188,7 +186,7 @@ function derToRaw(derSig: Uint8Array): Uint8Array {
 async function encryptPayload(
   p256dhBase64: string,
   authBase64: string,
-  plaintext: string
+  plaintext: string,
 ): Promise<Uint8Array> {
   const clientPublicKey = base64Decode(p256dhBase64);
   const clientAuth = base64Decode(authBase64);
@@ -198,7 +196,7 @@ async function encryptPayload(
   const localKeyPair = await crypto.subtle.generateKey(
     { name: "ECDH", namedCurve: "P-256" },
     true,
-    ["deriveBits"]
+    ["deriveBits"],
   );
 
   // Import client's public key
@@ -207,14 +205,14 @@ async function encryptPayload(
     clientPublicKey as BufferSource,
     { name: "ECDH", namedCurve: "P-256" },
     false,
-    []
+    [],
   );
 
   // Derive shared secret
   const sharedSecret = await crypto.subtle.deriveBits(
     { name: "ECDH", public: clientKey },
     localKeyPair.privateKey,
-    256
+    256,
   );
 
   // Export local public key
@@ -223,12 +221,7 @@ async function encryptPayload(
 
   // Derive encryption key and nonce using HKDF
   const authInfo = new TextEncoder().encode("Content-Encoding: auth\0");
-  const ikm = await hkdf(
-    new Uint8Array(sharedSecret),
-    clientAuth,
-    authInfo,
-    32
-  );
+  const ikm = await hkdf(new Uint8Array(sharedSecret), clientAuth, authInfo, 32);
 
   const keyInfo = createInfo("aesgcm", clientPublicKey, localPublicKeyBytes);
   const contentKey = await hkdf(ikm, new Uint8Array(0), keyInfo, 16);
@@ -249,13 +242,13 @@ async function encryptPayload(
     contentKey as BufferSource,
     { name: "AES-GCM" },
     false,
-    ["encrypt"]
+    ["encrypt"],
   );
 
   const encrypted = await crypto.subtle.encrypt(
     { name: "AES-GCM", iv: nonce as BufferSource, tagLength: 128 },
     aesKey,
-    padded as BufferSource
+    padded as BufferSource,
   );
 
   // Build aes128gcm header: salt(16) + rs(4) + idlen(1) + keyid(65)
@@ -280,7 +273,7 @@ async function encryptPayload(
     contentKey2 as BufferSource,
     { name: "AES-GCM" },
     false,
-    ["encrypt"]
+    ["encrypt"],
   );
 
   // Re-build padded with record delimiter
@@ -291,7 +284,7 @@ async function encryptPayload(
   const encryptedRecord = await crypto.subtle.encrypt(
     { name: "AES-GCM", iv: nonce2 as BufferSource, tagLength: 128 },
     aesKey2,
-    recordPadded as BufferSource
+    recordPadded as BufferSource,
   );
 
   const result = new Uint8Array(header.length + encryptedRecord.byteLength);
@@ -304,16 +297,13 @@ async function encryptPayload(
 function createInfo(
   type: string,
   clientPublicKey: Uint8Array,
-  serverPublicKey: Uint8Array
+  serverPublicKey: Uint8Array,
 ): Uint8Array {
   const typeBytes = new TextEncoder().encode(`Content-Encoding: ${type}\0`);
   const p256dhBytes = new TextEncoder().encode("P-256\0");
 
   const info = new Uint8Array(
-    typeBytes.length +
-    p256dhBytes.length +
-    2 + clientPublicKey.length +
-    2 + serverPublicKey.length
+    typeBytes.length + p256dhBytes.length + 2 + clientPublicKey.length + 2 + serverPublicKey.length,
   );
 
   let offset = 0;
@@ -336,14 +326,14 @@ async function hkdf(
   ikm: Uint8Array,
   salt: Uint8Array,
   info: Uint8Array,
-  length: number
+  length: number,
 ): Promise<Uint8Array> {
   const key = await crypto.subtle.importKey(
     "raw",
     (salt.length > 0 ? salt : new Uint8Array(32)) as BufferSource,
     { name: "HMAC", hash: "SHA-256" },
     false,
-    ["sign"]
+    ["sign"],
   );
   const prk = new Uint8Array(await crypto.subtle.sign("HMAC", key, ikm as BufferSource));
 
@@ -352,14 +342,14 @@ async function hkdf(
     prk as BufferSource,
     { name: "HMAC", hash: "SHA-256" },
     false,
-    ["sign"]
+    ["sign"],
   );
   const infoWithCounter = new Uint8Array(info.length + 1);
   infoWithCounter.set(info);
   infoWithCounter[info.length] = 1;
 
   const okm = new Uint8Array(
-    await crypto.subtle.sign("HMAC", prkKey, infoWithCounter as BufferSource)
+    await crypto.subtle.sign("HMAC", prkKey, infoWithCounter as BufferSource),
   );
   return okm.slice(0, length);
 }
@@ -445,7 +435,7 @@ Deno.serve(async (req) => {
           pushPayload,
           vapidPublicKey,
           vapidPrivateKey,
-          vapidSubject
+          vapidSubject,
         );
 
         if (result.ok) {
@@ -461,10 +451,12 @@ Deno.serve(async (req) => {
         } else {
           failed++;
         }
-      })
+      }),
     );
 
-    console.log(`Push fan-out: ${sent} sent, ${expired} expired (410), ${failed} transient-failed, ${results.length} total`);
+    console.log(
+      `Push fan-out: ${sent} sent, ${expired} expired (410), ${failed} transient-failed, ${results.length} total`,
+    );
 
     return new Response(JSON.stringify({ sent, expired, failed }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

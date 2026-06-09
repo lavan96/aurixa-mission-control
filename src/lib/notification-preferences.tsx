@@ -69,10 +69,7 @@ export function isMuted(
   kind: NotificationKind,
   severity: NotificationSeverity,
 ): boolean {
-  return (
-    snapshot.muted_kinds.includes(kind) ||
-    snapshot.muted_severities.includes(severity)
-  );
+  return snapshot.muted_kinds.includes(kind) || snapshot.muted_severities.includes(severity);
 }
 
 /**
@@ -112,7 +109,9 @@ export function useNotificationPreferences() {
           muted_severities: data.muted_severities ?? [],
           mute_toasts: data.mute_toasts,
           mute_browser_push: data.mute_browser_push,
-          digest_mode: ((data as { digest_mode?: string }).digest_mode as LocalCache["digest_mode"]) ?? "realtime",
+          digest_mode:
+            ((data as { digest_mode?: string }).digest_mode as LocalCache["digest_mode"]) ??
+            "realtime",
         }
       : DEFAULTS;
     setPrefs(next);
@@ -130,19 +129,17 @@ export function useNotificationPreferences() {
       // Optimistic
       setPrefs(next);
       writeCache(next);
-      const { error } = await supabase
-        .from("notification_preferences")
-        .upsert(
-          {
-            user_id: session.user.id,
-            muted_kinds: next.muted_kinds,
-            muted_severities: next.muted_severities,
-            mute_toasts: next.mute_toasts,
-            mute_browser_push: next.mute_browser_push,
-            digest_mode: next.digest_mode,
-          },
-          { onConflict: "user_id" },
-        );
+      const { error } = await supabase.from("notification_preferences").upsert(
+        {
+          user_id: session.user.id,
+          muted_kinds: next.muted_kinds,
+          muted_severities: next.muted_severities,
+          mute_toasts: next.mute_toasts,
+          mute_browser_push: next.mute_browser_push,
+          digest_mode: next.digest_mode,
+        },
+        { onConflict: "user_id" },
+      );
       if (error) throw error;
     },
     [session],
@@ -183,9 +180,8 @@ export function useNotificationPreferences() {
   );
 
   const muted = useMemo(
-    () =>
-      (kind: NotificationKind, severity: NotificationSeverity) =>
-        isMuted(prefs, kind, severity),
+    () => (kind: NotificationKind, severity: NotificationSeverity) =>
+      isMuted(prefs, kind, severity),
     [prefs],
   );
 

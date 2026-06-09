@@ -19,6 +19,7 @@ export const listPurchasableClones = createServerFn({ method: "GET" })
       .from("clones")
       .select("id, name, slug, deploy_url")
       .order("name", { ascending: true });
-    if (error) return { ok: false as const, error: error.message, clones: [] as PurchasableClone[] };
+    if (error)
+      return { ok: false as const, error: error.message, clones: [] as PurchasableClone[] };
     return { ok: true as const, clones: (data ?? []) as PurchasableClone[] };
   });

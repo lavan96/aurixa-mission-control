@@ -80,10 +80,7 @@ export const deleteDetectionRun = createServerFn({ method: "POST" })
       .update({ previous_run_id: null })
       .eq("previous_run_id", data.runId);
 
-    const { error } = await supabase
-      .from("module_detection_runs")
-      .delete()
-      .eq("id", data.runId);
+    const { error } = await supabase.from("module_detection_runs").delete().eq("id", data.runId);
     if (error) return { ok: false as const, error: error.message };
 
     await supabase.from("audit_log").insert({
@@ -203,9 +200,15 @@ export const resolveDriftAlert = createServerFn({ method: "POST" })
 export const batchUpdateModuleStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
-    (data: { moduleIds: string[]; status: "approved" | "archived" | "rejected"; rejectionReason?: string }) => {
-      if (!Array.isArray(data?.moduleIds) || data.moduleIds.length === 0) throw new Error("moduleIds required");
-      if (!["approved", "archived", "rejected"].includes(data.status)) throw new Error("status must be approved, archived, or rejected");
+    (data: {
+      moduleIds: string[];
+      status: "approved" | "archived" | "rejected";
+      rejectionReason?: string;
+    }) => {
+      if (!Array.isArray(data?.moduleIds) || data.moduleIds.length === 0)
+        throw new Error("moduleIds required");
+      if (!["approved", "archived", "rejected"].includes(data.status))
+        throw new Error("status must be approved, archived, or rejected");
       return data;
     },
   )
@@ -239,13 +242,13 @@ export const batchUpdateModuleStatus = createServerFn({ method: "POST" })
 // Approve modules and optionally trigger cascade deploy
 export const approveAndDeploy = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
-    (data: { moduleIds: string[]; cloneIds: string[]; cascadeMode?: string }) => {
-      if (!Array.isArray(data?.moduleIds) || data.moduleIds.length === 0) throw new Error("moduleIds required");
-      if (!Array.isArray(data?.cloneIds) || data.cloneIds.length === 0) throw new Error("cloneIds required");
-      return data;
-    },
-  )
+  .inputValidator((data: { moduleIds: string[]; cloneIds: string[]; cascadeMode?: string }) => {
+    if (!Array.isArray(data?.moduleIds) || data.moduleIds.length === 0)
+      throw new Error("moduleIds required");
+    if (!Array.isArray(data?.cloneIds) || data.cloneIds.length === 0)
+      throw new Error("cloneIds required");
+    return data;
+  })
   .handler(async ({ data, context }) => {
     // Approve modules first
     const { error: modErr } = await context.supabase
@@ -262,7 +265,9 @@ export const approveAndDeploy = createServerFn({ method: "POST" })
     // Create cascade event
     const insertRow: Database["public"]["Tables"]["cascade_events"]["Insert"] = {
       trigger: "manual",
-      mode: (data.cascadeMode === "auto_merge" ? "auto_merge" : "pr") as Database["public"]["Enums"]["cascade_mode"],
+      mode: (data.cascadeMode === "auto_merge"
+        ? "auto_merge"
+        : "pr") as Database["public"]["Enums"]["cascade_mode"],
       status: "pending",
       initiated_by: context.userId,
       scope_filter: { module_ids: data.moduleIds },
@@ -281,22 +286,18 @@ export const approveAndDeploy = createServerFn({ method: "POST" })
       clone_id: cloneId,
       status: "queued" as const,
     }));
-    const { error: resErr } = await context.supabase
-      .from("cascade_results")
-      .insert(results);
+    const { error: resErr } = await context.supabase.from("cascade_results").insert(results);
     if (resErr) return { ok: false as const, error: resErr.message };
 
     // Create tracking job
-    const { error: jobErr } = await context.supabase
-      .from("module_cascade_jobs")
-      .insert({
-        module_ids: data.moduleIds,
-        clone_ids: data.cloneIds,
-        cascade_event_id: event.id,
-        status: "queued",
-        initiated_by: context.userId,
-        metadata: { cascade_mode: data.cascadeMode ?? "pr" },
-      });
+    const { error: jobErr } = await context.supabase.from("module_cascade_jobs").insert({
+      module_ids: data.moduleIds,
+      clone_ids: data.cloneIds,
+      cascade_event_id: event.id,
+      status: "queued",
+      initiated_by: context.userId,
+      metadata: { cascade_mode: data.cascadeMode ?? "pr" },
+    });
     if (jobErr) return { ok: false as const, error: jobErr.message };
 
     // Audit
@@ -336,7 +337,12 @@ export const getModuleIntelligence = createServerFn({ method: "POST" })
       const result = await analyzeModuleIntelligence(context.supabase);
       return { ok: true as const, ...result };
     } catch (e) {
-      return { ok: false as const, error: e instanceof Error ? e.message : String(e), coInstallation: [], healthScores: [] };
+      return {
+        ok: false as const,
+        error: e instanceof Error ? e.message : String(e),
+        coInstallation: [],
+        healthScores: [],
+      };
     }
   });
 
@@ -345,19 +351,19 @@ export const getModuleIntelligence = createServerFn({ method: "POST" })
 // Publish approved modules to the library
 export const publishToLibrary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
-    (data: { moduleIds: string[]; tags?: string[] }) => {
-      if (!Array.isArray(data?.moduleIds) || data.moduleIds.length === 0) throw new Error("moduleIds required");
-      return data;
-    },
-  )
+  .inputValidator((data: { moduleIds: string[]; tags?: string[] }) => {
+    if (!Array.isArray(data?.moduleIds) || data.moduleIds.length === 0)
+      throw new Error("moduleIds required");
+    return data;
+  })
   .handler(async ({ data, context }) => {
     // Fetch the modules
     const { data: modules, error: fetchErr } = await context.supabase
       .from("modules")
       .select("*")
       .in("id", data.moduleIds);
-    if (fetchErr || !modules) return { ok: false as const, error: fetchErr?.message ?? "Failed to fetch modules" };
+    if (fetchErr || !modules)
+      return { ok: false as const, error: fetchErr?.message ?? "Failed to fetch modules" };
 
     let published = 0;
     for (const m of modules) {
@@ -377,30 +383,29 @@ export const publishToLibrary = createServerFn({ method: "POST" })
         .limit(1);
       const nextVersion = ((prevVersions?.[0]?.version as number) ?? 0) + 1;
 
-      const { error: insertErr } = await context.supabase
-        .from("module_library")
-        .insert({
-          name: m.name,
-          slug: m.slug,
-          description: m.description,
-          route_path: (m.routes as string[])?.[0] ?? null,
-          entry_file: m.route_entry_file ?? m.slug,
-          file_paths: m.resolved_files ?? m.file_globs ?? [],
-          file_count: (m.resolved_files as string[])?.length ?? (m.file_globs as string[])?.length ?? 0,
-          version: nextVersion,
-          source_detection_run_id: m.detection_run_id,
-          source_module_id: m.id,
-          published_by: context.userId,
-          is_latest: true,
-          tags: data.tags ?? [],
-          metadata: {
-            cohesion_score: m.cohesion_score,
-            coupling_score: m.coupling_score,
-            ai_confidence: m.ai_confidence,
-            ai_reasoning: m.ai_reasoning,
-            shared_by_modules: m.shared_by_modules,
-          },
-        });
+      const { error: insertErr } = await context.supabase.from("module_library").insert({
+        name: m.name,
+        slug: m.slug,
+        description: m.description,
+        route_path: (m.routes as string[])?.[0] ?? null,
+        entry_file: m.route_entry_file ?? m.slug,
+        file_paths: m.resolved_files ?? m.file_globs ?? [],
+        file_count:
+          (m.resolved_files as string[])?.length ?? (m.file_globs as string[])?.length ?? 0,
+        version: nextVersion,
+        source_detection_run_id: m.detection_run_id,
+        source_module_id: m.id,
+        published_by: context.userId,
+        is_latest: true,
+        tags: data.tags ?? [],
+        metadata: {
+          cohesion_score: m.cohesion_score,
+          coupling_score: m.coupling_score,
+          ai_confidence: m.ai_confidence,
+          ai_reasoning: m.ai_reasoning,
+          shared_by_modules: m.shared_by_modules,
+        },
+      });
       if (!insertErr) published++;
     }
 
@@ -417,9 +422,7 @@ export const publishToLibrary = createServerFn({ method: "POST" })
 // Get library entries
 export const getModuleLibrary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
-    (data?: { latestOnly?: boolean; slug?: string }) => data ?? {},
-  )
+  .inputValidator((data?: { latestOnly?: boolean; slug?: string }) => data ?? {})
   .handler(async ({ data, context }) => {
     let query = context.supabase
       .from("module_library")
@@ -438,17 +441,12 @@ export const getModuleLibrary = createServerFn({ method: "POST" })
 // Remove library entry
 export const removeFromLibrary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
-    (data: { entryId: string }) => {
-      if (!data?.entryId) throw new Error("entryId required");
-      return data;
-    },
-  )
+  .inputValidator((data: { entryId: string }) => {
+    if (!data?.entryId) throw new Error("entryId required");
+    return data;
+  })
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("module_library")
-      .delete()
-      .eq("id", data.entryId);
+    const { error } = await context.supabase.from("module_library").delete().eq("id", data.entryId);
     if (error) return { ok: false as const, error: error.message };
     return { ok: true as const };
   });

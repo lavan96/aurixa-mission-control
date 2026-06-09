@@ -31,15 +31,16 @@ export function GitHubRateLimitMeter() {
     };
     void tick();
     const id = setInterval(() => void tick(), 60_000);
-    return () => { cancelled = true; clearInterval(id); };
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
   }, [fn]);
 
   if (err) return null;
   if (!state) return null;
   const pct = state.limit > 0 ? state.remaining / state.limit : 1;
-  const tone =
-    pct > 0.5 ? "text-emerald-500" :
-    pct > 0.2 ? "text-amber-500" : "text-red-500";
+  const tone = pct > 0.5 ? "text-emerald-500" : pct > 0.2 ? "text-amber-500" : "text-red-500";
   const resetMin = Math.max(0, Math.round((state.reset * 1000 - Date.now()) / 60000));
   return (
     <Tooltip>
@@ -50,9 +51,7 @@ export function GitHubRateLimitMeter() {
           <span className="text-muted-foreground/60">/ {state.limit.toLocaleString()}</span>
         </div>
       </TooltipTrigger>
-      <TooltipContent side="bottom">
-        GitHub App rate limit · resets in {resetMin}m
-      </TooltipContent>
+      <TooltipContent side="bottom">GitHub App rate limit · resets in {resetMin}m</TooltipContent>
     </Tooltip>
   );
 }

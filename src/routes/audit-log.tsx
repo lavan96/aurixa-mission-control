@@ -29,12 +29,7 @@ type AuditLog = Database["public"]["Tables"]["audit_log"]["Row"];
 
 const PAGE_SIZE = 50;
 
-const ACTION_VALUES = [
-  "all",
-  "cascade.executed",
-  "fleet.drift_scan",
-  "modules.detected",
-] as const;
+const ACTION_VALUES = ["all", "cascade.executed", "fleet.drift_scan", "modules.detected"] as const;
 
 const ENTITY_VALUES = ["all", "cascade_event", "clone", "module"] as const;
 
@@ -131,8 +126,7 @@ function AuditLogPage() {
       )
     : logs;
 
-  const hasFilters =
-    search.action !== "all" || search.entity !== "all" || search.q.length > 0;
+  const hasFilters = search.action !== "all" || search.entity !== "all" || search.q.length > 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const clearFilters = () =>
@@ -323,23 +317,12 @@ function AuditLogPage() {
         </CardContent>
       </Card>
 
-      <AuditLogDetailDrawer
-        log={selected}
-        onOpenChange={(open) => !open && setSelected(null)}
-      />
+      <AuditLogDetailDrawer log={selected} onOpenChange={(open) => !open && setSelected(null)} />
     </div>
   );
 }
 
-function LogRow({
-  log,
-  isLast,
-  onOpen,
-}: {
-  log: AuditLog;
-  isLast: boolean;
-  onOpen: () => void;
-}) {
+function LogRow({ log, isLast, onOpen }: { log: AuditLog; isLast: boolean; onOpen: () => void }) {
   const tone = actionTone(log.action);
 
   return (
@@ -351,9 +334,7 @@ function LogRow({
         </div>
         <button type="button" onClick={onOpen} className="flex-1 text-left">
           <div className="flex flex-wrap items-center gap-2">
-            <code className={cn("font-mono text-sm font-medium", tone.text)}>
-              {log.action}
-            </code>
+            <code className={cn("font-mono text-sm font-medium", tone.text)}>{log.action}</code>
             {log.entity_type && (
               <Badge variant="outline" className="text-[10px] uppercase">
                 {log.entity_type}

@@ -25,10 +25,9 @@ export async function createCascadeForAllClones(args: {
 }> {
   const { supabase, mode, trigger, sourceBranch, sourceSha, initiatedBy, summary } = args;
 
-  const { data: clones, error: cloneErr } = await supabase
-    .from("clones")
-    .select("id");
-  if (cloneErr) return { eventId: null, cloneCount: 0, requiresApproval: false, error: cloneErr.message };
+  const { data: clones, error: cloneErr } = await supabase.from("clones").select("id");
+  if (cloneErr)
+    return { eventId: null, cloneCount: 0, requiresApproval: false, error: cloneErr.message };
   if (!clones || clones.length === 0) {
     return { eventId: null, cloneCount: 0, requiresApproval: false, error: "No clones registered" };
   }
@@ -65,7 +64,12 @@ export async function createCascadeForAllClones(args: {
   }));
   const { error: resErr } = await supabase.from("cascade_results").insert(rows);
   if (resErr) {
-    return { eventId: event.id, cloneCount: 0, requiresApproval: blast.requiresApproval, error: resErr.message };
+    return {
+      eventId: event.id,
+      cloneCount: 0,
+      requiresApproval: blast.requiresApproval,
+      error: resErr.message,
+    };
   }
 
   if (blast.requiresApproval) {

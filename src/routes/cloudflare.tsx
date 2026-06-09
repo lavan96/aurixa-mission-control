@@ -7,10 +7,35 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Shield, Lock, Bot, Gauge, Activity, Plug, AlertTriangle, RefreshCw, Trash2, KeyRound } from "lucide-react";
+import {
+  Shield,
+  Lock,
+  Bot,
+  Gauge,
+  Activity,
+  Plug,
+  AlertTriangle,
+  RefreshCw,
+  Trash2,
+  KeyRound,
+} from "lucide-react";
 import { useClones } from "@/lib/queries";
 import { toast } from "sonner";
 import {
@@ -112,13 +137,22 @@ function CloudflarePage() {
           <Shield className="h-5 w-5 text-info" />
         </div>
         <div className="flex-1">
-          <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">edge</p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
+            edge
+          </p>
           <h1 className="text-3xl font-semibold tracking-tight">Cloudflare</h1>
           <p className="text-sm text-muted-foreground">
             Per-clone WAF, bot, and rate-limit control via the Cloudflare v4 API.
           </p>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => { tokenQ.refetch(); fleetQ.refetch(); }}>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => {
+            tokenQ.refetch();
+            fleetQ.refetch();
+          }}
+        >
           <RefreshCw className="h-4 w-4" />
         </Button>
       </header>
@@ -130,7 +164,9 @@ function CloudflarePage() {
             <CardTitle className="flex items-center gap-2 text-base">
               <KeyRound className="h-4 w-4" /> API token
             </CardTitle>
-            <CardDescription>Stored as the <code className="font-mono">CLOUDFLARE_API_TOKEN</code> server secret</CardDescription>
+            <CardDescription>
+              Stored as the <code className="font-mono">CLOUDFLARE_API_TOKEN</code> server secret
+            </CardDescription>
           </div>
           {tokenQ.data?.configured ? (
             tokenQ.data.valid ? (
@@ -144,8 +180,8 @@ function CloudflarePage() {
         </CardHeader>
         {!tokenQ.data?.configured && (
           <CardContent className="text-sm text-muted-foreground">
-            Add the <code>CLOUDFLARE_API_TOKEN</code> secret in Lovable Cloud settings. Required scopes:
-            Zone — Read, Zone Settings — Edit, Analytics — Read.
+            Add the <code>CLOUDFLARE_API_TOKEN</code> secret in Lovable Cloud settings. Required
+            scopes: Zone — Read, Zone Settings — Edit, Analytics — Read.
           </CardContent>
         )}
       </Card>
@@ -167,8 +203,15 @@ function CloudflarePage() {
       {tokenQ.data?.valid && (
         <div className="grid gap-3 md:grid-cols-3">
           <StatCard label="24h requests" value={totals.requests.toLocaleString()} />
-          <StatCard label="24h threats blocked" value={totals.threats.toLocaleString()} accent="warning" />
-          <StatCard label="24h bandwidth (MB)" value={Math.round(totals.bandwidth / 1024 / 1024).toLocaleString()} />
+          <StatCard
+            label="24h threats blocked"
+            value={totals.threats.toLocaleString()}
+            accent="warning"
+          />
+          <StatCard
+            label="24h bandwidth (MB)"
+            value={Math.round(totals.bandwidth / 1024 / 1024).toLocaleString()}
+          />
         </div>
       )}
 
@@ -199,7 +242,8 @@ function CloudflarePage() {
         <CardContent>
           {attached.length === 0 ? (
             <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-              No clones wrapped yet. Attach a zone via API token, or seed one manually — both are optional.
+              No clones wrapped yet. Attach a zone via API token, or seed one manually — both are
+              optional.
             </div>
           ) : (
             <div className="space-y-2">
@@ -207,23 +251,33 @@ function CloudflarePage() {
                 const stats = fleetQ.data?.analytics.find((a) => a.clone_id === cfg.clone_id);
                 const clone = clones.find((c) => c.id === cfg.clone_id);
                 return (
-                  <div key={cfg.clone_id} className="flex flex-col gap-3 rounded-md border border-border bg-surface p-4 md:flex-row md:items-center">
+                  <div
+                    key={cfg.clone_id}
+                    className="flex flex-col gap-3 rounded-md border border-border bg-surface p-4 md:flex-row md:items-center"
+                  >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm font-semibold">{clone?.name ?? cfg.zone_name}</span>
+                        <span className="font-mono text-sm font-semibold">
+                          {clone?.name ?? cfg.zone_name}
+                        </span>
                         <Badge variant="outline" className="border-info/40 text-info text-[10px]">
                           {cfg.zone_name}
                         </Badge>
-                        <Badge variant="outline" className="text-[10px]">{cfg.status}</Badge>
+                        <Badge variant="outline" className="text-[10px]">
+                          {cfg.status}
+                        </Badge>
                       </div>
                       <div className="mt-1 font-mono text-[11px] text-muted-foreground">
-                        Sec: {cfg.security_level ?? "—"} · Bot: {cfg.bot_fight_mode ? "on" : "off"} · WAF: {cfg.waf_preset ?? "—"}
+                        Sec: {cfg.security_level ?? "—"} · Bot: {cfg.bot_fight_mode ? "on" : "off"}{" "}
+                        · WAF: {cfg.waf_preset ?? "—"}
                       </div>
                     </div>
                     {stats && (
                       <div className="flex gap-4 font-mono text-[11px] text-muted-foreground">
                         <span>{stats.requests.toLocaleString()} req</span>
-                        <span className="text-warning">{stats.threats.toLocaleString()} threats</span>
+                        <span className="text-warning">
+                          {stats.threats.toLocaleString()} threats
+                        </span>
                       </div>
                     )}
                     <div className="flex gap-2">
@@ -264,8 +318,14 @@ function StatCard({ label, value, accent }: { label: string; value: string; acce
   return (
     <Card>
       <CardContent className="p-5">
-        <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
-        <div className={`mt-1 text-2xl font-semibold ${accent === "warning" ? "text-warning" : ""}`}>{value}</div>
+        <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+          {label}
+        </div>
+        <div
+          className={`mt-1 text-2xl font-semibold ${accent === "warning" ? "text-warning" : ""}`}
+        >
+          {value}
+        </div>
       </CardContent>
     </Card>
   );
@@ -286,7 +346,9 @@ function AttachZoneDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm"><Plug className="mr-2 h-4 w-4" /> Attach zone</Button>
+        <Button size="sm">
+          <Plug className="mr-2 h-4 w-4" /> Attach zone
+        </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -297,22 +359,43 @@ function AttachZoneDialog({
           <div>
             <label className="font-mono text-[11px] uppercase text-muted-foreground">Clone</label>
             <Select value={cloneId} onValueChange={setCloneId}>
-              <SelectTrigger><SelectValue placeholder="Pick a clone" /></SelectTrigger>
-              <SelectContent>{clones.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+              <SelectTrigger>
+                <SelectValue placeholder="Pick a clone" />
+              </SelectTrigger>
+              <SelectContent>
+                {clones.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
           <div>
             <label className="font-mono text-[11px] uppercase text-muted-foreground">Zone</label>
             <Select value={zoneId} onValueChange={setZoneId}>
-              <SelectTrigger><SelectValue placeholder="Pick a zone" /></SelectTrigger>
-              <SelectContent>{zones.map((z) => <SelectItem key={z.id} value={z.id}>{z.name}</SelectItem>)}</SelectContent>
+              <SelectTrigger>
+                <SelectValue placeholder="Pick a zone" />
+              </SelectTrigger>
+              <SelectContent>
+                {zones.map((z) => (
+                  <SelectItem key={z.id} value={z.id}>
+                    {z.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
         </div>
         <DialogFooter>
           <Button
             disabled={!cloneId || !zoneId}
-            onClick={() => { onAttach({ cloneId, zoneId }); setOpen(false); setCloneId(""); setZoneId(""); }}
+            onClick={() => {
+              onAttach({ cloneId, zoneId });
+              setOpen(false);
+              setCloneId("");
+              setZoneId("");
+            }}
           >
             Attach
           </Button>
@@ -329,7 +412,12 @@ function PostureDialog({
   pending,
 }: {
   cloneId: string;
-  current: { security_level: string | null; bot_fight_mode: boolean; rate_limit_rps: number | null; waf_preset: string | null };
+  current: {
+    security_level: string | null;
+    bot_fight_mode: boolean;
+    rate_limit_rps: number | null;
+    waf_preset: string | null;
+  };
   onApply: (v: any) => void;
   pending: boolean;
 }) {
@@ -341,7 +429,9 @@ function PostureDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline">Posture</Button>
+        <Button size="sm" variant="outline">
+          Posture
+        </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -350,28 +440,53 @@ function PostureDialog({
         </DialogHeader>
         <div className="space-y-3">
           <div>
-            <label className="font-mono text-[11px] uppercase text-muted-foreground">Security level</label>
+            <label className="font-mono text-[11px] uppercase text-muted-foreground">
+              Security level
+            </label>
             <Select value={sec} onValueChange={setSec}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
-                {["off","essentially_off","low","medium","high","under_attack"].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                {["off", "essentially_off", "low", "medium", "high", "under_attack"].map((v) => (
+                  <SelectItem key={v} value={v}>
+                    {v}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="flex items-center justify-between">
-            <label className="font-mono text-[11px] uppercase text-muted-foreground">Bot fight mode</label>
+            <label className="font-mono text-[11px] uppercase text-muted-foreground">
+              Bot fight mode
+            </label>
             <Switch checked={bot} onCheckedChange={setBot} />
           </div>
           <div>
-            <label className="font-mono text-[11px] uppercase text-muted-foreground">Rate limit (req/sec)</label>
-            <Input type="number" value={rl} onChange={(e) => setRl(e.target.value)} placeholder="0 = off" />
+            <label className="font-mono text-[11px] uppercase text-muted-foreground">
+              Rate limit (req/sec)
+            </label>
+            <Input
+              type="number"
+              value={rl}
+              onChange={(e) => setRl(e.target.value)}
+              placeholder="0 = off"
+            />
           </div>
           <div>
-            <label className="font-mono text-[11px] uppercase text-muted-foreground">WAF preset</label>
+            <label className="font-mono text-[11px] uppercase text-muted-foreground">
+              WAF preset
+            </label>
             <Select value={waf} onValueChange={setWaf}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
-                {["lenient","balanced","strict"].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                {["lenient", "balanced", "strict"].map((v) => (
+                  <SelectItem key={v} value={v}>
+                    {v}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -438,61 +553,117 @@ function SeedZoneDialog({
         <DialogHeader>
           <DialogTitle>Seed Cloudflare zone</DialogTitle>
           <DialogDescription>
-            Optional. Bind a clone to a zone without an API token. Posture fields are stored locally; live posture
-            apply still requires the <code className="font-mono">CLOUDFLARE_API_TOKEN</code> secret.
+            Optional. Bind a clone to a zone without an API token. Posture fields are stored
+            locally; live posture apply still requires the{" "}
+            <code className="font-mono">CLOUDFLARE_API_TOKEN</code> secret.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div>
             <label className="font-mono text-[11px] uppercase text-muted-foreground">Clone *</label>
             <Select value={cloneId} onValueChange={setCloneId}>
-              <SelectTrigger><SelectValue placeholder="Pick a clone" /></SelectTrigger>
-              <SelectContent>{clones.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+              <SelectTrigger>
+                <SelectValue placeholder="Pick a clone" />
+              </SelectTrigger>
+              <SelectContent>
+                {clones.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="font-mono text-[11px] uppercase text-muted-foreground">Zone ID *</label>
-              <Input value={zoneId} onChange={(e) => setZoneId(e.target.value)} placeholder="e.g. abc123…" />
+              <label className="font-mono text-[11px] uppercase text-muted-foreground">
+                Zone ID *
+              </label>
+              <Input
+                value={zoneId}
+                onChange={(e) => setZoneId(e.target.value)}
+                placeholder="e.g. abc123…"
+              />
             </div>
             <div>
-              <label className="font-mono text-[11px] uppercase text-muted-foreground">Zone name *</label>
-              <Input value={zoneName} onChange={(e) => setZoneName(e.target.value)} placeholder="example.com" />
+              <label className="font-mono text-[11px] uppercase text-muted-foreground">
+                Zone name *
+              </label>
+              <Input
+                value={zoneName}
+                onChange={(e) => setZoneName(e.target.value)}
+                placeholder="example.com"
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="font-mono text-[11px] uppercase text-muted-foreground">Account ID</label>
-              <Input value={accountId} onChange={(e) => setAccountId(e.target.value)} placeholder="optional" />
+              <label className="font-mono text-[11px] uppercase text-muted-foreground">
+                Account ID
+              </label>
+              <Input
+                value={accountId}
+                onChange={(e) => setAccountId(e.target.value)}
+                placeholder="optional"
+              />
             </div>
             <div>
               <label className="font-mono text-[11px] uppercase text-muted-foreground">Plan</label>
-              <Input value={plan} onChange={(e) => setPlan(e.target.value)} placeholder="optional" />
+              <Input
+                value={plan}
+                onChange={(e) => setPlan(e.target.value)}
+                placeholder="optional"
+              />
             </div>
           </div>
           <div>
-            <label className="font-mono text-[11px] uppercase text-muted-foreground">Security level</label>
+            <label className="font-mono text-[11px] uppercase text-muted-foreground">
+              Security level
+            </label>
             <Select value={sec} onValueChange={setSec}>
-              <SelectTrigger><SelectValue placeholder="optional" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="optional" />
+              </SelectTrigger>
               <SelectContent>
-                {["off","essentially_off","low","medium","high","under_attack"].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                {["off", "essentially_off", "low", "medium", "high", "under_attack"].map((v) => (
+                  <SelectItem key={v} value={v}>
+                    {v}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="flex items-center justify-between">
-            <label className="font-mono text-[11px] uppercase text-muted-foreground">Bot fight mode</label>
+            <label className="font-mono text-[11px] uppercase text-muted-foreground">
+              Bot fight mode
+            </label>
             <Switch checked={bot} onCheckedChange={setBot} />
           </div>
           <div>
-            <label className="font-mono text-[11px] uppercase text-muted-foreground">Rate limit (req/sec)</label>
-            <Input type="number" value={rl} onChange={(e) => setRl(e.target.value)} placeholder="optional" />
+            <label className="font-mono text-[11px] uppercase text-muted-foreground">
+              Rate limit (req/sec)
+            </label>
+            <Input
+              type="number"
+              value={rl}
+              onChange={(e) => setRl(e.target.value)}
+              placeholder="optional"
+            />
           </div>
           <div>
-            <label className="font-mono text-[11px] uppercase text-muted-foreground">WAF preset</label>
+            <label className="font-mono text-[11px] uppercase text-muted-foreground">
+              WAF preset
+            </label>
             <Select value={waf} onValueChange={setWaf}>
-              <SelectTrigger><SelectValue placeholder="optional" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="optional" />
+              </SelectTrigger>
               <SelectContent>
-                {["lenient","balanced","strict"].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                {["lenient", "balanced", "strict"].map((v) => (
+                  <SelectItem key={v} value={v}>
+                    {v}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -513,8 +684,15 @@ function SeedZoneDialog({
                 wafPreset: (waf || undefined) as any,
               });
               setOpen(false);
-              setCloneId(""); setZoneId(""); setZoneName(""); setAccountId(""); setPlan("");
-              setSec(""); setBot(false); setRl(""); setWaf("");
+              setCloneId("");
+              setZoneId("");
+              setZoneName("");
+              setAccountId("");
+              setPlan("");
+              setSec("");
+              setBot(false);
+              setRl("");
+              setWaf("");
             }}
           >
             Seed zone

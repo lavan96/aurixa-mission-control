@@ -71,7 +71,5 @@ export type BrandDriftScanResult = {
   }>;
 };
 
-export type BrandAssignmentStatus =
-  Database["public"]["Enums"]["brand_assignment_status"];
-export type BrandProfileStatus =
-  Database["public"]["Enums"]["brand_profile_status"];
+export type BrandAssignmentStatus = Database["public"]["Enums"]["brand_assignment_status"];
+export type BrandProfileStatus = Database["public"]["Enums"]["brand_profile_status"];

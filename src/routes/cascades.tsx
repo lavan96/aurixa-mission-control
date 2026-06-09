@@ -7,7 +7,19 @@ import { useCascadeEvents, useClones } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Waves, GitMerge, Send, Bell, ChevronRight, Package, Bot, X, CalendarClock, Tag, Download } from "lucide-react";
+import {
+  Waves,
+  GitMerge,
+  Send,
+  Bell,
+  ChevronRight,
+  Package,
+  Bot,
+  X,
+  CalendarClock,
+  Tag,
+  Download,
+} from "lucide-react";
 import { exportRowsAsCSV } from "@/lib/csv";
 import { SavedViewsBar } from "@/components/saved-views-bar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -21,7 +33,10 @@ import { runCascade } from "@/server/cascade-engine.functions";
 import { BulkCascadeCard } from "@/components/bulk-cascade-card";
 import { CardRowSkeleton } from "@/components/list-skeletons";
 import { EmptyState } from "@/components/empty-state";
-import { CascadeTemplatesCard, type CascadeTemplateValue } from "@/components/cascade-templates-card";
+import {
+  CascadeTemplatesCard,
+  type CascadeTemplateValue,
+} from "@/components/cascade-templates-card";
 import { CascadeDryRunCard } from "@/components/cascade-dryrun-card";
 import { assessBlastRadius } from "@/lib/blast-radius";
 import { ShieldAlert, Sparkles, Loader2 } from "lucide-react";
@@ -70,9 +85,7 @@ function CascadesPage() {
   // Filter clones by selected tags
   const tagFilteredClones = useMemo(() => {
     if (scope !== "tagged" || selectedTags.length === 0) return clones;
-    return clones.filter((c) =>
-      selectedTags.some((t: string) => (c.tags ?? []).includes(t)),
-    );
+    return clones.filter((c) => selectedTags.some((t: string) => (c.tags ?? []).includes(t)));
   }, [clones, scope, selectedTags]);
 
   type SearchState = typeof search;
@@ -139,11 +152,7 @@ function CascadesPage() {
           .eq("entity_id", scheduleId)
           .order("created_at", { ascending: false })
           .limit(500),
-        supabase
-          .from("cascade_schedules")
-          .select("name")
-          .eq("id", scheduleId)
-          .maybeSingle(),
+        supabase.from("cascade_schedules").select("name").eq("id", scheduleId).maybeSingle(),
       ]);
       if (cancelled) return;
       const ids = new Set<string>();
@@ -172,10 +181,8 @@ function CascadesPage() {
   useEffect(() => {
     const channel = supabase
       .channel("cascades-list")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "cascade_events" },
-        () => refresh(),
+      .on("postgres_changes", { event: "*", schema: "public", table: "cascade_events" }, () =>
+        refresh(),
       )
       .subscribe();
     return () => {
@@ -191,7 +198,9 @@ function CascadesPage() {
 
   const fire = async () => {
     setBusy(true);
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     const { data: ev, error } = await supabase
       .from("cascade_events")
       .insert({
@@ -282,7 +291,10 @@ function CascadesPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">New cascade</CardTitle>
-          <CardDescription>Filter by module is automatic — only files belonging to modules each clone has installed get applied.</CardDescription>
+          <CardDescription>
+            Filter by module is automatic — only files belonging to modules each clone has installed
+            get applied.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <div>
@@ -290,9 +302,27 @@ function CascadesPage() {
               mode
             </div>
             <div className="grid gap-2 md:grid-cols-3">
-              <ModeCard active={mode === "pr"} icon={<GitMerge />} title="Open PR" desc="Safe — review before merging." onClick={() => setMode("pr")} />
-              <ModeCard active={mode === "auto_merge"} icon={<Send />} title="Auto-merge" desc="Push & merge automatically." onClick={() => setMode("auto_merge")} />
-              <ModeCard active={mode === "notify"} icon={<Bell />} title="Notify only" desc="No commits — just flag drift." onClick={() => setMode("notify")} />
+              <ModeCard
+                active={mode === "pr"}
+                icon={<GitMerge />}
+                title="Open PR"
+                desc="Safe — review before merging."
+                onClick={() => setMode("pr")}
+              />
+              <ModeCard
+                active={mode === "auto_merge"}
+                icon={<Send />}
+                title="Auto-merge"
+                desc="Push & merge automatically."
+                onClick={() => setMode("auto_merge")}
+              />
+              <ModeCard
+                active={mode === "notify"}
+                icon={<Bell />}
+                title="Notify only"
+                desc="No commits — just flag drift."
+                onClick={() => setMode("notify")}
+              />
             </div>
           </div>
           <div>
@@ -300,10 +330,16 @@ function CascadesPage() {
               scope
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant={scope === "all" ? "default" : "outline"} onClick={() => setScope("all")}>
+              <Button
+                variant={scope === "all" ? "default" : "outline"}
+                onClick={() => setScope("all")}
+              >
                 All clones ({clones.length})
               </Button>
-              <Button variant={scope === "tagged" ? "default" : "outline"} onClick={() => setScope("tagged")}>
+              <Button
+                variant={scope === "tagged" ? "default" : "outline"}
+                onClick={() => setScope("tagged")}
+              >
                 <Tag className="mr-1.5 h-3.5 w-3.5" /> By tag
                 {scope === "tagged" && selectedTags.length > 0 && (
                   <Badge variant="secondary" className="ml-1.5 text-[10px]">
@@ -311,7 +347,10 @@ function CascadesPage() {
                   </Badge>
                 )}
               </Button>
-              <Button variant={scope === "selected" ? "default" : "outline"} onClick={() => setScope("selected")}>
+              <Button
+                variant={scope === "selected" ? "default" : "outline"}
+                onClick={() => setScope("selected")}
+              >
                 Manual select
               </Button>
             </div>
@@ -324,7 +363,8 @@ function CascadesPage() {
                 ) : (
                   <>
                     <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                      select tags · {selectedTags.length} active → {tagFilteredClones.length} clone{tagFilteredClones.length === 1 ? "" : "s"}
+                      select tags · {selectedTags.length} active → {tagFilteredClones.length} clone
+                      {tagFilteredClones.length === 1 ? "" : "s"}
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {allTags.map((tag) => {
@@ -342,12 +382,13 @@ function CascadesPage() {
                                 : "border-border bg-surface text-muted-foreground hover:border-primary/30 hover:text-foreground",
                             )}
                           >
-                            <Tag className="h-3 w-3" />
-                            #{tag}
-                            <span className={cn(
-                              "ml-0.5 rounded-full px-1 text-[9px]",
-                              active ? "bg-primary/20" : "bg-muted",
-                            )}>
+                            <Tag className="h-3 w-3" />#{tag}
+                            <span
+                              className={cn(
+                                "ml-0.5 rounded-full px-1 text-[9px]",
+                                active ? "bg-primary/20" : "bg-muted",
+                              )}
+                            >
                               {count}
                             </span>
                           </button>
@@ -375,9 +416,8 @@ function CascadesPage() {
               <div className="flex-1">
                 <div className="font-mono uppercase tracking-wider">Approval gate</div>
                 <div className="mt-0.5 font-mono text-[11px] text-warning/90">
-                  {blast.reason} The cascade will queue and wait — no GitHub
-                  changes happen until a different operator approves on the
-                  cascade detail page.
+                  {blast.reason} The cascade will queue and wait — no GitHub changes happen until a
+                  different operator approves on the cascade detail page.
                 </div>
               </div>
             </div>
@@ -394,10 +434,7 @@ function CascadesPage() {
                 ? `${tagFilteredClones.length} clone${tagFilteredClones.length === 1 ? "" : "s"} matching tags`
                 : `${clones.length} clone${clones.length === 1 ? "" : "s"} in fleet`}
             </div>
-            <Button
-              onClick={fire}
-              disabled={busy || targets.length === 0}
-            >
+            <Button onClick={fire} disabled={busy || targets.length === 0}>
               <Waves className="mr-2 h-4 w-4" />
               {busy
                 ? "Queueing…"
@@ -414,10 +451,16 @@ function CascadesPage() {
       <CascadeDryRunCard />
 
       <CascadeTemplatesCard
-        current={{ mode, scope: scope as "all" | "tagged" | "selected", tags: selectedTags, cloneIds: [] }}
+        current={{
+          mode,
+          scope: scope as "all" | "tagged" | "selected",
+          tags: selectedTags,
+          cloneIds: [],
+        }}
         onApply={(v: CascadeTemplateValue) => {
           setMode(v.mode);
-          if (v.scope === "all" || v.scope === "tagged" || v.scope === "selected") setScope(v.scope as (typeof SCOPE_VALUES)[number]);
+          if (v.scope === "all" || v.scope === "tagged" || v.scope === "selected")
+            setScope(v.scope as (typeof SCOPE_VALUES)[number]);
           else setScope("selected");
           if (v.tags.length > 0) setTags(v.tags);
         }}
@@ -496,12 +539,7 @@ function CascadesPage() {
         ) : (
           <div className="space-y-2">
             {visibleEvents.map((e) => (
-              <Link
-                key={e.id}
-                to="/cascades/$eventId"
-                params={{ eventId: e.id }}
-                className="block"
-              >
+              <Link key={e.id} to="/cascades/$eventId" params={{ eventId: e.id }} className="block">
                 <Card className="border-border/80 transition-colors hover:border-primary/40">
                   <CardContent className="flex items-center justify-between p-4">
                     <div className="flex items-center gap-3">
@@ -510,9 +548,16 @@ function CascadesPage() {
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-sm font-medium">{e.mode.replace("_", " ")}</span>
-                          <Badge variant="outline" className="text-[10px] uppercase">{e.trigger}</Badge>
-                          <Badge variant="outline" className={cn("text-[10px] uppercase", statusTone(e.status))}>
+                          <span className="font-mono text-sm font-medium">
+                            {e.mode.replace("_", " ")}
+                          </span>
+                          <Badge variant="outline" className="text-[10px] uppercase">
+                            {e.trigger}
+                          </Badge>
+                          <Badge
+                            variant="outline"
+                            className={cn("text-[10px] uppercase", statusTone(e.status))}
+                          >
                             {e.status}
                           </Badge>
                           {(() => {
@@ -621,7 +666,12 @@ function ModeCard({
         active ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
       )}
     >
-      <div className={cn("mb-2 [&>svg]:h-4 [&>svg]:w-4", active ? "text-primary" : "text-muted-foreground")}>
+      <div
+        className={cn(
+          "mb-2 [&>svg]:h-4 [&>svg]:w-4",
+          active ? "text-primary" : "text-muted-foreground",
+        )}
+      >
         {icon}
       </div>
       <div className="font-mono text-sm font-semibold">{title}</div>
@@ -630,18 +680,40 @@ function ModeCard({
   );
 }
 
-function AiPreflightSummary({ scope, mode, cloneCount, tags }: { scope: string; mode: string; cloneCount: number; tags: string[] }) {
+function AiPreflightSummary({
+  scope,
+  mode,
+  cloneCount,
+  tags,
+}: {
+  scope: string;
+  mode: string;
+  cloneCount: number;
+  tags: string[];
+}) {
   const fn = useServerFn(aiCascadeSummary);
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const run = async () => {
-    setLoading(true); setError(null); setSummary(null);
+    setLoading(true);
+    setError(null);
+    setSummary(null);
     try {
-      const r = await fn({ data: { scope: tags.length > 0 ? `${scope}:${tags.join(",")}` : scope, mode, cloneCount, affectedModules: [] } });
+      const r = await fn({
+        data: {
+          scope: tags.length > 0 ? `${scope}:${tags.join(",")}` : scope,
+          mode,
+          cloneCount,
+          affectedModules: [],
+        },
+      });
       setSummary(r.summary);
-    } catch (e) { setError(e instanceof Error ? e.message : "AI failed"); }
-    finally { setLoading(false); }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "AI failed");
+    } finally {
+      setLoading(false);
+    }
   };
   return (
     <div className="rounded-md border border-border/60 bg-surface/50 p-3">
@@ -650,13 +722,19 @@ function AiPreflightSummary({ scope, mode, cloneCount, tags }: { scope: string; 
           <Sparkles className="h-3.5 w-3.5 text-primary" /> AI pre-flight briefing
         </div>
         <Button size="sm" variant="ghost" disabled={loading || cloneCount === 0} onClick={run}>
-          {loading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1.5 h-3.5 w-3.5" />}
+          {loading ? (
+            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+          )}
           {summary ? "Re-summarize" : "Summarize"}
         </Button>
       </div>
       {error && <div className="mt-2 text-xs text-destructive">{error}</div>}
       {summary && (
-        <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-foreground">{summary}</pre>
+        <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-foreground">
+          {summary}
+        </pre>
       )}
     </div>
   );

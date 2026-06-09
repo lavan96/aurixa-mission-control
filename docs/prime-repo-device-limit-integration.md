@@ -23,7 +23,9 @@ export function getDeviceFingerprint(): string {
     Intl.DateTimeFormat().resolvedOptions().timeZone,
     crypto.randomUUID(),
   ].join("|");
-  fp = btoa(seed).replace(/[^A-Za-z0-9]/g, "").slice(0, 64);
+  fp = btoa(seed)
+    .replace(/[^A-Za-z0-9]/g, "")
+    .slice(0, 64);
   localStorage.setItem(KEY, fp);
   return fp;
 }
@@ -45,7 +47,7 @@ seat client lives):
 
 ```ts
 const MC_BASE = process.env.AURIXA_MISSION_CONTROL_URL!; // e.g. https://aurixa-mission-control.lovable.app
-const API_KEY = await loadAurixaApiKey();                // from .aurixa/credentials.json
+const API_KEY = await loadAurixaApiKey(); // from .aurixa/credentials.json
 
 export async function registerDevice(input: {
   external_user_id: string;

@@ -10,8 +10,16 @@ export const listPricingCatalog = createServerFn({ method: "GET" })
       supabase.from("addon_modules").select("*").eq("is_active", true).order("sort_order"),
       supabase.from("setup_packages").select("*").eq("is_active", true).order("sort_order"),
       supabase.from("report_credit_costs").select("*").eq("is_active", true).order("sort_order"),
-      supabase.from("seat_plans").select("slug,name,price_cents,currency,metadata").eq("is_active", true).order("price_cents"),
-      supabase.from("topup_packs").select("slug,name,tokens,price_cents,currency,metadata").eq("is_active", true).order("price_cents"),
+      supabase
+        .from("seat_plans")
+        .select("slug,name,price_cents,currency,metadata")
+        .eq("is_active", true)
+        .order("price_cents"),
+      supabase
+        .from("topup_packs")
+        .select("slug,name,tokens,price_cents,currency,metadata")
+        .eq("is_active", true)
+        .order("price_cents"),
     ]);
 
     if (roles.error) throw roles.error;

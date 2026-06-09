@@ -22,9 +22,13 @@ export const Route = createFileRoute("/billing/success")({
 function formatAmount(cents: number | null, currency: string | null) {
   if (cents == null || !currency) return null;
   try {
-    return new Intl.NumberFormat(undefined, { style: "currency", currency: currency.toUpperCase() })
-      .format(cents / 100);
-  } catch { return `${(cents / 100).toFixed(2)} ${currency.toUpperCase()}`; }
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: currency.toUpperCase(),
+    }).format(cents / 100);
+  } catch {
+    return `${(cents / 100).toFixed(2)} ${currency.toUpperCase()}`;
+  }
 }
 
 const MODE_LABEL: Record<string, string> = {
@@ -73,9 +77,10 @@ function SuccessPage() {
   const amount = info ? formatAmount(info.amountTotal, info.currency) : null;
   const target = info?.cloneName ?? info?.tenantName ?? null;
 
-  const fStatus = fulfillmentQuery.data && "ok" in fulfillmentQuery.data && fulfillmentQuery.data.ok
-    ? fulfillmentQuery.data
-    : null;
+  const fStatus =
+    fulfillmentQuery.data && "ok" in fulfillmentQuery.data && fulfillmentQuery.data.ok
+      ? fulfillmentQuery.data
+      : null;
   const fulfilled = !!fStatus?.fulfilled;
   const webhookError = fStatus?.webhookError ?? null;
   const timedOut = !fulfilled && Date.now() - startedAt > POLL_MAX_MS;
@@ -120,7 +125,9 @@ function SuccessPage() {
           {info?.itemSlug && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Sparkles className="h-3.5 w-3.5" />
-              <span>Item: <span className="font-mono">{info.itemSlug}</span></span>
+              <span>
+                Item: <span className="font-mono">{info.itemSlug}</span>
+              </span>
             </div>
           )}
 
@@ -141,7 +148,9 @@ function SuccessPage() {
           {webhookError && (
             <div className="flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs">
               <AlertTriangle className="h-4 w-4 text-destructive" />
-              <span>Fulfilment hit an error. Our team has been notified — refresh in a moment.</span>
+              <span>
+                Fulfilment hit an error. Our team has been notified — refresh in a moment.
+              </span>
             </div>
           )}
 
@@ -162,13 +171,19 @@ function SuccessPage() {
           )}
 
           <div className="flex flex-wrap gap-2 pt-2">
-            <Button asChild><Link to="/settings/billing">Back to billing</Link></Button>
+            <Button asChild>
+              <Link to="/settings/billing">Back to billing</Link>
+            </Button>
             {info?.cloneId ? (
               <Button asChild variant="outline">
-                <Link to="/pricing" search={{ clone: info.cloneId }}>Buy more for this client</Link>
+                <Link to="/pricing" search={{ clone: info.cloneId }}>
+                  Buy more for this client
+                </Link>
               </Button>
             ) : (
-              <Button asChild variant="outline"><Link to="/pricing">View pricing</Link></Button>
+              <Button asChild variant="outline">
+                <Link to="/pricing">View pricing</Link>
+              </Button>
             )}
           </div>
         </CardContent>

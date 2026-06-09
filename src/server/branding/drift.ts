@@ -8,9 +8,7 @@ import type { BrandDriftScanResult } from "./types";
 
 type SupabaseLike = SupabaseClient<Database>;
 
-export async function runBrandDriftScan(
-  supabase: SupabaseLike,
-): Promise<BrandDriftScanResult> {
+export async function runBrandDriftScan(supabase: SupabaseLike): Promise<BrandDriftScanResult> {
   const { data: rows, error } = await supabase
     .from("clone_brand_assignments")
     .select(

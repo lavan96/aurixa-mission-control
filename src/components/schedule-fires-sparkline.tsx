@@ -36,13 +36,7 @@ export function ScheduleFiresSparkline({
       <div className="flex h-3 items-end gap-[2px]">
         {ordered.map((s, i) => {
           const tone = TONE[(s as FireStatus) ?? "pending"] ?? TONE.pending;
-          return (
-            <span
-              key={i}
-              className={cn("h-3 w-1 rounded-sm", tone)}
-              aria-label={s}
-            />
-          );
+          return <span key={i} className={cn("h-3 w-1 rounded-sm", tone)} aria-label={s} />;
         })}
       </div>
       <span className="font-mono text-[10px] text-muted-foreground">

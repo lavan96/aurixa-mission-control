@@ -1,4 +1,3 @@
-
 # Seat Entitlements Architecture
 
 ## What I understood

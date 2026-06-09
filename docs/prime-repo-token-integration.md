@@ -6,9 +6,9 @@ before generating a report and **commits** (or **cancels**) when it finishes.
 
 ## 1. Secrets (set in prime repo)
 
-| Name | Value |
-| --- | --- |
-| `MISSION_CONTROL_URL` | `https://aurixa-mission-control.lovable.app` |
+| Name                            | Value                                                                                  |
+| ------------------------------- | -------------------------------------------------------------------------------------- |
+| `MISSION_CONTROL_URL`           | `https://aurixa-mission-control.lovable.app`                                           |
 | `MISSION_CONTROL_CLONE_API_KEY` | Issue in Mission Control → Settings → Billing & Tokens → API Keys. Starts with `mck_`. |
 
 ## 2. Client module — `src/server/tokens.client.ts`
@@ -43,11 +43,11 @@ export type ReserveResult = {
 };
 
 export function reserveTokens(input: {
-  tenantRef: string;            // stable user/org id from prime app
+  tenantRef: string; // stable user/org id from prime app
   displayName?: string;
-  kind: string;                 // e.g. "report.full", "report.summary"
+  kind: string; // e.g. "report.full", "report.summary"
   estimatedTokens: number;
-  idempotencyKey: string;       // deterministic per logical report attempt
+  idempotencyKey: string; // deterministic per logical report attempt
   ttlSeconds?: number;
   requestPayload?: Record<string, unknown>;
 }) {
@@ -95,8 +95,16 @@ export function getBalance(tenantRef: string, displayName?: string) {
   if (displayName) q.set("display_name", displayName);
   return call<{
     ok: true;
-    tenant: { current_period_end: string | null; billing_plans: { name: string; monthly_allowance: number; overage_policy: string } | null };
-    balance: { available: number; reserved: number; lifetime_granted: number; lifetime_spent: number };
+    tenant: {
+      current_period_end: string | null;
+      billing_plans: { name: string; monthly_allowance: number; overage_policy: string } | null;
+    };
+    balance: {
+      available: number;
+      reserved: number;
+      lifetime_granted: number;
+      lifetime_spent: number;
+    };
   }>(`/api/public/tokens/balance?${q.toString()}`, { method: "GET" });
 }
 ```
@@ -109,8 +117,8 @@ Wrap **every** report entry point with reserve → generate → commit/cancel.
 import { reserveTokens, commitTokens, cancelTokens } from "@/server/tokens.client";
 
 export async function generateReport(params: {
-  userId: string;            // tenantRef
-  reportRequestId: string;   // stable id for this attempt
+  userId: string; // tenantRef
+  reportRequestId: string; // stable id for this attempt
   inputs: ReportInputs;
 }) {
   const estimate = estimateTokens(params.inputs); // your heuristic
@@ -144,6 +152,7 @@ export async function generateReport(params: {
 ```
 
 ### Rules
+
 - **`idempotencyKey` must be deterministic** for a given logical attempt — retrying with the same key returns the existing job instead of double-charging.
 - **`tenantRef`** = your stable user or org id. Mission Control auto-provisions the tenant on first call and grants the default plan's monthly allowance.
 - **Always commit or cancel.** Uncommitted reservations auto-release after `ttl_seconds` (default 600), but explicit cancel frees balance immediately.
@@ -174,13 +183,13 @@ billing surface is: pre-flight balance check + post-report receipt.
 
 ## 6. Error handling
 
-| Error from Mission Control | Meaning | Prime repo action |
-| --- | --- | --- |
-| `unauthorized` (401) | Bad/revoked `x-clone-api-key` | Page on-call; do not retry. |
-| `insufficient_funds` (200, `ok:false`) | Balance < estimate, plan blocks overage | Show "Out of tokens — top up" CTA; do not start the report. See §7. |
-| `job_not_found` / `forbidden` | Job from a different clone | Bug — log and surface. |
-| `invalid_input` (400) | Schema mismatch | Bug — log payload. |
-| Network/5xx on commit | Mission Control unreachable after generation | Retry commit with same `job_id` (commit is idempotent on completed jobs). |
+| Error from Mission Control             | Meaning                                      | Prime repo action                                                         |
+| -------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------- |
+| `unauthorized` (401)                   | Bad/revoked `x-clone-api-key`                | Page on-call; do not retry.                                               |
+| `insufficient_funds` (200, `ok:false`) | Balance < estimate, plan blocks overage      | Show "Out of tokens — top up" CTA; do not start the report. See §7.       |
+| `job_not_found` / `forbidden`          | Job from a different clone                   | Bug — log and surface.                                                    |
+| `invalid_input` (400)                  | Schema mismatch                              | Bug — log payload.                                                        |
+| Network/5xx on commit                  | Mission Control unreachable after generation | Retry commit with same `job_id` (commit is idempotent on completed jobs). |
 
 ## 7. Out-of-tokens UI flow
 
@@ -198,7 +207,10 @@ Update `tokens.client.ts` so callers can `instanceof`-check the failure:
 
 ```typescript
 export class InsufficientTokensError extends Error {
-  constructor(public available: number, public required: number) {
+  constructor(
+    public available: number,
+    public required: number,
+  ) {
     super(`insufficient_funds: have ${available}, need ${required}`);
     this.name = "InsufficientTokensError";
   }
@@ -206,10 +218,7 @@ export class InsufficientTokensError extends Error {
 
 // inside `call()`:
 if (json.ok === false && json.error === "insufficient_funds") {
-  throw new InsufficientTokensError(
-    (json as any).available ?? 0,
-    (json as any).required ?? 0,
-  );
+  throw new InsufficientTokensError((json as any).available ?? 0, (json as any).required ?? 0);
 }
 ```
 
@@ -219,7 +228,9 @@ if (json.ok === false && json.error === "insufficient_funds") {
 import { InsufficientTokensError } from "@/server/tokens.client";
 import { OutOfTokensBanner } from "@/components/out-of-tokens-banner";
 
-const [outOfTokens, setOutOfTokens] = useState<{ available: number; required: number } | null>(null);
+const [outOfTokens, setOutOfTokens] = useState<{ available: number; required: number } | null>(
+  null,
+);
 
 async function onSubmit() {
   setOutOfTokens(null);
@@ -238,10 +249,7 @@ async function onSubmit() {
 return (
   <>
     {outOfTokens && (
-      <OutOfTokensBanner
-        available={outOfTokens.available}
-        required={outOfTokens.required}
-      />
+      <OutOfTokensBanner available={outOfTokens.available} required={outOfTokens.required} />
     )}
     <ReportForm onSubmit={onSubmit} />
   </>
@@ -259,7 +267,10 @@ import { Link } from "@tanstack/react-router";
 export function OutOfTokensBanner({
   available,
   required,
-}: { available: number; required: number }) {
+}: {
+  available: number;
+  required: number;
+}) {
   const short = (required - available).toLocaleString();
   return (
     <div
@@ -270,9 +281,9 @@ export function OutOfTokensBanner({
       <div className="flex-1">
         <p className="font-semibold text-destructive">Out of report credits</p>
         <p className="mt-1 text-sm text-muted-foreground">
-          This report needs <strong>{required.toLocaleString()}</strong> tokens but
-          you only have <strong>{available.toLocaleString()}</strong> available —
-          you're short by <strong>{short}</strong>.
+          This report needs <strong>{required.toLocaleString()}</strong> tokens but you only have{" "}
+          <strong>{available.toLocaleString()}</strong> available — you're short by{" "}
+          <strong>{short}</strong>.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Button asChild>
@@ -298,11 +309,11 @@ balance between pre-flight and reserve).
 
 ## 8. Idempotency contract
 
-| Endpoint | Idempotency key | Behavior on replay |
-| --- | --- | --- |
+| Endpoint  | Idempotency key                                                  | Behavior on replay                                                                                                                                               |
+| --------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `reserve` | `(clone_id, idempotency_key)` — pass via `idempotency_key` field | Returns the existing `job_id` and reservation with `idempotent: true` instead of double-reserving. Use the **same key** for retries of the same logical attempt. |
-| `commit` | `job_id` | If the job is already `completed`, returns the original `charged_tokens` with `idempotent: true` — never double-charges. Safe to retry on network/5xx. |
-| `cancel` | `job_id` | No-op if the job is not in `reserved` state; returns `ok: true` regardless. |
+| `commit`  | `job_id`                                                         | If the job is already `completed`, returns the original `charged_tokens` with `idempotent: true` — never double-charges. Safe to retry on network/5xx.           |
+| `cancel`  | `job_id`                                                         | No-op if the job is not in `reserved` state; returns `ok: true` regardless.                                                                                      |
 
 **Rule of thumb:** retries with the same `idempotency_key` / `job_id` are
 always safe. Generating a new key for a retry creates a new charge.
@@ -337,12 +348,12 @@ the prime repo cannot observe via the synchronous reserve/commit path.
 
 ### 10a. Events
 
-| Event | Fired when |
-| --- | --- |
-| `tokens.balance.updated` | A reserve/commit/cancel/grant/topup/refund changed the tenant balance. Payload includes the latest `{ tenant, balance }` snapshot. |
-| `tokens.key.rotated` | An admin rotated an API key. Payload includes `{ key_id, old_prefix, new_prefix, revoke_at }` so the prime repo can swap secrets before the grace period ends. |
-| `tokens.key.revoked` | A key was revoked (manually or by scheduled rotation). |
-| `tokens.alert` | Threshold alert (80%/100% allowance), cancel-rate spike, or first-use of a key. |
+| Event                    | Fired when                                                                                                                                                     |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tokens.balance.updated` | A reserve/commit/cancel/grant/topup/refund changed the tenant balance. Payload includes the latest `{ tenant, balance }` snapshot.                             |
+| `tokens.key.rotated`     | An admin rotated an API key. Payload includes `{ key_id, old_prefix, new_prefix, revoke_at }` so the prime repo can swap secrets before the grace period ends. |
+| `tokens.key.revoked`     | A key was revoked (manually or by scheduled rotation).                                                                                                         |
+| `tokens.alert`           | Threshold alert (80%/100% allowance), cancel-rate spike, or first-use of a key.                                                                                |
 
 ### 10b. Configuring an endpoint
 
@@ -432,7 +443,7 @@ call the public catalogue endpoint:
 ```typescript
 export function listTopupPacks(tenantRef: string, opts?: { limit?: number; offset?: number }) {
   const q = new URLSearchParams({ tenant_ref: tenantRef });
-  if (opts?.limit) q.set("limit", String(opts.limit));   // default 50, max 100
+  if (opts?.limit) q.set("limit", String(opts.limit)); // default 50, max 100
   if (opts?.offset) q.set("offset", String(opts.offset));
   return call<{
     ok: true;
@@ -471,7 +482,6 @@ signature check and your receiver's idempotency handling without touching
 real balances. The payload shape mirrors production events; receivers
 should accept `event === "tokens.test"` as a no-op success.
 
-
 ### 11b. CTA wiring
 
 Replace the placeholder `/billing/topup` link in `OutOfTokensBanner` with
@@ -484,7 +494,7 @@ const { packs, topup_url } = await listTopupPacks(userId);
   <a href={topup_url ?? `${MISSION_CONTROL_URL}/billing/topup`} target="_blank" rel="noreferrer">
     Top up credits
   </a>
-</Button>
+</Button>;
 ```
 
 The Mission Control `/billing/topup` page is authenticated — only operators
@@ -496,7 +506,6 @@ sort controls, and **paginated pack cards** (page-size selector + First /
 Prev / Next / Last controls). For programmatic consumers, the underlying
 `/api/public/tokens/packs` endpoint paginates server-side via `limit` /
 `offset` (see §11a).
-
 
 ### 11c. Refresh balance after top-up
 

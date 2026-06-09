@@ -11,7 +11,9 @@ function bucketize(rows: Array<{ probed_at: string; payload: unknown }>): Bucket
   const map = new Map<string, { up: number; total: number }>();
   for (const r of rows) {
     const date = r.probed_at.slice(0, 10);
-    const status = String(((r.payload ?? {}) as Record<string, unknown>).status ?? "").toLowerCase();
+    const status = String(
+      ((r.payload ?? {}) as Record<string, unknown>).status ?? "",
+    ).toLowerCase();
     const ok = ["ok", "up", "healthy", "ready", "active"].includes(status);
     const cur = map.get(date) ?? { up: 0, total: 0 };
     cur.total += 1;
@@ -20,7 +22,12 @@ function bucketize(rows: Array<{ probed_at: string; payload: unknown }>): Bucket
   }
   return Array.from(map.entries())
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, v]) => ({ date, up: v.up, total: v.total, pct: v.total > 0 ? Math.round((v.up / v.total) * 100) : 0 }));
+    .map(([date, v]) => ({
+      date,
+      up: v.up,
+      total: v.total,
+      pct: v.total > 0 ? Math.round((v.up / v.total) * 100) : 0,
+    }));
 }
 
 export function CloneHealthTimeline({ cloneId }: { cloneId: string }) {
@@ -36,9 +43,13 @@ export function CloneHealthTimeline({ cloneId }: { cloneId: string }) {
         .gte("probed_at", since)
         .order("probed_at", { ascending: true });
       if (cancelled) return;
-      setSeries(bucketize((data ?? []).map((r) => ({ probed_at: r.probed_at, payload: r.payload }))));
+      setSeries(
+        bucketize((data ?? []).map((r) => ({ probed_at: r.probed_at, payload: r.payload }))),
+      );
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [cloneId]);
 
   if (series.length === 0) return null;
@@ -57,8 +68,20 @@ export function CloneHealthTimeline({ cloneId }: { cloneId: string }) {
             <LineChart data={series}>
               <XAxis dataKey="date" tick={{ fontSize: 10 }} hide />
               <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} width={28} />
-              <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", fontSize: 11 }} />
-              <Line type="monotone" dataKey="pct" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+              <Tooltip
+                contentStyle={{
+                  background: "hsl(var(--card))",
+                  border: "1px solid hsl(var(--border))",
+                  fontSize: 11,
+                }}
+              />
+              <Line
+                type="monotone"
+                dataKey="pct"
+                stroke="hsl(var(--primary))"
+                strokeWidth={2}
+                dot={false}
+              />
             </LineChart>
           </ResponsiveContainer>
         </div>

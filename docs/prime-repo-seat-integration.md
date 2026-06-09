@@ -20,27 +20,42 @@ Reads the existing `AURIXA_API_KEY` from the credentials loader. Exposes:
 
 ```ts
 export type SeatReserveInput = {
-  externalUserId: string;   // typically the new auth.users.id or email
+  externalUserId: string; // typically the new auth.users.id or email
   email?: string;
   displayName?: string;
-  idempotencyKey: string;   // stable per signup attempt (uuid v4 ok)
+  idempotencyKey: string; // stable per signup attempt (uuid v4 ok)
 };
 
-export async function reserveSeat(input: SeatReserveInput): Promise<
+export async function reserveSeat(
+  input: SeatReserveInput,
+): Promise<
   | { ok: true; seat_id: string; seats_remaining: number; status: string }
   | { ok: false; error: "seat_limit_reached"; seat_limit: number; seats_used: number; plan: string }
   | { ok: false; error: string }
 >;
 
 export async function commitSeat(seatId: string): Promise<{ ok: boolean }>;
-export async function releaseSeat(externalUserId: string, reason?: string): Promise<{ ok: boolean }>;
+export async function releaseSeat(
+  externalUserId: string,
+  reason?: string,
+): Promise<{ ok: boolean }>;
 export async function getSeatEntitlement(): Promise<{
   plan: { slug: string; name: string; seat_limit: number; device_limit_per_seat: number | null };
   seats_used: number;
   seats_remaining: number;
 }>;
-export async function listSeats(opts?: { status?: "reserved" | "active" | "removed"; limit?: number; offset?: number }): Promise<{
-  seats: Array<{ id: string; external_user_id: string; email: string | null; status: string; created_at: string }>;
+export async function listSeats(opts?: {
+  status?: "reserved" | "active" | "removed";
+  limit?: number;
+  offset?: number;
+}): Promise<{
+  seats: Array<{
+    id: string;
+    external_user_id: string;
+    email: string | null;
+    status: string;
+    created_at: string;
+  }>;
   total: number;
 }>;
 ```
@@ -128,6 +143,7 @@ Reuse the existing HMAC-SHA256 verification (`process.env.AURIXA_WEBHOOK_SECRET`
 ### 7. Docs
 
 Add `docs/mission-control-seats.md` describing:
+
 - where credentials live (`.aurixa/credentials.json`)
 - the 5 endpoints + their request/response shapes
 - the signup integration snippet (above)
@@ -137,19 +153,20 @@ Add `docs/mission-control-seats.md` describing:
 
 ## Mission Control side — API summary (for the Prime repo to call)
 
-| Method | Path                              | Purpose                                  |
-| -----: | --------------------------------- | ---------------------------------------- |
-|  POST  | `/api/public/seats/reserve`       | Reserve a seat (idempotent). 402 if full |
-|  POST  | `/api/public/seats/commit`        | Finalize a reservation after signup ok   |
-|  POST  | `/api/public/seats/release`       | Free a seat on user delete/deactivate    |
-|   GET  | `/api/public/seats/entitlement`   | Current plan, cap, used, remaining       |
-|   GET  | `/api/public/seats/list`          | Paginated seat list (admin UI in clone)  |
+| Method | Path                            | Purpose                                  |
+| -----: | ------------------------------- | ---------------------------------------- |
+|   POST | `/api/public/seats/reserve`     | Reserve a seat (idempotent). 402 if full |
+|   POST | `/api/public/seats/commit`      | Finalize a reservation after signup ok   |
+|   POST | `/api/public/seats/release`     | Free a seat on user delete/deactivate    |
+|    GET | `/api/public/seats/entitlement` | Current plan, cap, used, remaining       |
+|    GET | `/api/public/seats/list`        | Paginated seat list (admin UI in clone)  |
 
 All require `x-clone-api-key: mck_…` with scope `seats:manage`. Issue this
 scope alongside `tokens:meter` and `clones:rotate` when minting clone API
 keys (auto-provisioning code should be updated to include it).
 
 Webhook events fired to subscribed endpoints:
+
 - `seats.reserved`, `seats.committed`, `seats.released`
 - `seats.limit.approaching` (≥80% used)
 - `seats.limit.reached` (at cap)

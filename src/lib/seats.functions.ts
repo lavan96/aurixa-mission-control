@@ -32,7 +32,7 @@ export const listSeatEntitlements = createServerFn({ method: "GET" })
     const rows = ((ents.data ?? []) as any[]).map((e) => ({
       ...e,
       plan: planMap.get(e.seat_plan_id) ?? null,
-      clone: e.clone_id ? cloneMap.get(e.clone_id) ?? null : null,
+      clone: e.clone_id ? (cloneMap.get(e.clone_id) ?? null) : null,
     }));
     return { entitlements: rows };
   });
@@ -53,8 +53,16 @@ export const assignSeatPlan = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const filter = data.cloneId
-      ? supabase.from("clone_seat_entitlements" as never).select("*").eq("clone_id", data.cloneId).maybeSingle()
-      : supabase.from("clone_seat_entitlements" as never).select("*").is("clone_id", null).maybeSingle();
+      ? supabase
+          .from("clone_seat_entitlements" as never)
+          .select("*")
+          .eq("clone_id", data.cloneId)
+          .maybeSingle()
+      : supabase
+          .from("clone_seat_entitlements" as never)
+          .select("*")
+          .is("clone_id", null)
+          .maybeSingle();
     const existing = await filter;
     const prevPlanId = (existing.data as any)?.seat_plan_id ?? null;
 
@@ -137,14 +145,22 @@ export const removeSeatManually = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const seat = await supabase.from("clone_seats" as never).select("*").eq("id", data.seatId).maybeSingle();
-    if (seat.error || !seat.data) return { ok: false as const, error: seat.error?.message ?? "not_found" };
+    const seat = await supabase
+      .from("clone_seats" as never)
+      .select("*")
+      .eq("id", data.seatId)
+      .maybeSingle();
+    if (seat.error || !seat.data)
+      return { ok: false as const, error: seat.error?.message ?? "not_found" };
     const upd = await supabase
       .from("clone_seats" as never)
       .update({ status: "removed", removed_at: new Date().toISOString() } as never)
       .eq("id", data.seatId);
     if (upd.error) return { ok: false as const, error: upd.error.message };
-    await supabase.rpc("recompute_seats_used" as never, { _clone_id: (seat.data as any).clone_id } as never);
+    await supabase.rpc(
+      "recompute_seats_used" as never,
+      { _clone_id: (seat.data as any).clone_id } as never,
+    );
     await supabase.from("seat_audit" as never).insert({
       clone_id: (seat.data as any).clone_id,
       action: "manual_remove",

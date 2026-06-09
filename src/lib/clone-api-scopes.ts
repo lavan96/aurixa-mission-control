@@ -12,12 +12,48 @@ export type CloneApiScope = {
 };
 
 export const CLONE_API_SCOPES: CloneApiScope[] = [
-  { value: "tokens:meter", group: "tokens", label: "Tokens — meter", description: "Reserve, commit, cancel report credits and read tenant balance.", default: true },
-  { value: "tokens:read", group: "tokens", label: "Tokens — read", description: "Read-only access to token packs and balance endpoints.", default: true },
-  { value: "seats:manage", group: "seats", label: "Seats — manage", description: "Reserve, commit, release user seats and read seat entitlement.", default: true },
-  { value: "devices:manage", group: "devices", label: "Devices — manage", description: "Register, heartbeat, release per-seat devices and enforce device caps.", default: true },
-  { value: "pricing:read", group: "pricing", label: "Pricing — read catalog", description: "Read seat plans, roles, addons, setup packages, and per-report credit costs.", default: true },
-  { value: "webhooks:emit", group: "webhooks", label: "Webhooks — emit", description: "Allow this key to trigger outbound webhook deliveries on usage events.", default: false },
+  {
+    value: "tokens:meter",
+    group: "tokens",
+    label: "Tokens — meter",
+    description: "Reserve, commit, cancel report credits and read tenant balance.",
+    default: true,
+  },
+  {
+    value: "tokens:read",
+    group: "tokens",
+    label: "Tokens — read",
+    description: "Read-only access to token packs and balance endpoints.",
+    default: true,
+  },
+  {
+    value: "seats:manage",
+    group: "seats",
+    label: "Seats — manage",
+    description: "Reserve, commit, release user seats and read seat entitlement.",
+    default: true,
+  },
+  {
+    value: "devices:manage",
+    group: "devices",
+    label: "Devices — manage",
+    description: "Register, heartbeat, release per-seat devices and enforce device caps.",
+    default: true,
+  },
+  {
+    value: "pricing:read",
+    group: "pricing",
+    label: "Pricing — read catalog",
+    description: "Read seat plans, roles, addons, setup packages, and per-report credit costs.",
+    default: true,
+  },
+  {
+    value: "webhooks:emit",
+    group: "webhooks",
+    label: "Webhooks — emit",
+    description: "Allow this key to trigger outbound webhook deliveries on usage events.",
+    default: false,
+  },
 ];
 
 export const DEFAULT_SCOPES = CLONE_API_SCOPES.filter((s) => s.default).map((s) => s.value);

@@ -21,10 +21,7 @@ export const getFleetMetrics = createServerFn({ method: "GET" })
         .from("ai_usage_log")
         .select("feature, total_tokens, created_at")
         .gte("created_at", since30),
-      supabase
-        .from("push_delivery_log")
-        .select("success, created_at")
-        .gte("created_at", since30),
+      supabase.from("push_delivery_log").select("success, created_at").gte("created_at", since30),
       supabase
         .from("clone_health_snapshots")
         .select("clone_id, payload, probed_at")

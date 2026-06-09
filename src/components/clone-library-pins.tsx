@@ -11,7 +11,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { BookOpen, Loader2, Pin, X, CheckCircle2, AlertCircle, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
@@ -62,7 +66,9 @@ export function CloneLibraryPinsCard({ cloneId }: { cloneId: string }) {
     setLoading(false);
   }, [cloneId, getPinsFn, getLibraryFn]);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   // Group entries by slug, only approved
   const approvedBySlug = new Map<string, LibraryEntry[]>();
@@ -138,8 +144,8 @@ export function CloneLibraryPinsCard({ cloneId }: { cloneId: string }) {
               <BookOpen className="h-4 w-4 text-primary" /> Library version pins
             </CardTitle>
             <CardDescription className="text-xs">
-              Choose which approved library version this clone should install per module slug.
-              Only admin-approved versions are selectable.
+              Choose which approved library version this clone should install per module slug. Only
+              admin-approved versions are selectable.
             </CardDescription>
           </div>
           {pins.length > 0 && (
@@ -190,10 +196,16 @@ export function CloneLibraryPinsCard({ cloneId }: { cloneId: string }) {
                         <div className="flex items-center gap-2 min-w-0">
                           <Pin className="h-3 w-3 shrink-0 text-primary" />
                           <code className="font-mono text-sm truncate">{p.slug}</code>
-                          <Badge variant="outline" className="font-mono text-[10px]">v{p.version}</Badge>
+                          <Badge variant="outline" className="font-mono text-[10px]">
+                            v{p.version}
+                          </Badge>
                           {isStale && (
-                            <Badge variant="outline" className="font-mono text-[9px] border-warning/40 text-warning">
-                              <AlertCircle className="mr-1 h-2.5 w-2.5" /> v{versions[0].version} available
+                            <Badge
+                              variant="outline"
+                              className="font-mono text-[9px] border-warning/40 text-warning"
+                            >
+                              <AlertCircle className="mr-1 h-2.5 w-2.5" /> v{versions[0].version}{" "}
+                              available
                             </Badge>
                           )}
                         </div>
@@ -261,7 +273,9 @@ export function CloneLibraryPinsCard({ cloneId }: { cloneId: string }) {
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <code className="font-mono text-sm truncate">{slug}</code>
-                        <Badge variant="outline" className="font-mono text-[10px]">{latest.name}</Badge>
+                        <Badge variant="outline" className="font-mono text-[10px]">
+                          {latest.name}
+                        </Badge>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         {versions.length > 1 ? (
@@ -288,7 +302,9 @@ export function CloneLibraryPinsCard({ cloneId }: { cloneId: string }) {
                             {busy === slug ? (
                               <Loader2 className="h-3 w-3 animate-spin" />
                             ) : (
-                              <><Pin className="mr-1 h-3 w-3" /> pin v{latest.version}</>
+                              <>
+                                <Pin className="mr-1 h-3 w-3" /> pin v{latest.version}
+                              </>
                             )}
                           </Button>
                         )}
@@ -302,7 +318,8 @@ export function CloneLibraryPinsCard({ cloneId }: { cloneId: string }) {
             {approvedBySlug.size === 0 && (
               <div className="rounded-md border border-dashed p-4 text-center text-xs text-muted-foreground">
                 <CheckCircle2 className="mx-auto mb-1 h-4 w-4" />
-                No approved library entries available yet. Publish modules and have an admin approve them first.
+                No approved library entries available yet. Publish modules and have an admin approve
+                them first.
               </div>
             )}
           </>

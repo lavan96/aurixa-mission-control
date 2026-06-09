@@ -60,7 +60,9 @@ export async function runCascadeDryRun(
   const { data: prime } = await supabase.from("prime_config").select("*").limit(1).maybeSingle();
   if (!prime) return { ok: false, error: "Prime not configured" };
 
-  let clonesQuery = supabase.from("clones").select("id, name, github_owner, github_repo, default_branch");
+  let clonesQuery = supabase
+    .from("clones")
+    .select("id, name, github_owner, github_repo, default_branch");
   if (opts.cloneIds && opts.cloneIds.length > 0) {
     clonesQuery = clonesQuery.in("id", opts.cloneIds);
   }
@@ -91,7 +93,10 @@ export async function runCascadeDryRun(
   const { data: cmRows } = await supabase
     .from("clone_modules")
     .select("clone_id, modules(file_globs)")
-    .in("clone_id", limited.map((c) => c.id));
+    .in(
+      "clone_id",
+      limited.map((c) => c.id),
+    );
 
   const cloneToGlobs = new Map<string, string[]>();
   const cloneToModuleCount = new Map<string, number>();

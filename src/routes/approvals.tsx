@@ -17,7 +17,11 @@ import { formatDistanceToNow } from "@/lib/format";
 import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/approvals")({
-  component: () => (<ProtectedRoute><ApprovalsPage /></ProtectedRoute>),
+  component: () => (
+    <ProtectedRoute>
+      <ApprovalsPage />
+    </ProtectedRoute>
+  ),
   head: () => ({ meta: [{ title: "Approvals — Aurixa Systems Mission Control" }] }),
 });
 
@@ -53,9 +57,13 @@ function ApprovalsPage() {
       return { decision, results };
     },
     onSuccess: ({ decision, results }) => {
-      const ok = results.filter((r) => r.status === "fulfilled" && (r.value as any)?.ok !== false).length;
+      const ok = results.filter(
+        (r) => r.status === "fulfilled" && (r.value as any)?.ok !== false,
+      ).length;
       const fail = results.length - ok;
-      toast.success(`${decision === "approve" ? "Approved" : "Rejected"} ${ok}/${results.length}${fail ? ` · ${fail} failed` : ""}`);
+      toast.success(
+        `${decision === "approve" ? "Approved" : "Rejected"} ${ok}/${results.length}${fail ? ` · ${fail} failed` : ""}`,
+      );
       setPicked(new Set());
       setReason("");
       qc.invalidateQueries({ queryKey: ["pending-approvals"] });
@@ -70,22 +78,35 @@ function ApprovalsPage() {
           <ShieldCheck className="h-5 w-5 text-warning" />
         </div>
         <div className="flex-1">
-          <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">queue</p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
+            queue
+          </p>
           <h1 className="text-3xl font-semibold tracking-tight">Approvals</h1>
-          <p className="text-sm text-muted-foreground">High-blast-radius cascades waiting for a second operator.</p>
+          <p className="text-sm text-muted-foreground">
+            High-blast-radius cascades waiting for a second operator.
+          </p>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => q.refetch()}><RefreshCw className="h-4 w-4" /></Button>
+        <Button variant="ghost" size="icon" onClick={() => q.refetch()}>
+          <RefreshCw className="h-4 w-4" />
+        </Button>
       </header>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <div>
             <CardTitle className="text-base">{events.length} awaiting review</CardTitle>
-            <CardDescription>Select multiple events to approve or reject in one shot.</CardDescription>
+            <CardDescription>
+              Select multiple events to approve or reject in one shot.
+            </CardDescription>
           </div>
           {picked.size > 0 && (
             <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => bulk.mutate("reject")} disabled={bulk.isPending}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => bulk.mutate("reject")}
+                disabled={bulk.isPending}
+              >
                 <ShieldAlert className="mr-1 h-4 w-4" /> Reject {picked.size}
               </Button>
               <Button size="sm" onClick={() => bulk.mutate("approve")} disabled={bulk.isPending}>
@@ -116,12 +137,24 @@ function ApprovalsPage() {
                   key={e.id}
                   className="flex items-start gap-3 rounded-md border border-border bg-surface p-3 hover:bg-sidebar-accent/40 cursor-pointer"
                 >
-                  <Checkbox checked={picked.has(e.id)} onCheckedChange={() => toggle(e.id)} className="mt-1" />
+                  <Checkbox
+                    checked={picked.has(e.id)}
+                    onCheckedChange={() => toggle(e.id)}
+                    className="mt-1"
+                  />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant="outline" className="font-mono text-[10px]">{e.mode}</Badge>
-                      <span className="font-mono text-xs text-muted-foreground">{formatDistanceToNow(e.created_at)}</span>
-                      {e.source_branch && <span className="font-mono text-[10px] text-muted-foreground">@ {e.source_branch}</span>}
+                      <Badge variant="outline" className="font-mono text-[10px]">
+                        {e.mode}
+                      </Badge>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {formatDistanceToNow(e.created_at)}
+                      </span>
+                      {e.source_branch && (
+                        <span className="font-mono text-[10px] text-muted-foreground">
+                          @ {e.source_branch}
+                        </span>
+                      )}
                     </div>
                     {e.summary && <p className="mt-1 text-sm">{e.summary}</p>}
                   </div>

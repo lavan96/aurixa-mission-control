@@ -32,10 +32,10 @@ export const Route = createFileRoute("/hooks/brand-drift")({
             entity_type: "cron",
             metadata: { error: msg },
           });
-          return new Response(
-            JSON.stringify({ success: false, error: msg }),
-            { status: 500, headers: { "Content-Type": "application/json" } },
-          );
+          return new Response(JSON.stringify({ success: false, error: msg }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
         }
       },
     },

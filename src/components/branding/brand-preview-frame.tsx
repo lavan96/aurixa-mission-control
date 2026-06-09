@@ -22,12 +22,8 @@ export function BrandPreviewFrame({
   const cfg = bundle.brand_config ?? {};
   const contact = bundle.report_contact ?? {};
   const isDark = variant === "dark";
-  const bg = isDark
-    ? cfg.background_color || "#0a0a0a"
-    : cfg.background_color || "#ffffff";
-  const fg = isDark
-    ? cfg.foreground_color || "#fafafa"
-    : cfg.foreground_color || "#0a0a0a";
+  const bg = isDark ? cfg.background_color || "#0a0a0a" : cfg.background_color || "#ffffff";
+  const fg = isDark ? cfg.foreground_color || "#fafafa" : cfg.foreground_color || "#0a0a0a";
   const primary = cfg.primary_color || "#0066ff";
   const accent = cfg.accent_color || "#ff6b35";
   const logo = isDark ? cfg.logo_dark_url : cfg.logo_light_url;
@@ -35,10 +31,7 @@ export function BrandPreviewFrame({
 
   return (
     <div
-      className={cn(
-        "rounded-lg border border-border/60 overflow-hidden shadow-sm",
-        className,
-      )}
+      className={cn("rounded-lg border border-border/60 overflow-hidden shadow-sm", className)}
       style={{ background: bg, color: fg, fontFamily }}
     >
       {/* Header */}
@@ -61,14 +54,10 @@ export function BrandPreviewFrame({
               {(cfg.brand_name?.[0] ?? "B").toUpperCase()}
             </div>
           )}
-          <div className="text-sm font-semibold">
-            {cfg.brand_name || "Brand name"}
-          </div>
+          <div className="text-sm font-semibold">{cfg.brand_name || "Brand name"}</div>
         </div>
         {cfg.support_url && (
-          <span className="text-[10px] opacity-60 truncate max-w-[140px]">
-            {cfg.support_url}
-          </span>
+          <span className="text-[10px] opacity-60 truncate max-w-[140px]">{cfg.support_url}</span>
         )}
       </div>
 
@@ -78,8 +67,8 @@ export function BrandPreviewFrame({
           {cfg.tagline || "Your tagline appears here"}
         </h3>
         <p className="text-xs opacity-70 leading-relaxed">
-          This is a sample preview of how your brand renders across reports,
-          emails, and the customer dashboard.
+          This is a sample preview of how your brand renders across reports, emails, and the
+          customer dashboard.
         </p>
         <div className="flex gap-2 pt-1">
           <button
@@ -100,10 +89,7 @@ export function BrandPreviewFrame({
       </div>
 
       {/* Swatches */}
-      <div
-        className="grid grid-cols-5 gap-1 px-4 pb-3"
-        style={{ borderTop: `1px solid ${fg}10` }}
-      >
+      <div className="grid grid-cols-5 gap-1 px-4 pb-3" style={{ borderTop: `1px solid ${fg}10` }}>
         {(
           [
             ["primary_color", "Primary"],
@@ -127,9 +113,7 @@ export function BrandPreviewFrame({
       </div>
 
       {/* Contact strip */}
-      {(contact.contact_name ||
-        contact.contact_email ||
-        contact.contact_phone) && (
+      {(contact.contact_name || contact.contact_email || contact.contact_phone) && (
         <div
           className="px-4 py-3 text-[11px] space-y-1"
           style={{
@@ -137,9 +121,7 @@ export function BrandPreviewFrame({
             borderTop: `1px solid ${fg}10`,
           }}
         >
-          {contact.contact_name && (
-            <div className="font-medium">{contact.contact_name}</div>
-          )}
+          {contact.contact_name && <div className="font-medium">{contact.contact_name}</div>}
           <div className="flex flex-wrap gap-x-3 gap-y-1 opacity-75">
             {contact.contact_email && (
               <span className="flex items-center gap-1">

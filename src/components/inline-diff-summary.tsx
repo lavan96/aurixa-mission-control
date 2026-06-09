@@ -26,9 +26,7 @@ export function InlineDiffSummary({
 
   // Heuristic: if every non-empty line starts with +, -, ~ or "M ", treat as
   // structured. Otherwise show as a single paragraph.
-  const structured =
-    lines.length > 0 &&
-    lines.every((l) => /^[+\-~MAD]\s|^[+\-~]/.test(l));
+  const structured = lines.length > 0 && lines.every((l) => /^[+\-~MAD]\s|^[+\-~]/.test(l));
 
   if (!structured) {
     return (
@@ -42,7 +40,9 @@ export function InlineDiffSummary({
           <FileDiff className="h-3 w-3" />
           diff summary
           {typeof filesChanged === "number" && filesChanged > 0 && (
-            <span>· {filesChanged} file{filesChanged === 1 ? "" : "s"}</span>
+            <span>
+              · {filesChanged} file{filesChanged === 1 ? "" : "s"}
+            </span>
           )}
         </div>
         <div className="whitespace-pre-wrap break-words">{summary}</div>
@@ -51,17 +51,14 @@ export function InlineDiffSummary({
   }
 
   return (
-    <div
-      className={cn(
-        "rounded-md border border-border/60 bg-surface p-3",
-        className,
-      )}
-    >
+    <div className={cn("rounded-md border border-border/60 bg-surface p-3", className)}>
       <div className="mb-2 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
         <FileDiff className="h-3 w-3" />
         diff
         {typeof filesChanged === "number" && filesChanged > 0 && (
-          <span>· {filesChanged} file{filesChanged === 1 ? "" : "s"}</span>
+          <span>
+            · {filesChanged} file{filesChanged === 1 ? "" : "s"}
+          </span>
         )}
       </div>
       <ul className="space-y-0.5">
@@ -70,10 +67,7 @@ export function InlineDiffSummary({
           const sign = m?.[1] ?? "~";
           const path = m?.[2] ?? line;
           return (
-            <li
-              key={i}
-              className="flex items-center gap-1.5 font-mono text-[11px]"
-            >
+            <li key={i} className="flex items-center gap-1.5 font-mono text-[11px]">
               <DiffMark sign={sign} />
               <span className="truncate text-foreground/90" title={path}>
                 {path}

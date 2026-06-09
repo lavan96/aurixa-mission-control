@@ -124,14 +124,15 @@ export const bulkDeleteCascadeTemplates = createServerFn({ method: "POST" })
 
 export const bulkSetLibraryApproval = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { ids: string[]; status: "approved" | "rejected" | "pending"; reason?: string }) =>
-    z
-      .object({
-        ids: idArray,
-        status: z.enum(["approved", "rejected", "pending"]),
-        reason: z.string().optional(),
-      })
-      .parse(d),
+  .inputValidator(
+    (d: { ids: string[]; status: "approved" | "rejected" | "pending"; reason?: string }) =>
+      z
+        .object({
+          ids: idArray,
+          status: z.enum(["approved", "rejected", "pending"]),
+          reason: z.string().optional(),
+        })
+        .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
@@ -183,7 +184,11 @@ export const bulkDeprecateLibrary = createServerFn({ method: "POST" })
       action: "library.bulk_deprecated",
       entity_type: "module_library",
       actor_user_id: userId,
-      metadata: { count: data.ids.length, reason: data.reason, replacementSlug: data.replacementSlug },
+      metadata: {
+        count: data.ids.length,
+        reason: data.reason,
+        replacementSlug: data.replacementSlug,
+      },
     });
     return { ok: true as const, count: data.ids.length };
   });
@@ -248,9 +253,7 @@ export const bulkDeleteBrandProfiles = createServerFn({ method: "POST" })
 
 export const bulkDetachCloudflareZones = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { cloneIds: string[] }) =>
-    z.object({ cloneIds: idArray }).parse(d),
-  )
+  .inputValidator((d: { cloneIds: string[] }) => z.object({ cloneIds: idArray }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { error: e1 } = await supabase
@@ -275,9 +278,7 @@ export const bulkDetachCloudflareZones = createServerFn({ method: "POST" })
 
 export const bulkDismissDriftSuggestions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { alertIds: string[] }) =>
-    z.object({ alertIds: idArray }).parse(d),
-  )
+  .inputValidator((d: { alertIds: string[] }) => z.object({ alertIds: idArray }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { error } = await supabase
@@ -313,9 +314,7 @@ export const bulkDeleteDetectionRuns = createServerFn({ method: "POST" })
 
 export const bulkRemoveLibraryPins = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { pinIds: string[] }) =>
-    z.object({ pinIds: idArray }).parse(d),
-  )
+  .inputValidator((d: { pinIds: string[] }) => z.object({ pinIds: idArray }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { error } = await supabase.from("clone_library_pins").delete().in("id", data.pinIds);

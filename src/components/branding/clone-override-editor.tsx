@@ -21,20 +21,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Save,
-  Eraser,
-  Layers,
-  Eye,
-  RotateCcw,
-} from "lucide-react";
+import { Save, Eraser, Layers, Eye, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { BrandPreviewFrame, type PreviewBundle } from "./brand-preview-frame";
@@ -98,9 +87,7 @@ export function CloneOverrideEditorDialog({
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [assignment, setAssignment] = useState<EffectiveAssignment | null>(
-    null,
-  );
+  const [assignment, setAssignment] = useState<EffectiveAssignment | null>(null);
   const [overrides, setOverrides] = useState<{
     brand_config: Record<string, string>;
     report_contact: Record<string, string>;
@@ -132,9 +119,7 @@ export function CloneOverrideEditorDialog({
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        toast.error(
-          err instanceof Error ? err.message : "Failed to load assignment",
-        );
+        toast.error(err instanceof Error ? err.message : "Failed to load assignment");
         setLoading(false);
       });
     return () => {
@@ -161,8 +146,7 @@ export function CloneOverrideEditorDialog({
   }, [baseBundle, overrides]);
 
   const overrideCount =
-    Object.keys(overrides.brand_config).length +
-    Object.keys(overrides.report_contact).length;
+    Object.keys(overrides.brand_config).length + Object.keys(overrides.report_contact).length;
 
   const setField = (group: Field["group"], key: string, value: string) => {
     setOverrides((prev) => {
@@ -193,9 +177,7 @@ export function CloneOverrideEditorDialog({
     });
     setSaving(false);
     if (r.ok) {
-      toast.success(
-        `Overrides saved · ${overrideCount} field(s). Run apply to push.`,
-      );
+      toast.success(`Overrides saved · ${overrideCount} field(s). Run apply to push.`);
       onSaved();
       onClose();
     } else {
@@ -227,8 +209,8 @@ export function CloneOverrideEditorDialog({
             Clone overrides · {cloneName}
           </DialogTitle>
           <DialogDescription>
-            Layer per-clone tweaks on top of the inherited brand profile. Empty
-            fields fall through to the profile defaults.
+            Layer per-clone tweaks on top of the inherited brand profile. Empty fields fall through
+            to the profile defaults.
           </DialogDescription>
         </DialogHeader>
 
@@ -260,9 +242,7 @@ export function CloneOverrideEditorDialog({
                 <Badge
                   variant="outline"
                   className={cn(
-                    overrideCount > 0
-                      ? "bg-amber-500/10 text-amber-300 border-amber-500/30"
-                      : "",
+                    overrideCount > 0 ? "bg-amber-500/10 text-amber-300 border-amber-500/30" : "",
                   )}
                 >
                   {overrideCount} override{overrideCount === 1 ? "" : "s"}
@@ -276,95 +256,75 @@ export function CloneOverrideEditorDialog({
                 </TabsList>
 
                 {(["brand_config", "report_contact"] as const).map((group) => (
-                  <TabsContent
-                    key={group}
-                    value={group}
-                    className="mt-3 space-y-2"
-                  >
-                    {OVERRIDABLE_FIELDS.filter((f) => f.group === group).map(
-                      (f) => {
-                        const baseValue =
-                          (baseBundle[group] as Record<string, string>)[f.key] ??
-                          "";
-                        const overrideValue = overrides[group][f.key];
-                        const isOverridden = overrideValue !== undefined;
-                        return (
-                          <div
-                            key={f.key}
-                            className={cn(
-                              "rounded-md border p-2.5 space-y-1.5",
-                              isOverridden
-                                ? "border-amber-500/40 bg-amber-500/5"
-                                : "border-border bg-card",
-                            )}
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                                {f.label}
-                                {isOverridden && (
-                                  <span className="ml-2 normal-case tracking-normal text-amber-300">
-                                    overridden
-                                  </span>
-                                )}
-                              </Label>
+                  <TabsContent key={group} value={group} className="mt-3 space-y-2">
+                    {OVERRIDABLE_FIELDS.filter((f) => f.group === group).map((f) => {
+                      const baseValue = (baseBundle[group] as Record<string, string>)[f.key] ?? "";
+                      const overrideValue = overrides[group][f.key];
+                      const isOverridden = overrideValue !== undefined;
+                      return (
+                        <div
+                          key={f.key}
+                          className={cn(
+                            "rounded-md border p-2.5 space-y-1.5",
+                            isOverridden
+                              ? "border-amber-500/40 bg-amber-500/5"
+                              : "border-border bg-card",
+                          )}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                              {f.label}
                               {isOverridden && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-6 px-1.5 text-[10px]"
-                                  onClick={() => resetField(group, f.key)}
-                                >
-                                  <RotateCcw className="h-3 w-3 mr-1" />
-                                  Reset
-                                </Button>
+                                <span className="ml-2 normal-case tracking-normal text-amber-300">
+                                  overridden
+                                </span>
                               )}
-                            </div>
-                            {f.type === "color" ? (
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="color"
-                                  value={
-                                    overrideValue ?? baseValue ?? "#000000"
-                                  }
-                                  onChange={(e) =>
-                                    setField(group, f.key, e.target.value)
-                                  }
-                                  className="h-9 w-14 cursor-pointer rounded border border-input bg-background"
-                                />
-                                <Input
-                                  value={overrideValue ?? ""}
-                                  placeholder={baseValue || "Inherit default"}
-                                  onChange={(e) =>
-                                    setField(group, f.key, e.target.value)
-                                  }
-                                  className="font-mono text-sm"
-                                />
-                              </div>
-                            ) : f.type === "textarea" ? (
-                              <Textarea
-                                rows={2}
-                                value={overrideValue ?? ""}
-                                placeholder={baseValue || "Inherit default"}
-                                onChange={(e) =>
-                                  setField(group, f.key, e.target.value)
-                                }
+                            </Label>
+                            {isOverridden && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 px-1.5 text-[10px]"
+                                onClick={() => resetField(group, f.key)}
+                              >
+                                <RotateCcw className="h-3 w-3 mr-1" />
+                                Reset
+                              </Button>
+                            )}
+                          </div>
+                          {f.type === "color" ? (
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="color"
+                                value={overrideValue ?? baseValue ?? "#000000"}
+                                onChange={(e) => setField(group, f.key, e.target.value)}
+                                className="h-9 w-14 cursor-pointer rounded border border-input bg-background"
                               />
-                            ) : (
                               <Input
                                 value={overrideValue ?? ""}
                                 placeholder={baseValue || "Inherit default"}
-                                onChange={(e) =>
-                                  setField(group, f.key, e.target.value)
-                                }
-                                className={cn(
-                                  f.type === "url" && "font-mono text-xs",
-                                )}
+                                onChange={(e) => setField(group, f.key, e.target.value)}
+                                className="font-mono text-sm"
                               />
-                            )}
-                          </div>
-                        );
-                      },
-                    )}
+                            </div>
+                          ) : f.type === "textarea" ? (
+                            <Textarea
+                              rows={2}
+                              value={overrideValue ?? ""}
+                              placeholder={baseValue || "Inherit default"}
+                              onChange={(e) => setField(group, f.key, e.target.value)}
+                            />
+                          ) : (
+                            <Input
+                              value={overrideValue ?? ""}
+                              placeholder={baseValue || "Inherit default"}
+                              onChange={(e) => setField(group, f.key, e.target.value)}
+                              className={cn(f.type === "url" && "font-mono text-xs")}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
                   </TabsContent>
                 ))}
               </Tabs>

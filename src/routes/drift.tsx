@@ -52,9 +52,7 @@ function DriftDashboard() {
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("clones")
-      .select("id, name, drift_suggestions");
+    const { data } = await supabase.from("clones").select("id, name, drift_suggestions");
     const out: Row[] = [];
     for (const c of data ?? []) {
       const sugs = (c.drift_suggestions as unknown as Suggestion[] | null) ?? [];
@@ -109,8 +107,15 @@ function DriftDashboard() {
 
       <div className="flex flex-wrap items-center gap-2">
         {(["all", "high", "medium", "low"] as const).map((f) => (
-          <Button key={f} size="sm" variant={filter === f ? "default" : "outline"} onClick={() => setFilter(f)}>
-            {f === "all" ? `All (${rows.length})` : `${f} (${rows.filter((r) => r.suggestion.risk === f).length})`}
+          <Button
+            key={f}
+            size="sm"
+            variant={filter === f ? "default" : "outline"}
+            onClick={() => setFilter(f)}
+          >
+            {f === "all"
+              ? `All (${rows.length})`
+              : `${f} (${rows.filter((r) => r.suggestion.risk === f).length})`}
           </Button>
         ))}
       </div>
@@ -129,7 +134,9 @@ function DriftDashboard() {
           <Card key={cat}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <Badge variant="outline" className="font-mono uppercase">{cat}</Badge>
+                <Badge variant="outline" className="font-mono uppercase">
+                  {cat}
+                </Badge>
                 <span className="font-mono text-xs text-muted-foreground">{items.length} open</span>
               </CardTitle>
             </CardHeader>
@@ -143,7 +150,10 @@ function DriftDashboard() {
                     <div className="flex flex-wrap items-center gap-2">
                       <RiskIcon risk={r.suggestion.risk} />
                       <span className="text-sm font-medium">{r.suggestion.summary}</span>
-                      <Badge variant="outline" className={cn("text-[10px] uppercase", riskTone(r.suggestion.risk))}>
+                      <Badge
+                        variant="outline"
+                        className={cn("text-[10px] uppercase", riskTone(r.suggestion.risk))}
+                      >
                         {r.suggestion.risk}
                       </Badge>
                       <Link
@@ -162,10 +172,19 @@ function DriftDashboard() {
                     </div>
                   </div>
                   <div className="flex shrink-0 gap-1">
-                    <Button size="sm" disabled={busy === r.suggestion.id} onClick={() => onApply(r)}>
+                    <Button
+                      size="sm"
+                      disabled={busy === r.suggestion.id}
+                      onClick={() => onApply(r)}
+                    >
                       Apply
                     </Button>
-                    <Button size="sm" variant="ghost" disabled={busy === r.suggestion.id} onClick={() => onDismiss(r)}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={busy === r.suggestion.id}
+                      onClick={() => onDismiss(r)}
+                    >
                       Dismiss
                     </Button>
                   </div>
@@ -181,7 +200,11 @@ function DriftDashboard() {
 
 function RiskIcon({ risk }: { risk: "low" | "medium" | "high" }) {
   if (risk === "low") return <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />;
-  return <AlertTriangle className={cn("h-4 w-4 shrink-0", risk === "high" ? "text-destructive" : "text-warning")} />;
+  return (
+    <AlertTriangle
+      className={cn("h-4 w-4 shrink-0", risk === "high" ? "text-destructive" : "text-warning")}
+    />
+  );
 }
 
 function riskTone(r: "low" | "medium" | "high") {

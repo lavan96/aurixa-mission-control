@@ -129,9 +129,7 @@ async function fetchFileContents(
           });
           const data = res.data as { type?: string; content?: string };
           if (data.type !== "file" || !data.content) return null;
-          const content = Buffer.from(data.content, "base64")
-            .toString("utf8")
-            .slice(0, maxSize);
+          const content = Buffer.from(data.content, "base64").toString("utf8").slice(0, maxSize);
           return { file, content };
         } catch {
           return null;
@@ -253,20 +251,22 @@ async function traceImports(
 // ─── Route Detection ────────────────────────────────────────────────
 
 function identifyRouteFiles(files: string[]): string[] {
-  return files.filter((f) => {
-    // Match common route patterns
-    if (f.match(/src\/routes\/.*\.(tsx|ts|jsx|js)$/)) return true;
-    if (f.match(/app\/routes\/.*\.(tsx|ts|jsx|js)$/)) return true;
-    if (f.match(/src\/pages\/.*\.(tsx|ts|jsx|js)$/)) return true;
-    return false;
-  }).filter((f) => {
-    // Exclude internal files
-    const name = f.split("/").pop() ?? "";
-    if (name.startsWith("__root")) return false;
-    if (name === "routeTree.gen.ts") return false;
-    if (name.startsWith("_")) return false;
-    return true;
-  });
+  return files
+    .filter((f) => {
+      // Match common route patterns
+      if (f.match(/src\/routes\/.*\.(tsx|ts|jsx|js)$/)) return true;
+      if (f.match(/app\/routes\/.*\.(tsx|ts|jsx|js)$/)) return true;
+      if (f.match(/src\/pages\/.*\.(tsx|ts|jsx|js)$/)) return true;
+      return false;
+    })
+    .filter((f) => {
+      // Exclude internal files
+      const name = f.split("/").pop() ?? "";
+      if (name.startsWith("__root")) return false;
+      if (name === "routeTree.gen.ts") return false;
+      if (name.startsWith("_")) return false;
+      return true;
+    });
 }
 
 function routeFileToPath(file: string): string {
@@ -290,7 +290,9 @@ function routeFileToSlug(file: string): string {
   let name = file.split("/").pop() ?? "";
   name = name.replace(/\.(tsx|ts|jsx|js)$/, "");
   if (name === "index") return "home";
-  return name.replace(/\./g, "-").replace(/\$/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "") || "root";
+  return (
+    name.replace(/\./g, "-").replace(/\$/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "") || "root"
+  );
 }
 
 function routeFileToName(file: string): string {
@@ -341,10 +343,28 @@ export async function runDetection(args: {
 }> {
   const { supabase, userId, config, onProgress } = args;
   const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) return { ok: false, runId: "", proposed: 0, inserted: 0, updated: 0, orphanAlerts: 0, error: "LOVABLE_API_KEY not configured" };
+  if (!apiKey)
+    return {
+      ok: false,
+      runId: "",
+      proposed: 0,
+      inserted: 0,
+      updated: 0,
+      orphanAlerts: 0,
+      error: "LOVABLE_API_KEY not configured",
+    };
 
   const { data: prime } = await supabase.from("prime_config").select("*").limit(1).maybeSingle();
-  if (!prime) return { ok: false, runId: "", proposed: 0, inserted: 0, updated: 0, orphanAlerts: 0, error: "Configure prime repo first" };
+  if (!prime)
+    return {
+      ok: false,
+      runId: "",
+      proposed: 0,
+      inserted: 0,
+      updated: 0,
+      orphanAlerts: 0,
+      error: "Configure prime repo first",
+    };
 
   // Find previous run for delta mode
   let previousRunId: string | null = null;
@@ -378,7 +398,15 @@ export async function runDetection(args: {
     .select()
     .single();
   if (runErr || !run) {
-    return { ok: false, runId: "", proposed: 0, inserted: 0, updated: 0, orphanAlerts: 0, error: runErr?.message ?? "Failed to create run" };
+    return {
+      ok: false,
+      runId: "",
+      proposed: 0,
+      inserted: 0,
+      updated: 0,
+      orphanAlerts: 0,
+      error: runErr?.message ?? "Failed to create run",
+    };
   }
 
   const runId = run.id;
@@ -390,19 +418,34 @@ export async function runDetection(args: {
     // ── Phase 1: Fetch real tree ──
     progress("tree_fetch", "Fetching repository tree from GitHub…", 5);
     const octokit = getAppOctokit();
-    const ref: RepoRef = { owner: prime.github_owner, repo: prime.github_repo, branch: prime.default_branch };
+    const ref: RepoRef = {
+      owner: prime.github_owner,
+      repo: prime.github_repo,
+      branch: prime.default_branch,
+    };
     const { files, treeHash } = await fetchRepoTree(octokit, ref);
 
     // Delta check
     if (config.deltaMode && previousTreeHash === treeHash) {
-      await supabase.from("module_detection_runs").update({
-        status: "completed",
-        tree_hash: treeHash,
-        file_count: files.length,
-        completed_at: new Date().toISOString(),
-        error_message: "No changes detected since last scan",
-      }).eq("id", runId);
-      return { ok: true, runId, proposed: 0, inserted: 0, updated: 0, orphanAlerts: 0, error: "No changes since last scan" };
+      await supabase
+        .from("module_detection_runs")
+        .update({
+          status: "completed",
+          tree_hash: treeHash,
+          file_count: files.length,
+          completed_at: new Date().toISOString(),
+          error_message: "No changes detected since last scan",
+        })
+        .eq("id", runId);
+      return {
+        ok: true,
+        runId,
+        proposed: 0,
+        inserted: 0,
+        updated: 0,
+        orphanAlerts: 0,
+        error: "No changes since last scan",
+      };
     }
 
     const allFilesSet = new Set(files);
@@ -414,14 +457,25 @@ export async function runDetection(args: {
     progress("route_detection", `Found ${routeFiles.length} route files`, 25);
 
     if (routeFiles.length === 0) {
-      await supabase.from("module_detection_runs").update({
-        status: "completed",
-        tree_hash: treeHash,
-        file_count: files.length,
-        completed_at: new Date().toISOString(),
-        error_message: "No route files found in repository",
-      }).eq("id", runId);
-      return { ok: true, runId, proposed: 0, inserted: 0, updated: 0, orphanAlerts: 0, error: "No route files found" };
+      await supabase
+        .from("module_detection_runs")
+        .update({
+          status: "completed",
+          tree_hash: treeHash,
+          file_count: files.length,
+          completed_at: new Date().toISOString(),
+          error_message: "No route files found in repository",
+        })
+        .eq("id", runId);
+      return {
+        ok: true,
+        runId,
+        proposed: 0,
+        inserted: 0,
+        updated: 0,
+        orphanAlerts: 0,
+        error: "No route files found",
+      };
     }
 
     // ── Phase 3: Trace imports for each route ──
@@ -437,7 +491,11 @@ export async function runDetection(args: {
       progress("import_tracing", `Tracing ${rf} (${i + 1}/${routeFiles.length})…`, pct);
 
       const { files: resolvedFiles, edges } = await traceImports(
-        rf, allFilesSet, contentCache, octokit, ref,
+        rf,
+        allFilesSet,
+        contentCache,
+        octokit,
+        ref,
       );
       allEdges.push(...edges);
 
@@ -482,7 +540,9 @@ export async function runDetection(args: {
         // Tag each module that uses this shared file
         for (const mod of routeModules) {
           if (mod.resolved_files.includes(file)) {
-            mod.shared_by_modules = [...new Set([...mod.shared_by_modules, ...owners.filter((o) => o !== mod.slug)])];
+            mod.shared_by_modules = [
+              ...new Set([...mod.shared_by_modules, ...owners.filter((o) => o !== mod.slug)]),
+            ];
           }
         }
       }
@@ -552,23 +612,26 @@ export async function runDetection(args: {
 
       if (existing) {
         if (existing.status === "proposed" || existing.status === "rejected") {
-          await supabase.from("modules").update({
-            name: m.name,
-            description: m.description,
-            file_globs: m.file_globs,
-            routes: m.routes,
-            route_entry_file: m.entry_file,
-            resolved_files: m.resolved_files,
-            shared_by_modules: m.shared_by_modules,
-            ai_confidence: m.ai_confidence,
-            ai_reasoning: m.ai_reasoning,
-            cohesion_score: m.cohesion_score,
-            coupling_score: m.coupling_score,
-            requires: m.requires,
-            incompatible_with: m.incompatible_with,
-            detection_run_id: runId,
-            tree_snapshot_hash: treeHash,
-          }).eq("id", existing.id);
+          await supabase
+            .from("modules")
+            .update({
+              name: m.name,
+              description: m.description,
+              file_globs: m.file_globs,
+              routes: m.routes,
+              route_entry_file: m.entry_file,
+              resolved_files: m.resolved_files,
+              shared_by_modules: m.shared_by_modules,
+              ai_confidence: m.ai_confidence,
+              ai_reasoning: m.ai_reasoning,
+              cohesion_score: m.cohesion_score,
+              coupling_score: m.coupling_score,
+              requires: m.requires,
+              incompatible_with: m.incompatible_with,
+              detection_run_id: runId,
+              tree_snapshot_hash: treeHash,
+            })
+            .eq("id", existing.id);
           updated++;
         }
       } else {
@@ -613,29 +676,34 @@ export async function runDetection(args: {
 
     // Finalize run
     progress("complete", "Detection complete!", 100);
-    const passes: PassResult[] = [{
-      pass: 1,
-      name: "Route-first import tracing",
-      model: "deterministic",
-      duration_ms: 0,
-      modules_proposed: routeModules.length,
-      summary: `Traced ${routeModules.length} route modules from ${routeFiles.length} route files, ${sharedFiles.length} shared files, ${orphanFiles.length} orphans`,
-    }];
+    const passes: PassResult[] = [
+      {
+        pass: 1,
+        name: "Route-first import tracing",
+        model: "deterministic",
+        duration_ms: 0,
+        modules_proposed: routeModules.length,
+        summary: `Traced ${routeModules.length} route modules from ${routeFiles.length} route files, ${sharedFiles.length} shared files, ${orphanFiles.length} orphans`,
+      },
+    ];
 
-    await supabase.from("module_detection_runs").update({
-      status: "completed",
-      tree_hash: treeHash,
-      file_count: files.length,
-      sampled_file_count: contentCache.size,
-      dependency_count: allEdges.length,
-      pass_count: passes.length,
-      passes: JSON.parse(JSON.stringify(passes)),
-      proposed_modules: routeModules.length,
-      inserted_modules: inserted,
-      updated_modules: updated,
-      orphan_files_found: orphanAlerts,
-      completed_at: new Date().toISOString(),
-    }).eq("id", runId);
+    await supabase
+      .from("module_detection_runs")
+      .update({
+        status: "completed",
+        tree_hash: treeHash,
+        file_count: files.length,
+        sampled_file_count: contentCache.size,
+        dependency_count: allEdges.length,
+        pass_count: passes.length,
+        passes: JSON.parse(JSON.stringify(passes)),
+        proposed_modules: routeModules.length,
+        inserted_modules: inserted,
+        updated_modules: updated,
+        orphan_files_found: orphanAlerts,
+        completed_at: new Date().toISOString(),
+      })
+      .eq("id", runId);
 
     await supabase.from("audit_log").insert({
       action: "module.route_detection_complete",
@@ -658,12 +726,23 @@ export async function runDetection(args: {
   } catch (e) {
     const errorMsg = e instanceof Error ? e.message : String(e);
     console.error("Detection run failed:", errorMsg);
-    await supabase.from("module_detection_runs").update({
-      status: "failed",
-      error_message: errorMsg,
-      completed_at: new Date().toISOString(),
-    }).eq("id", runId);
-    return { ok: false, runId, proposed: 0, inserted: 0, updated: 0, orphanAlerts: 0, error: errorMsg };
+    await supabase
+      .from("module_detection_runs")
+      .update({
+        status: "failed",
+        error_message: errorMsg,
+        completed_at: new Date().toISOString(),
+      })
+      .eq("id", runId);
+    return {
+      ok: false,
+      runId,
+      proposed: 0,
+      inserted: 0,
+      updated: 0,
+      orphanAlerts: 0,
+      error: errorMsg,
+    };
   }
 }
 
@@ -671,7 +750,12 @@ export async function runDetection(args: {
 
 export async function analyzeModuleIntelligence(supabase: Supabase): Promise<{
   coInstallation: Array<{ module_a: string; module_b: string; coInstallRate: number }>;
-  healthScores: Array<{ moduleId: string; moduleName: string; score: number; breakdown: Record<string, number> }>;
+  healthScores: Array<{
+    moduleId: string;
+    moduleName: string;
+    score: number;
+    breakdown: Record<string, number>;
+  }>;
 }> {
   const { data: cloneModules } = await supabase
     .from("clone_modules")
@@ -679,7 +763,11 @@ export async function analyzeModuleIntelligence(supabase: Supabase): Promise<{
 
   const byClone = new Map<string, string[]>();
   const moduleNames = new Map<string, string>();
-  for (const row of (cloneModules ?? []) as Array<{ clone_id: string; module_id: string; modules: { name: string; slug: string } | null }>) {
+  for (const row of (cloneModules ?? []) as Array<{
+    clone_id: string;
+    module_id: string;
+    modules: { name: string; slug: string } | null;
+  }>) {
     if (!row.modules) continue;
     const list = byClone.get(row.clone_id) ?? [];
     list.push(row.module_id);
@@ -715,46 +803,60 @@ export async function analyzeModuleIntelligence(supabase: Supabase): Promise<{
     .sort((a, b) => b.coInstallRate - a.coInstallRate)
     .slice(0, 20);
 
-  const { data: modules } = await supabase.from("modules").select("id, name, slug, ai_confidence, cohesion_score, coupling_score");
+  const { data: modules } = await supabase
+    .from("modules")
+    .select("id, name, slug, ai_confidence, cohesion_score, coupling_score");
   const { data: clones } = await supabase.from("clones").select("id, sync_status");
 
   const cloneStatusMap = new Map<string, string>();
   for (const c of clones ?? []) cloneStatusMap.set(c.id, c.sync_status);
 
-  const healthScores = (modules ?? []).map((m) => {
-    const moduleClones = (cloneModules ?? [])
-      .filter((cm: { module_id: string }) => cm.module_id === m.id)
-      .map((cm: { clone_id: string }) => cm.clone_id);
+  const healthScores = (modules ?? [])
+    .map((m) => {
+      const moduleClones = (cloneModules ?? [])
+        .filter((cm: { module_id: string }) => cm.module_id === m.id)
+        .map((cm: { clone_id: string }) => cm.clone_id);
 
-    const inSync = moduleClones.filter((cid: string) => cloneStatusMap.get(cid) === "in_sync").length;
-    const failed = moduleClones.filter((cid: string) => cloneStatusMap.get(cid) === "failed").length;
+      const inSync = moduleClones.filter(
+        (cid: string) => cloneStatusMap.get(cid) === "in_sync",
+      ).length;
+      const failed = moduleClones.filter(
+        (cid: string) => cloneStatusMap.get(cid) === "failed",
+      ).length;
 
-    const syncRate = moduleClones.length > 0 ? inSync / moduleClones.length : 0;
-    const failRate = moduleClones.length > 0 ? failed / moduleClones.length : 0;
-    const cohesion = Number(m.cohesion_score) || 0.5;
-    const coupling = Number(m.coupling_score) || 0.5;
-    const confidence = Number(m.ai_confidence) || 0.5;
-    const coverage = totalClones > 0 ? moduleClones.length / totalClones : 0;
+      const syncRate = moduleClones.length > 0 ? inSync / moduleClones.length : 0;
+      const failRate = moduleClones.length > 0 ? failed / moduleClones.length : 0;
+      const cohesion = Number(m.cohesion_score) || 0.5;
+      const coupling = Number(m.coupling_score) || 0.5;
+      const confidence = Number(m.ai_confidence) || 0.5;
+      const coverage = totalClones > 0 ? moduleClones.length / totalClones : 0;
 
-    const score = Math.round(
-      (syncRate * 30 + (1 - failRate) * 25 + cohesion * 20 + (1 - coupling) * 15 + confidence * 10) * 100,
-    ) / 100;
+      const score =
+        Math.round(
+          (syncRate * 30 +
+            (1 - failRate) * 25 +
+            cohesion * 20 +
+            (1 - coupling) * 15 +
+            confidence * 10) *
+            100,
+        ) / 100;
 
-    return {
-      moduleId: m.id,
-      moduleName: m.name,
-      score,
-      breakdown: {
-        sync_rate: Math.round(syncRate * 100),
-        fail_rate: Math.round(failRate * 100),
-        cohesion: Math.round(cohesion * 100),
-        coupling: Math.round(coupling * 100),
-        confidence: Math.round(confidence * 100),
-        coverage: Math.round(coverage * 100),
-        clone_count: moduleClones.length,
-      },
-    };
-  }).sort((a, b) => b.score - a.score);
+      return {
+        moduleId: m.id,
+        moduleName: m.name,
+        score,
+        breakdown: {
+          sync_rate: Math.round(syncRate * 100),
+          fail_rate: Math.round(failRate * 100),
+          cohesion: Math.round(cohesion * 100),
+          coupling: Math.round(coupling * 100),
+          confidence: Math.round(confidence * 100),
+          coverage: Math.round(coverage * 100),
+          clone_count: moduleClones.length,
+        },
+      };
+    })
+    .sort((a, b) => b.score - a.score);
 
   return { coInstallation, healthScores };
 }

@@ -6,7 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CopyButton } from "@/components/copy-button";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "@/lib/format";
@@ -38,7 +44,8 @@ export const Route = createFileRoute("/route-errors")({
       { title: "Route Errors — Aurixa Systems Mission Control" },
       {
         name: "description",
-        content: "Telemetry of routes that crashed in production, with frequency and most recent stack.",
+        content:
+          "Telemetry of routes that crashed in production, with frequency and most recent stack.",
       },
     ],
   }),
@@ -86,10 +93,18 @@ function RouteErrorsPage() {
     const q = search.trim().toLowerCase();
     const map = new Map<
       string,
-      { route_path: string; count: number; lastAt: string; lastMessage: string; lastStack: string | null; samples: Row[] }
+      {
+        route_path: string;
+        count: number;
+        lastAt: string;
+        lastMessage: string;
+        lastStack: string | null;
+        samples: Row[];
+      }
     >();
     for (const r of rows) {
-      if (q && !r.route_path.toLowerCase().includes(q) && !r.message.toLowerCase().includes(q)) continue;
+      if (q && !r.route_path.toLowerCase().includes(q) && !r.message.toLowerCase().includes(q))
+        continue;
       const cur = map.get(r.route_path);
       if (!cur) {
         map.set(r.route_path, {
@@ -125,8 +140,8 @@ function RouteErrorsPage() {
           </p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight">Route errors</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Routes that crashed in production, grouped by path. Reported automatically by the
-            in-app error boundary.
+            Routes that crashed in production, grouped by path. Reported automatically by the in-app
+            error boundary.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -163,15 +178,10 @@ function RouteErrorsPage() {
 
       <TrendSparkline rows={rows} />
 
-
       <div className="grid gap-2 md:grid-cols-3">
         <SummaryTile label="Total reports" value={String(total)} tone="info" />
         <SummaryTile label="Distinct routes" value={String(distinctRoutes)} tone="warning" />
-        <SummaryTile
-          label="Window"
-          value={windowKey}
-          tone="muted"
-        />
+        <SummaryTile label="Window" value={windowKey} tone="muted" />
       </div>
 
       <Card>
@@ -239,7 +249,10 @@ function RouteErrorsPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <code className="truncate font-mono text-sm">{g.route_path}</code>
-                        <Badge variant="outline" className="font-mono text-[10px] uppercase border-destructive/40 text-destructive">
+                        <Badge
+                          variant="outline"
+                          className="font-mono text-[10px] uppercase border-destructive/40 text-destructive"
+                        >
                           {g.count} {g.count === 1 ? "fail" : "fails"}
                         </Badge>
                       </div>
@@ -365,16 +378,14 @@ function TrendSparkline({ rows }: { rows: Row[] }) {
             <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
               14-day trend
             </div>
-            <div className="text-sm font-medium">{total} reports · peak {max}/day</div>
+            <div className="text-sm font-medium">
+              {total} reports · peak {max}/day
+            </div>
           </div>
         </div>
         <div className="flex h-16 items-end gap-1">
           {buckets.map((b) => (
-            <div
-              key={b.day}
-              className="group relative flex-1"
-              title={`${b.day}: ${b.count}`}
-            >
+            <div key={b.day} className="group relative flex-1" title={`${b.day}: ${b.count}`}>
               <div
                 className={cn(
                   "w-full rounded-sm transition-colors",
@@ -399,4 +410,3 @@ function TrendSparkline({ rows }: { rows: Row[] }) {
     </Card>
   );
 }
-

@@ -7,12 +7,12 @@ import type { Database } from "@/integrations/supabase/types";
 import { executeCascade } from "./cascade-engine.server";
 import { bulkSyncModule } from "./module-sync.server";
 import { applyBrandToClone } from "./branding.server";
-import { nextCronTick } from "./cron";
+import { nextCronTick } from "@/lib/cron";
 import { assessBlastRadius } from "./cascade-approvals.server";
-import { unknownTable, type CascadeScheduleRow } from "./_phase3d-types";
 
 type SupabaseLike = SupabaseClient<Database>;
 type CascadeMode = Database["public"]["Enums"]["cascade_mode"];
+type CascadeScheduleRow = Database["public"]["Tables"]["cascade_schedules"]["Row"];
 
 export type ScheduleRunOutcome = {
   schedule_id: string;
@@ -34,7 +34,8 @@ export async function runScheduleNow(
   scheduleId: string,
   initiatedBy: string | null,
 ): Promise<ScheduleRunOutcome> {
-  const { data, error } = await unknownTable(supabase, "cascade_schedules")
+  const { data, error } = await supabase
+    .from("cascade_schedules")
     .select("*")
     .eq("id", scheduleId)
     .maybeSingle();
@@ -52,7 +53,8 @@ export async function runScheduleNow(
 
 export async function runDueSchedules(supabase: SupabaseLike): Promise<RunDueResult> {
   const now = new Date().toISOString();
-  const { data, error } = await unknownTable(supabase, "cascade_schedules")
+  const { data, error } = await supabase
+    .from("cascade_schedules")
     .select("*")
     .eq("enabled", true)
     .or(`next_run_at.is.null,next_run_at.lte.${now}`);
@@ -93,7 +95,8 @@ async function executeOne(
   }
 
   const next = nextCronTick(sched.cron_expression, new Date());
-  await unknownTable(supabase, "cascade_schedules")
+  await supabase
+    .from("cascade_schedules")
     .update({
       last_run_at: startedAt,
       next_run_at: next ? next.toISOString() : null,

@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAdmin } from "@/integrations/supabase/role-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { getAppOctokit } from "./github-app.server";
 import { generateApiKey } from "./clone-api-keys.server";
@@ -29,7 +29,7 @@ export type ProvisionCloneResult =
   | { ok: false; error: string };
 
 export const provisionClone = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .inputValidator((input: ProvisionCloneInput) => {
     if (!input?.name?.trim()) throw new Error("name is required");
     if (!input?.slug?.trim()) throw new Error("slug is required");
@@ -42,11 +42,7 @@ export const provisionClone = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<ProvisionCloneResult> => {
     const { supabase, userId } = context;
 
-    const { data: prime } = await supabase
-      .from("prime_config")
-      .select("*")
-      .limit(1)
-      .maybeSingle();
+    const { data: prime } = await supabase.from("prime_config").select("*").limit(1).maybeSingle();
     if (!prime) {
       return { ok: false, error: "Prime not configured — set it up in Settings first" };
     }
@@ -157,7 +153,12 @@ export const provisionClone = createServerFn({ method: "POST" })
     // clone's frontend can read it at build time. Failure here is non-fatal:
     // the clone is still considered created and the operator can re-issue.
     let issuedApiKey: { raw: string; prefix: string; id: string } | null = null;
-    let cascadeResult: { ok: boolean; path: string; commit_sha?: string | null; error?: string } | null = null;
+    let cascadeResult: {
+      ok: boolean;
+      path: string;
+      commit_sha?: string | null;
+      error?: string;
+    } | null = null;
     try {
       const { raw, hash, prefix } = generateApiKey();
       const keyInsert = await supabaseAdmin

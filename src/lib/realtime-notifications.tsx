@@ -64,8 +64,7 @@ export function RealtimeNotifications() {
           if (seenTerminalEvents.current.has(ev.id)) return;
           seenTerminalEvents.current.add(ev.id);
 
-          const open = () =>
-            navigate({ to: "/cascades/$eventId", params: { eventId: ev.id } });
+          const open = () => navigate({ to: "/cascades/$eventId", params: { eventId: ev.id } });
 
           // Honor user mute preferences for toasts.
           const snap = getMutedSnapshot();
@@ -96,41 +95,37 @@ export function RealtimeNotifications() {
 
     const clonesChannel = supabase
       .channel(`notif:clones-drift:${channelSuffix}`)
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "clones" },
-        (payload) => {
-          const c = payload.new as Clone;
-          const sugg = (c.drift_suggestions as DriftSuggestion[] | null) ?? [];
-          const fresh: DriftSuggestion[] = [];
-          for (const s of sugg) {
-            if (s.severity !== "high") continue;
-            const key = `${c.id}::${s.title}`;
-            if (seenHighDrift.current.has(key)) continue;
-            seenHighDrift.current.add(key);
-            fresh.push(s);
-          }
-          if (fresh.length === 0) return;
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "clones" }, (payload) => {
+        const c = payload.new as Clone;
+        const sugg = (c.drift_suggestions as DriftSuggestion[] | null) ?? [];
+        const fresh: DriftSuggestion[] = [];
+        for (const s of sugg) {
+          if (s.severity !== "high") continue;
+          const key = `${c.id}::${s.title}`;
+          if (seenHighDrift.current.has(key)) continue;
+          seenHighDrift.current.add(key);
+          fresh.push(s);
+        }
+        if (fresh.length === 0) return;
 
-          // Honor mute preferences for high-drift toasts.
-          const snap = getMutedSnapshot();
-          if (snap.mute_toasts) return;
-          if (isMuted(snap, "drift_high", "warning")) return;
+        // Honor mute preferences for high-drift toasts.
+        const snap = getMutedSnapshot();
+        if (snap.mute_toasts) return;
+        if (isMuted(snap, "drift_high", "warning")) return;
 
-          const goto = () => navigate({ to: "/fleet-manager" });
-          const first = fresh[0];
-          toast.warning(
-            fresh.length === 1
-              ? `High drift on ${c.name}`
-              : `${fresh.length} high-severity issues on ${c.name}`,
-            {
-              description: first.title,
-              action: { label: "Inspect", onClick: goto },
-              duration: 8000,
-            },
-          );
-        },
-      )
+        const goto = () => navigate({ to: "/fleet-manager" });
+        const first = fresh[0];
+        toast.warning(
+          fresh.length === 1
+            ? `High drift on ${c.name}`
+            : `${fresh.length} high-severity issues on ${c.name}`,
+          {
+            description: first.title,
+            action: { label: "Inspect", onClick: goto },
+            duration: 8000,
+          },
+        );
+      })
       .subscribe();
 
     return () => {

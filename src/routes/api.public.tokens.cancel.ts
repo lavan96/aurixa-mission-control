@@ -1,10 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import {
-  jsonResponse,
-  resolveCloneApiKey,
-} from "@/server/clone-api-keys.server";
+import { jsonResponse, resolveCloneApiKey } from "@/server/clone-api-keys.server";
 import { checkRateLimit } from "@/server/token-rate-limit.server";
 import { fireTokenWebhook, balanceSnapshot } from "@/server/token-webhooks.server";
 
@@ -23,9 +20,17 @@ export const Route = createFileRoute("/api/public/tokens/cancel")({
         );
         if (!key) return jsonResponse({ ok: false, error: "unauthorized" }, 401);
         let body: unknown;
-        try { body = await request.json(); } catch { return jsonResponse({ ok: false, error: "invalid_json" }, 400); }
+        try {
+          body = await request.json();
+        } catch {
+          return jsonResponse({ ok: false, error: "invalid_json" }, 400);
+        }
         const parsed = Schema.safeParse(body);
-        if (!parsed.success) return jsonResponse({ ok: false, error: "invalid_input", issues: parsed.error.issues }, 400);
+        if (!parsed.success)
+          return jsonResponse(
+            { ok: false, error: "invalid_input", issues: parsed.error.issues },
+            400,
+          );
 
         const job = await supabaseAdmin
           .from("report_jobs")
@@ -33,7 +38,8 @@ export const Route = createFileRoute("/api/public/tokens/cancel")({
           .eq("id", parsed.data.job_id)
           .maybeSingle();
         if (!job.data) return jsonResponse({ ok: false, error: "job_not_found" }, 404);
-        if (job.data.clone_id !== key.clone_id) return jsonResponse({ ok: false, error: "forbidden" }, 403);
+        if (job.data.clone_id !== key.clone_id)
+          return jsonResponse({ ok: false, error: "forbidden" }, 403);
 
         const { data: result, error } = await supabaseAdmin.rpc("cancel_token_reservation", {
           _job_id: parsed.data.job_id,

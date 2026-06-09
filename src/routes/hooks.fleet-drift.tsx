@@ -20,10 +20,9 @@ export const Route = createFileRoute("/hooks/fleet-drift")({
             entity_type: "cron",
             metadata: result as Record<string, unknown>,
           });
-          return new Response(
-            JSON.stringify({ success: true, ...result }),
-            { headers: { "Content-Type": "application/json" } },
-          );
+          return new Response(JSON.stringify({ success: true, ...result }), {
+            headers: { "Content-Type": "application/json" },
+          });
         } catch (e) {
           const msg = e instanceof Error ? e.message : "Scan failed";
           console.error("Drift scan failed:", msg);
@@ -33,10 +32,10 @@ export const Route = createFileRoute("/hooks/fleet-drift")({
             entity_type: "cron",
             metadata: { error: msg },
           });
-          return new Response(
-            JSON.stringify({ success: false, error: msg }),
-            { status: 500, headers: { "Content-Type": "application/json" } },
-          );
+          return new Response(JSON.stringify({ success: false, error: msg }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
         }
       },
     },

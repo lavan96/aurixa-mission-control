@@ -5,7 +5,16 @@ import { cloudflareApi, CloudflareError } from "./cloudflare/client";
 
 async function audit(
   supabase: any,
-  args: { clone_id?: string; zone_id?: string; action: string; payload?: any; result?: any; success: boolean; error?: string; actor: string | null },
+  args: {
+    clone_id?: string;
+    zone_id?: string;
+    action: string;
+    payload?: any;
+    result?: any;
+    success: boolean;
+    error?: string;
+    actor: string | null;
+  },
 ) {
   await supabase.from("cloudflare_audit").insert({
     clone_id: args.clone_id ?? null,
@@ -29,7 +38,11 @@ export const cfTokenStatus = createServerFn({ method: "GET" })
       const r = await cloudflareApi.verifyToken();
       return { configured: true as const, valid: r.status === "active", status: r.status };
     } catch (e) {
-      return { configured: true as const, valid: false as const, error: e instanceof Error ? e.message : String(e) };
+      return {
+        configured: true as const,
+        valid: false as const,
+        error: e instanceof Error ? e.message : String(e),
+      };
     }
   });
 
@@ -67,40 +80,61 @@ export const cfAttachZone = createServerFn({ method: "POST" })
         { onConflict: "clone_id" },
       );
       if (error) throw new Error(error.message);
-      await supabase.from("clones").update({ cloudflare_enabled: true, cloudflare_zone_id: zone.id }).eq("id", data.cloneId);
-      await audit(supabase, { clone_id: data.cloneId, zone_id: zone.id, action: "attach_zone", success: true, actor: userId });
+      await supabase
+        .from("clones")
+        .update({ cloudflare_enabled: true, cloudflare_zone_id: zone.id })
+        .eq("id", data.cloneId);
+      await audit(supabase, {
+        clone_id: data.cloneId,
+        zone_id: zone.id,
+        action: "attach_zone",
+        success: true,
+        actor: userId,
+      });
       return { ok: true, zone };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      await audit(supabase, { clone_id: data.cloneId, zone_id: data.zoneId, action: "attach_zone", success: false, error: msg, actor: userId });
+      await audit(supabase, {
+        clone_id: data.cloneId,
+        zone_id: data.zoneId,
+        action: "attach_zone",
+        success: false,
+        error: msg,
+        actor: userId,
+      });
       throw new Error(msg);
     }
   });
 
 export const cfSeedZone = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: {
-    cloneId: string;
-    zoneId: string;
-    zoneName: string;
-    accountId?: string;
-    plan?: string;
-    securityLevel?: "off" | "essentially_off" | "low" | "medium" | "high" | "under_attack";
-    botFight?: boolean;
-    rateLimitRps?: number;
-    wafPreset?: "lenient" | "balanced" | "strict";
-  }) =>
-    z.object({
-      cloneId: z.string().uuid(),
-      zoneId: z.string().min(1),
-      zoneName: z.string().min(1),
-      accountId: z.string().optional(),
-      plan: z.string().optional(),
-      securityLevel: z.enum(["off","essentially_off","low","medium","high","under_attack"]).optional(),
-      botFight: z.boolean().optional(),
-      rateLimitRps: z.number().int().min(0).max(10000).optional(),
-      wafPreset: z.enum(["lenient","balanced","strict"]).optional(),
-    }).parse(d),
+  .inputValidator(
+    (d: {
+      cloneId: string;
+      zoneId: string;
+      zoneName: string;
+      accountId?: string;
+      plan?: string;
+      securityLevel?: "off" | "essentially_off" | "low" | "medium" | "high" | "under_attack";
+      botFight?: boolean;
+      rateLimitRps?: number;
+      wafPreset?: "lenient" | "balanced" | "strict";
+    }) =>
+      z
+        .object({
+          cloneId: z.string().uuid(),
+          zoneId: z.string().min(1),
+          zoneName: z.string().min(1),
+          accountId: z.string().optional(),
+          plan: z.string().optional(),
+          securityLevel: z
+            .enum(["off", "essentially_off", "low", "medium", "high", "under_attack"])
+            .optional(),
+          botFight: z.boolean().optional(),
+          rateLimitRps: z.number().int().min(0).max(10000).optional(),
+          wafPreset: z.enum(["lenient", "balanced", "strict"]).optional(),
+        })
+        .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
@@ -122,12 +156,30 @@ export const cfSeedZone = createServerFn({ method: "POST" })
         { onConflict: "clone_id" },
       );
       if (error) throw new Error(error.message);
-      await supabase.from("clones").update({ cloudflare_enabled: true, cloudflare_zone_id: data.zoneId }).eq("id", data.cloneId);
-      await audit(supabase, { clone_id: data.cloneId, zone_id: data.zoneId, action: "seed_zone_manual", payload: data, success: true, actor: userId });
+      await supabase
+        .from("clones")
+        .update({ cloudflare_enabled: true, cloudflare_zone_id: data.zoneId })
+        .eq("id", data.cloneId);
+      await audit(supabase, {
+        clone_id: data.cloneId,
+        zone_id: data.zoneId,
+        action: "seed_zone_manual",
+        payload: data,
+        success: true,
+        actor: userId,
+      });
       return { ok: true };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      await audit(supabase, { clone_id: data.cloneId, zone_id: data.zoneId, action: "seed_zone_manual", payload: data, success: false, error: msg, actor: userId });
+      await audit(supabase, {
+        clone_id: data.cloneId,
+        zone_id: data.zoneId,
+        action: "seed_zone_manual",
+        payload: data,
+        success: false,
+        error: msg,
+        actor: userId,
+      });
       throw new Error(msg);
     }
   });
@@ -138,29 +190,40 @@ export const cfDetachZone = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await supabase.from("cloudflare_clone_config").delete().eq("clone_id", data.cloneId);
-    await supabase.from("clones").update({ cloudflare_enabled: false, cloudflare_zone_id: null }).eq("id", data.cloneId);
-    await audit(supabase, { clone_id: data.cloneId, action: "detach_zone", success: true, actor: userId });
+    await supabase
+      .from("clones")
+      .update({ cloudflare_enabled: false, cloudflare_zone_id: null })
+      .eq("id", data.cloneId);
+    await audit(supabase, {
+      clone_id: data.cloneId,
+      action: "detach_zone",
+      success: true,
+      actor: userId,
+    });
     return { ok: true };
   });
 
 export const cfApplyPosture = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: {
-    cloneId: string;
-    securityLevel?: "off" | "essentially_off" | "low" | "medium" | "high" | "under_attack";
-    botFight?: boolean;
-    rateLimitRps?: number;
-    wafPreset?: "lenient" | "balanced" | "strict";
-  }) =>
-    z
-      .object({
-        cloneId: z.string().uuid(),
-        securityLevel: z.enum(["off", "essentially_off", "low", "medium", "high", "under_attack"]).optional(),
-        botFight: z.boolean().optional(),
-        rateLimitRps: z.number().int().min(0).max(10000).optional(),
-        wafPreset: z.enum(["lenient", "balanced", "strict"]).optional(),
-      })
-      .parse(d),
+  .inputValidator(
+    (d: {
+      cloneId: string;
+      securityLevel?: "off" | "essentially_off" | "low" | "medium" | "high" | "under_attack";
+      botFight?: boolean;
+      rateLimitRps?: number;
+      wafPreset?: "lenient" | "balanced" | "strict";
+    }) =>
+      z
+        .object({
+          cloneId: z.string().uuid(),
+          securityLevel: z
+            .enum(["off", "essentially_off", "low", "medium", "high", "under_attack"])
+            .optional(),
+          botFight: z.boolean().optional(),
+          rateLimitRps: z.number().int().min(0).max(10000).optional(),
+          wafPreset: z.enum(["lenient", "balanced", "strict"]).optional(),
+        })
+        .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
@@ -191,11 +254,26 @@ export const cfApplyPosture = createServerFn({ method: "POST" })
           last_synced_at: new Date().toISOString(),
         })
         .eq("clone_id", data.cloneId);
-      await audit(supabase, { clone_id: data.cloneId, zone_id: cfg.zone_id, action: "apply_posture", payload: data, success: true, actor: userId });
+      await audit(supabase, {
+        clone_id: data.cloneId,
+        zone_id: cfg.zone_id,
+        action: "apply_posture",
+        payload: data,
+        success: true,
+        actor: userId,
+      });
       return { ok: true, applied: ops };
     } catch (e) {
       const msg = e instanceof CloudflareError ? e.message : (e as Error).message;
-      await audit(supabase, { clone_id: data.cloneId, zone_id: cfg.zone_id, action: "apply_posture", payload: data, success: false, error: msg, actor: userId });
+      await audit(supabase, {
+        clone_id: data.cloneId,
+        zone_id: cfg.zone_id,
+        action: "apply_posture",
+        payload: data,
+        success: false,
+        error: msg,
+        actor: userId,
+      });
       throw new Error(msg);
     }
   });
@@ -206,9 +284,12 @@ export const cfFleetAnalytics = createServerFn({ method: "GET" })
     const { supabase } = context;
     const { data: configs } = await supabase
       .from("cloudflare_clone_config")
-      .select("clone_id, zone_id, zone_name, security_level, bot_fight_mode, rate_limit_rps, waf_preset, status, last_synced_at");
+      .select(
+        "clone_id, zone_id, zone_name, security_level, bot_fight_mode, rate_limit_rps, waf_preset, status, last_synced_at",
+      );
     const list = configs ?? [];
-    if (!process.env.CLOUDFLARE_API_TOKEN) return { configs: list, analytics: [], configured: false };
+    if (!process.env.CLOUDFLARE_API_TOKEN)
+      return { configs: list, analytics: [], configured: false };
 
     const analytics = await Promise.all(
       list.slice(0, 20).map(async (c) => {
@@ -222,7 +303,14 @@ export const cfFleetAnalytics = createServerFn({ method: "GET" })
             bandwidth: a.totals.bandwidth.all,
           };
         } catch {
-          return { clone_id: c.clone_id, zone_name: c.zone_name, requests: 0, threats: 0, bandwidth: 0, error: true };
+          return {
+            clone_id: c.clone_id,
+            zone_name: c.zone_name,
+            requests: 0,
+            threats: 0,
+            bandwidth: 0,
+            error: true,
+          };
         }
       }),
     );

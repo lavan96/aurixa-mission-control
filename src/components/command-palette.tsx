@@ -76,14 +76,11 @@ export function CommandPalette() {
     };
   }, []);
 
-  const run = useCallback(
-    (fn: () => void) => {
-      setOpen(false);
-      // defer so the dialog finishes closing before route change
-      setTimeout(fn, 10);
-    },
-    [],
-  );
+  const run = useCallback((fn: () => void) => {
+    setOpen(false);
+    // defer so the dialog finishes closing before route change
+    setTimeout(fn, 10);
+  }, []);
 
   // Collect all unique tags from fleet
   const allTags = (() => {
@@ -116,7 +113,9 @@ export function CommandPalette() {
       hint: "Push & merge automatically",
       icon: <Send className="h-4 w-4" />,
       onSelect: () =>
-        run(() => navigate({ to: "/cascades", search: { mode: "auto_merge", scope: "all", tags: "" } })),
+        run(() =>
+          navigate({ to: "/cascades", search: { mode: "auto_merge", scope: "all", tags: "" } }),
+        ),
       keywords: "cascade push auto merge",
     },
     {
@@ -125,7 +124,9 @@ export function CommandPalette() {
       hint: "Flag drift without commits",
       icon: <Bell className="h-4 w-4" />,
       onSelect: () =>
-        run(() => navigate({ to: "/cascades", search: { mode: "notify", scope: "all", tags: "" } })),
+        run(() =>
+          navigate({ to: "/cascades", search: { mode: "notify", scope: "all", tags: "" } }),
+        ),
       keywords: "cascade notify drift",
     },
     {
@@ -207,11 +208,7 @@ export function CommandPalette() {
 
         <CommandGroup heading="Actions">
           {actions.map((a) => (
-            <CommandItem
-              key={a.id}
-              value={`${a.label} ${a.keywords ?? ""}`}
-              onSelect={a.onSelect}
-            >
+            <CommandItem key={a.id} value={`${a.label} ${a.keywords ?? ""}`} onSelect={a.onSelect}>
               <span className="text-muted-foreground">{a.icon}</span>
               <span>{a.label}</span>
               {a.hint && (
@@ -264,9 +261,7 @@ export function CommandPalette() {
                   key={c.id}
                   value={`clone ${c.name} ${c.slug} ${c.github_owner}/${c.github_repo} ${(c.tags ?? []).join(" ")}`}
                   onSelect={() =>
-                    run(() =>
-                      navigate({ to: "/clones/$cloneId", params: { cloneId: c.id } }),
-                    )
+                    run(() => navigate({ to: "/clones/$cloneId", params: { cloneId: c.id } }))
                   }
                 >
                   <GitBranch className="h-4 w-4 text-muted-foreground" />
@@ -290,9 +285,7 @@ export function CommandPalette() {
                   key={m.id}
                   value={`module ${m.name} ${m.slug}`}
                   onSelect={() =>
-                    run(() =>
-                      navigate({ to: "/modules/$slug", params: { slug: m.slug } }),
-                    )
+                    run(() => navigate({ to: "/modules/$slug", params: { slug: m.slug } }))
                   }
                 >
                   <Boxes className="h-4 w-4 text-muted-foreground" />
@@ -315,9 +308,7 @@ export function CommandPalette() {
                   key={e.id}
                   value={`cascade ${e.id} ${e.mode} ${e.status} ${e.summary ?? ""}`}
                   onSelect={() =>
-                    run(() =>
-                      navigate({ to: "/cascades/$eventId", params: { eventId: e.id } }),
-                    )
+                    run(() => navigate({ to: "/cascades/$eventId", params: { eventId: e.id } }))
                   }
                 >
                   <History className="h-4 w-4 text-muted-foreground" />

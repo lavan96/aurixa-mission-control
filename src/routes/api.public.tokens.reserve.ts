@@ -1,11 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import {
-  ensureTenant,
-  jsonResponse,
-  resolveCloneApiKey,
-} from "@/server/clone-api-keys.server";
+import { ensureTenant, jsonResponse, resolveCloneApiKey } from "@/server/clone-api-keys.server";
 import { checkRateLimit } from "@/server/token-rate-limit.server";
 import { fireTokenWebhook, balanceSnapshot } from "@/server/token-webhooks.server";
 
@@ -32,14 +28,29 @@ export const Route = createFileRoute("/api/public/tokens/reserve")({
         const rl = await checkRateLimit(key.id);
         if (!rl.ok) {
           return new Response(
-            JSON.stringify({ ok: false, error: "rate_limited", count: rl.count, limit: rl.limit, retry_after_seconds: rl.retry_after_seconds }),
-            { status: 429, headers: { "Content-Type": "application/json", "Retry-After": String(rl.retry_after_seconds) } },
+            JSON.stringify({
+              ok: false,
+              error: "rate_limited",
+              count: rl.count,
+              limit: rl.limit,
+              retry_after_seconds: rl.retry_after_seconds,
+            }),
+            {
+              status: 429,
+              headers: {
+                "Content-Type": "application/json",
+                "Retry-After": String(rl.retry_after_seconds),
+              },
+            },
           );
         }
 
         // Track first-use of an API key (security signal)
         if (!key.first_used_at) {
-          await supabaseAdmin.from("clone_api_keys").update({ first_used_at: new Date().toISOString() }).eq("id", key.id);
+          await supabaseAdmin
+            .from("clone_api_keys")
+            .update({ first_used_at: new Date().toISOString() })
+            .eq("id", key.id);
           await supabaseAdmin.from("notifications").insert({
             kind: "tokens_key_first_use",
             severity: "info",
@@ -49,7 +60,11 @@ export const Route = createFileRoute("/api/public/tokens/reserve")({
             url: "/settings/billing",
             metadata: { key_id: key.id },
           });
-          await fireTokenWebhook("tokens.alert", { alert: "key_first_use", key_id: key.id }, key.clone_id);
+          await fireTokenWebhook(
+            "tokens.alert",
+            { alert: "key_first_use", key_id: key.id },
+            key.clone_id,
+          );
         }
 
         let body: unknown;
@@ -85,9 +100,15 @@ export const Route = createFileRoute("/api/public/tokens/reserve")({
         });
         if (error) return jsonResponse({ ok: false, error: error.message }, 500);
         // Fire balance update webhook (fire-and-forget)
-        balanceSnapshot(tenant.tenantId).then((snap) =>
-          fireTokenWebhook("tokens.balance.updated", { ...snap, source: "reserve" }, key.clone_id),
-        ).catch(() => {});
+        balanceSnapshot(tenant.tenantId)
+          .then((snap) =>
+            fireTokenWebhook(
+              "tokens.balance.updated",
+              { ...snap, source: "reserve" },
+              key.clone_id,
+            ),
+          )
+          .catch(() => {});
         return jsonResponse(result, 200);
       },
     },

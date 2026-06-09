@@ -8,7 +8,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/status-pill";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Github, ExternalLink, Shield, Trash2, Waves, Plus, RefreshCw, X, Pencil } from "lucide-react";
+import {
+  ArrowLeft,
+  Github,
+  ExternalLink,
+  Shield,
+  Trash2,
+  Waves,
+  Plus,
+  RefreshCw,
+  X,
+  Pencil,
+} from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "@/lib/format";
 import { CloneActivityHistory } from "@/components/clone-activity-history";
@@ -62,7 +73,9 @@ function CloneDetail() {
   }, [cloneId]);
 
   const inject = async (moduleId: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     const { error } = await supabase
       .from("clone_modules")
       .insert({ clone_id: cloneId, module_id: moduleId, installed_by: user?.id });
@@ -88,7 +101,9 @@ function CloneDetail() {
     load();
   };
   const remove = async (moduleId: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     await supabase.from("clone_modules").delete().eq("clone_id", cloneId).eq("module_id", moduleId);
     toast.success("Module removed");
     const mod = allModules.find((m) => m.id === moduleId);
@@ -155,7 +170,10 @@ function CloneDetail() {
   if (!clone) {
     return (
       <div className="space-y-3">
-        <Link to="/dashboard" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
+        <Link
+          to="/dashboard"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+        >
           <ArrowLeft className="mr-1 h-4 w-4" /> back
         </Link>
         <div>Clone not found.</div>
@@ -168,7 +186,10 @@ function CloneDetail() {
 
   return (
     <div className="space-y-6">
-      <Link to="/dashboard" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
+      <Link
+        to="/dashboard"
+        className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+      >
         <ArrowLeft className="mr-1 h-4 w-4" /> fleet
       </Link>
 
@@ -188,10 +209,7 @@ function CloneDetail() {
             </Badge>
             <span className="inline-flex items-center gap-1 font-mono">
               {clone.github_owner}/{clone.github_repo}
-              <CopyButton
-                value={`${clone.github_owner}/${clone.github_repo}`}
-                label="repo slug"
-              />
+              <CopyButton value={`${clone.github_owner}/${clone.github_repo}`} label="repo slug" />
             </span>
             {clone.last_synced_sha && (
               <span className="inline-flex items-center gap-1 font-mono text-xs">
@@ -208,7 +226,11 @@ function CloneDetail() {
           <Button variant="outline">
             <Waves className="mr-1.5 h-4 w-4" /> Cascade now
           </Button>
-          <Button variant="ghost" onClick={destroy} className="text-destructive hover:text-destructive">
+          <Button
+            variant="ghost"
+            onClick={destroy}
+            className="text-destructive hover:text-destructive"
+          >
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -217,15 +239,38 @@ function CloneDetail() {
       <CloneEditDialog clone={clone} open={editOpen} onOpenChange={setEditOpen} onSaved={load} />
 
       <div className="grid gap-3 md:grid-cols-3">
-        <InfoTile label="GitHub" value={clone.github_url ?? "—"} icon={<Github className="h-4 w-4" />} link={clone.github_url} />
-        <InfoTile label="Lovable" value={clone.lovable_project_url ?? "—"} icon={<ExternalLink className="h-4 w-4" />} link={clone.lovable_project_url} />
-        <InfoTile label="Deploy" value={clone.deploy_url ?? "—"} icon={<ExternalLink className="h-4 w-4" />} link={clone.deploy_url} />
+        <InfoTile
+          label="GitHub"
+          value={clone.github_url ?? "—"}
+          icon={<Github className="h-4 w-4" />}
+          link={clone.github_url}
+        />
+        <InfoTile
+          label="Lovable"
+          value={clone.lovable_project_url ?? "—"}
+          icon={<ExternalLink className="h-4 w-4" />}
+          link={clone.lovable_project_url}
+        />
+        <InfoTile
+          label="Deploy"
+          value={clone.deploy_url ?? "—"}
+          icon={<ExternalLink className="h-4 w-4" />}
+          link={clone.deploy_url}
+        />
       </div>
 
       <CloneSyncStatusCard clone={clone} />
 
       <CloneHealthCard cloneId={cloneId} />
-      <Suspense fallback={<Card><CardContent className="p-6 text-xs text-muted-foreground">Loading timeline…</CardContent></Card>}>
+      <Suspense
+        fallback={
+          <Card>
+            <CardContent className="p-6 text-xs text-muted-foreground">
+              Loading timeline…
+            </CardContent>
+          </Card>
+        }
+      >
         <CloneHealthTimeline cloneId={cloneId} />
       </Suspense>
 
@@ -341,10 +386,18 @@ function CloneDetail() {
         <CardContent>
           {clone.cloudflare_enabled ? (
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="outline">WAF rules</Button>
-              <Button size="sm" variant="outline">Bot protection</Button>
-              <Button size="sm" variant="outline">Rate limiting</Button>
-              <Button size="sm" variant="outline">DDoS</Button>
+              <Button size="sm" variant="outline">
+                WAF rules
+              </Button>
+              <Button size="sm" variant="outline">
+                Bot protection
+              </Button>
+              <Button size="sm" variant="outline">
+                Rate limiting
+              </Button>
+              <Button size="sm" variant="outline">
+                DDoS
+              </Button>
             </div>
           ) : (
             <Button variant="outline">
@@ -398,7 +451,12 @@ function InfoTile({
   );
   if (link) {
     return (
-      <a href={link} target="_blank" rel="noreferrer" className="block transition-opacity hover:opacity-80">
+      <a
+        href={link}
+        target="_blank"
+        rel="noreferrer"
+        className="block transition-opacity hover:opacity-80"
+      >
         {inner}
       </a>
     );

@@ -1,8 +1,7 @@
 // Per-clone health snapshot: deploy uptime ping, last successful cascade,
 // and AI-summarized recent activity over the last 7 days.
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
-import { unknownTable } from "./_phase3d-types";
+import type { Database, Json } from "@/integrations/supabase/types";
 
 type SupabaseLike = SupabaseClient<Database>;
 
@@ -14,11 +13,12 @@ export async function readCachedCloneHealth(
   supabase: SupabaseLike,
   cloneId: string,
 ): Promise<{ payload: CloneHealth; probedAt: string } | null> {
-  const { data } = await unknownTable(supabase, "clone_health_snapshots")
+  const { data } = await supabase
+    .from("clone_health_snapshots")
     .select("payload, probed_at")
     .eq("clone_id", cloneId)
     .maybeSingle();
-  const row = data as { payload: CloneHealth; probed_at: string } | null;
+  const row = data as unknown as { payload: CloneHealth; probed_at: string } | null;
   if (!row) return null;
   const age = Date.now() - new Date(row.probed_at).getTime();
   if (age > HEALTH_SNAPSHOT_TTL_MS) return null;
@@ -30,10 +30,10 @@ async function writeSnapshot(
   cloneId: string,
   payload: CloneHealth,
 ): Promise<void> {
-  await unknownTable(supabase, "clone_health_snapshots").upsert(
+  await supabase.from("clone_health_snapshots").upsert(
     {
       clone_id: cloneId,
-      payload: payload as unknown,
+      payload: payload as unknown as Json,
       probed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },
@@ -44,7 +44,11 @@ async function writeSnapshot(
 export type CloneHealth = {
   cloneId: string;
   deployUrl: string | null;
-  uptime: { status: "up" | "down" | "unknown"; httpStatus: number | null; latencyMs: number | null };
+  uptime: {
+    status: "up" | "down" | "unknown";
+    httpStatus: number | null;
+    latencyMs: number | null;
+  };
   lastSuccessfulCascadeAt: string | null;
   lastFailedCascadeAt: string | null;
   cascadeCount7d: number;
@@ -55,7 +59,11 @@ export type CloneHealth = {
 
 const FETCH_TIMEOUT_MS = 4000;
 
-async function pingDeploy(url: string): Promise<{ status: "up" | "down" | "unknown"; httpStatus: number | null; latencyMs: number | null }> {
+async function pingDeploy(url: string): Promise<{
+  status: "up" | "down" | "unknown";
+  httpStatus: number | null;
+  latencyMs: number | null;
+}> {
   try {
     const t0 = Date.now();
     const ctl = new AbortController();

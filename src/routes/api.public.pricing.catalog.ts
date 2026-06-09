@@ -7,20 +7,51 @@ export const Route = createFileRoute("/api/public/pricing/catalog")({
     handlers: {
       GET: async ({ request }) => {
         // Catalog is non-sensitive; any of these scopes can read it.
-        const key = await resolveCloneApiKey(
-          request.headers.get("x-clone-api-key"),
-          ["pricing:read", "tokens:meter", "tokens:read", "seats:manage"],
-        );
+        const key = await resolveCloneApiKey(request.headers.get("x-clone-api-key"), [
+          "pricing:read",
+          "tokens:meter",
+          "tokens:read",
+          "seats:manage",
+        ]);
         if (!key) return jsonResponse({ ok: false, error: "unauthorized" }, 401);
 
-
         const [roles, addons, setups, reports, plans, packs] = await Promise.all([
-          supabaseAdmin.from("seat_roles" as never).select("slug,name,description,price_min_cents,price_max_cents,currency,permissions,metadata,sort_order").eq("is_active", true).order("sort_order"),
-          supabaseAdmin.from("addon_modules" as never).select("slug,name,category,description,price_min_cents,price_max_cents,billing_period,currency,included_in_plans,metadata,sort_order").eq("is_active", true).order("sort_order"),
-          supabaseAdmin.from("setup_packages" as never).select("slug,name,description,price_min_cents,price_max_cents,currency,applies_to_plans,deliverables,metadata,sort_order").eq("is_active", true).order("sort_order"),
-          supabaseAdmin.from("report_credit_costs" as never).select("slug,name,category,description,credit_cost,metadata,sort_order").eq("is_active", true).order("sort_order"),
-          supabaseAdmin.from("seat_plans" as never).select("slug,name,seat_limit,device_limit_per_seat,price_cents,currency,metadata").eq("is_active", true).order("price_cents"),
-          supabaseAdmin.from("topup_packs" as never).select("slug,name,tokens,price_cents,currency,metadata").eq("is_active", true).order("price_cents"),
+          supabaseAdmin
+            .from("seat_roles" as never)
+            .select(
+              "slug,name,description,price_min_cents,price_max_cents,currency,permissions,metadata,sort_order",
+            )
+            .eq("is_active", true)
+            .order("sort_order"),
+          supabaseAdmin
+            .from("addon_modules" as never)
+            .select(
+              "slug,name,category,description,price_min_cents,price_max_cents,billing_period,currency,included_in_plans,metadata,sort_order",
+            )
+            .eq("is_active", true)
+            .order("sort_order"),
+          supabaseAdmin
+            .from("setup_packages" as never)
+            .select(
+              "slug,name,description,price_min_cents,price_max_cents,currency,applies_to_plans,deliverables,metadata,sort_order",
+            )
+            .eq("is_active", true)
+            .order("sort_order"),
+          supabaseAdmin
+            .from("report_credit_costs" as never)
+            .select("slug,name,category,description,credit_cost,metadata,sort_order")
+            .eq("is_active", true)
+            .order("sort_order"),
+          supabaseAdmin
+            .from("seat_plans" as never)
+            .select("slug,name,seat_limit,device_limit_per_seat,price_cents,currency,metadata")
+            .eq("is_active", true)
+            .order("price_cents"),
+          supabaseAdmin
+            .from("topup_packs" as never)
+            .select("slug,name,tokens,price_cents,currency,metadata")
+            .eq("is_active", true)
+            .order("price_cents"),
         ]);
 
         return jsonResponse({

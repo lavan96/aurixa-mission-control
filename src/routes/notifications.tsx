@@ -5,13 +5,7 @@ import { ProtectedRoute } from "@/components/protected-route";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -261,13 +255,9 @@ function NotificationsPage() {
   useEffect(() => {
     const channel = supabase
       .channel(`notif:page:${Math.random().toString(36).slice(2)}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "notifications" },
-        () => {
-          void refresh();
-        },
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "notifications" }, () => {
+        void refresh();
+      })
       .subscribe();
     return () => {
       void supabase.removeChannel(channel);
@@ -378,8 +368,10 @@ function NotificationsPage() {
               if (!confirm("Delete all read notifications older than 30 days?")) return;
               const { purgeReadNotifications } = await import("@/server/bulk-ops.functions");
               const r = await purgeReadNotifications({ data: { olderThanDays: 30 } });
-              if (r.ok) { toast.success(`Purged ${r.deleted} read notifications`); refresh(); }
-              else toast.error(r.error);
+              if (r.ok) {
+                toast.success(`Purged ${r.deleted} read notifications`);
+                refresh();
+              } else toast.error(r.error);
             }}
           >
             <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Purge old read
@@ -395,8 +387,8 @@ function NotificationsPage() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Mark all matching as read?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Every unread notification matching the current filters will be
-                  marked as read across all pages.
+                  Every unread notification matching the current filters will be marked as read
+                  across all pages.
                   {hasFilters ? (
                     <span className="mt-2 block font-mono text-[11px] text-muted-foreground">
                       filters: {filterSummary(search)}
@@ -565,19 +557,13 @@ function NotificationsPage() {
                     <Icon className={cn("mt-0.5 h-4 w-4 shrink-0", tone(n.severity))} />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-medium text-foreground">
-                          {n.title}
-                        </span>
+                        <span className="text-sm font-medium text-foreground">{n.title}</span>
                         <Badge variant="outline" className="text-[10px] uppercase">
                           {n.kind.replace(/_/g, " ")}
                         </Badge>
-                        {unread && (
-                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                        )}
+                        {unread && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
                       </div>
-                      {n.body && (
-                        <p className="mt-1 text-xs text-muted-foreground">{n.body}</p>
-                      )}
+                      {n.body && <p className="mt-1 text-xs text-muted-foreground">{n.body}</p>}
                       <p className="mt-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                         {formatDistanceToNow(n.created_at)}
                       </p>
@@ -598,11 +584,7 @@ function NotificationsPage() {
                 }
                 return (
                   <li key={n.id}>
-                    <button
-                      type="button"
-                      onClick={handleClick}
-                      className="block w-full text-left"
-                    >
+                    <button type="button" onClick={handleClick} className="block w-full text-left">
                       {inner}
                     </button>
                   </li>
@@ -626,7 +608,10 @@ function PushControl({ push }: { push: ReturnType<typeof useBrowserPushSettings>
   }
   if (push.permission === "denied") {
     return (
-      <Badge variant="outline" className="gap-1 border-destructive/40 text-destructive text-[10px] uppercase">
+      <Badge
+        variant="outline"
+        className="gap-1 border-destructive/40 text-destructive text-[10px] uppercase"
+      >
         <BellOff className="h-3 w-3" /> Push blocked
       </Badge>
     );
@@ -645,12 +630,7 @@ function PushControl({ push }: { push: ReturnType<typeof useBrowserPushSettings>
   );
 }
 
-function filterSummary(s: {
-  kind: string;
-  severity: string;
-  clone: string;
-  read: string;
-}): string {
+function filterSummary(s: { kind: string; severity: string; clone: string; read: string }): string {
   const parts: string[] = [];
   if (s.kind !== "all") parts.push(`kind=${s.kind}`);
   if (s.severity !== "all") parts.push(`severity=${s.severity}`);
@@ -674,8 +654,7 @@ function MuteSummaryChip({
   if (total === 0) return null;
   const parts: string[] = [];
   if (kinds > 0) parts.push(`${kinds} kind${kinds === 1 ? "" : "s"}`);
-  if (severities > 0)
-    parts.push(`${severities} severit${severities === 1 ? "y" : "ies"}`);
+  if (severities > 0) parts.push(`${severities} severit${severities === 1 ? "y" : "ies"}`);
   if (toasts) parts.push("toasts");
   if (push) parts.push("push");
   return (

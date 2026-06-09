@@ -48,10 +48,7 @@ export async function bulkSyncModule(args: {
   }
 
   // Scope to clones that actually exist (RLS will already filter unauthorized).
-  const { data: existingClones } = await supabase
-    .from("clones")
-    .select("id")
-    .in("id", cloneIds);
+  const { data: existingClones } = await supabase.from("clones").select("id").in("id", cloneIds);
   const validIds = (existingClones ?? []).map((c) => c.id);
   if (validIds.length === 0) {
     return base(moduleId, action, [], { ok: false, error: "No accessible clones in selection" });

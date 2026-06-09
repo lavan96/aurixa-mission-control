@@ -1,10 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import {
-  ensureTenant,
-  jsonResponse,
-  resolveCloneApiKey,
-} from "@/server/clone-api-keys.server";
+import { ensureTenant, jsonResponse, resolveCloneApiKey } from "@/server/clone-api-keys.server";
 import { checkRateLimit } from "@/server/token-rate-limit.server";
 
 /**
@@ -19,10 +15,10 @@ export const Route = createFileRoute("/api/public/tokens/packs")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        const key = await resolveCloneApiKey(
-          request.headers.get("x-clone-api-key"),
-          ["tokens:read", "tokens:meter"],
-        );
+        const key = await resolveCloneApiKey(request.headers.get("x-clone-api-key"), [
+          "tokens:read",
+          "tokens:meter",
+        ]);
         if (!key) return jsonResponse({ ok: false, error: "unauthorized" }, 401);
 
         const rl = await checkRateLimit(key.id);
@@ -48,18 +44,18 @@ export const Route = createFileRoute("/api/public/tokens/packs")({
         }
 
         const url = new URL(request.url);
-        const limit = Math.max(
-          1,
-          Math.min(100, Number(url.searchParams.get("limit") ?? 50) || 50),
-        );
+        const limit = Math.max(1, Math.min(100, Number(url.searchParams.get("limit") ?? 50) || 50));
         const offset = Math.max(0, Number(url.searchParams.get("offset") ?? 0) || 0);
 
-        const { data: packs, count, error } = await supabaseAdmin
+        const {
+          data: packs,
+          count,
+          error,
+        } = await supabaseAdmin
           .from("topup_packs")
-          .select(
-            "id, slug, name, tokens, price_cents, currency, expires_after_days",
-            { count: "exact" },
-          )
+          .select("id, slug, name, tokens, price_cents, currency, expires_after_days", {
+            count: "exact",
+          })
           .eq("is_active", true)
           .order("tokens", { ascending: true })
           .range(offset, offset + limit - 1);
@@ -74,9 +70,7 @@ export const Route = createFileRoute("/api/public/tokens/packs")({
             url.searchParams.get("display_name") ?? undefined,
           );
           if (tenant.ok) {
-            const base =
-              process.env.PUBLIC_APP_URL ??
-              `${url.protocol}//${url.host}`;
+            const base = process.env.PUBLIC_APP_URL ?? `${url.protocol}//${url.host}`;
             topupUrl = `${base}/billing/topup?tenant=${encodeURIComponent(tenant.tenantId)}`;
           }
         }
@@ -92,10 +86,7 @@ export const Route = createFileRoute("/api/public/tokens/packs")({
               offset,
               total,
               has_more: offset + (packs?.length ?? 0) < total,
-              next_offset:
-                offset + (packs?.length ?? 0) < total
-                  ? offset + limit
-                  : null,
+              next_offset: offset + (packs?.length ?? 0) < total ? offset + limit : null,
             },
           }),
           {

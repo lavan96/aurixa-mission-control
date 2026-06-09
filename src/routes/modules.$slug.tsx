@@ -98,7 +98,10 @@ export const Route = createFileRoute("/modules/$slug")({
   ),
   notFoundComponent: () => (
     <div className="space-y-3">
-      <Link to="/modules" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
+      <Link
+        to="/modules"
+        className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+      >
         <ArrowLeft className="mr-1 h-4 w-4" /> modules
       </Link>
       <div>Module not found.</div>
@@ -124,11 +127,7 @@ function ModuleDetail() {
 
   const load = async () => {
     setLoading(true);
-    const { data: m } = await supabase
-      .from("modules")
-      .select("*")
-      .eq("slug", slug)
-      .maybeSingle();
+    const { data: m } = await supabase.from("modules").select("*").eq("slug", slug).maybeSingle();
     setModule(m ?? null);
     if (m) {
       const { data: cm } = await supabase
@@ -207,7 +206,9 @@ function ModuleDetail() {
               {module.status}
             </Badge>
             <span className="font-mono">{module.slug}</span>
-            <span className="font-mono">· {globCount} glob{globCount === 1 ? "" : "s"}</span>
+            <span className="font-mono">
+              · {globCount} glob{globCount === 1 ? "" : "s"}
+            </span>
           </div>
         </div>
         <Button onClick={syncAll} disabled={syncing || clones.length === 0 || globCount === 0}>
@@ -228,7 +229,9 @@ function ModuleDetail() {
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <CardTitle className="text-base">Coverage</CardTitle>
-              <CardDescription>Clones with this module installed and their current sync state.</CardDescription>
+              <CardDescription>
+                Clones with this module installed and their current sync state.
+              </CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
               <FilterChip active={!statusFilter} onClick={() => setStatusFilter(null)}>
@@ -264,61 +267,67 @@ function ModuleDetail() {
               <Boxes className="mx-auto mb-2 h-5 w-5" />
               No clones have this module installed yet.
             </div>
-          ) : (() => {
-            const filtered = statusFilter
-              ? clones.filter((c) => c.sync_status === statusFilter)
-              : clones;
-            if (filtered.length === 0) {
+          ) : (
+            (() => {
+              const filtered = statusFilter
+                ? clones.filter((c) => c.sync_status === statusFilter)
+                : clones;
+              if (filtered.length === 0) {
+                return (
+                  <div className="flex flex-col items-center gap-2 rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+                    <Boxes className="h-5 w-5" />
+                    No clones match the {statusFilter?.replace("_", " ")} filter.
+                    <button
+                      type="button"
+                      onClick={() => setStatusFilter(null)}
+                      className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-primary hover:underline"
+                    >
+                      <X className="h-3 w-3" /> clear filter
+                    </button>
+                  </div>
+                );
+              }
               return (
-                <div className="flex flex-col items-center gap-2 rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-                  <Boxes className="h-5 w-5" />
-                  No clones match the {statusFilter?.replace("_", " ")} filter.
-                  <button
-                    type="button"
-                    onClick={() => setStatusFilter(null)}
-                    className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-primary hover:underline"
-                  >
-                    <X className="h-3 w-3" /> clear filter
-                  </button>
+                <div className="space-y-2">
+                  {filtered.map((c) => (
+                    <Link
+                      key={c.id}
+                      to="/clones/$cloneId"
+                      params={{ cloneId: c.id }}
+                      className="block"
+                    >
+                      <Card className="border-border/80 transition-colors hover:border-primary/40">
+                        <CardContent className="flex items-center justify-between p-4">
+                          <div className="min-w-0">
+                            <div className="font-mono text-sm font-medium">{c.name}</div>
+                            <div className="font-mono text-xs text-muted-foreground">
+                              {c.github_owner}/{c.github_repo}
+                              {c.last_cascade_at && (
+                                <> · last cascade {formatDistanceToNow(c.last_cascade_at)}</>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <StatusPill status={c.sync_status} behind={c.commits_behind} />
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  ))}
                 </div>
               );
-            }
-            return (
-              <div className="space-y-2">
-                {filtered.map((c) => (
-                  <Link
-                    key={c.id}
-                    to="/clones/$cloneId"
-                    params={{ cloneId: c.id }}
-                    className="block"
-                  >
-                    <Card className="border-border/80 transition-colors hover:border-primary/40">
-                      <CardContent className="flex items-center justify-between p-4">
-                        <div className="min-w-0">
-                          <div className="font-mono text-sm font-medium">{c.name}</div>
-                          <div className="font-mono text-xs text-muted-foreground">
-                            {c.github_owner}/{c.github_repo}
-                            {c.last_cascade_at && <> · last cascade {formatDistanceToNow(c.last_cascade_at)}</>}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <StatusPill status={c.sync_status} behind={c.commits_behind} />
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
-            );
-          })()}
+            })()
+          )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
           <CardTitle className="text-base">File globs</CardTitle>
-          <CardDescription>Only files matching these patterns get pushed during a scoped sync.</CardDescription>
+          <CardDescription>
+            Only files matching these patterns get pushed during a scoped sync.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-1.5">
@@ -336,4 +345,3 @@ function ModuleDetail() {
     </div>
   );
 }
-

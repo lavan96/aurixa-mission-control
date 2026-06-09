@@ -92,15 +92,22 @@ function TopupBody() {
   const checkoutFn = useServerFn(createStripeCheckout);
 
   async function buyWithStripe(pack: Pack) {
-    if (!tenant) { toast.error("No tenant in context"); return; }
+    if (!tenant) {
+      toast.error("No tenant in context");
+      return;
+    }
     if (!pack.stripe_price_id) {
-      toast.error("Pack not linked to Stripe yet"); return;
+      toast.error("Pack not linked to Stripe yet");
+      return;
     }
     try {
       const r = await checkoutFn({
         data: { mode: "topup", tenantId: tenant, itemId: pack.id },
       });
-      if (!r.ok) { toast.error(r.error); return; }
+      if (!r.ok) {
+        toast.error(r.error);
+        return;
+      }
       if (r.url) window.location.href = r.url;
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Checkout failed");
@@ -126,18 +133,14 @@ function TopupBody() {
   const [minTokens, setMinTokens] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
 
-  const currencies = useMemo(
-    () => Array.from(new Set(all.map((p) => p.currency))).sort(),
-    [all],
-  );
+  const currencies = useMemo(() => Array.from(new Set(all.map((p) => p.currency))).sort(), [all]);
 
   const filtered = useMemo(() => {
     let rows = all.filter((p) => p.is_active);
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       rows = rows.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) || p.slug.toLowerCase().includes(q),
+        (p) => p.name.toLowerCase().includes(q) || p.slug.toLowerCase().includes(q),
       );
     }
     if (currency !== "__all__") rows = rows.filter((p) => p.currency === currency);
@@ -149,11 +152,21 @@ function TopupBody() {
     }
     const sorted = [...rows];
     switch (sort) {
-      case "tokens-asc": sorted.sort((a, b) => a.tokens - b.tokens); break;
-      case "tokens-desc": sorted.sort((a, b) => b.tokens - a.tokens); break;
-      case "price-asc": sorted.sort((a, b) => a.price_cents - b.price_cents); break;
-      case "price-desc": sorted.sort((a, b) => b.price_cents - a.price_cents); break;
-      case "name": sorted.sort((a, b) => a.name.localeCompare(b.name)); break;
+      case "tokens-asc":
+        sorted.sort((a, b) => a.tokens - b.tokens);
+        break;
+      case "tokens-desc":
+        sorted.sort((a, b) => b.tokens - a.tokens);
+        break;
+      case "price-asc":
+        sorted.sort((a, b) => a.price_cents - b.price_cents);
+        break;
+      case "price-desc":
+        sorted.sort((a, b) => b.price_cents - a.price_cents);
+        break;
+      case "name":
+        sorted.sort((a, b) => a.name.localeCompare(b.name));
+        break;
     }
     return sorted;
   }, [all, search, currency, minTokens, maxPrice, sort]);
@@ -193,17 +206,21 @@ function TopupBody() {
     if (!pending || !tenant) return;
     setSubmitting(true);
     try {
-      const r = await topupFn({
+      const r = (await topupFn({
         data: { tenantId: tenant, packId: pending.pack.id, idempotencyKey: pending.idemKey },
-      }) as { ok?: boolean; error?: string; idempotent_replay?: boolean; tokens?: number };
+      })) as { ok?: boolean; error?: string; idempotent_replay?: boolean; tokens?: number };
       if (r.ok === false) {
         toast.error(r.error ?? "Top-up failed");
         return;
       }
       if (r.idempotent_replay) {
-        toast.info(`Already applied earlier (${r.tokens?.toLocaleString()} tokens) — no double-charge.`);
+        toast.info(
+          `Already applied earlier (${r.tokens?.toLocaleString()} tokens) — no double-charge.`,
+        );
       } else {
-        toast.success(`Top-up applied: +${r.tokens?.toLocaleString() ?? pending.pack.tokens.toLocaleString()} tokens`);
+        toast.success(
+          `Top-up applied: +${r.tokens?.toLocaleString() ?? pending.pack.tokens.toLocaleString()} tokens`,
+        );
       }
       qc.invalidateQueries({ queryKey: ["topup", "tenant", tenant] });
       setPending(null);
@@ -247,8 +264,8 @@ function TopupBody() {
       {!tenant && (
         <Card>
           <CardContent className="py-6 text-sm text-muted-foreground">
-            Open this page from a clone with <code>?tenant=&lt;tenant_id&gt;</code> in the URL to apply a
-            top-up. Without a tenant, this page is read-only.
+            Open this page from a clone with <code>?tenant=&lt;tenant_id&gt;</code> in the URL to
+            apply a top-up. Without a tenant, this page is read-only.
           </CardContent>
         </Card>
       )}
@@ -263,11 +280,15 @@ function TopupBody() {
             className="md:col-span-2"
           />
           <Select value={currency} onValueChange={setCurrency}>
-            <SelectTrigger><SelectValue placeholder="Currency" /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder="Currency" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="__all__">All currencies</SelectItem>
               {currencies.map((c) => (
-                <SelectItem key={c} value={c}>{c}</SelectItem>
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -287,7 +308,9 @@ function TopupBody() {
             onChange={(e) => setMaxPrice(e.target.value)}
           />
           <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
-            <SelectTrigger className="md:col-span-1"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="md:col-span-1">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="tokens-asc">Tokens · low → high</SelectItem>
               <SelectItem value="tokens-desc">Tokens · high → low</SelectItem>
@@ -297,7 +320,8 @@ function TopupBody() {
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground md:col-span-5">
-            Showing {visible.length === 0 ? 0 : pageStart + 1}–{pageStart + visible.length} of {filtered.length} matching ({all.filter((p) => p.is_active).length} active overall)
+            Showing {visible.length === 0 ? 0 : pageStart + 1}–{pageStart + visible.length} of{" "}
+            {filtered.length} matching ({all.filter((p) => p.is_active).length} active overall)
           </p>
         </CardContent>
       </Card>
@@ -335,9 +359,18 @@ function TopupBody() {
                   onClick={() => buyWithStripe(p)}
                   title={!p.stripe_price_id ? "Stripe price not linked" : undefined}
                 >
-                  {tenant ? (p.stripe_price_id ? "Pay with Stripe" : "Stripe not linked") : "Select tenant"}
+                  {tenant
+                    ? p.stripe_price_id
+                      ? "Pay with Stripe"
+                      : "Stripe not linked"
+                    : "Select tenant"}
                 </Button>
-                <Button variant="outline" size="sm" disabled={!tenant} onClick={() => requestBuy(p)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!tenant}
+                  onClick={() => requestBuy(p)}
+                >
                   Apply manually (admin)
                 </Button>
               </div>
@@ -354,40 +387,89 @@ function TopupBody() {
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span>Page size</span>
             <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
-              <SelectTrigger className="h-8 w-20"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 w-20">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {[6, 9, 12, 24, 48].map((n) => (
-                  <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                  <SelectItem key={n} value={String(n)}>
+                    {n}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" disabled={safePage <= 1} onClick={() => setPage(1)}>« First</Button>
-            <Button size="sm" variant="outline" disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>Prev</Button>
+            <Button size="sm" variant="outline" disabled={safePage <= 1} onClick={() => setPage(1)}>
+              « First
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={safePage <= 1}
+              onClick={() => setPage(safePage - 1)}
+            >
+              Prev
+            </Button>
             <span className="font-mono text-xs tabular-nums text-muted-foreground">
               {safePage} / {totalPages}
             </span>
-            <Button size="sm" variant="outline" disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)}>Next</Button>
-            <Button size="sm" variant="outline" disabled={safePage >= totalPages} onClick={() => setPage(totalPages)}>Last »</Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={safePage >= totalPages}
+              onClick={() => setPage(safePage + 1)}
+            >
+              Next
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={safePage >= totalPages}
+              onClick={() => setPage(totalPages)}
+            >
+              Last »
+            </Button>
           </div>
         </div>
       )}
 
-      <AlertDialog open={!!pending} onOpenChange={(o) => { if (!o && !submitting) setPending(null); }}>
+      <AlertDialog
+        open={!!pending}
+        onOpenChange={(o) => {
+          if (!o && !submitting) setPending(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm top-up</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3 text-sm">
-                <p>Review before charging the tenant's account. This action is recorded in the audit log.</p>
+                <p>
+                  Review before charging the tenant's account. This action is recorded in the audit
+                  log.
+                </p>
                 {pending && (
                   <div className="rounded border border-border bg-muted/30 p-3 font-mono text-xs">
-                    <Row k="Tenant" v={tenantQ.data?.tenant?.display_name ?? tenantQ.data?.tenant?.external_ref ?? tenant} />
+                    <Row
+                      k="Tenant"
+                      v={
+                        tenantQ.data?.tenant?.display_name ??
+                        tenantQ.data?.tenant?.external_ref ??
+                        tenant
+                      }
+                    />
                     <Row k="Pack" v={`${pending.pack.name} (${pending.pack.slug})`} />
                     <Row k="Tokens" v={`+${pending.pack.tokens.toLocaleString()}`} />
                     <Row k="Price" v={money(pending.pack.price_cents, pending.pack.currency)} />
-                    <Row k="Expires" v={pending.pack.expires_after_days ? `in ${pending.pack.expires_after_days}d` : "never"} />
+                    <Row
+                      k="Expires"
+                      v={
+                        pending.pack.expires_after_days
+                          ? `in ${pending.pack.expires_after_days}d`
+                          : "never"
+                      }
+                    />
                     <Row k="Idempotency key" v={pending.idemKey} />
                   </div>
                 )}
@@ -401,7 +483,10 @@ function TopupBody() {
             <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               disabled={submitting}
-              onClick={(e) => { e.preventDefault(); void confirmBuy(); }}
+              onClick={(e) => {
+                e.preventDefault();
+                void confirmBuy();
+              }}
             >
               {submitting ? "Applying…" : "Confirm & apply"}
             </AlertDialogAction>
@@ -424,7 +509,9 @@ function Row({ k, v }: { k: string; v: React.ReactNode }) {
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div>
-      <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+        {label}
+      </p>
       <p className="mt-1 text-xl font-semibold">{value.toLocaleString()}</p>
     </div>
   );

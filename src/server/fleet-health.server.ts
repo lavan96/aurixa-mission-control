@@ -2,11 +2,7 @@
 // failure / drift counts over the last 7 days. Used by the /health dashboard.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import {
-  getCloneHealth,
-  readCachedCloneHealth,
-  type CloneHealth,
-} from "./clone-health.server";
+import { getCloneHealth, readCachedCloneHealth, type CloneHealth } from "./clone-health.server";
 
 type SupabaseLike = SupabaseClient<Database>;
 
@@ -52,9 +48,7 @@ export async function getFleetHealth(
   // probedAt + fromCache per row so the UI can show a cache-age badge.
   const probed = await Promise.all(
     list.map(async (c) => {
-      const cached = opts.force
-        ? null
-        : await readCachedCloneHealth(supabase, c.id);
+      const cached = opts.force ? null : await readCachedCloneHealth(supabase, c.id);
       if (cached) {
         return { health: cached.payload, probedAt: cached.probedAt, fromCache: true };
       }

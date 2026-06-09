@@ -20,9 +20,7 @@ import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "@/lib/format";
 import { EmptyState } from "@/components/empty-state";
 
-type AuditEntry = Awaited<
-  ReturnType<typeof getRoleAuditLog>
->["entries"][0];
+type AuditEntry = Awaited<ReturnType<typeof getRoleAuditLog>>["entries"][0];
 
 export const Route = createFileRoute("/settings/role-audit")({
   component: () => (
@@ -62,7 +60,7 @@ function RoleAuditPage() {
           e.action.toLowerCase().includes(search.toLowerCase()) ||
           (e.actor_name ?? "").toLowerCase().includes(search.toLowerCase()) ||
           (e.target_name ?? "").toLowerCase().includes(search.toLowerCase()) ||
-          JSON.stringify(e.metadata).toLowerCase().includes(search.toLowerCase())
+          JSON.stringify(e.metadata).toLowerCase().includes(search.toLowerCase()),
       )
     : entries;
 
@@ -77,12 +75,9 @@ function RoleAuditPage() {
             <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
               delegation trail
             </p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-              Role Audit Log
-            </h1>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight">Role Audit Log</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Every role assignment, revocation, and hierarchy change across all
-              environments.
+              Every role assignment, revocation, and hierarchy change across all environments.
             </p>
           </div>
         </div>
@@ -142,16 +137,8 @@ function RoleAuditRow({ entry }: { entry: AuditEntry }) {
   const isCloneCreated = entry.action === "clone.created";
   const role = (meta?.role as string) ?? null;
 
-  const ActionIcon = isAssign
-    ? UserPlus
-    : isRevoke
-      ? UserMinus
-      : ScrollText;
-  const actionColor = isAssign
-    ? "text-success"
-    : isRevoke
-      ? "text-destructive"
-      : "text-info";
+  const ActionIcon = isAssign ? UserPlus : isRevoke ? UserMinus : ScrollText;
+  const actionColor = isAssign ? "text-success" : isRevoke ? "text-destructive" : "text-info";
 
   return (
     <div className="px-4 py-3">
@@ -187,8 +174,7 @@ function RoleAuditRow({ entry }: { entry: AuditEntry }) {
               <>
                 <ArrowRight className="h-3 w-3" />
                 <span className="font-medium text-foreground">
-                  {entry.target_name ??
-                    String(meta.target_user_id).slice(0, 8)}
+                  {entry.target_name ?? String(meta.target_user_id).slice(0, 8)}
                 </span>
               </>
             )}
@@ -214,15 +200,11 @@ function RoleAuditRow({ entry }: { entry: AuditEntry }) {
                 {entry.actor_user_id?.slice(0, 12) ?? "NULL (system)"}
               </span>
               <span className="text-muted-foreground">assigned_at</span>
-              <span className="font-mono">
-                {new Date(entry.created_at).toISOString()}
-              </span>
+              <span className="font-mono">{new Date(entry.created_at).toISOString()}</span>
               {!!meta?.role_id && (
                 <>
                   <span className="text-muted-foreground">role_id</span>
-                  <span className="font-mono">
-                    {String(meta.role_id).slice(0, 12)}…
-                  </span>
+                  <span className="font-mono">{String(meta.role_id).slice(0, 12)}…</span>
                 </>
               )}
             </div>

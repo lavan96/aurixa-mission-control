@@ -24,7 +24,14 @@ const STATUS_COLORS: Record<string, { fill: string; glow: string }> = {
   unknown: { fill: "oklch(0.60 0.10 250)", glow: "oklch(0.70 0.14 250)" },
 };
 
-export function TreeNodeCircle({ node, index, highlighted, selected, multiSelected, onSelect }: Props) {
+export function TreeNodeCircle({
+  node,
+  index,
+  highlighted,
+  selected,
+  multiSelected,
+  onSelect,
+}: Props) {
   const [hovered, setHovered] = useState(false);
 
   const isTrunk = node.id === "__trunk__";

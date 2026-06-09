@@ -43,12 +43,17 @@ export function GitHubSetupWizard() {
       setValidation(res);
 
       // Audit log
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       await supabase.from("audit_log").insert({
         action: "github.secrets_validated",
         entity_type: "settings",
         actor_user_id: user?.id,
-        metadata: { all_valid: res.allValid, results: res.secrets.map((s) => ({ name: s.name, valid: s.valid })) },
+        metadata: {
+          all_valid: res.allValid,
+          results: res.secrets.map((s) => ({ name: s.name, valid: s.valid })),
+        },
       });
 
       if (res.allValid) {
@@ -69,7 +74,9 @@ export function GitHubSetupWizard() {
       setGhStatus(res);
 
       // Audit log
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       await supabase.from("audit_log").insert({
         action: "github.wizard_connection_tested",
         entity_type: "settings",
@@ -126,9 +133,7 @@ export function GitHubSetupWizard() {
             const isDone = i < stepIndex;
             return (
               <div key={s.key} className="flex items-center gap-1">
-                {i > 0 && (
-                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40" />
-                )}
+                {i > 0 && <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40" />}
                 <div
                   className={cn(
                     "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors",
@@ -177,21 +182,22 @@ export function GitHubSetupWizard() {
                       <div className="font-mono text-xs font-medium">{s.name}</div>
                       {s.name === "GITHUB_APP_ID" && (
                         <div className="text-[11px] italic text-muted-foreground/70">
-                          Your App's numeric ID — found in <strong>GitHub App → General → App ID</strong> (e.g. 123456).
+                          Your App's numeric ID — found in{" "}
+                          <strong>GitHub App → General → App ID</strong> (e.g. 123456).
                         </div>
                       )}
                       {s.name === "GITHUB_APP_INSTALLATION_ID" && (
                         <div className="text-[11px] italic text-muted-foreground/70">
-                          The number at the end of the URL when you click <em>Configure</em> on the installed app
-                          (<code className="rounded bg-muted px-0.5">…/installations/<strong>{"<ID>"}</strong></code>).
+                          The number at the end of the URL when you click <em>Configure</em> on the
+                          installed app (
+                          <code className="rounded bg-muted px-0.5">
+                            …/installations/<strong>{"<ID>"}</strong>
+                          </code>
+                          ).
                         </div>
                       )}
-                      {s.hint && (
-                        <div className="text-xs text-muted-foreground">{s.hint}</div>
-                      )}
-                      {s.valid && (
-                        <div className="text-xs text-success">Format valid ✓</div>
-                      )}
+                      {s.hint && <div className="text-xs text-muted-foreground">{s.hint}</div>}
+                      {s.valid && <div className="text-xs text-success">Format valid ✓</div>}
                     </div>
                   </div>
                 ))}
@@ -360,11 +366,7 @@ export function GitHubSetupWizard() {
                 <RefreshCw className={cn("mr-2 h-3.5 w-3.5", loading && "animate-spin")} />
                 Re-check
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setStep("connect")}
-              >
+              <Button variant="ghost" size="sm" onClick={() => setStep("connect")}>
                 Back
               </Button>
             </div>

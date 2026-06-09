@@ -74,7 +74,8 @@ export function RichDiffViewer({
             <FileDiff className="h-3.5 w-3.5" />
             <span>
               {baseSha.slice(0, 7)}…{headSha.slice(0, 7)}
-              {typeof filesChanged === "number" && ` · ${filesChanged} file${filesChanged === 1 ? "" : "s"}`}
+              {typeof filesChanged === "number" &&
+                ` · ${filesChanged} file${filesChanged === 1 ? "" : "s"}`}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -174,13 +175,15 @@ export function RichDiffViewer({
                       : "border-border bg-surface text-muted-foreground hover:border-primary/30 hover:text-foreground",
                   )}
                 >
-                  <span className={cn(
-                    "mr-1",
-                    f.status === "added" && "text-success",
-                    f.status === "removed" && "text-destructive",
-                    f.status === "modified" && "text-info",
-                    f.status === "renamed" && "text-warning",
-                  )}>
+                  <span
+                    className={cn(
+                      "mr-1",
+                      f.status === "added" && "text-success",
+                      f.status === "removed" && "text-destructive",
+                      f.status === "modified" && "text-info",
+                      f.status === "renamed" && "text-warning",
+                    )}
+                  >
                     {f.status === "added" ? "+" : f.status === "removed" ? "−" : "~"}
                   </span>
                   {f.filename.split("/").pop()}
@@ -192,79 +195,80 @@ export function RichDiffViewer({
             </div>
 
             {/* Expanded diff */}
-            {expandedFile && (() => {
-              const file = files.find((f) => f.filename === expandedFile);
-              if (!file) return null;
-              const oldCode = file.oldContent ?? "";
-              const newCode = file.newContent ?? "";
+            {expandedFile &&
+              (() => {
+                const file = files.find((f) => f.filename === expandedFile);
+                if (!file) return null;
+                const oldCode = file.oldContent ?? "";
+                const newCode = file.newContent ?? "";
 
-              // If we have patch but no full content, show the patch as text
-              if (!file.oldContent && !file.newContent && file.patch) {
+                // If we have patch but no full content, show the patch as text
+                if (!file.oldContent && !file.newContent && file.patch) {
+                  return (
+                    <div className="rounded-md border border-border/60 bg-surface overflow-x-auto">
+                      <div className="border-b border-border/60 px-3 py-1.5 font-mono text-[11px] text-muted-foreground">
+                        {file.filename}
+                      </div>
+                      <pre className="p-3 font-mono text-[11px] leading-relaxed text-foreground/90 whitespace-pre-wrap">
+                        {file.patch}
+                      </pre>
+                    </div>
+                  );
+                }
+
                 return (
-                  <div className="rounded-md border border-border/60 bg-surface overflow-x-auto">
-                    <div className="border-b border-border/60 px-3 py-1.5 font-mono text-[11px] text-muted-foreground">
+                  <div className="rounded-md border border-border/60 overflow-hidden">
+                    <div className="border-b border-border/60 bg-surface px-3 py-1.5 font-mono text-[11px] text-muted-foreground">
                       {file.filename}
                     </div>
-                    <pre className="p-3 font-mono text-[11px] leading-relaxed text-foreground/90 whitespace-pre-wrap">
-                      {file.patch}
-                    </pre>
+                    <div className="max-h-[600px] overflow-auto text-[11px] [&_pre]:!bg-transparent [&_td]:!bg-transparent [&_table]:!bg-transparent">
+                      <Suspense
+                        fallback={
+                          <div className="flex items-center justify-center py-8">
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          </div>
+                        }
+                      >
+                        <ReactDiffViewer
+                          oldValue={oldCode}
+                          newValue={newCode}
+                          splitView={splitView}
+                          useDarkTheme={true}
+                          hideLineNumbers={false}
+                          styles={{
+                            variables: {
+                              dark: {
+                                diffViewerBackground: "transparent",
+                                addedBackground: "rgba(34, 197, 94, 0.08)",
+                                removedBackground: "rgba(239, 68, 68, 0.08)",
+                                wordAddedBackground: "rgba(34, 197, 94, 0.2)",
+                                wordRemovedBackground: "rgba(239, 68, 68, 0.2)",
+                                addedGutterBackground: "rgba(34, 197, 94, 0.12)",
+                                removedGutterBackground: "rgba(239, 68, 68, 0.12)",
+                                gutterBackground: "transparent",
+                                gutterBackgroundDark: "transparent",
+                                highlightBackground: "rgba(139, 92, 246, 0.1)",
+                                highlightGutterBackground: "rgba(139, 92, 246, 0.1)",
+                                codeFoldGutterBackground: "transparent",
+                                codeFoldBackground: "transparent",
+                                emptyLineBackground: "transparent",
+                                addedGutterColor: "rgb(34, 197, 94)",
+                                removedGutterColor: "rgb(239, 68, 68)",
+                                gutterColor: "rgb(115, 115, 115)",
+                                addedColor: "rgb(200, 255, 200)",
+                                removedColor: "rgb(255, 200, 200)",
+                                diffViewerTitleBackground: "transparent",
+                                diffViewerTitleColor: "rgb(163, 163, 163)",
+                                diffViewerTitleBorderColor: "transparent",
+                              },
+                            },
+                          }}
+                        />
+                      </Suspense>
+                    </div>
                   </div>
                 );
-              }
-
-              return (
-                <div className="rounded-md border border-border/60 overflow-hidden">
-                  <div className="border-b border-border/60 bg-surface px-3 py-1.5 font-mono text-[11px] text-muted-foreground">
-                    {file.filename}
-                  </div>
-                  <div className="max-h-[600px] overflow-auto text-[11px] [&_pre]:!bg-transparent [&_td]:!bg-transparent [&_table]:!bg-transparent">
-                    <Suspense
-                      fallback={
-                        <div className="flex items-center justify-center py-8">
-                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                        </div>
-                      }
-                    >
-                      <ReactDiffViewer
-                        oldValue={oldCode}
-                        newValue={newCode}
-                        splitView={splitView}
-                        useDarkTheme={true}
-                        hideLineNumbers={false}
-                        styles={{
-                          variables: {
-                            dark: {
-                              diffViewerBackground: "transparent",
-                              addedBackground: "rgba(34, 197, 94, 0.08)",
-                              removedBackground: "rgba(239, 68, 68, 0.08)",
-                              wordAddedBackground: "rgba(34, 197, 94, 0.2)",
-                              wordRemovedBackground: "rgba(239, 68, 68, 0.2)",
-                              addedGutterBackground: "rgba(34, 197, 94, 0.12)",
-                              removedGutterBackground: "rgba(239, 68, 68, 0.12)",
-                              gutterBackground: "transparent",
-                              gutterBackgroundDark: "transparent",
-                              highlightBackground: "rgba(139, 92, 246, 0.1)",
-                              highlightGutterBackground: "rgba(139, 92, 246, 0.1)",
-                              codeFoldGutterBackground: "transparent",
-                              codeFoldBackground: "transparent",
-                              emptyLineBackground: "transparent",
-                              addedGutterColor: "rgb(34, 197, 94)",
-                              removedGutterColor: "rgb(239, 68, 68)",
-                              gutterColor: "rgb(115, 115, 115)",
-                              addedColor: "rgb(200, 255, 200)",
-                              removedColor: "rgb(255, 200, 200)",
-                              diffViewerTitleBackground: "transparent",
-                              diffViewerTitleColor: "rgb(163, 163, 163)",
-                              diffViewerTitleBorderColor: "transparent",
-                            },
-                          },
-                        }}
-                      />
-                    </Suspense>
-                  </div>
-                </div>
-              );
-            })()}
+              })()}
           </div>
         )}
       </CardContent>

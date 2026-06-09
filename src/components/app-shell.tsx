@@ -106,134 +106,144 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <AppShellContext.Provider value={true}>
-    <div className="flex min-h-dvh w-full">
-      {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-border/60 bg-sidebar p-4 md:flex">
-        <Link to="/dashboard" className="mb-8 flex items-center gap-2">
-          <div className="relative flex h-9 w-9 items-center justify-center rounded-md bg-primary/15 ring-1 ring-primary/40">
-            <Radio className="h-5 w-5 text-primary" />
-            <span className="absolute -right-0.5 -top-0.5 h-2 w-2 animate-pulse rounded-full bg-accent" />
-          </div>
-          <div className="flex flex-col leading-tight">
-            <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Aurixa Systems</span>
-            <span className="font-mono text-sm font-semibold tracking-wide text-foreground">MISSION CONTROL</span>
-          </div>
-        </Link>
-
-        <nav className="flex-1 min-h-0 space-y-1 overflow-y-auto pr-1">{navLinks}</nav>
-
-        <div className="mt-auto rounded-md border border-border/60 bg-surface p-3">
-          <div className="mb-2 truncate font-mono text-[11px] text-muted-foreground">
-            {user?.email}
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start text-muted-foreground hover:text-foreground"
-            onClick={async () => {
-              await signOut();
-              nav({ to: "/auth" });
-            }}
-          >
-            <LogOut className="mr-2 h-4 w-4" /> Sign out
-          </Button>
-        </div>
-      </aside>
-
-      <main className="flex-1 min-w-0">
-        {/* Mobile top bar */}
-        <header className="md:hidden sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border/60 bg-background/80 px-4 backdrop-blur">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 shrink-0"
-            onClick={() => setMobileOpen(true)}
-          >
-            <Menu className="h-5 w-5" />
-            <span className="sr-only">Open menu</span>
-          </Button>
-          <div className="flex items-center gap-2">
-            <Radio className="h-4 w-4 text-primary" />
-            <div className="flex flex-col leading-none">
-              <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">Aurixa</span>
-              <span className="font-mono text-xs font-semibold tracking-wide">MISSION CONTROL</span>
+      <div className="flex min-h-dvh w-full">
+        {/* Desktop sidebar */}
+        <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-border/60 bg-sidebar p-4 md:flex">
+          <Link to="/dashboard" className="mb-8 flex items-center gap-2">
+            <div className="relative flex h-9 w-9 items-center justify-center rounded-md bg-primary/15 ring-1 ring-primary/40">
+              <Radio className="h-5 w-5 text-primary" />
+              <span className="absolute -right-0.5 -top-0.5 h-2 w-2 animate-pulse rounded-full bg-accent" />
             </div>
+            <div className="flex flex-col leading-tight">
+              <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                Aurixa Systems
+              </span>
+              <span className="font-mono text-sm font-semibold tracking-wide text-foreground">
+                MISSION CONTROL
+              </span>
+            </div>
+          </Link>
+
+          <nav className="flex-1 min-h-0 space-y-1 overflow-y-auto pr-1">{navLinks}</nav>
+
+          <div className="mt-auto rounded-md border border-border/60 bg-surface p-3">
+            <div className="mb-2 truncate font-mono text-[11px] text-muted-foreground">
+              {user?.email}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start text-muted-foreground hover:text-foreground"
+              onClick={async () => {
+                await signOut();
+                nav({ to: "/auth" });
+              }}
+            >
+              <LogOut className="mr-2 h-4 w-4" /> Sign out
+            </Button>
           </div>
-          <div className="ml-auto flex items-center gap-1">
+        </aside>
+
+        <main className="flex-1 min-w-0">
+          {/* Mobile top bar */}
+          <header className="md:hidden sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border/60 bg-background/80 px-4 backdrop-blur">
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9"
-              onClick={() => window.dispatchEvent(new Event("open-command-palette"))}
-              aria-label="Open command palette"
+              className="h-9 w-9 shrink-0"
+              onClick={() => setMobileOpen(true)}
             >
-              <Search className="h-4 w-4" />
+              <Menu className="h-5 w-5" />
+              <span className="sr-only">Open menu</span>
             </Button>
-            <ThemeToggle />
-            <NotificationsBell />
-          </div>
-        </header>
-
-        {/* Mobile navigation drawer */}
-        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetContent side="left" className="w-72 p-0">
-            <SheetHeader className="sr-only">
-              <SheetTitle>Navigation</SheetTitle>
-              <SheetDescription>Main navigation menu</SheetDescription>
-            </SheetHeader>
-            <div className="flex h-full flex-col bg-sidebar">
-              <div className="flex items-center gap-2 border-b border-border/60 p-4">
-                <div className="relative flex h-8 w-8 items-center justify-center rounded-md bg-primary/15 ring-1 ring-primary/40">
-                  <Radio className="h-4 w-4 text-primary" />
-                  <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
-                </div>
-                <div className="flex flex-col leading-tight">
-                  <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">Aurixa Systems</span>
-                  <span className="font-mono text-xs font-semibold tracking-wide text-foreground">MISSION CONTROL</span>
-                </div>
-              </div>
-
-              <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-                {navLinks}
-              </nav>
-
-              <div className="border-t border-border/60 p-3">
-                <div className="mb-2 truncate font-mono text-[10px] text-muted-foreground">
-                  {user?.email}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start text-muted-foreground hover:text-foreground"
-                  onClick={async () => {
-                    setMobileOpen(false);
-                    await signOut();
-                    nav({ to: "/auth" });
-                  }}
-                >
-                  <LogOut className="mr-2 h-4 w-4" /> Sign out
-                </Button>
+            <div className="flex items-center gap-2">
+              <Radio className="h-4 w-4 text-primary" />
+              <div className="flex flex-col leading-none">
+                <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
+                  Aurixa
+                </span>
+                <span className="font-mono text-xs font-semibold tracking-wide">
+                  MISSION CONTROL
+                </span>
               </div>
             </div>
-          </SheetContent>
-        </Sheet>
+            <div className="ml-auto flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9"
+                onClick={() => window.dispatchEvent(new Event("open-command-palette"))}
+                aria-label="Open command palette"
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+              <ThemeToggle />
+              <NotificationsBell />
+            </div>
+          </header>
 
-        {/* Desktop top bar */}
-        <header className="hidden md:flex sticky top-0 z-30 h-12 items-center justify-end gap-2 border-b border-border/60 bg-background/80 px-6 backdrop-blur">
-          <GitHubRateLimitMeter />
-          <kbd className="hidden lg:inline-flex items-center gap-1 rounded border border-border/60 bg-surface px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-            ⌘K
-            <span className="text-muted-foreground/60">command palette</span>
-          </kbd>
-          <ThemeToggle />
-          <NotificationsBell />
-        </header>
-        <div className="p-4 md:p-8">{children}</div>
-      </main>
-      <CommandPalette />
-      <KeyboardShortcuts />
-      <OnboardingWizard />
-    </div>
+          {/* Mobile navigation drawer */}
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            <SheetContent side="left" className="w-72 p-0">
+              <SheetHeader className="sr-only">
+                <SheetTitle>Navigation</SheetTitle>
+                <SheetDescription>Main navigation menu</SheetDescription>
+              </SheetHeader>
+              <div className="flex h-full flex-col bg-sidebar">
+                <div className="flex items-center gap-2 border-b border-border/60 p-4">
+                  <div className="relative flex h-8 w-8 items-center justify-center rounded-md bg-primary/15 ring-1 ring-primary/40">
+                    <Radio className="h-4 w-4 text-primary" />
+                    <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
+                  </div>
+                  <div className="flex flex-col leading-tight">
+                    <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
+                      Aurixa Systems
+                    </span>
+                    <span className="font-mono text-xs font-semibold tracking-wide text-foreground">
+                      MISSION CONTROL
+                    </span>
+                  </div>
+                </div>
+
+                <nav className="flex-1 space-y-1 overflow-y-auto p-3">{navLinks}</nav>
+
+                <div className="border-t border-border/60 p-3">
+                  <div className="mb-2 truncate font-mono text-[10px] text-muted-foreground">
+                    {user?.email}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start text-muted-foreground hover:text-foreground"
+                    onClick={async () => {
+                      setMobileOpen(false);
+                      await signOut();
+                      nav({ to: "/auth" });
+                    }}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" /> Sign out
+                  </Button>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
+
+          {/* Desktop top bar */}
+          <header className="hidden md:flex sticky top-0 z-30 h-12 items-center justify-end gap-2 border-b border-border/60 bg-background/80 px-6 backdrop-blur">
+            <GitHubRateLimitMeter />
+            <kbd className="hidden lg:inline-flex items-center gap-1 rounded border border-border/60 bg-surface px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+              ⌘K
+              <span className="text-muted-foreground/60">command palette</span>
+            </kbd>
+            <ThemeToggle />
+            <NotificationsBell />
+          </header>
+          <div className="p-4 md:p-8">{children}</div>
+        </main>
+        <CommandPalette />
+        <KeyboardShortcuts />
+        <OnboardingWizard />
+      </div>
     </AppShellContext.Provider>
   );
 }

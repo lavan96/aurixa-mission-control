@@ -13,8 +13,7 @@ import {
   type CloneOverrides,
 } from "./branding.server";
 
-const STORAGE_BASE_URL =
-  process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? "";
+const STORAGE_BASE_URL = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? "";
 
 // ─── Versions ─────────────────────────────────────────────────────────
 
@@ -79,28 +78,24 @@ export const rollbackBrandProfile = createServerFn({ method: "POST" })
 
 export const upsertCloneOverrides = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
-    (data: { cloneId: string; profileId: string; overrides: CloneOverrides }) => {
-      if (!data?.cloneId) throw new Error("cloneId required");
-      if (!data?.profileId) throw new Error("profileId required");
-      return data;
-    },
-  )
+  .inputValidator((data: { cloneId: string; profileId: string; overrides: CloneOverrides }) => {
+    if (!data?.cloneId) throw new Error("cloneId required");
+    if (!data?.profileId) throw new Error("profileId required");
+    return data;
+  })
   .handler(async ({ data, context }) => {
     const overrides = sanitizeOverrides(data.overrides);
 
-    const { error } = await context.supabase
-      .from("clone_brand_assignments")
-      .upsert(
-        {
-          clone_id: data.cloneId,
-          profile_id: data.profileId,
-          overrides: overrides as never,
-          status: "pending",
-          drift_summary: "Override changed — awaiting cascade",
-        },
-        { onConflict: "clone_id" },
-      );
+    const { error } = await context.supabase.from("clone_brand_assignments").upsert(
+      {
+        clone_id: data.cloneId,
+        profile_id: data.profileId,
+        overrides: overrides as never,
+        status: "pending",
+        drift_summary: "Override changed — awaiting cascade",
+      },
+      { onConflict: "clone_id" },
+    );
     if (error) return { ok: false as const, error: error.message };
 
     await context.supabase.from("audit_log").insert({
