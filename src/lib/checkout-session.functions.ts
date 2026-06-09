@@ -2,12 +2,12 @@
 // so the success page can confirm which client was billed.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireOperator } from "@/integrations/supabase/role-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { getStripe } from "@/server/stripe.server";
 
 export const lookupCheckoutSession = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOperator])
   .inputValidator((input) => z.object({ sessionId: z.string().min(1) }).parse(input))
   .handler(async ({ data }) => {
     try {

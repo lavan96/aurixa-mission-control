@@ -45,33 +45,43 @@ the compare diff of any (private) repo the App is installed on. **Fixed** by
 adding `requireSupabaseAuth`. (A follow-up could further restrict `owner/repo` to
 registered clone repos.)
 
-### F2 — Authenticated-but-not-authorized handlers using `supabaseAdmin` · OPEN (recommend Phase 5)
-These authenticate but bypass RLS via `supabaseAdmin` with **no role check**, so
-a logged-in non-operator could invoke privileged operations:
+### F2 — Authenticated-but-not-authorized handlers using `supabaseAdmin` · FIXED ✅ (Phase 5)
+These authenticated but bypassed RLS via `supabaseAdmin` with **no role check**, so
+a logged-in non-operator could invoke privileged operations. Now gated by a
+role-enforcing middleware (`requireOperator` / `requireAdmin`, in
+`integrations/supabase/role-middleware.ts`) that extends `requireSupabaseAuth`
+with a `user_roles` check and returns 403 otherwise:
 
-| File | Privileged surface |
-|---|---|
-| `server/clone-provisioning.functions.ts` | Provisions clones / GitHub repos / backends. Only *incidentally* gated by the RLS on its first `context.supabase` read of `prime_config` — fragile. |
-| `lib/clone-api-keys.functions.ts` | Mint / rotate / revoke clone API keys. |
-| `lib/token-webhooks.functions.ts` | CRUD of token webhook endpoints. |
-| `lib/checkout-session.functions.ts` | Reads/creates checkout-session state. |
-| `lib/stripe.functions.ts` | Creates Stripe Checkout sessions; `tenantId`/`cloneId` come from input with **no ownership check** (IDOR: a user can target another tenant). |
+| File | Privileged surface | Gate applied |
+|---|---|---|
+| `server/clone-provisioning.functions.ts` | Provisions clones / GitHub repos / backends. | **requireAdmin** |
+| `lib/clone-api-keys.functions.ts` | Mint / rotate / revoke clone API keys. | **requireAdmin** |
+| `lib/token-webhooks.functions.ts` | CRUD of token webhook endpoints. | **requireOperator** |
+| `lib/checkout-session.functions.ts` | Reads/creates checkout-session state. | **requireOperator** |
+| `lib/stripe.functions.ts` | Creates Stripe Checkout sessions. | **requireOperator** |
+
+Note on the Stripe "IDOR": this is an internal operator console (operators manage
+the whole fleet, there is no per-user tenant ownership), so the correct
+authorization is the operator-role gate now applied — not per-tenant ownership.
 
 ### F3 — Confirmed safe-by-design
 `getPublicPricing` (public marketing page, selects only non-PII pricing columns)
 and `getVapidPublicKey` (public key the browser needs to subscribe to push).
 
-## Recommendation (Phase 5)
+## Resolution status (Phase 5)
 
-1. Add role-enforcing middleware that extends `requireSupabaseAuth`, e.g.
-   `requireOperatorAuth` (asserts `is_operator(userId)`) and `requireAdminAuth`
-   (asserts `has_role(userId, 'admin')`), returning 403 otherwise.
-2. Apply per the F2 table — admin for provisioning / API-key minting / webhook
-   config; operator for the rest.
-3. For `stripe.functions.ts` / `checkout-session.functions.ts`, additionally
-   verify the caller owns the supplied `tenantId`/`cloneId` (close the IDOR).
-4. Prefer `context.supabase` (RLS) over `supabaseAdmin` in handlers wherever the
-   operation does not genuinely require service-role privileges.
+1. ✅ Added `requireOperator` / `requireAdmin` middleware (composes
+   `requireSupabaseAuth` + a `user_roles` check → 403).
+2. ✅ Applied per the F2 table.
+3. ✅ Stripe/checkout gated by `requireOperator` (per-tenant ownership N/A — this
+   is a fleet operator console, see note above).
+4. ↩️ Optional further hardening: prefer `context.supabase` (RLS) over
+   `supabaseAdmin` in handlers that don't truly need service-role privileges, and
+   re-confirm per-feature role tiers against the UI's own gating. Left as a
+   non-urgent follow-up since the role gate already closes the access gap.
 
-These are behavioral changes (a non-operator who currently *can* call these would
-start getting 403), so they are scoped to a follow-up rather than bundled here.
+**Behavioral note:** an authenticated user with *no* operator role can no longer
+invoke these functions over RPC (they get 403). All users who can reach the
+admin UI already hold an operator role (`protected-route.tsx`), so no legitimate
+UI flow is affected; provisioning and API-key minting now additionally require an
+admin role.

@@ -3,7 +3,7 @@
 // The webhook (api/public/stripe/webhook) finalises the purchase server-side.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireOperator } from "@/integrations/supabase/role-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { getStripe } from "@/server/stripe.server";
 import { ensureTenant } from "@/server/clone-api-keys.server";
@@ -63,7 +63,7 @@ async function ensureStripeCustomer(tenantId: string): Promise<string> {
 }
 
 export const createStripeCheckout = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOperator])
   .inputValidator((input) => InputSchema.parse(input))
   .handler(async ({ data }) => {
     const item = await resolveItem(data.mode, data.itemId);

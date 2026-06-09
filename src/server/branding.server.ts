@@ -7,6 +7,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { runSqlOnProject } from "./backend-provisioning.server";
+import { decryptSecret } from "./crypto.server";
 
 import { hashBrandBundle } from "./branding/hash";
 import { buildApplySql } from "./branding/sql";
@@ -134,7 +135,7 @@ export async function applyBrandToClone(
   const assets = (profile.asset_manifest as unknown as BrandAsset[]) ?? [];
   const mirror = await mirrorAssetsToClone({
     cloneSupabaseUrl: backend.supabase_url,
-    cloneServiceRoleKey: backend.service_role_key,
+    cloneServiceRoleKey: decryptSecret(backend.service_role_key),
     cloneBucket: "branding",
     assets,
   });

@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { provisionCloneBackend } from "./backend-provisioning.server";
+import { encryptSecret } from "./crypto.server";
 
 /**
  * Provision a dedicated Supabase backend for a clone.
@@ -109,8 +110,8 @@ export const provisionBackend = createServerFn({ method: "POST" })
           supabase_project_ref: result.projectRef,
           supabase_url: result.projectUrl,
           anon_key: result.anonKey,
-          service_role_key: result.serviceRoleKey,
-          db_pass: result.dbPass,
+          service_role_key: encryptSecret(result.serviceRoleKey),
+          db_pass: encryptSecret(result.dbPass),
           status: "ready" as const,
           status_detail: "Backend is ready",
           migration_version: "bootstrap_v1",
@@ -247,8 +248,8 @@ export const retryBackendProvisioning = createServerFn({ method: "POST" })
           supabase_project_ref: result.projectRef,
           supabase_url: result.projectUrl,
           anon_key: result.anonKey,
-          service_role_key: result.serviceRoleKey,
-          db_pass: result.dbPass,
+          service_role_key: encryptSecret(result.serviceRoleKey),
+          db_pass: encryptSecret(result.dbPass),
           status: "ready" as const,
           status_detail: "Backend is ready",
           migration_version: "bootstrap_v1",

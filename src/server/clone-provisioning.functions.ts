@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAdmin } from "@/integrations/supabase/role-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { getAppOctokit } from "./github-app.server";
 import { generateApiKey } from "./clone-api-keys.server";
@@ -29,7 +29,7 @@ export type ProvisionCloneResult =
   | { ok: false; error: string };
 
 export const provisionClone = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .inputValidator((input: ProvisionCloneInput) => {
     if (!input?.name?.trim()) throw new Error("name is required");
     if (!input?.slug?.trim()) throw new Error("slug is required");

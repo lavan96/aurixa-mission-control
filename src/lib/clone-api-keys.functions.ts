@@ -1,13 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAdmin } from "@/integrations/supabase/role-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { generateApiKey } from "@/server/clone-api-keys.server";
 import { fireTokenWebhook } from "@/server/token-webhooks.server";
 import { cascadeApiKeyToRepo } from "@/server/clone-credentials.server";
 
 export const listCloneApiKeys = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .inputValidator((input) => z.object({ cloneId: z.string().uuid().optional() }).parse(input ?? {}))
   .handler(async ({ data, context }) => {
     let q = context.supabase
@@ -23,7 +23,7 @@ export const listCloneApiKeys = createServerFn({ method: "GET" })
   });
 
 export const createCloneApiKey = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .inputValidator((input) =>
     z
       .object({
@@ -48,7 +48,7 @@ export const createCloneApiKey = createServerFn({ method: "POST" })
   });
 
 export const revokeCloneApiKey = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data }) => {
     const { data: key } = await supabaseAdmin
@@ -72,7 +72,7 @@ export const revokeCloneApiKey = createServerFn({ method: "POST" })
   });
 
 export const rotateCloneApiKey = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .inputValidator((input) =>
     z
       .object({
