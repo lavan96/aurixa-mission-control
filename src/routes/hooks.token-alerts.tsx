@@ -5,12 +5,13 @@ import { verifyCronAuth } from "@/server/cron-auth.server";
 
 // Cron-invoked. Scans tenants for allowance thresholds and cancel-rate spikes,
 // fans notifications, fires webhooks, and retries failed webhook deliveries.
+// Auth: requires Bearer DRIFT_REFRESH_TOKEN.
 export const Route = createFileRoute("/hooks/token-alerts")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const unauthorized = verifyCronAuth(request);
-        if (unauthorized) return unauthorized;
+        const auth = verifyCronAuth(request);
+        if (!auth.ok) return auth.response;
 
         const out = {
           tenants_checked: 0,

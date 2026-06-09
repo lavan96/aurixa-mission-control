@@ -13,7 +13,7 @@ import { registerServiceWorker } from "@/lib/push-subscription";
 
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-dvh items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="font-mono text-7xl font-bold text-primary text-glow">404</h1>
         <h2 className="mt-4 text-xl font-semibold text-foreground">Signal lost</h2>

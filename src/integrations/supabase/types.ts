@@ -1082,39 +1082,54 @@ export type Database = {
       }
       clone_seat_entitlements: {
         Row: {
+          canceled_at: string | null
           clone_id: string | null
           created_at: string
+          current_period_end: string | null
           expires_at: string | null
           granted_at: string
           id: string
           notes: string | null
+          past_due_at: string | null
           seat_plan_id: string
           seats_used: number
           status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           updated_at: string
         }
         Insert: {
+          canceled_at?: string | null
           clone_id?: string | null
           created_at?: string
+          current_period_end?: string | null
           expires_at?: string | null
           granted_at?: string
           id?: string
           notes?: string | null
+          past_due_at?: string | null
           seat_plan_id: string
           seats_used?: number
           status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           updated_at?: string
         }
         Update: {
+          canceled_at?: string | null
           clone_id?: string | null
           created_at?: string
+          current_period_end?: string | null
           expires_at?: string | null
           granted_at?: string
           id?: string
           notes?: string | null
+          past_due_at?: string | null
           seat_plan_id?: string
           seats_used?: number
           status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -2413,10 +2428,14 @@ export type Database = {
           amount_cents: number | null
           created_at: string
           currency: string | null
+          fulfilled_at: string | null
           id: string
           metadata: Json
+          refund_amount_cents: number | null
+          refunded_at: string | null
           setup_package_id: string | null
           status: string
+          stripe_charge_id: string | null
           stripe_checkout_session_id: string | null
           stripe_payment_intent_id: string | null
           tenant_id: string | null
@@ -2426,10 +2445,14 @@ export type Database = {
           amount_cents?: number | null
           created_at?: string
           currency?: string | null
+          fulfilled_at?: string | null
           id?: string
           metadata?: Json
+          refund_amount_cents?: number | null
+          refunded_at?: string | null
           setup_package_id?: string | null
           status?: string
+          stripe_charge_id?: string | null
           stripe_checkout_session_id?: string | null
           stripe_payment_intent_id?: string | null
           tenant_id?: string | null
@@ -2439,10 +2462,14 @@ export type Database = {
           amount_cents?: number | null
           created_at?: string
           currency?: string | null
+          fulfilled_at?: string | null
           id?: string
           metadata?: Json
+          refund_amount_cents?: number | null
+          refunded_at?: string | null
           setup_package_id?: string | null
           status?: string
+          stripe_charge_id?: string | null
           stripe_checkout_session_id?: string | null
           stripe_payment_intent_id?: string | null
           tenant_id?: string | null
@@ -2949,6 +2976,15 @@ export type Database = {
         Args: { _actual_tokens: number; _job_id: string; _result_meta?: Json }
         Returns: Json
       }
+      entitlement_for_subscription: {
+        Args: { _sub_id: string }
+        Returns: {
+          clone_id: string
+          id: string
+          seat_plan_id: string
+          status: string
+        }[]
+      }
       expire_stale_reservations: { Args: never; Returns: Json }
       expire_stale_seat_reservations: { Args: never; Returns: Json }
       grant_tokens: {
@@ -2971,6 +3007,13 @@ export type Database = {
       highest_role_level: { Args: { _user_id: string }; Returns: number }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_operator: { Args: { _user_id: string }; Returns: boolean }
+      purge_log_tables: {
+        Args: never
+        Returns: {
+          deleted_rows: number
+          table_name: string
+        }[]
+      }
       recompute_seat_device_count: {
         Args: { _seat_id: string }
         Returns: number

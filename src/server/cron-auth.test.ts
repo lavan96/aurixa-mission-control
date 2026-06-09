@@ -24,40 +24,43 @@ describe("verifyCronAuth", () => {
     process.env.DRIFT_REFRESH_TOKEN = saved.DRIFT_REFRESH_TOKEN;
   });
 
-  it("fails closed with 500 when no secret is configured", async () => {
+  it("fails closed with 500 when no secret is configured", () => {
     const res = verifyCronAuth(req({ authorization: "Bearer anything" }));
-    expect(res).not.toBeNull();
-    expect(res!.status).toBe(500);
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.response.status).toBe(500);
   });
 
   it("rejects a request with no Authorization header", () => {
     process.env.CRON_SECRET = "s3cret";
     const res = verifyCronAuth(req());
-    expect(res!.status).toBe(401);
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.response.status).toBe(401);
   });
 
   it("rejects a wrong token", () => {
     process.env.CRON_SECRET = "s3cret";
-    expect(verifyCronAuth(req({ authorization: "Bearer nope" }))!.status).toBe(401);
+    const res = verifyCronAuth(req({ authorization: "Bearer nope" }));
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.response.status).toBe(401);
   });
 
   it("rejects the public anon key shape (different value)", () => {
     process.env.CRON_SECRET = "s3cret";
-    expect(verifyCronAuth(req({ authorization: "Bearer eyJhbGci.public.key" }))!.status).toBe(401);
+    expect(verifyCronAuth(req({ authorization: "Bearer eyJhbGci.public.key" })).ok).toBe(false);
   });
 
   it("accepts the correct CRON_SECRET as a Bearer token", () => {
     process.env.CRON_SECRET = "s3cret";
-    expect(verifyCronAuth(req({ authorization: "Bearer s3cret" }))).toBeNull();
+    expect(verifyCronAuth(req({ authorization: "Bearer s3cret" })).ok).toBe(true);
   });
 
-  it("accepts the deprecated DRIFT_REFRESH_TOKEN fallback", () => {
+  it("accepts the DRIFT_REFRESH_TOKEN secret as a Bearer token", () => {
     process.env.DRIFT_REFRESH_TOKEN = "drift-token";
-    expect(verifyCronAuth(req({ authorization: "Bearer drift-token" }))).toBeNull();
+    expect(verifyCronAuth(req({ authorization: "Bearer drift-token" })).ok).toBe(true);
   });
 
   it("does not accept a token missing the Bearer prefix", () => {
     process.env.CRON_SECRET = "s3cret";
-    expect(verifyCronAuth(req({ authorization: "s3cret" }))!.status).toBe(401);
+    expect(verifyCronAuth(req({ authorization: "s3cret" })).ok).toBe(false);
   });
 });

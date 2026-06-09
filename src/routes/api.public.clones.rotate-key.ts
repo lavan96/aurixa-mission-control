@@ -138,7 +138,8 @@ export const Route = createFileRoute("/api/public/clones/rotate-key")({
             old_key_id: current.id,
             new_key_id: newId,
             new_key_prefix: prefix,
-            new_key_secret: raw,
+            // SECURITY: the raw key is intentionally NOT stored here.
+            // It is returned exactly once in the HTTP response (see below).
             revoke_at: revokeAt,
             grace_hours: parsed.data.grace_hours,
             repo_cascade: cascadeResult,

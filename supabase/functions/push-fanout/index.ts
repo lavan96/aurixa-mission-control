@@ -20,13 +20,10 @@ async function sendWebPush(
   vapidPublicKey: string,
   vapidPrivateKey: string,
   vapidSubject: string,
-): Promise<boolean> {
+): Promise<{ ok: boolean; gone: boolean }> {
   try {
-    // Build JWT for VAPID
     const audience = new URL(subscription.endpoint).origin;
     const jwt = await createVapidJwt(audience, vapidSubject, vapidPrivateKey, vapidPublicKey);
-
-    // Encrypt payload using Web Push encryption
     const encrypted = await encryptPayload(subscription.p256dh, subscription.auth, payload);
 
     const res = await fetch(subscription.endpoint, {
@@ -41,19 +38,19 @@ async function sendWebPush(
       body: encrypted,
     });
 
+    // 410 Gone / 404 Not Found = permanently dead → delete subscription.
+    // Other failures (429, 5xx, network) are transient → keep subscription.
     if (res.status === 410 || res.status === 404) {
-      // Subscription expired — caller should clean up
-      return false;
+      return { ok: false, gone: true };
     }
-
     if (!res.ok) {
-      console.error(`Push failed: ${res.status} ${await res.text()}`);
+      console.error(`Push failed (transient): ${res.status} ${await res.text()}`);
+      return { ok: false, gone: false };
     }
-
-    return res.ok;
+    return { ok: true, gone: false };
   } catch (err) {
     console.error("sendWebPush error:", err);
-    return false;
+    return { ok: false, gone: false };
   }
 }
 
@@ -422,10 +419,10 @@ Deno.serve(async (req) => {
 
     let sent = 0;
     let expired = 0;
+    let failed = 0;
 
     const results = await Promise.allSettled(
       subscriptions.map(async (sub) => {
-        // Check user preferences
         const userPref = prefsMap.get(sub.user_id);
         if (userPref) {
           if (userPref.mute_browser_push) return;
@@ -433,7 +430,7 @@ Deno.serve(async (req) => {
           if (userPref.muted_severities?.includes(notification.severity)) return;
         }
 
-        const ok = await sendWebPush(
+        const result = await sendWebPush(
           { endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth },
           pushPayload,
           vapidPublicKey,
@@ -441,24 +438,27 @@ Deno.serve(async (req) => {
           vapidSubject,
         );
 
-        if (ok) {
+        if (result.ok) {
           sent++;
-          // Update last_used_at
           await supabase
             .from("push_subscriptions")
             .update({ last_used_at: new Date().toISOString() })
             .eq("id", sub.id);
-        } else {
+        } else if (result.gone) {
+          // Only delete on permanent 410/404 — transient failures keep the row.
           expired++;
-          // Remove expired subscription
           await supabase.from("push_subscriptions").delete().eq("id", sub.id);
+        } else {
+          failed++;
         }
       }),
     );
 
-    console.log(`Push fan-out: ${sent} sent, ${expired} expired, ${results.length} total`);
+    console.log(
+      `Push fan-out: ${sent} sent, ${expired} expired (410), ${failed} transient-failed, ${results.length} total`,
+    );
 
-    return new Response(JSON.stringify({ sent, expired }), {
+    return new Response(JSON.stringify({ sent, expired, failed }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {

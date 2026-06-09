@@ -9,8 +9,8 @@ export const Route = createFileRoute("/hooks/drift-refresh")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const unauthorized = verifyCronAuth(request);
-        if (unauthorized) return unauthorized;
+        const auth = verifyCronAuth(request);
+        if (!auth.ok) return auth.response;
 
         try {
           const result = await runDriftRefresh(supabaseAdmin);

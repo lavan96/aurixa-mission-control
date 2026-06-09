@@ -201,7 +201,7 @@ function PricingPage() {
   const reports = data?.reports ?? [];
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
+    <div className="relative min-h-dvh overflow-hidden bg-background text-foreground">
       <BackgroundFX />
 
       {/* Top nav */}

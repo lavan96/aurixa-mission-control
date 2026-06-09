@@ -1,10 +1,12 @@
 // Shared authentication for cron / scheduled-hook endpoints (src/routes/hooks.*).
 //
-// Previously each hook compared the Bearer token against the Supabase
-// *publishable* key — which is PUBLIC (it ships in the client bundle), so those
-// privileged endpoints were effectively unauthenticated. This helper requires a
-// dedicated, non-public shared secret (CRON_SECRET) and compares it in constant
-// time. It fails closed: if CRON_SECRET is unset, every request is rejected.
+// The hooks previously accepted the Supabase *publishable* key, which is PUBLIC
+// (it ships in the client bundle), so those privileged endpoints were
+// effectively unauthenticated. This requires a dedicated, non-public shared
+// secret and compares it in constant time, failing closed if none is set.
+//
+// Accepts CRON_SECRET (preferred) or DRIFT_REFRESH_TOKEN (the value pg_cron
+// injects from Supabase Vault), so either rollout configuration works.
 import crypto from "crypto";
 
 function jsonResponse(body: unknown, status: number): Response {
@@ -14,9 +16,8 @@ function jsonResponse(body: unknown, status: number): Response {
   });
 }
 
-// Constant-time string comparison. A length mismatch returns false up front
-// (timingSafeEqual requires equal-length buffers); the secret's length is not
-// itself sensitive.
+// Constant-time string comparison; a length mismatch returns false up front
+// (timingSafeEqual requires equal-length buffers).
 function timingSafeEqualStr(a: string, b: string): boolean {
   const ab = Buffer.from(a);
   const bb = Buffer.from(b);
@@ -24,29 +25,24 @@ function timingSafeEqualStr(a: string, b: string): boolean {
   return crypto.timingSafeEqual(ab, bb);
 }
 
+export type CronAuthResult = { ok: true } | { ok: false; response: Response };
+
 /**
  * Verify a scheduled-hook request carries the shared cron secret as a Bearer
- * token. Returns `null` when the request is authorized, or a `Response`
- * (401/500) that the handler should return immediately.
- *
- * Accepts `CRON_SECRET` (preferred). For backward compatibility during rollout
- * it also accepts `DRIFT_REFRESH_TOKEN` — a non-public secret already used by
- * the drift-refresh job — so existing schedulers keep working while the cron
- * jobs are migrated to CRON_SECRET. The public publishable/anon key is no
- * longer accepted by any hook.
+ * token. Returns `{ ok: true }` when authorized, otherwise `{ ok: false,
+ * response }` with the 401/500 the handler should return immediately.
  */
-export function verifyCronAuth(request: Request): Response | null {
+export function verifyCronAuth(request: Request): CronAuthResult {
   const secrets = [process.env.CRON_SECRET, process.env.DRIFT_REFRESH_TOKEN].filter(
     (s): s is string => typeof s === "string" && s.length > 0,
   );
   if (secrets.length === 0) {
-    return jsonResponse({ error: "cron_secret_not_configured" }, 500);
+    return { ok: false, response: jsonResponse({ error: "cron_secret_not_configured" }, 500) };
   }
-
   const header = request.headers.get("authorization") ?? "";
   const token = header.startsWith("Bearer ") ? header.slice("Bearer ".length) : "";
   if (!token || !secrets.some((secret) => timingSafeEqualStr(token, secret))) {
-    return jsonResponse({ error: "Unauthorized" }, 401);
+    return { ok: false, response: jsonResponse({ error: "Unauthorized" }, 401) };
   }
-  return null;
+  return { ok: true };
 }

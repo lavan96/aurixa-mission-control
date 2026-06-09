@@ -81,75 +81,87 @@ export async function runDriftRefresh(supabase: SupabaseLike): Promise<DriftRefr
   let updated = 0;
   const per_clone: DriftRefreshResult["per_clone"] = [];
 
-  await Promise.all(
-    clones.map(async (c) => {
-      try {
-        let baseSha = c.last_synced_sha;
-        if (!baseSha) {
-          const { data: br } = await octokit.repos.getBranch({
-            owner: c.github_owner,
-            repo: c.github_repo,
-            branch: c.default_branch || "main",
-          });
-          baseSha = br.commit.sha;
-        }
+  // Concurrency cap: at most 6 GitHub API calls in flight. Prevents
+  // exhausting the per-installation rate limit on large fleets and avoids
+  // saturating the Worker's outbound connection budget.
+  const CONCURRENCY = 6;
+  const queue = [...clones];
 
-        const { data: cmp } = await octokit.repos.compareCommitsWithBasehead({
-          owner: prime.github_owner,
-          repo: prime.github_repo,
-          basehead: `${baseSha}...${primeSha}`,
+  const processOne = async (c: (typeof clones)[number]) => {
+    try {
+      let baseSha = c.last_synced_sha;
+      if (!baseSha) {
+        const { data: br } = await octokit.repos.getBranch({
+          owner: c.github_owner,
+          repo: c.github_repo,
+          branch: c.default_branch || "main",
         });
-        const behind = cmp.ahead_by ?? 0;
+        baseSha = br.commit.sha;
+      }
 
-        let status: SyncStatus;
-        if (c.sync_status === "failed") status = "failed";
-        else if (c.sync_status === "cascading") status = "cascading";
-        else if (behind === 0) status = "in_sync";
-        else status = "behind";
+      const { data: cmp } = await octokit.repos.compareCommitsWithBasehead({
+        owner: prime.github_owner,
+        repo: prime.github_repo,
+        basehead: `${baseSha}...${primeSha}`,
+      });
+      const behind = cmp.ahead_by ?? 0;
 
-        if (behind !== c.commits_behind || status !== c.sync_status || !c.last_drift_check_at) {
-          await supabase
-            .from("clones")
-            .update({
-              commits_behind: behind,
-              sync_status: status,
-              last_drift_check_at: new Date().toISOString(),
-            })
-            .eq("id", c.id);
-          updated++;
-        } else {
-          await supabase
-            .from("clones")
-            .update({ last_drift_check_at: new Date().toISOString() })
-            .eq("id", c.id);
-        }
+      let status: SyncStatus;
+      if (c.sync_status === "failed") status = "failed";
+      else if (c.sync_status === "cascading") status = "cascading";
+      else if (behind === 0) status = "in_sync";
+      else status = "behind";
 
-        per_clone.push({
-          id: c.id,
-          name: c.name,
-          commits_behind: behind,
-          sync_status: status,
-        });
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : "Unreachable";
+      if (behind !== c.commits_behind || status !== c.sync_status || !c.last_drift_check_at) {
         await supabase
           .from("clones")
           .update({
-            sync_status: "failed",
+            commits_behind: behind,
+            sync_status: status,
             last_drift_check_at: new Date().toISOString(),
           })
           .eq("id", c.id);
-        per_clone.push({
-          id: c.id,
-          name: c.name,
-          commits_behind: c.commits_behind,
-          sync_status: "failed",
-          error: msg,
-        });
         updated++;
+      } else {
+        await supabase
+          .from("clones")
+          .update({ last_drift_check_at: new Date().toISOString() })
+          .eq("id", c.id);
       }
-    }),
-  );
+
+      per_clone.push({
+        id: c.id,
+        name: c.name,
+        commits_behind: behind,
+        sync_status: status,
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Unreachable";
+      await supabase
+        .from("clones")
+        .update({
+          sync_status: "failed",
+          last_drift_check_at: new Date().toISOString(),
+        })
+        .eq("id", c.id);
+      per_clone.push({
+        id: c.id,
+        name: c.name,
+        commits_behind: c.commits_behind,
+        sync_status: "failed",
+        error: msg,
+      });
+      updated++;
+    }
+  };
+
+  const workers = Array.from({ length: Math.min(CONCURRENCY, queue.length) }, async () => {
+    while (queue.length > 0) {
+      const c = queue.shift();
+      if (c) await processOne(c);
+    }
+  });
+  await Promise.all(workers);
 
   return {
     ok: true,

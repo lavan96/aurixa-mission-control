@@ -1,13 +1,31 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
+import { lazy, Suspense } from "react";
 import { ProtectedRoute } from "@/components/protected-route";
 import { RouteError } from "@/components/route-error";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BarChart3, Activity, Sparkles, Bell, Bot } from "lucide-react";
 import { getFleetMetrics } from "@/server/metrics.functions";
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
+
+const CascadesByDayChart = lazy(() =>
+  import("@/components/charts/metrics-charts").then((m) => ({ default: m.CascadesByDayChart })),
+);
+const DriftByDayChart = lazy(() =>
+  import("@/components/charts/metrics-charts").then((m) => ({ default: m.DriftByDayChart })),
+);
+const AiByDayChart = lazy(() =>
+  import("@/components/charts/metrics-charts").then((m) => ({ default: m.AiByDayChart })),
+);
+
+function ChartFallback() {
+  return (
+    <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+      Loading chart…
+    </div>
+  );
+}
 
 export const Route = createFileRoute("/metrics")({
   errorComponent: RouteError,
@@ -68,24 +86,9 @@ function MetricsPage() {
           <CardDescription>Activity over the last 30 days</CardDescription>
         </CardHeader>
         <CardContent className="h-64">
-          {q.data?.cascades_by_day?.length ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={q.data.cascades_by_day}>
-                <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip />
-                <Line
-                  type="monotone"
-                  dataKey="count"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth={2}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <Empty />
-          )}
+          <Suspense fallback={<ChartFallback />}>
+            <CascadesByDayChart data={q.data?.cascades_by_day} />
+          </Suspense>
         </CardContent>
       </Card>
 
@@ -98,24 +101,9 @@ function MetricsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="h-48">
-            {q.data?.drift_by_day?.length ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={q.data.drift_by_day}>
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 10 }} />
-                  <Tooltip />
-                  <Line
-                    type="monotone"
-                    dataKey="count"
-                    stroke="hsl(var(--warning))"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <Empty />
-            )}
+            <Suspense fallback={<ChartFallback />}>
+              <DriftByDayChart data={q.data?.drift_by_day} />
+            </Suspense>
           </CardContent>
         </Card>
         <Card>
@@ -126,24 +114,9 @@ function MetricsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="h-48">
-            {q.data?.ai_by_day?.length ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={q.data.ai_by_day}>
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 10 }} />
-                  <Tooltip />
-                  <Line
-                    type="monotone"
-                    dataKey="count"
-                    stroke="hsl(var(--accent))"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <Empty />
-            )}
+            <Suspense fallback={<ChartFallback />}>
+              <AiByDayChart data={q.data?.ai_by_day} />
+            </Suspense>
           </CardContent>
         </Card>
       </div>
@@ -179,14 +152,6 @@ function MetricsPage() {
           )}
         </CardContent>
       </Card>
-    </div>
-  );
-}
-
-function Empty() {
-  return (
-    <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-      No data yet
     </div>
   );
 }
