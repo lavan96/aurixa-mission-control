@@ -2944,6 +2944,34 @@ export type Database = {
           supabase_url: string | null
           updated_at: string | null
         }
+        Insert: {
+          admin_email?: string | null
+          clone_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string | null
+          migration_version?: string | null
+          region?: string | null
+          status?: Database["public"]["Enums"]["clone_backend_status"] | null
+          status_detail?: string | null
+          supabase_project_ref?: string | null
+          supabase_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          admin_email?: string | null
+          clone_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string | null
+          migration_version?: string | null
+          region?: string | null
+          status?: Database["public"]["Enums"]["clone_backend_status"] | null
+          status_detail?: string | null
+          supabase_project_ref?: string | null
+          supabase_url?: string | null
+          updated_at?: string | null
+        }
         Relationships: []
       }
     }
@@ -3147,9 +3175,6 @@ export type Database = {
         | "seat_limit_approaching"
         | "seat_limit_reached"
         | "seat_plan_changed"
-        | "device_limit_reached"
-        | "device_registered"
-        | "device_released"
       notification_severity: "info" | "success" | "warning" | "error"
       overage_policy: "block" | "topup_only" | "pay_as_you_go"
       provisioning_method: "fork" | "template" | "clone"
@@ -3355,9 +3380,6 @@ export const Constants = {
         "seat_limit_approaching",
         "seat_limit_reached",
         "seat_plan_changed",
-        "device_limit_reached",
-        "device_registered",
-        "device_released",
       ],
       notification_severity: ["info", "success", "warning", "error"],
       overage_policy: ["block", "topup_only", "pay_as_you_go"],
