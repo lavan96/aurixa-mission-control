@@ -2929,7 +2929,51 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      clone_backends_safe: {
+        Row: {
+          admin_email: string | null
+          clone_id: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string | null
+          migration_version: string | null
+          region: string | null
+          status: Database["public"]["Enums"]["clone_backend_status"] | null
+          status_detail: string | null
+          supabase_project_ref: string | null
+          supabase_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          admin_email?: string | null
+          clone_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string | null
+          migration_version?: string | null
+          region?: string | null
+          status?: Database["public"]["Enums"]["clone_backend_status"] | null
+          status_detail?: string | null
+          supabase_project_ref?: string | null
+          supabase_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          admin_email?: string | null
+          clone_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string | null
+          migration_version?: string | null
+          region?: string | null
+          status?: Database["public"]["Enums"]["clone_backend_status"] | null
+          status_detail?: string | null
+          supabase_project_ref?: string | null
+          supabase_url?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       apply_topup: {
