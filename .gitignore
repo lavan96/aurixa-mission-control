@@ -16,10 +16,6 @@ dist-ssr
 .nitro
 *.local
 
-# Environment variables (never commit real secrets; use .env.example as the template)
-.env
-.env.*
-!.env.example
 
 # Wrangler / Cloudflare
 .wrangler/
