@@ -3175,6 +3175,9 @@ export type Database = {
         | "seat_limit_approaching"
         | "seat_limit_reached"
         | "seat_plan_changed"
+        | "device_limit_reached"
+        | "device_registered"
+        | "device_released"
       notification_severity: "info" | "success" | "warning" | "error"
       overage_policy: "block" | "topup_only" | "pay_as_you_go"
       provisioning_method: "fork" | "template" | "clone"
@@ -3380,6 +3383,9 @@ export const Constants = {
         "seat_limit_approaching",
         "seat_limit_reached",
         "seat_plan_changed",
+        "device_limit_reached",
+        "device_registered",
+        "device_released",
       ],
       notification_severity: ["info", "success", "warning", "error"],
       overage_policy: ["block", "topup_only", "pay_as_you_go"],
