@@ -164,7 +164,7 @@ export const provisionClone = createServerFn({ method: "POST" })
               .from("cascade_events")
               .insert({
                 trigger: "manual",
-                mode: "direct",
+                mode: "auto_merge",
                 status: "pending",
                 requires_approval: false,
                 scope_filter: {
