@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { useServerFn } from "@tanstack/react-start";
 import { provisionClone } from "@/server/clone-provisioning.functions";
 import { provisionBackend } from "@/server/backend-provisioning.functions";
+import { enqueueEdgeJob } from "@/server/edge-provisioning.functions";
 
 export const Route = createFileRoute("/clones/new")({
   component: () => (
@@ -75,6 +76,9 @@ function NewClone() {
   const [ownerMode, setOwnerMode] = useState<"org" | "transfer">("org");
   const [transferTarget, setTransferTarget] = useState("");
   const [cloudflare, setCloudflare] = useState(false);
+  const [edgeProvider, setEdgeProvider] = useState<"cloudflare" | "aws" | "azure">("cloudflare");
+  const [edgeHostname, setEdgeHostname] = useState("");
+  const [edgePreset, setEdgePreset] = useState("balanced");
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
@@ -83,6 +87,7 @@ function NewClone() {
   const [adminPassword, setAdminPassword] = useState("");
   const [backendRegion, setBackendRegion] = useState("us-east-1");
   const provisionBackendFn = useServerFn(provisionBackend);
+  const enqueueEdge = useServerFn(enqueueEdgeJob);
 
   // Default the org field to the prime's default_clone_org once it loads
   useEffect(() => {
@@ -181,6 +186,32 @@ function NewClone() {
           .catch(() => {
             toast.error("Backend provisioning encountered an error");
           });
+      }
+
+      // Enqueue edge attach if user chose one.
+      if (cloudflare) {
+        try {
+          await enqueueEdge({
+            data: {
+              cloneId: result.cloneId,
+              providerSlug: edgeProvider,
+              action: "attach",
+              payload: {
+                hostname: edgeHostname.trim() || undefined,
+                posturePreset: edgePreset,
+              },
+            },
+          });
+          toast.info(
+            edgeProvider === "cloudflare"
+              ? "Edge attach queued — worker will run within a minute"
+              : `${edgeProvider.toUpperCase()} waitlisted — coming soon`,
+          );
+        } catch (e) {
+          toast.error(
+            `Edge enqueue failed: ${e instanceof Error ? e.message : "unknown"}`,
+          );
+        }
       }
 
       setBusy(false);
@@ -447,18 +478,59 @@ function NewClone() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <Shield className="h-4 w-4 text-info" /> 6 · Cloudflare wrapper (optional)
+            <Shield className="h-4 w-4 text-info" /> 6 · Edge security (optional)
           </CardTitle>
           <CardDescription>
-            Wrap the front-end with Cloudflare for WAF, rate limiting, and DDoS protection. You'll
-            be prompted for an API token on first use.
+            Wrap the front-end with an edge/CDN provider for WAF, bot mitigation, rate limiting,
+            and DDoS. Cloudflare is live today; AWS &amp; Azure are on the waitlist.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <label className="flex cursor-pointer items-center gap-3">
             <Checkbox checked={cloudflare} onCheckedChange={(v) => setCloudflare(!!v)} />
-            <span className="text-sm">Enable Cloudflare wrapper for this clone</span>
+            <span className="text-sm">Attach an edge provider to this clone</span>
           </label>
+          {cloudflare && (
+            <div className="grid gap-3 rounded-md border border-border p-4 md:grid-cols-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Provider</Label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={edgeProvider}
+                  onChange={(e) =>
+                    setEdgeProvider(e.target.value as "cloudflare" | "aws" | "azure")
+                  }
+                >
+                  <option value="cloudflare">Cloudflare</option>
+                  <option value="aws">AWS CloudFront (waitlist)</option>
+                  <option value="azure">Azure Front Door (waitlist)</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">
+                  Hostname {edgeProvider !== "cloudflare" && "(optional)"}
+                </Label>
+                <Input
+                  value={edgeHostname}
+                  onChange={(e) => setEdgeHostname(e.target.value)}
+                  placeholder="app.example.com"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Posture preset</Label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={edgePreset}
+                  onChange={(e) => setEdgePreset(e.target.value)}
+                >
+                  <option value="lenient">Lenient</option>
+                  <option value="balanced">Balanced</option>
+                  <option value="strict">Strict</option>
+                  <option value="under_attack">Under Attack</option>
+                </select>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

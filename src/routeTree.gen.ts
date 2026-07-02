@@ -50,6 +50,7 @@ import { Route as HooksEdgeDriftRouteImport } from './routes/hooks.edge-drift'
 import { Route as HooksEdgeDrainRouteImport } from './routes/hooks.edge-drain'
 import { Route as HooksDriftRefreshRouteImport } from './routes/hooks.drift-refresh'
 import { Route as HooksBrandDriftRouteImport } from './routes/hooks.brand-drift'
+import { Route as FleetEdgeRouteImport } from './routes/fleet.edge'
 import { Route as ClonesNewRouteImport } from './routes/clones.new'
 import { Route as ClonesCloneIdRouteImport } from './routes/clones.$cloneId'
 import { Route as CascadesEventIdRouteImport } from './routes/cascades.$eventId'
@@ -284,6 +285,11 @@ const HooksBrandDriftRoute = HooksBrandDriftRouteImport.update({
   path: '/hooks/brand-drift',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FleetEdgeRoute = FleetEdgeRouteImport.update({
+  id: '/fleet/edge',
+  path: '/fleet/edge',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ClonesNewRoute = ClonesNewRouteImport.update({
   id: '/clones/new',
   path: '/clones/new',
@@ -453,6 +459,7 @@ export interface FileRoutesByFullPath {
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
+  '/fleet/edge': typeof FleetEdgeRoute
   '/hooks/brand-drift': typeof HooksBrandDriftRoute
   '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
   '/hooks/edge-drain': typeof HooksEdgeDrainRoute
@@ -521,6 +528,7 @@ export interface FileRoutesByTo {
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
+  '/fleet/edge': typeof FleetEdgeRoute
   '/hooks/brand-drift': typeof HooksBrandDriftRoute
   '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
   '/hooks/edge-drain': typeof HooksEdgeDrainRoute
@@ -591,6 +599,7 @@ export interface FileRoutesById {
   '/cascades/$eventId': typeof CascadesEventIdRoute
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
+  '/fleet/edge': typeof FleetEdgeRoute
   '/hooks/brand-drift': typeof HooksBrandDriftRoute
   '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
   '/hooks/edge-drain': typeof HooksEdgeDrainRoute
@@ -662,6 +671,7 @@ export interface FileRouteTypes {
     | '/cascades/$eventId'
     | '/clones/$cloneId'
     | '/clones/new'
+    | '/fleet/edge'
     | '/hooks/brand-drift'
     | '/hooks/drift-refresh'
     | '/hooks/edge-drain'
@@ -730,6 +740,7 @@ export interface FileRouteTypes {
     | '/cascades/$eventId'
     | '/clones/$cloneId'
     | '/clones/new'
+    | '/fleet/edge'
     | '/hooks/brand-drift'
     | '/hooks/drift-refresh'
     | '/hooks/edge-drain'
@@ -799,6 +810,7 @@ export interface FileRouteTypes {
     | '/cascades/$eventId'
     | '/clones/$cloneId'
     | '/clones/new'
+    | '/fleet/edge'
     | '/hooks/brand-drift'
     | '/hooks/drift-refresh'
     | '/hooks/edge-drain'
@@ -868,6 +880,7 @@ export interface RootRouteChildren {
   BillingTopupRoute: typeof BillingTopupRoute
   ClonesCloneIdRoute: typeof ClonesCloneIdRoute
   ClonesNewRoute: typeof ClonesNewRoute
+  FleetEdgeRoute: typeof FleetEdgeRoute
   HooksBrandDriftRoute: typeof HooksBrandDriftRoute
   HooksDriftRefreshRoute: typeof HooksDriftRefreshRoute
   HooksEdgeDrainRoute: typeof HooksEdgeDrainRoute
@@ -1186,6 +1199,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HooksBrandDriftRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/fleet/edge': {
+      id: '/fleet/edge'
+      path: '/fleet/edge'
+      fullPath: '/fleet/edge'
+      preLoaderRoute: typeof FleetEdgeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/clones/new': {
       id: '/clones/new'
       path: '/clones/new'
@@ -1451,6 +1471,7 @@ const rootRouteChildren: RootRouteChildren = {
   BillingTopupRoute: BillingTopupRoute,
   ClonesCloneIdRoute: ClonesCloneIdRoute,
   ClonesNewRoute: ClonesNewRoute,
+  FleetEdgeRoute: FleetEdgeRoute,
   HooksBrandDriftRoute: HooksBrandDriftRoute,
   HooksDriftRefreshRoute: HooksDriftRefreshRoute,
   HooksEdgeDrainRoute: HooksEdgeDrainRoute,

@@ -12,7 +12,7 @@ import {
   ArrowLeft,
   Github,
   ExternalLink,
-  Shield,
+  
   Trash2,
   Waves,
   Plus,
@@ -36,6 +36,7 @@ import type { DriftSuggestion } from "@/server/drift-suggestions.functions";
 import { CloneEditDialog } from "@/components/clone-edit-dialog";
 import { CopyButton } from "@/components/copy-button";
 import { CloneSyncStatusCard } from "@/components/clone-sync-status-card";
+import { CloneEdgeCard } from "@/components/clone-edge-card";
 import { RouteError } from "@/components/route-error";
 
 export const Route = createFileRoute("/clones/$cloneId")({
@@ -377,35 +378,7 @@ function CloneDetail() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Shield className="h-4 w-4 text-info" /> Cloudflare
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {clone.cloudflare_enabled ? (
-            <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="outline">
-                WAF rules
-              </Button>
-              <Button size="sm" variant="outline">
-                Bot protection
-              </Button>
-              <Button size="sm" variant="outline">
-                Rate limiting
-              </Button>
-              <Button size="sm" variant="outline">
-                DDoS
-              </Button>
-            </div>
-          ) : (
-            <Button variant="outline">
-              <Shield className="mr-2 h-4 w-4" /> Add Cloudflare wrapper
-            </Button>
-          )}
-        </CardContent>
-      </Card>
+      <CloneEdgeCard cloneId={cloneId} />
 
       <CloneDriftSuggestionsCard
         cloneId={cloneId}
