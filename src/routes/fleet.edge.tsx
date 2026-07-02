@@ -378,10 +378,49 @@ function FleetEdge() {
             </Select>
           </div>
 
+          {isAdmin && selected.size > 0 && (
+            <div className="flex flex-wrap items-center gap-2 rounded-md border border-primary/40 bg-primary/5 px-3 py-2">
+              <Badge variant="outline" className="border-primary/40 text-primary">
+                {selected.size} selected
+              </Badge>
+              <Select value={bulkPreset} onValueChange={setBulkPreset}>
+                <SelectTrigger className="h-8 w-[180px] text-xs">
+                  <SelectValue placeholder="Apply preset…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {presets.map((p) => (
+                    <SelectItem key={p.slug} value={p.slug}>
+                      {p.display_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button size="sm" onClick={bulkApplyPreset} disabled={bulkBusy || !bulkPreset}>
+                Reapply posture
+              </Button>
+              <Button size="sm" variant="outline" onClick={bulkSync} disabled={bulkBusy}>
+                <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${bulkBusy ? "animate-spin" : ""}`} />
+                Sync selected
+              </Button>
+              <Button size="sm" variant="ghost" onClick={clearSelection} disabled={bulkBusy}>
+                Clear
+              </Button>
+            </div>
+          )}
+
           <div className="overflow-x-auto rounded-md border border-border">
             <table className="w-full text-sm">
               <thead className="bg-surface font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                 <tr>
+                  {isAdmin && (
+                    <th className="w-8 px-3 py-2 text-left">
+                      <Checkbox
+                        checked={allSelected ? true : someSelected ? "indeterminate" : false}
+                        onCheckedChange={toggleAll}
+                        aria-label="Select all"
+                      />
+                    </th>
+                  )}
                   <th className="px-3 py-2 text-left">Clone</th>
                   <th className="px-3 py-2 text-left">Provider</th>
                   <th className="px-3 py-2 text-left">Hostname</th>
