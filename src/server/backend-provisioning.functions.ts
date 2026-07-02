@@ -120,6 +120,34 @@ export const provisionBackend = createServerFn({ method: "POST" })
         })
         .eq("clone_id", data.cloneId);
 
+      // Step 6 — Apply per-module migrations for selected modules
+      const moduleIds = data.moduleIds ?? [];
+      const moduleApplyResults: Array<{ id: string; name: string; ok: boolean; error?: string }> =
+        [];
+      if (moduleIds.length > 0) {
+        const { runSqlOnProject } = await import("./backend-provisioning.server");
+        const { data: mods } = await supabase
+          .from("modules")
+          .select("id, name, clone_migration_sql, apply_on_install")
+          .in("id", moduleIds);
+        for (const m of mods ?? []) {
+          const sql = (m.clone_migration_sql ?? "").trim();
+          if (!sql || m.apply_on_install === false) continue;
+          try {
+            await runSqlOnProject(result.projectRef, sql);
+            moduleApplyResults.push({ id: m.id, name: m.name, ok: true });
+          } catch (e) {
+            moduleApplyResults.push({
+              id: m.id,
+              name: m.name,
+              ok: false,
+              error: e instanceof Error ? e.message : "sql failed",
+            });
+          }
+        }
+      }
+
+
       // Audit log
       await supabase.from("audit_log").insert({
         action: "clone_backend.provisioned",
