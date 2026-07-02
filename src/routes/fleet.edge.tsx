@@ -433,23 +433,36 @@ function FleetEdge() {
               <tbody>
                 {loading && (
                   <tr>
-                    <td colSpan={7} className="p-6 text-center text-muted-foreground">
+                    <td colSpan={isAdmin ? 8 : 7} className="p-6 text-center text-muted-foreground">
                       Loading…
                     </td>
                   </tr>
                 )}
                 {!loading && filtered.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="p-6 text-center text-muted-foreground">
+                    <td colSpan={isAdmin ? 8 : 7} className="p-6 text-center text-muted-foreground">
                       No matches
                     </td>
                   </tr>
                 )}
-                {filtered.map((r, i) => (
+                {filtered.map((r, i) => {
+                  const canSelect = !!r.provider_slug && r.status !== "waitlisted";
+                  return (
                   <tr
                     key={`${r.clone_id}-${r.provider_slug ?? "none"}-${i}`}
                     className="border-t border-border/50"
                   >
+                    {isAdmin && (
+                      <td className="px-3 py-2">
+                        {canSelect && (
+                          <Checkbox
+                            checked={selected.has(rowKey(r))}
+                            onCheckedChange={() => toggleRow(r)}
+                            aria-label={`Select ${r.clone_name}`}
+                          />
+                        )}
+                      </td>
+                    )}
                     <td className="px-3 py-2">
                       <Link
                         to="/clones/$cloneId"
