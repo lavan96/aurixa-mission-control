@@ -188,6 +188,32 @@ function NewClone() {
           });
       }
 
+      // Enqueue edge attach if user chose one.
+      if (cloudflare) {
+        try {
+          await enqueueEdge({
+            data: {
+              cloneId: result.cloneId,
+              providerSlug: edgeProvider,
+              action: "attach",
+              payload: {
+                hostname: edgeHostname.trim() || undefined,
+                posturePreset: edgePreset,
+              },
+            },
+          });
+          toast.info(
+            edgeProvider === "cloudflare"
+              ? "Edge attach queued — worker will run within a minute"
+              : `${edgeProvider.toUpperCase()} waitlisted — coming soon`,
+          );
+        } catch (e) {
+          toast.error(
+            `Edge enqueue failed: ${e instanceof Error ? e.message : "unknown"}`,
+          );
+        }
+      }
+
       setBusy(false);
       nav({ to: "/clones/$cloneId", params: { cloneId: result.cloneId } });
     } catch (e) {
