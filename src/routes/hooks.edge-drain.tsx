@@ -53,7 +53,6 @@ async function claimJobs(limit: number): Promise<JobRow[]> {
       status: "running",
       locked_at: nowIso,
       locked_by: "edge-drain",
-      attempts: (admin as any).sql?.("attempts + 1"),
     })
     .in("id", ids)
     .in("status", ["queued", "retry"])
