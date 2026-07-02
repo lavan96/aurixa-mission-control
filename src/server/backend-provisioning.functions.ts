@@ -148,6 +148,8 @@ export const provisionBackend = createServerFn({ method: "POST" })
       }
 
 
+      const failedModules = moduleApplyResults.filter((r) => !r.ok);
+
       // Audit log
       await supabase.from("audit_log").insert({
         action: "clone_backend.provisioned",
@@ -158,18 +160,22 @@ export const provisionBackend = createServerFn({ method: "POST" })
           project_ref: result.projectRef,
           region: data.region || "us-east-1",
           admin_email: data.adminEmail,
+          module_migrations: moduleApplyResults,
         },
       });
 
       // Notification
       await supabase.from("notifications").insert({
         kind: "clone_created" as const,
-        severity: "success" as const,
+        severity: failedModules.length > 0 ? ("warning" as const) : ("success" as const),
         title: `Backend provisioned: ${clone.name}`,
-        body: `Dedicated Supabase project created (${result.projectRef}) with admin ${data.adminEmail}`,
+        body:
+          failedModules.length > 0
+            ? `Dedicated backend ready (${result.projectRef}). ${failedModules.length} module migration(s) failed — review the clone page.`
+            : `Dedicated Supabase project created (${result.projectRef}) with admin ${data.adminEmail}`,
         clone_id: data.cloneId,
         url: `/clones/${data.cloneId}`,
-        metadata: { project_ref: result.projectRef },
+        metadata: { project_ref: result.projectRef, module_migrations: moduleApplyResults },
       });
 
       return { ok: true as const };
