@@ -5,7 +5,7 @@
  */
 export type CloneApiScope = {
   value: string;
-  group: "tokens" | "seats" | "devices" | "pricing" | "webhooks";
+  group: "tokens" | "seats" | "devices" | "pricing" | "webhooks" | "edge";
   label: string;
   description: string;
   default?: boolean;
@@ -52,6 +52,13 @@ export const CLONE_API_SCOPES: CloneApiScope[] = [
     group: "webhooks",
     label: "Webhooks — emit",
     description: "Allow this key to trigger outbound webhook deliveries on usage events.",
+    default: false,
+  },
+  {
+    value: "edge:read",
+    group: "edge",
+    label: "Edge — read status",
+    description: "Read-only access to this clone's edge/CDN provider status, posture, and last sync.",
     default: false,
   },
 ];
