@@ -17,6 +17,7 @@ export const provisionBackend = createServerFn({ method: "POST" })
       region?: string;
       adminEmail: string;
       adminPassword: string;
+      moduleIds?: string[];
     }) => {
       if (!input?.cloneId?.trim()) throw new Error("cloneId is required");
       if (!input?.cloneName?.trim()) throw new Error("cloneName is required");
