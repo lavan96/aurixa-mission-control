@@ -168,6 +168,7 @@ function NewClone() {
             region: backendRegion,
             adminEmail,
             adminPassword,
+            moduleIds: Array.from(picked),
           },
         })
           .then((backendResult) => {

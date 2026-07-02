@@ -17,6 +17,7 @@ export const provisionBackend = createServerFn({ method: "POST" })
       region?: string;
       adminEmail: string;
       adminPassword: string;
+      moduleIds?: string[];
     }) => {
       if (!input?.cloneId?.trim()) throw new Error("cloneId is required");
       if (!input?.cloneName?.trim()) throw new Error("cloneName is required");
@@ -119,6 +120,36 @@ export const provisionBackend = createServerFn({ method: "POST" })
         })
         .eq("clone_id", data.cloneId);
 
+      // Step 6 — Apply per-module migrations for selected modules
+      const moduleIds = data.moduleIds ?? [];
+      const moduleApplyResults: Array<{ id: string; name: string; ok: boolean; error?: string }> =
+        [];
+      if (moduleIds.length > 0) {
+        const { runSqlOnProject } = await import("./backend-provisioning.server");
+        const { data: mods } = await supabase
+          .from("modules")
+          .select("id, name, clone_migration_sql, apply_on_install")
+          .in("id", moduleIds);
+        for (const m of mods ?? []) {
+          const sql = (m.clone_migration_sql ?? "").trim();
+          if (!sql || m.apply_on_install === false) continue;
+          try {
+            await runSqlOnProject(result.projectRef, sql);
+            moduleApplyResults.push({ id: m.id, name: m.name, ok: true });
+          } catch (e) {
+            moduleApplyResults.push({
+              id: m.id,
+              name: m.name,
+              ok: false,
+              error: e instanceof Error ? e.message : "sql failed",
+            });
+          }
+        }
+      }
+
+
+      const failedModules = moduleApplyResults.filter((r) => !r.ok);
+
       // Audit log
       await supabase.from("audit_log").insert({
         action: "clone_backend.provisioned",
@@ -129,18 +160,22 @@ export const provisionBackend = createServerFn({ method: "POST" })
           project_ref: result.projectRef,
           region: data.region || "us-east-1",
           admin_email: data.adminEmail,
+          module_migrations: moduleApplyResults,
         },
       });
 
       // Notification
       await supabase.from("notifications").insert({
         kind: "clone_created" as const,
-        severity: "success" as const,
+        severity: failedModules.length > 0 ? ("warning" as const) : ("success" as const),
         title: `Backend provisioned: ${clone.name}`,
-        body: `Dedicated Supabase project created (${result.projectRef}) with admin ${data.adminEmail}`,
+        body:
+          failedModules.length > 0
+            ? `Dedicated backend ready (${result.projectRef}). ${failedModules.length} module migration(s) failed — review the clone page.`
+            : `Dedicated Supabase project created (${result.projectRef}) with admin ${data.adminEmail}`,
         clone_id: data.cloneId,
         url: `/clones/${data.cloneId}`,
-        metadata: { project_ref: result.projectRef },
+        metadata: { project_ref: result.projectRef, module_migrations: moduleApplyResults },
       });
 
       return { ok: true as const };
