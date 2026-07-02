@@ -12,7 +12,7 @@ import {
   ArrowLeft,
   Github,
   ExternalLink,
-  Shield,
+  
   Trash2,
   Waves,
   Plus,
