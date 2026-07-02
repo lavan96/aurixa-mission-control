@@ -36,6 +36,7 @@ import type { DriftSuggestion } from "@/server/drift-suggestions.functions";
 import { CloneEditDialog } from "@/components/clone-edit-dialog";
 import { CopyButton } from "@/components/copy-button";
 import { CloneSyncStatusCard } from "@/components/clone-sync-status-card";
+import { CloneEdgeCard } from "@/components/clone-edge-card";
 import { RouteError } from "@/components/route-error";
 
 export const Route = createFileRoute("/clones/$cloneId")({
