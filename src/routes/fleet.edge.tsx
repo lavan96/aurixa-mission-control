@@ -1,0 +1,451 @@
+// Fleet-wide edge security dashboard.
+// Admin-only view of every clone's edge configuration and quick actions.
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ProtectedRoute } from "@/components/protected-route";
+import { RouteError } from "@/components/route-error";
+import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { useServerFn } from "@tanstack/react-start";
+import { useEffect, useState, useMemo } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Shield, RefreshCw, ExternalLink } from "lucide-react";
+import { toast } from "sonner";
+import { useUserRoles } from "@/lib/use-user-roles";
+import {
+  enqueueEdgeJob,
+  applyEdgePreset,
+  listEdgePresets,
+  listEdgeProviders,
+} from "@/server/edge-provisioning.functions";
+import { formatDistanceToNow } from "@/lib/format";
+
+type FleetRow = {
+  clone_id: string;
+  clone_name: string;
+  provider_slug: string | null;
+  hostname: string | null;
+  status: string | null;
+  status_detail: string | null;
+  posture_preset: string | null;
+  last_synced_at: string | null;
+  pending_jobs: number;
+  failed_jobs: number;
+};
+
+const getFleetEdge = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const s = context.supabase as any;
+    const { data: clones } = await s
+      .from("clones")
+      .select("id, name")
+      .order("name");
+    const { data: configs } = await s
+      .from("clone_edge_config")
+      .select(
+        "clone_id, provider_slug, hostname, status, status_detail, posture_preset, last_synced_at",
+      );
+    const { data: pending } = await s
+      .from("edge_provisioning_jobs")
+      .select("clone_id, status")
+      .in("status", ["queued", "running"]);
+    const { data: failed } = await s
+      .from("edge_provisioning_jobs")
+      .select("clone_id, status")
+      .eq("status", "failed");
+
+    const rows: FleetRow[] = [];
+    const configsByClone = new Map<string, any[]>();
+    for (const c of configs ?? []) {
+      const arr = configsByClone.get(c.clone_id) ?? [];
+      arr.push(c);
+      configsByClone.set(c.clone_id, arr);
+    }
+    const pendingByClone = new Map<string, number>();
+    for (const p of pending ?? [])
+      pendingByClone.set(p.clone_id, (pendingByClone.get(p.clone_id) ?? 0) + 1);
+    const failedByClone = new Map<string, number>();
+    for (const f of failed ?? [])
+      failedByClone.set(f.clone_id, (failedByClone.get(f.clone_id) ?? 0) + 1);
+
+    for (const clone of clones ?? []) {
+      const cfgs = configsByClone.get(clone.id);
+      if (!cfgs || cfgs.length === 0) {
+        rows.push({
+          clone_id: clone.id,
+          clone_name: clone.name,
+          provider_slug: null,
+          hostname: null,
+          status: null,
+          status_detail: null,
+          posture_preset: null,
+          last_synced_at: null,
+          pending_jobs: pendingByClone.get(clone.id) ?? 0,
+          failed_jobs: failedByClone.get(clone.id) ?? 0,
+        });
+      } else {
+        for (const c of cfgs) {
+          rows.push({
+            clone_id: clone.id,
+            clone_name: clone.name,
+            provider_slug: c.provider_slug,
+            hostname: c.hostname,
+            status: c.status,
+            status_detail: c.status_detail,
+            posture_preset: c.posture_preset,
+            last_synced_at: c.last_synced_at,
+            pending_jobs: pendingByClone.get(clone.id) ?? 0,
+            failed_jobs: failedByClone.get(clone.id) ?? 0,
+          });
+        }
+      }
+    }
+    return { rows };
+  });
+
+export const Route = createFileRoute("/fleet.edge")({
+  errorComponent: RouteError,
+  component: () => (
+    <ProtectedRoute>
+      <FleetEdge />
+    </ProtectedRoute>
+  ),
+  head: () => ({
+    meta: [{ title: "Edge security fleet — Aurixa Systems Mission Control" }],
+  }),
+});
+
+function toneFor(status: string | null | undefined) {
+  if (status === "active") return "text-success border-success/40";
+  if (status === "error") return "text-destructive border-destructive/40";
+  if (status === "waitlisted") return "text-warning border-warning/40";
+  if (status === "attaching" || status === "syncing")
+    return "text-info border-info/40";
+  return "text-muted-foreground";
+}
+
+function FleetEdge() {
+  const { isAdmin } = useUserRoles();
+  const fetchFleet = useServerFn(getFleetEdge);
+  const enqueue = useServerFn(enqueueEdgeJob);
+  const applyPreset = useServerFn(applyEdgePreset);
+  const listPresets = useServerFn(listEdgePresets);
+  const listProviders = useServerFn(listEdgeProviders);
+
+  const [rows, setRows] = useState<FleetRow[]>([]);
+  const [presets, setPresets] = useState<any[]>([]);
+  const [providers, setProviders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [filter, setFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [f, p, pr] = await Promise.all([
+        fetchFleet(),
+        listPresets(),
+        listProviders(),
+      ]);
+      setRows(f.rows ?? []);
+      setPresets(p.presets ?? []);
+      setProviders(pr.providers ?? []);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const filtered = useMemo(() => {
+    return rows.filter((r) => {
+      if (statusFilter !== "all") {
+        if (statusFilter === "unattached" && r.status) return false;
+        if (statusFilter !== "unattached" && r.status !== statusFilter) return false;
+      }
+      if (filter && !r.clone_name.toLowerCase().includes(filter.toLowerCase())) return false;
+      return true;
+    });
+  }, [rows, filter, statusFilter]);
+
+  const stats = useMemo(() => {
+    const attached = rows.filter((r) => r.status === "active").length;
+    const errors = rows.filter((r) => r.status === "error").length;
+    const waitlisted = rows.filter((r) => r.status === "waitlisted").length;
+    const pending = rows.reduce((s, r) => s + r.pending_jobs, 0);
+    const uniqueClones = new Set(rows.map((r) => r.clone_id)).size;
+    return { attached, errors, waitlisted, pending, uniqueClones };
+  }, [rows]);
+
+  const sync = async (row: FleetRow) => {
+    if (!row.provider_slug) return;
+    setBusy(`sync:${row.clone_id}:${row.provider_slug}`);
+    try {
+      await enqueue({
+        data: {
+          cloneId: row.clone_id,
+          providerSlug: row.provider_slug as any,
+          action: "sync",
+          payload: {},
+        },
+      });
+      toast.success("Sync queued");
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const changePreset = async (row: FleetRow, presetSlug: string) => {
+    if (!row.provider_slug) return;
+    setBusy(`preset:${row.clone_id}:${row.provider_slug}`);
+    try {
+      await applyPreset({
+        data: {
+          cloneId: row.clone_id,
+          providerSlug: row.provider_slug as any,
+          presetSlug,
+        },
+      });
+      toast.success("Posture update queued");
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
+            fleet
+          </p>
+          <h1 className="mt-1 flex items-center gap-2 text-3xl font-semibold tracking-tight">
+            <Shield className="h-6 w-6 text-info" /> Edge security
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Fleet-wide view of edge/CDN providers attached to every clone.
+          </p>
+        </div>
+        <Button variant="outline" onClick={load} disabled={loading}>
+          <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
+      </header>
+
+      <div className="grid gap-3 md:grid-cols-5">
+        <StatTile label="Clones" value={stats.uniqueClones} />
+        <StatTile label="Active" value={stats.attached} tone="text-success" />
+        <StatTile label="Errors" value={stats.errors} tone="text-destructive" />
+        <StatTile label="Waitlisted" value={stats.waitlisted} tone="text-warning" />
+        <StatTile label="Pending jobs" value={stats.pending} tone="text-info" />
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Fleet coverage</CardTitle>
+          <CardDescription>
+            {providers.length} providers registered · {presets.length} posture presets
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            <Input
+              placeholder="Filter by clone name…"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="max-w-xs"
+            />
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="unattached">Unattached</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="error">Error</SelectItem>
+                <SelectItem value="waitlisted">Waitlisted</SelectItem>
+                <SelectItem value="attaching">Attaching</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="overflow-x-auto rounded-md border border-border">
+            <table className="w-full text-sm">
+              <thead className="bg-surface font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                <tr>
+                  <th className="px-3 py-2 text-left">Clone</th>
+                  <th className="px-3 py-2 text-left">Provider</th>
+                  <th className="px-3 py-2 text-left">Hostname</th>
+                  <th className="px-3 py-2 text-left">Status</th>
+                  <th className="px-3 py-2 text-left">Posture</th>
+                  <th className="px-3 py-2 text-left">Last sync</th>
+                  <th className="px-3 py-2 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading && (
+                  <tr>
+                    <td colSpan={7} className="p-6 text-center text-muted-foreground">
+                      Loading…
+                    </td>
+                  </tr>
+                )}
+                {!loading && filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="p-6 text-center text-muted-foreground">
+                      No matches
+                    </td>
+                  </tr>
+                )}
+                {filtered.map((r, i) => (
+                  <tr
+                    key={`${r.clone_id}-${r.provider_slug ?? "none"}-${i}`}
+                    className="border-t border-border/50"
+                  >
+                    <td className="px-3 py-2">
+                      <Link
+                        to="/clones/$cloneId"
+                        params={{ cloneId: r.clone_id }}
+                        className="font-mono hover:text-primary"
+                      >
+                        {r.clone_name}
+                      </Link>
+                      {r.failed_jobs > 0 && (
+                        <Badge variant="outline" className="ml-2 text-[10px] text-destructive">
+                          {r.failed_jobs} failed
+                        </Badge>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 font-mono text-xs">
+                      {r.provider_slug ?? (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 font-mono text-xs">
+                      {r.hostname ?? <span className="text-muted-foreground">—</span>}
+                    </td>
+                    <td className="px-3 py-2">
+                      {r.status ? (
+                        <Badge
+                          variant="outline"
+                          className={`font-mono text-[10px] ${toneFor(r.status)}`}
+                        >
+                          {r.status}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">not attached</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      {r.provider_slug && isAdmin ? (
+                        <Select
+                          value={r.posture_preset ?? ""}
+                          onValueChange={(v) => changePreset(r, v)}
+                          disabled={busy !== null || r.status === "waitlisted"}
+                        >
+                          <SelectTrigger className="h-7 w-[140px] text-xs">
+                            <SelectValue placeholder="—" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {presets.map((p) => (
+                              <SelectItem key={p.slug} value={p.slug}>
+                                {p.display_name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <span className="font-mono text-xs">
+                          {r.posture_preset ?? "—"}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 font-mono text-[11px] text-muted-foreground">
+                      {r.last_synced_at ? formatDistanceToNow(r.last_synced_at) : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <div className="inline-flex items-center gap-1">
+                        {r.provider_slug && isAdmin && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={busy !== null || r.status === "waitlisted"}
+                            onClick={() => sync(r)}
+                            className="h-7 px-2"
+                          >
+                            <RefreshCw
+                              className={`h-3.5 w-3.5 ${
+                                busy === `sync:${r.clone_id}:${r.provider_slug}`
+                                  ? "animate-spin"
+                                  : ""
+                              }`}
+                            />
+                          </Button>
+                        )}
+                        <Link
+                          to="/clones/$cloneId"
+                          params={{ cloneId: r.clone_id }}
+                          className="inline-flex h-7 items-center rounded-md px-2 text-muted-foreground hover:text-foreground"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function StatTile({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone?: string;
+}) {
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+          {label}
+        </div>
+        <div className={`mt-1 text-2xl font-semibold ${tone ?? ""}`}>{value}</div>
+      </CardContent>
+    </Card>
+  );
+}
