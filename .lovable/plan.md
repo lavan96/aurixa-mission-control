@@ -1,79 +1,125 @@
-# Seat Entitlements Architecture
+# Per-Clone Edge Security Provisioning — Cloudflare (live) + AWS/Azure (mocked)
 
-## What I understood
+## Goals
 
-You want a **seat (user profile) entitlement system** per clone, mirroring the token-metering architecture we already built:
+- Optional, opt-in edge-security layer per clone. Never blocks clone creation.
+- Cloudflare first, real API. AWS & Azure surfaced in UI as "coming soon" tiles that persist intent but don't call any API yet.
+- Fleet-scale: idempotent, queued, auditable, rate-limit aware, safe to run against hundreds of zones without hitting Cloudflare's per-account limits.
+- Same operator UX pattern as Supabase backend provisioning: a card on the clone page, a wizard step in `clones.new`, a fleet-wide view.
 
-1. **Prime repo = baseline tier**: 4 seats included → becomes the "Starter" plan.
-2. **Tiered plans** (mock pricing for now): Starter (4), Growth, Pro, Enterprise — each with a seat cap.
-3. **Per-clone entitlement**: each clone is assigned a seat plan; Mission Control shows usage vs. cap.
-4. **Prime-repo integration**: the clone's frontend asks Mission Control "can this user be created?" via the same `x-clone-api-key` mechanism we use for tokens. Reserve → commit on signup; release on delete.
-5. **Future hook (not in this pass)**: device limit per seat. We'll leave the schema room for it.
+## Current state (already in repo)
 
-This is a direct seat-side parallel to `token_packs` + `/api/public/tokens/*`.
+We already have a partial Cloudflare surface: `cloudflare_clone_config`, `cloudflare_audit`, `cloudflare_accounts` tables; `src/server/cloudflare/client.ts` (typed CF v4 client with retry); `src/server/cloudflare.functions.ts` (attach/detach/seed/posture/analytics); `src/routes/cloudflare.tsx`; and `clones.cloudflare_enabled` / `cloudflare_zone_id` columns. This plan **builds on** that — it is not a greenfield rewrite. The gap is: no per-clone provisioner (only attach-existing-zone), no queue/worker, no security-posture presets applied end-to-end, no DNS/WAF/rate-limit templating, no fleet drift check, no multi-provider abstraction.
 
 ## Architecture
 
+### Provider abstraction
+
+New shared contract so Cloudflare, AWS, Azure all plug into the same orchestrator:
+
 ```text
-billing_plans (extend)              seat_plans (new)
-  + seat_tier ──────────────────►   id, slug, name,
-                                     seat_limit, device_limit,
-                                     price_cents, currency, is_active
-
-clone_seat_entitlements (new)
-  clone_id, seat_plan_id,
-  seats_used (cached), status,
-  granted_at, expires_at
-
-clone_seats (new)  ◄── source of truth for "who occupies a seat"
-  id, clone_id, external_user_id (from clone's auth),
-  email, display_name, status (active|invited|removed),
-  device_count (future), created_at, removed_at
-
-seat_audit (new)
-  clone_id, action (reserve|commit|release|cap_hit|plan_change),
-  external_user_id, actor, metadata
+EdgeProvider
+ ├── slug: 'cloudflare' | 'aws' | 'azure'
+ ├── status: 'live' | 'mocked'
+ ├── attachZone(clone, input)      → provider_resource_ref
+ ├── applyPosture(ref, preset)     → applied[]
+ ├── syncState(ref)                → drift[]
+ ├── detach(ref)                   → void
+ └── analytics(ref, window)        → { requests, threats, bandwidth }
 ```
 
-## Public API (mirrors token endpoints)
+Cloudflare implements all methods. AWS/Azure implementations return `{ status: 'mocked' }` and write to the same audit + config tables so the UI is uniform.
 
-All under `/api/public/seats/*`, auth via `x-clone-api-key` (existing `clones:rotate`-style scope → new `seats:manage`).
+### Data model (additive)
 
-- `POST /api/public/seats/reserve` — `{ external_user_id, email }` → returns `{ reservation_id, seats_remaining }` or 402 with `{ error: "seat_limit_reached", upgrade_url }`.
-- `POST /api/public/seats/commit` — finalize on successful signup.
-- `POST /api/public/seats/release` — on user delete/deactivate.
-- `GET  /api/public/seats/entitlement` — current plan, cap, used, remaining.
-- `GET  /api/public/seats/list` — paginated list of seats (for clone's admin UI).
+- `edge_providers` — catalog: slug, display_name, status, capabilities jsonb (`{ dns, waf, rate_limit, bot, analytics }`). Seeded with cloudflare/aws/azure.
+- `clone_edge_config` — supersedes `cloudflare_clone_config` as the multi-provider table (keep old table, add view for back-compat). Columns: clone_id, provider_slug, external_ref (zone_id / distribution_id / front_door_id), account_ref, posture_preset, security_level, bot_fight, rate_limit_rps, waf_preset, custom_rules jsonb, status, last_synced_at, drift jsonb.
+- `edge_provisioning_jobs` — queue: id, clone_id, provider_slug, action (`attach|apply_posture|sync|detach`), payload jsonb, status (`queued|running|succeeded|failed|retry`), attempts, next_attempt_at, error, created_by. Backing store for the fleet-scale worker.
+- `edge_posture_presets` — named bundles (`lenient|balanced|strict|under_attack`) with the exact settings a preset expands to. Editable from `/cloudflare` for admins so we don't hardcode.
+- Extend `cloudflare_audit` → `edge_audit` (new table, keep old view) with `provider_slug`.
 
-Idempotency key + signed webhooks (`seats.limit.approaching`, `seats.limit.reached`, `seats.plan.changed`) reusing the existing webhook delivery infrastructure.
+Migration keeps `cloudflare_clone_config` populated via trigger so nothing existing breaks during rollout.
 
-## Mission Control UI
+### Provisioning flow (Cloudflare, live)
 
-- **`/billing/seats`** (new): plan catalog cards (Starter 4 / Growth 10 / Pro 25 / Enterprise custom), search/filter like topup, mock prices.
-- **`/settings/billing` → Seat Entitlements panel**: per-clone table — plan, used/cap progress bar, change plan, view seats, audit trail.
-- **Clone detail page (`/clones/$cloneId`)**: "Seats" tab — list, manual add/remove, force-release, device count column (placeholder).
-- **Notifications**: new kinds `seat_limit_approaching` (≥80%), `seat_limit_reached`, `seat_plan_changed`.
+Wizard step on `clones.new` (optional checkbox "Attach edge security"):
 
-## Prime-repo agent prompt (parallel to the tokens one)
+1. Operator picks provider (cloudflare only enabled; aws/azure disabled with "Coming soon").
+2. Cloudflare path branches on mode:
+   - **BYO zone**: pick from `cfListZones()` — current attach flow.
+   - **New zone**: enter apex domain → we call `POST /zones` under the configured account, return NS records for the operator to set at their registrar, mark status `pending_ns`.
+3. Choose posture preset + optional custom rules (rate-limit RPS, bot fight, WAF preset).
+4. Submission enqueues an `edge_provisioning_jobs` row with action `attach` + `apply_posture`. Response returns immediately with `job_id`. Clone creation is **never blocked**.
+5. Background worker (see Queue below) executes, streams progress into `edge_audit`, updates `clone_edge_config.status` (`pending_ns → verifying → active → drifted → failed`).
 
-Once Mission Control side ships, I'll generate the matching drop-in prompt for the Prime repo's chat agent — credential loader already exists (`.aurixa/credentials.json`), so it's just a `seats.server.ts` client + hook into the signup/delete flows.
+### Queue & worker (fleet-scale)
 
-## Implementation phases
+- Insert into `edge_provisioning_jobs` triggers `pg_net` to POST `/api/public/hooks/edge-provision` with Bearer auth (same pattern as existing cron hooks in `src/server/cron-auth.server.ts`).
+- The route is a fan-out worker: pulls up to N queued jobs `FOR UPDATE SKIP LOCKED`, processes with a concurrency cap (default 6, per-account limited to avoid CF's 1200 req/5min token cap), writes results, requeues on transient errors with exponential backoff.
+- Also polled by a new cron `hooks.edge-drain.tsx` every minute so failed webhook deliveries don't strand jobs.
+- Reuses `withRetry` from `src/lib/with-retry.ts`, respects CF `429 Retry-After`.
 
-1. **DB migration**: `seat_plans`, `clone_seat_entitlements`, `clone_seats`, `seat_audit`, enum additions, RLS, RPC `reserve_seat`/`commit_seat`/`release_seat` (atomic counter updates, prevents race overshoot), seed 4 mock plans.
-2. **Server functions** (`src/lib/seats.functions.ts`): admin list/assign-plan/change-plan, dashboard summary.
-3. **Public routes** (`src/routes/api.public.seats.{reserve,commit,release,entitlement,list}.ts`): reuse `resolveCloneApiKey`, idempotency, signed responses.
-4. **Mission Control UI**: `/billing/seats` catalog + entitlement panels in `/settings/billing` and `/clones/$cloneId`.
-5. **Webhooks + notifications**: extend `fireTokenWebhook` infra → generic `fireSystemWebhook`, add `seat_*` notification kinds.
-6. **Prime-repo prompt**: drop-in spec for the clone-side integration.
+### Drift & health
 
-Phase 1+2+3 unlocks the API surface; 4 makes it operable; 5 makes it observable; 6 closes the loop with the clone.
+- New cron `hooks.edge-drift.tsx` (daily) walks every active `clone_edge_config`, calls `syncState`, compares live settings to intended posture, writes drift jsonb + emits a `notification` (`edge.drift_detected`) when a clone diverges — same pattern as `fleet-drift`.
+- Analytics 24h totals surfaced on the clone page card and aggregated on `/cloudflare` fleet view.
 
-## Open questions before I build
+### Auth, scopes, secrets
 
-1. **Seat counts per tier** — confirm: Starter 4 / Growth 10 / Pro 25 / Enterprise unlimited? Or different numbers?
-2. **Overage policy** — when a clone hits its cap: hard block (recommended, mirrors token `overage_policy='block'`), soft warn, or auto-upgrade?
-3. **Who counts as a seat** — every authenticated user in the clone's `auth.users`, or only users with a specific role (e.g. exclude end-customers from B2C clones)? My default: every auth user, clone decides what to report.
-4. **Device limit** — you said "later", confirmed I'll just reserve the schema column and skip enforcement for now.
+- `CLOUDFLARE_API_TOKEN` already stored. Add scope-check helper: token must have `Zone:Read`, `Zone Settings:Edit`, `DNS:Edit`, `Firewall Services:Edit`, `Analytics:Read`. `cfTokenStatus` extended to surface missing scopes so admins see a red banner on `/cloudflare` instead of failing at attach time.
+- API keys: new scope `edge:manage` in `src/lib/clone-api-scopes.ts` for external callers of `/api/public/edge/*` (read-only status endpoint in phase 3, no mutations from public keys).
+- All mutating server fns require admin (role_level ≥ 80) via `has_role`, matching `prime_config` pattern.
 
-Answer those four and I'll execute phases 1–6 in one push.
+### UI surfaces
+
+- `src/components/clone-edge-card.tsx` — twin of `clone-backend-card.tsx`. Status, posture chip, analytics sparkline, "Apply posture", "Sync now", "Detach", live job progress.
+- `clones.new.tsx` — new optional "Edge Security" section beneath the existing "Dedicated Backend" section. Provider tabs (CF live, AWS/Azure disabled).
+- `clones.$cloneId.tsx` — mount `<CloneEdgeCard />`.
+- `cloudflare.tsx` (existing) — expand into a **fleet dashboard**: provider tiles across the top (CF active, AWS/Azure "coming soon" with waitlist toggle), fleet table (clone, provider, posture, drift, 24h requests/threats), preset editor, token health.
+- `settings.index.tsx` — provider-level defaults (default account, default posture preset per new clone).
+
+### AWS / Azure mocks (phase 1)
+
+Purely front-end + persisted intent. No SDKs installed. Same `EdgeProvider` interface implemented as no-ops that:
+- Show provider on the wizard as "Coming soon" with a "Notify me" toggle → writes to `clone_edge_config` with `status='waitlisted'` and `provider_slug='aws'|'azure'`.
+- Render greyed cards with a lock icon on the clone page.
+- Appear in the fleet dashboard as counts so demand is visible before we build real integrations.
+
+## Phased execution
+
+### Phase 1 — Foundations (schema + provider abstraction)
+- Migration: `edge_providers`, `clone_edge_config`, `edge_provisioning_jobs`, `edge_posture_presets`, `edge_audit`, back-compat view over `cloudflare_clone_config`, seed CF/AWS/Azure rows and 4 presets. GRANTs + RLS (admin write, operator read).
+- `src/server/edge/providers.ts` (interface + registry), `src/server/edge/cloudflare-provider.ts` (wraps existing `cloudflareApi`), stubs for `aws-provider.ts` / `azure-provider.ts`.
+
+### Phase 2 — Provisioning pipeline
+- `src/server/edge-provisioning.functions.ts` (`enqueueJob`, `getJobStatus`, `getCloneEdgeStatus`, `applyPreset`, `detachEdge`) with admin gating.
+- `src/routes/api.public.hooks.edge-drain.tsx` (Bearer-auth worker) + `hooks.edge-drift.tsx` cron.
+- Cron rows via migration, reusing `DRIFT_REFRESH_TOKEN` pattern (new secret `EDGE_WORKER_TOKEN`).
+
+### Phase 3 — Operator UX
+- `CloneEdgeCard` component + wire into clone page.
+- `clones.new` optional wizard step (CF live; AWS/Azure mocked).
+- Fleet dashboard rewrite of `/cloudflare` with provider tiles + preset editor.
+- Notifications: `edge.provisioned`, `edge.drift_detected`, `edge.failed`.
+
+### Phase 4 — Hardening & external
+- Public read-only endpoint `/api/public/edge/status` (scope `edge:read`).
+- Bulk actions on `/fleet-manager`: "Attach edge to selected", "Reapply posture" — piped through the same queue.
+- Docs page at `docs/edge-security-integration.md`.
+- Backfill: one-shot migration copies existing `cloudflare_clone_config` rows into `clone_edge_config` with `provider_slug='cloudflare'`.
+
+## Technical notes
+
+- **Idempotency**: every job carries a stable `(clone_id, action, payload_hash)` unique key so retries and double-fires collapse.
+- **Rate limiting**: worker holds a Postgres advisory lock per Cloudflare account to serialize mutations within an account while parallelising across accounts.
+- **Rollback**: `detach` is always non-destructive to the zone itself (never deletes DNS records we didn't create); only removes our tracked overrides and unlinks the row.
+- **Testing**: unit tests for provider registry + preset expansion; integration test for the worker using a mocked CF client; existing `cloudflare/client.ts` retry logic reused unchanged.
+- **Back-compat**: `cloudflare_clone_config` remains readable for one release; UI reads exclusively from `clone_edge_config` after phase 3.
+
+## Out of scope (call out explicitly)
+
+- Registrar automation (we surface NS records; operator sets them).
+- Cloudflare Workers deployment per clone — separate track.
+- Real AWS CloudFront / Azure Front Door integration — deliberately mocked; requires its own plan once demand is proven via the waitlist.
+
+Ready to execute Phase 1 on approval.
