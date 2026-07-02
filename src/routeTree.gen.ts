@@ -46,6 +46,8 @@ import { Route as HooksRunSchedulesRouteImport } from './routes/hooks.run-schedu
 import { Route as HooksGithubRouteImport } from './routes/hooks.github'
 import { Route as HooksFleetDriftRouteImport } from './routes/hooks.fleet-drift'
 import { Route as HooksExpireReservationsRouteImport } from './routes/hooks.expire-reservations'
+import { Route as HooksEdgeDriftRouteImport } from './routes/hooks.edge-drift'
+import { Route as HooksEdgeDrainRouteImport } from './routes/hooks.edge-drain'
 import { Route as HooksDriftRefreshRouteImport } from './routes/hooks.drift-refresh'
 import { Route as HooksBrandDriftRouteImport } from './routes/hooks.brand-drift'
 import { Route as ClonesNewRouteImport } from './routes/clones.new'
@@ -262,6 +264,16 @@ const HooksExpireReservationsRoute = HooksExpireReservationsRouteImport.update({
   path: '/hooks/expire-reservations',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HooksEdgeDriftRoute = HooksEdgeDriftRouteImport.update({
+  id: '/hooks/edge-drift',
+  path: '/hooks/edge-drift',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HooksEdgeDrainRoute = HooksEdgeDrainRouteImport.update({
+  id: '/hooks/edge-drain',
+  path: '/hooks/edge-drain',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HooksDriftRefreshRoute = HooksDriftRefreshRouteImport.update({
   id: '/hooks/drift-refresh',
   path: '/hooks/drift-refresh',
@@ -443,6 +455,8 @@ export interface FileRoutesByFullPath {
   '/clones/new': typeof ClonesNewRoute
   '/hooks/brand-drift': typeof HooksBrandDriftRoute
   '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
+  '/hooks/edge-drain': typeof HooksEdgeDrainRoute
+  '/hooks/edge-drift': typeof HooksEdgeDriftRoute
   '/hooks/expire-reservations': typeof HooksExpireReservationsRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
   '/hooks/github': typeof HooksGithubRoute
@@ -509,6 +523,8 @@ export interface FileRoutesByTo {
   '/clones/new': typeof ClonesNewRoute
   '/hooks/brand-drift': typeof HooksBrandDriftRoute
   '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
+  '/hooks/edge-drain': typeof HooksEdgeDrainRoute
+  '/hooks/edge-drift': typeof HooksEdgeDriftRoute
   '/hooks/expire-reservations': typeof HooksExpireReservationsRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
   '/hooks/github': typeof HooksGithubRoute
@@ -577,6 +593,8 @@ export interface FileRoutesById {
   '/clones/new': typeof ClonesNewRoute
   '/hooks/brand-drift': typeof HooksBrandDriftRoute
   '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
+  '/hooks/edge-drain': typeof HooksEdgeDrainRoute
+  '/hooks/edge-drift': typeof HooksEdgeDriftRoute
   '/hooks/expire-reservations': typeof HooksExpireReservationsRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
   '/hooks/github': typeof HooksGithubRoute
@@ -646,6 +664,8 @@ export interface FileRouteTypes {
     | '/clones/new'
     | '/hooks/brand-drift'
     | '/hooks/drift-refresh'
+    | '/hooks/edge-drain'
+    | '/hooks/edge-drift'
     | '/hooks/expire-reservations'
     | '/hooks/fleet-drift'
     | '/hooks/github'
@@ -712,6 +732,8 @@ export interface FileRouteTypes {
     | '/clones/new'
     | '/hooks/brand-drift'
     | '/hooks/drift-refresh'
+    | '/hooks/edge-drain'
+    | '/hooks/edge-drift'
     | '/hooks/expire-reservations'
     | '/hooks/fleet-drift'
     | '/hooks/github'
@@ -779,6 +801,8 @@ export interface FileRouteTypes {
     | '/clones/new'
     | '/hooks/brand-drift'
     | '/hooks/drift-refresh'
+    | '/hooks/edge-drain'
+    | '/hooks/edge-drift'
     | '/hooks/expire-reservations'
     | '/hooks/fleet-drift'
     | '/hooks/github'
@@ -846,6 +870,8 @@ export interface RootRouteChildren {
   ClonesNewRoute: typeof ClonesNewRoute
   HooksBrandDriftRoute: typeof HooksBrandDriftRoute
   HooksDriftRefreshRoute: typeof HooksDriftRefreshRoute
+  HooksEdgeDrainRoute: typeof HooksEdgeDrainRoute
+  HooksEdgeDriftRoute: typeof HooksEdgeDriftRoute
   HooksExpireReservationsRoute: typeof HooksExpireReservationsRoute
   HooksFleetDriftRoute: typeof HooksFleetDriftRoute
   HooksGithubRoute: typeof HooksGithubRoute
@@ -1132,6 +1158,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HooksExpireReservationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/hooks/edge-drift': {
+      id: '/hooks/edge-drift'
+      path: '/hooks/edge-drift'
+      fullPath: '/hooks/edge-drift'
+      preLoaderRoute: typeof HooksEdgeDriftRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hooks/edge-drain': {
+      id: '/hooks/edge-drain'
+      path: '/hooks/edge-drain'
+      fullPath: '/hooks/edge-drain'
+      preLoaderRoute: typeof HooksEdgeDrainRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/hooks/drift-refresh': {
       id: '/hooks/drift-refresh'
       path: '/hooks/drift-refresh'
@@ -1413,6 +1453,8 @@ const rootRouteChildren: RootRouteChildren = {
   ClonesNewRoute: ClonesNewRoute,
   HooksBrandDriftRoute: HooksBrandDriftRoute,
   HooksDriftRefreshRoute: HooksDriftRefreshRoute,
+  HooksEdgeDrainRoute: HooksEdgeDrainRoute,
+  HooksEdgeDriftRoute: HooksEdgeDriftRoute,
   HooksExpireReservationsRoute: HooksExpireReservationsRoute,
   HooksFleetDriftRoute: HooksFleetDriftRoute,
   HooksGithubRoute: HooksGithubRoute,
