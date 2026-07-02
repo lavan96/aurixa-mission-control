@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -155,6 +156,11 @@ function FleetEdge() {
   const [busy, setBusy] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkPreset, setBulkPreset] = useState<string>("");
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  const rowKey = (r: FleetRow) => `${r.clone_id}::${r.provider_slug ?? "none"}`;
 
   const load = async () => {
     setLoading(true);

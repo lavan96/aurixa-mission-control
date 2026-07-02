@@ -72,6 +72,7 @@ import { Route as ApiPublicSeatsListRouteImport } from './routes/api.public.seat
 import { Route as ApiPublicSeatsEntitlementRouteImport } from './routes/api.public.seats.entitlement'
 import { Route as ApiPublicSeatsCommitRouteImport } from './routes/api.public.seats.commit'
 import { Route as ApiPublicPricingCatalogRouteImport } from './routes/api.public.pricing.catalog'
+import { Route as ApiPublicEdgeStatusRouteImport } from './routes/api.public.edge.status'
 import { Route as ApiPublicClonesRotateKeyRouteImport } from './routes/api.public.clones.rotate-key'
 import { Route as ApiPublicSeatsDevicesReleaseRouteImport } from './routes/api.public.seats.devices.release'
 import { Route as ApiPublicSeatsDevicesRegisterRouteImport } from './routes/api.public.seats.devices.register'
@@ -396,6 +397,11 @@ const ApiPublicPricingCatalogRoute = ApiPublicPricingCatalogRouteImport.update({
   path: '/api/public/pricing/catalog',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicEdgeStatusRoute = ApiPublicEdgeStatusRouteImport.update({
+  id: '/api/public/edge/status',
+  path: '/api/public/edge/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicClonesRotateKeyRoute =
   ApiPublicClonesRotateKeyRouteImport.update({
     id: '/api/public/clones/rotate-key',
@@ -480,6 +486,7 @@ export interface FileRoutesByFullPath {
   '/settings/roles': typeof SettingsRolesRoute
   '/settings/': typeof SettingsIndexRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
+  '/api/public/edge/status': typeof ApiPublicEdgeStatusRoute
   '/api/public/pricing/catalog': typeof ApiPublicPricingCatalogRoute
   '/api/public/seats/commit': typeof ApiPublicSeatsCommitRoute
   '/api/public/seats/entitlement': typeof ApiPublicSeatsEntitlementRoute
@@ -549,6 +556,7 @@ export interface FileRoutesByTo {
   '/settings/roles': typeof SettingsRolesRoute
   '/settings': typeof SettingsIndexRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
+  '/api/public/edge/status': typeof ApiPublicEdgeStatusRoute
   '/api/public/pricing/catalog': typeof ApiPublicPricingCatalogRoute
   '/api/public/seats/commit': typeof ApiPublicSeatsCommitRoute
   '/api/public/seats/entitlement': typeof ApiPublicSeatsEntitlementRoute
@@ -620,6 +628,7 @@ export interface FileRoutesById {
   '/settings/roles': typeof SettingsRolesRoute
   '/settings/': typeof SettingsIndexRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
+  '/api/public/edge/status': typeof ApiPublicEdgeStatusRoute
   '/api/public/pricing/catalog': typeof ApiPublicPricingCatalogRoute
   '/api/public/seats/commit': typeof ApiPublicSeatsCommitRoute
   '/api/public/seats/entitlement': typeof ApiPublicSeatsEntitlementRoute
@@ -692,6 +701,7 @@ export interface FileRouteTypes {
     | '/settings/roles'
     | '/settings/'
     | '/api/public/clones/rotate-key'
+    | '/api/public/edge/status'
     | '/api/public/pricing/catalog'
     | '/api/public/seats/commit'
     | '/api/public/seats/entitlement'
@@ -761,6 +771,7 @@ export interface FileRouteTypes {
     | '/settings/roles'
     | '/settings'
     | '/api/public/clones/rotate-key'
+    | '/api/public/edge/status'
     | '/api/public/pricing/catalog'
     | '/api/public/seats/commit'
     | '/api/public/seats/entitlement'
@@ -831,6 +842,7 @@ export interface FileRouteTypes {
     | '/settings/roles'
     | '/settings/'
     | '/api/public/clones/rotate-key'
+    | '/api/public/edge/status'
     | '/api/public/pricing/catalog'
     | '/api/public/seats/commit'
     | '/api/public/seats/entitlement'
@@ -892,6 +904,7 @@ export interface RootRouteChildren {
   HooksTokenAlertsRoute: typeof HooksTokenAlertsRoute
   HooksWarmHealthRoute: typeof HooksWarmHealthRoute
   ApiPublicClonesRotateKeyRoute: typeof ApiPublicClonesRotateKeyRoute
+  ApiPublicEdgeStatusRoute: typeof ApiPublicEdgeStatusRoute
   ApiPublicPricingCatalogRoute: typeof ApiPublicPricingCatalogRoute
   ApiPublicSeatsCommitRoute: typeof ApiPublicSeatsCommitRoute
   ApiPublicSeatsEntitlementRoute: typeof ApiPublicSeatsEntitlementRoute
@@ -1353,6 +1366,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPricingCatalogRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/edge/status': {
+      id: '/api/public/edge/status'
+      path: '/api/public/edge/status'
+      fullPath: '/api/public/edge/status'
+      preLoaderRoute: typeof ApiPublicEdgeStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/clones/rotate-key': {
       id: '/api/public/clones/rotate-key'
       path: '/api/public/clones/rotate-key'
@@ -1483,6 +1503,7 @@ const rootRouteChildren: RootRouteChildren = {
   HooksTokenAlertsRoute: HooksTokenAlertsRoute,
   HooksWarmHealthRoute: HooksWarmHealthRoute,
   ApiPublicClonesRotateKeyRoute: ApiPublicClonesRotateKeyRoute,
+  ApiPublicEdgeStatusRoute: ApiPublicEdgeStatusRoute,
   ApiPublicPricingCatalogRoute: ApiPublicPricingCatalogRoute,
   ApiPublicSeatsCommitRoute: ApiPublicSeatsCommitRoute,
   ApiPublicSeatsEntitlementRoute: ApiPublicSeatsEntitlementRoute,
