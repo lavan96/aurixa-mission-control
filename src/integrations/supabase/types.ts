@@ -896,6 +896,94 @@ export type Database = {
           },
         ]
       }
+      clone_edge_config: {
+        Row: {
+          account_ref: string | null
+          bot_fight: boolean
+          clone_id: string
+          created_at: string
+          created_by: string | null
+          custom_rules: Json
+          drift: Json | null
+          external_ref: string | null
+          hostname: string | null
+          id: string
+          last_synced_at: string | null
+          posture_preset: string | null
+          provider_slug: string
+          rate_limit_rps: number | null
+          security_level: string | null
+          status: string
+          status_detail: string | null
+          updated_at: string
+          waf_preset: string | null
+        }
+        Insert: {
+          account_ref?: string | null
+          bot_fight?: boolean
+          clone_id: string
+          created_at?: string
+          created_by?: string | null
+          custom_rules?: Json
+          drift?: Json | null
+          external_ref?: string | null
+          hostname?: string | null
+          id?: string
+          last_synced_at?: string | null
+          posture_preset?: string | null
+          provider_slug: string
+          rate_limit_rps?: number | null
+          security_level?: string | null
+          status?: string
+          status_detail?: string | null
+          updated_at?: string
+          waf_preset?: string | null
+        }
+        Update: {
+          account_ref?: string | null
+          bot_fight?: boolean
+          clone_id?: string
+          created_at?: string
+          created_by?: string | null
+          custom_rules?: Json
+          drift?: Json | null
+          external_ref?: string | null
+          hostname?: string | null
+          id?: string
+          last_synced_at?: string | null
+          posture_preset?: string | null
+          provider_slug?: string
+          rate_limit_rps?: number | null
+          security_level?: string | null
+          status?: string
+          status_detail?: string | null
+          updated_at?: string
+          waf_preset?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clone_edge_config_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clone_edge_config_posture_preset_fkey"
+            columns: ["posture_preset"]
+            isOneToOne: false
+            referencedRelation: "edge_posture_presets"
+            referencedColumns: ["slug"]
+          },
+          {
+            foreignKeyName: "clone_edge_config_provider_slug_fkey"
+            columns: ["provider_slug"]
+            isOneToOne: false
+            referencedRelation: "edge_providers"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
       clone_health_snapshots: {
         Row: {
           clone_id: string
@@ -1402,6 +1490,194 @@ export type Database = {
           zone_name?: string
         }
         Relationships: []
+      }
+      edge_audit: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          clone_id: string | null
+          created_at: string
+          error_message: string | null
+          external_ref: string | null
+          id: string
+          payload: Json
+          provider_slug: string
+          result: Json
+          success: boolean
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          clone_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          external_ref?: string | null
+          id?: string
+          payload?: Json
+          provider_slug: string
+          result?: Json
+          success: boolean
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          clone_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          external_ref?: string | null
+          id?: string
+          payload?: Json
+          provider_slug?: string
+          result?: Json
+          success?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "edge_audit_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      edge_posture_presets: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_name: string
+          is_default: boolean
+          settings: Json
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_name: string
+          is_default?: boolean
+          settings?: Json
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          is_default?: boolean
+          settings?: Json
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      edge_providers: {
+        Row: {
+          capabilities: Json
+          created_at: string
+          display_name: string
+          slug: string
+          sort_order: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          capabilities?: Json
+          created_at?: string
+          display_name: string
+          slug: string
+          sort_order?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          capabilities?: Json
+          created_at?: string
+          display_name?: string
+          slug?: string
+          sort_order?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      edge_provisioning_jobs: {
+        Row: {
+          action: string
+          attempts: number
+          clone_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          error: string | null
+          id: string
+          locked_at: string | null
+          locked_by: string | null
+          max_attempts: number
+          next_attempt_at: string
+          payload: Json
+          payload_hash: string
+          provider_slug: string
+          result: Json | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          action: string
+          attempts?: number
+          clone_id: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          id?: string
+          locked_at?: string | null
+          locked_by?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
+          payload?: Json
+          payload_hash: string
+          provider_slug: string
+          result?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          action?: string
+          attempts?: number
+          clone_id?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          id?: string
+          locked_at?: string | null
+          locked_by?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
+          payload?: Json
+          payload_hash?: string
+          provider_slug?: string
+          result?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "edge_provisioning_jobs_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "edge_provisioning_jobs_provider_slug_fkey"
+            columns: ["provider_slug"]
+            isOneToOne: false
+            referencedRelation: "edge_providers"
+            referencedColumns: ["slug"]
+          },
+        ]
       }
       fleet_digests: {
         Row: {
