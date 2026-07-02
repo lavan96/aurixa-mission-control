@@ -119,7 +119,7 @@ const getFleetEdge = createServerFn({ method: "GET" })
     return { rows };
   });
 
-export const Route = createFileRoute("/fleet.edge")({
+export const Route = createFileRoute("/fleet/edge")({
   errorComponent: RouteError,
   component: () => (
     <ProtectedRoute>
