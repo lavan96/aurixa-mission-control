@@ -1771,8 +1771,10 @@ export type Database = {
         Row: {
           ai_confidence: number | null
           ai_reasoning: string | null
+          apply_on_install: boolean
           approved_at: string | null
           approved_by: string | null
+          clone_migration_sql: string | null
           cohesion_score: number | null
           coupling_score: number | null
           created_at: string
@@ -1799,8 +1801,10 @@ export type Database = {
         Insert: {
           ai_confidence?: number | null
           ai_reasoning?: string | null
+          apply_on_install?: boolean
           approved_at?: string | null
           approved_by?: string | null
+          clone_migration_sql?: string | null
           cohesion_score?: number | null
           coupling_score?: number | null
           created_at?: string
@@ -1827,8 +1831,10 @@ export type Database = {
         Update: {
           ai_confidence?: number | null
           ai_reasoning?: string | null
+          apply_on_install?: boolean
           approved_at?: string | null
           approved_by?: string | null
+          clone_migration_sql?: string | null
           cohesion_score?: number | null
           coupling_score?: number | null
           created_at?: string
