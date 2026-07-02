@@ -76,6 +76,9 @@ function NewClone() {
   const [ownerMode, setOwnerMode] = useState<"org" | "transfer">("org");
   const [transferTarget, setTransferTarget] = useState("");
   const [cloudflare, setCloudflare] = useState(false);
+  const [edgeProvider, setEdgeProvider] = useState<"cloudflare" | "aws" | "azure">("cloudflare");
+  const [edgeHostname, setEdgeHostname] = useState("");
+  const [edgePreset, setEdgePreset] = useState("balanced");
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
@@ -84,6 +87,7 @@ function NewClone() {
   const [adminPassword, setAdminPassword] = useState("");
   const [backendRegion, setBackendRegion] = useState("us-east-1");
   const provisionBackendFn = useServerFn(provisionBackend);
+  const enqueueEdge = useServerFn(enqueueEdgeJob);
 
   // Default the org field to the prime's default_clone_org once it loads
   useEffect(() => {
