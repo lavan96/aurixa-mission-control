@@ -553,7 +553,8 @@ function FleetEdge() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
