@@ -145,7 +145,62 @@ export const provisionClone = createServerFn({ method: "POST" })
           installed_by: userId,
         })),
       );
+
+      // ─── Scoped cascade for picked module files ──────────────────
+      // Push only the file_globs from picked modules to the freshly-created
+      // repo so it lands with the modules pre-populated. Fire-and-forget:
+      // failure here is non-fatal — the operator can re-cascade from the UI.
+      if (data.method !== "clone" && githubUrl) {
+        try {
+          const { data: mods } = await supabase
+            .from("modules")
+            .select("id, name, file_globs")
+            .in("id", data.moduleIds);
+          const globs = Array.from(
+            new Set((mods ?? []).flatMap((m) => m.file_globs ?? [])),
+          );
+          if (globs.length > 0) {
+            const { data: ev } = await supabase
+              .from("cascade_events")
+              .insert({
+                trigger: "manual",
+                mode: "direct",
+                status: "pending",
+                requires_approval: false,
+                scope_filter: {
+                  scope: "clone_provision_modules",
+                  clone_ids: [inserted.id],
+                  module_ids: data.moduleIds,
+                  module_globs: globs,
+                },
+                summary: `Provision cascade · ${mods?.length ?? 0} module(s) → ${data.name}`,
+                initiated_by: userId,
+              })
+              .select()
+              .single();
+            if (ev) {
+              await supabase.from("cascade_results").insert({
+                cascade_event_id: ev.id,
+                clone_id: inserted.id,
+                status: "queued" as const,
+              });
+              // Kick execution asynchronously so we don't block the response
+              void (async () => {
+                try {
+                  const { executeCascade } = await import("./cascade-engine.server");
+                  await executeCascade(supabaseAdmin, ev.id);
+                } catch (err) {
+                  console.error("[provisionClone] module cascade failed:", err);
+                }
+              })();
+            }
+          }
+        } catch (e) {
+          console.error("[provisionClone] module cascade setup failed:", e);
+        }
+      }
     }
+
 
     // ─── Auto-issue + cascade Aurixa API key ──────────────────────────
     // Every new clone gets a Mission Control API key generated immediately
