@@ -244,6 +244,82 @@ function FleetEdge() {
     }
   };
 
+  const selectableRows = useMemo(
+    () => filtered.filter((r) => r.provider_slug && r.status !== "waitlisted"),
+    [filtered],
+  );
+  const allSelected =
+    selectableRows.length > 0 && selectableRows.every((r) => selected.has(rowKey(r)));
+  const someSelected = selected.size > 0 && !allSelected;
+  const toggleRow = (r: FleetRow) => {
+    const k = rowKey(r);
+    const next = new Set(selected);
+    if (next.has(k)) next.delete(k);
+    else next.add(k);
+    setSelected(next);
+  };
+  const toggleAll = () => {
+    if (allSelected) setSelected(new Set());
+    else setSelected(new Set(selectableRows.map(rowKey)));
+  };
+  const clearSelection = () => setSelected(new Set());
+
+  const selectedRows = useMemo(
+    () => filtered.filter((r) => selected.has(rowKey(r))),
+    [filtered, selected],
+  );
+
+  const bulkSync = async () => {
+    if (selectedRows.length === 0) return;
+    setBulkBusy(true);
+    try {
+      await Promise.all(
+        selectedRows.map((r) =>
+          enqueue({
+            data: {
+              cloneId: r.clone_id,
+              providerSlug: r.provider_slug as any,
+              action: "sync",
+              payload: {},
+            },
+          }),
+        ),
+      );
+      toast.success(`Queued sync for ${selectedRows.length} clone(s)`);
+      clearSelection();
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Bulk sync failed");
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const bulkApplyPreset = async () => {
+    if (selectedRows.length === 0 || !bulkPreset) return;
+    setBulkBusy(true);
+    try {
+      await Promise.all(
+        selectedRows.map((r) =>
+          applyPreset({
+            data: {
+              cloneId: r.clone_id,
+              providerSlug: r.provider_slug as any,
+              presetSlug: bulkPreset,
+            },
+          }),
+        ),
+      );
+      toast.success(`Applied "${bulkPreset}" to ${selectedRows.length} clone(s)`);
+      clearSelection();
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Bulk apply failed");
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
