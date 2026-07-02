@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -155,6 +156,11 @@ function FleetEdge() {
   const [busy, setBusy] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkPreset, setBulkPreset] = useState<string>("");
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  const rowKey = (r: FleetRow) => `${r.clone_id}::${r.provider_slug ?? "none"}`;
 
   const load = async () => {
     setLoading(true);
@@ -238,6 +244,82 @@ function FleetEdge() {
     }
   };
 
+  const selectableRows = useMemo(
+    () => filtered.filter((r) => r.provider_slug && r.status !== "waitlisted"),
+    [filtered],
+  );
+  const allSelected =
+    selectableRows.length > 0 && selectableRows.every((r) => selected.has(rowKey(r)));
+  const someSelected = selected.size > 0 && !allSelected;
+  const toggleRow = (r: FleetRow) => {
+    const k = rowKey(r);
+    const next = new Set(selected);
+    if (next.has(k)) next.delete(k);
+    else next.add(k);
+    setSelected(next);
+  };
+  const toggleAll = () => {
+    if (allSelected) setSelected(new Set());
+    else setSelected(new Set(selectableRows.map(rowKey)));
+  };
+  const clearSelection = () => setSelected(new Set());
+
+  const selectedRows = useMemo(
+    () => filtered.filter((r) => selected.has(rowKey(r))),
+    [filtered, selected],
+  );
+
+  const bulkSync = async () => {
+    if (selectedRows.length === 0) return;
+    setBulkBusy(true);
+    try {
+      await Promise.all(
+        selectedRows.map((r) =>
+          enqueue({
+            data: {
+              cloneId: r.clone_id,
+              providerSlug: r.provider_slug as any,
+              action: "sync",
+              payload: {},
+            },
+          }),
+        ),
+      );
+      toast.success(`Queued sync for ${selectedRows.length} clone(s)`);
+      clearSelection();
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Bulk sync failed");
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const bulkApplyPreset = async () => {
+    if (selectedRows.length === 0 || !bulkPreset) return;
+    setBulkBusy(true);
+    try {
+      await Promise.all(
+        selectedRows.map((r) =>
+          applyPreset({
+            data: {
+              cloneId: r.clone_id,
+              providerSlug: r.provider_slug as any,
+              presetSlug: bulkPreset,
+            },
+          }),
+        ),
+      );
+      toast.success(`Applied "${bulkPreset}" to ${selectedRows.length} clone(s)`);
+      clearSelection();
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Bulk apply failed");
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
@@ -296,10 +378,49 @@ function FleetEdge() {
             </Select>
           </div>
 
+          {isAdmin && selected.size > 0 && (
+            <div className="flex flex-wrap items-center gap-2 rounded-md border border-primary/40 bg-primary/5 px-3 py-2">
+              <Badge variant="outline" className="border-primary/40 text-primary">
+                {selected.size} selected
+              </Badge>
+              <Select value={bulkPreset} onValueChange={setBulkPreset}>
+                <SelectTrigger className="h-8 w-[180px] text-xs">
+                  <SelectValue placeholder="Apply preset…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {presets.map((p) => (
+                    <SelectItem key={p.slug} value={p.slug}>
+                      {p.display_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button size="sm" onClick={bulkApplyPreset} disabled={bulkBusy || !bulkPreset}>
+                Reapply posture
+              </Button>
+              <Button size="sm" variant="outline" onClick={bulkSync} disabled={bulkBusy}>
+                <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${bulkBusy ? "animate-spin" : ""}`} />
+                Sync selected
+              </Button>
+              <Button size="sm" variant="ghost" onClick={clearSelection} disabled={bulkBusy}>
+                Clear
+              </Button>
+            </div>
+          )}
+
           <div className="overflow-x-auto rounded-md border border-border">
             <table className="w-full text-sm">
               <thead className="bg-surface font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                 <tr>
+                  {isAdmin && (
+                    <th className="w-8 px-3 py-2 text-left">
+                      <Checkbox
+                        checked={allSelected ? true : someSelected ? "indeterminate" : false}
+                        onCheckedChange={toggleAll}
+                        aria-label="Select all"
+                      />
+                    </th>
+                  )}
                   <th className="px-3 py-2 text-left">Clone</th>
                   <th className="px-3 py-2 text-left">Provider</th>
                   <th className="px-3 py-2 text-left">Hostname</th>
@@ -312,23 +433,36 @@ function FleetEdge() {
               <tbody>
                 {loading && (
                   <tr>
-                    <td colSpan={7} className="p-6 text-center text-muted-foreground">
+                    <td colSpan={isAdmin ? 8 : 7} className="p-6 text-center text-muted-foreground">
                       Loading…
                     </td>
                   </tr>
                 )}
                 {!loading && filtered.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="p-6 text-center text-muted-foreground">
+                    <td colSpan={isAdmin ? 8 : 7} className="p-6 text-center text-muted-foreground">
                       No matches
                     </td>
                   </tr>
                 )}
-                {filtered.map((r, i) => (
+                {filtered.map((r, i) => {
+                  const canSelect = !!r.provider_slug && r.status !== "waitlisted";
+                  return (
                   <tr
                     key={`${r.clone_id}-${r.provider_slug ?? "none"}-${i}`}
                     className="border-t border-border/50"
                   >
+                    {isAdmin && (
+                      <td className="px-3 py-2">
+                        {canSelect && (
+                          <Checkbox
+                            checked={selected.has(rowKey(r))}
+                            onCheckedChange={() => toggleRow(r)}
+                            aria-label={`Select ${r.clone_name}`}
+                          />
+                        )}
+                      </td>
+                    )}
                     <td className="px-3 py-2">
                       <Link
                         to="/clones/$cloneId"
@@ -419,7 +553,8 @@ function FleetEdge() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
