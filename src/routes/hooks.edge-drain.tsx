@@ -184,25 +184,28 @@ async function runJob(job: JobRow): Promise<{ ok: boolean; result?: unknown; err
 
 async function finalize(job: JobRow, outcome: { ok: boolean; result?: unknown; error?: string }) {
   const nowIso = new Date().toISOString();
+  const nextAttempts = job.attempts + 1;
   if (outcome.ok) {
     await admin
       .from("edge_provisioning_jobs")
       .update({
         status: "succeeded",
+        attempts: nextAttempts,
         completed_at: nowIso,
         result: outcome.result ?? {},
         error: null,
       })
       .eq("id", job.id);
   } else {
-    const willRetry = job.attempts + 1 < job.max_attempts;
+    const willRetry = nextAttempts < job.max_attempts;
     await admin
       .from("edge_provisioning_jobs")
       .update({
         status: willRetry ? "retry" : "failed",
+        attempts: nextAttempts,
         error: outcome.error ?? "unknown",
         next_attempt_at: willRetry
-          ? new Date(Date.now() + backoffSeconds(job.attempts + 1) * 1000).toISOString()
+          ? new Date(Date.now() + backoffSeconds(nextAttempts) * 1000).toISOString()
           : undefined,
         completed_at: willRetry ? null : nowIso,
       })
