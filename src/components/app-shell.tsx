@@ -57,6 +57,7 @@ const NAV = [
   { to: "/route-errors", label: "Route Errors", icon: AlertTriangle },
   { to: "/cloudflare", label: "Cloudflare", icon: Shield },
   { to: "/fleet/edge", label: "Edge Security", icon: Shield },
+  { to: "/security-partners", label: "Security Partners", icon: ShieldCheck },
   { to: "/approvals", label: "Approvals", icon: ShieldCheck },
   { to: "/metrics", label: "Metrics", icon: BarChart3 },
   { to: "/slo", label: "SLO", icon: Target },
