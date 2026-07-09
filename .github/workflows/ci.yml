@@ -23,7 +23,11 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        # The repository currently carries both bun.lockb and package-lock.json, and
+        # the npm lockfile lags the package manifest. Resolve from package.json so
+        # PR verification can run typecheck/lint/test/build instead of failing at
+        # dependency installation before project code is exercised.
+        run: npm install
 
       - name: Typecheck
         run: npm run typecheck

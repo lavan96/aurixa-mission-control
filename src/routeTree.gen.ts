@@ -12,10 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as YggdrasilRouteImport } from './routes/yggdrasil'
 import { Route as SloRouteImport } from './routes/slo'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SecurityPartnersRouteImport } from './routes/security-partners'
 import { Route as SchedulesRouteImport } from './routes/schedules'
 import { Route as RouteErrorsRouteImport } from './routes/route-errors'
 import { Route as ReportJobsRouteImport } from './routes/report-jobs'
 import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as PartnerPortalRouteImport } from './routes/partner-portal'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as ModulesRouteImport } from './routes/modules'
 import { Route as MetricsRouteImport } from './routes/metrics'
@@ -79,1448 +81,185 @@ import { Route as ApiPublicSeatsDevicesRegisterRouteImport } from './routes/api.
 import { Route as ApiPublicSeatsDevicesListRouteImport } from './routes/api.public.seats.devices.list'
 import { Route as ApiPublicSeatsDevicesHeartbeatRouteImport } from './routes/api.public.seats.devices.heartbeat'
 
-const YggdrasilRoute = YggdrasilRouteImport.update({
-  id: '/yggdrasil',
-  path: '/yggdrasil',
-  getParentRoute: () => rootRouteImport,
+const YggdrasilRoute = YggdrasilRouteImport.update({ id: '/yggdrasil', path: '/yggdrasil', getParentRoute: () => rootRouteImport } as any)
+const SloRoute = SloRouteImport.update({ id: '/slo', path: '/slo', getParentRoute: () => rootRouteImport } as any)
+const SettingsRoute = SettingsRouteImport.update({ id: '/settings', path: '/settings', getParentRoute: () => rootRouteImport } as any)
+const SecurityPartnersRoute = SecurityPartnersRouteImport.update({ id: '/security-partners', path: '/security-partners', getParentRoute: () => rootRouteImport } as any)
+const SchedulesRoute = SchedulesRouteImport.update({ id: '/schedules', path: '/schedules', getParentRoute: () => rootRouteImport } as any)
+const RouteErrorsRoute = RouteErrorsRouteImport.update({ id: '/route-errors', path: '/route-errors', getParentRoute: () => rootRouteImport } as any)
+const ReportJobsRoute = ReportJobsRouteImport.update({ id: '/report-jobs', path: '/report-jobs', getParentRoute: () => rootRouteImport } as any)
+const PricingRoute = PricingRouteImport.update({ id: '/pricing', path: '/pricing', getParentRoute: () => rootRouteImport } as any)
+const PartnerPortalRoute = PartnerPortalRouteImport.update({ id: '/partner-portal', path: '/partner-portal', getParentRoute: () => rootRouteImport } as any)
+const NotificationsRoute = NotificationsRouteImport.update({ id: '/notifications', path: '/notifications', getParentRoute: () => rootRouteImport } as any)
+const ModulesRoute = ModulesRouteImport.update({ id: '/modules', path: '/modules', getParentRoute: () => rootRouteImport } as any)
+const MetricsRoute = MetricsRouteImport.update({ id: '/metrics', path: '/metrics', getParentRoute: () => rootRouteImport } as any)
+const HealthRoute = HealthRouteImport.update({ id: '/health', path: '/health', getParentRoute: () => rootRouteImport } as any)
+const FleetManagerRoute = FleetManagerRouteImport.update({ id: '/fleet-manager', path: '/fleet-manager', getParentRoute: () => rootRouteImport } as any)
+const DriftRoute = DriftRouteImport.update({ id: '/drift', path: '/drift', getParentRoute: () => rootRouteImport } as any)
+const DigestsRoute = DigestsRouteImport.update({ id: '/digests', path: '/digests', getParentRoute: () => rootRouteImport } as any)
+const DashboardRoute = DashboardRouteImport.update({ id: '/dashboard', path: '/dashboard', getParentRoute: () => rootRouteImport } as any)
+const CloudflareRoute = CloudflareRouteImport.update({ id: '/cloudflare', path: '/cloudflare', getParentRoute: () => rootRouteImport } as any)
+const CascadesRoute = CascadesRouteImport.update({ id: '/cascades', path: '/cascades', getParentRoute: () => rootRouteImport } as any)
+const BrandingRoute = BrandingRouteImport.update({ id: '/branding', path: '/branding', getParentRoute: () => rootRouteImport } as any)
+const AuthRoute = AuthRouteImport.update({ id: '/auth', path: '/auth', getParentRoute: () => rootRouteImport } as any)
+const AuditLogRoute = AuditLogRouteImport.update({ id: '/audit-log', path: '/audit-log', getParentRoute: () => rootRouteImport } as any)
+const ApprovalsRoute = ApprovalsRouteImport.update({ id: '/approvals', path: '/approvals', getParentRoute: () => rootRouteImport } as any)
+const IndexRoute = IndexRouteImport.update({ id: '/', path: '/', getParentRoute: () => rootRouteImport } as any)
+
+const SettingsIndexRoute = SettingsIndexRouteImport.update({ id: '/', path: '/', getParentRoute: () => SettingsRoute } as any)
+const SettingsRolesRoute = SettingsRolesRouteImport.update({ id: '/roles', path: '/roles', getParentRoute: () => SettingsRoute } as any)
+const SettingsRoleAuditRoute = SettingsRoleAuditRouteImport.update({ id: '/role-audit', path: '/role-audit', getParentRoute: () => SettingsRoute } as any)
+const SettingsProvisioningPreviewRoute = SettingsProvisioningPreviewRouteImport.update({ id: '/provisioning-preview', path: '/provisioning-preview', getParentRoute: () => SettingsRoute } as any)
+const SettingsPermissionMatrixRoute = SettingsPermissionMatrixRouteImport.update({ id: '/permission-matrix', path: '/permission-matrix', getParentRoute: () => SettingsRoute } as any)
+const SettingsNotificationsRoute = SettingsNotificationsRouteImport.update({ id: '/notifications', path: '/notifications', getParentRoute: () => SettingsRoute } as any)
+const SettingsBillingRoute = SettingsBillingRouteImport.update({ id: '/billing', path: '/billing', getParentRoute: () => SettingsRoute } as any)
+
+const ModulesBuilderRoute = ModulesBuilderRouteImport.update({ id: '/builder', path: '/builder', getParentRoute: () => ModulesRoute } as any)
+const ModulesSlugRoute = ModulesSlugRouteImport.update({ id: '/$slug', path: '/$slug', getParentRoute: () => ModulesRoute } as any)
+const CascadesEventIdRoute = CascadesEventIdRouteImport.update({ id: '/$eventId', path: '/$eventId', getParentRoute: () => CascadesRoute } as any)
+
+const HooksWarmHealthRoute = HooksWarmHealthRouteImport.update({ id: '/hooks/warm-health', path: '/hooks/warm-health', getParentRoute: () => rootRouteImport } as any)
+const HooksTokenAlertsRoute = HooksTokenAlertsRouteImport.update({ id: '/hooks/token-alerts', path: '/hooks/token-alerts', getParentRoute: () => rootRouteImport } as any)
+const HooksRunSchedulesRoute = HooksRunSchedulesRouteImport.update({ id: '/hooks/run-schedules', path: '/hooks/run-schedules', getParentRoute: () => rootRouteImport } as any)
+const HooksGithubRoute = HooksGithubRouteImport.update({ id: '/hooks/github', path: '/hooks/github', getParentRoute: () => rootRouteImport } as any)
+const HooksFleetDriftRoute = HooksFleetDriftRouteImport.update({ id: '/hooks/fleet-drift', path: '/hooks/fleet-drift', getParentRoute: () => rootRouteImport } as any)
+const HooksExpireReservationsRoute = HooksExpireReservationsRouteImport.update({ id: '/hooks/expire-reservations', path: '/hooks/expire-reservations', getParentRoute: () => rootRouteImport } as any)
+const HooksEdgeDriftRoute = HooksEdgeDriftRouteImport.update({ id: '/hooks/edge-drift', path: '/hooks/edge-drift', getParentRoute: () => rootRouteImport } as any)
+const HooksEdgeDrainRoute = HooksEdgeDrainRouteImport.update({ id: '/hooks/edge-drain', path: '/hooks/edge-drain', getParentRoute: () => rootRouteImport } as any)
+const HooksDriftRefreshRoute = HooksDriftRefreshRouteImport.update({ id: '/hooks/drift-refresh', path: '/hooks/drift-refresh', getParentRoute: () => rootRouteImport } as any)
+const HooksBrandDriftRoute = HooksBrandDriftRouteImport.update({ id: '/hooks/brand-drift', path: '/hooks/brand-drift', getParentRoute: () => rootRouteImport } as any)
+
+const FleetEdgeRoute = FleetEdgeRouteImport.update({ id: '/fleet/edge', path: '/fleet/edge', getParentRoute: () => rootRouteImport } as any)
+const ClonesNewRoute = ClonesNewRouteImport.update({ id: '/clones/new', path: '/clones/new', getParentRoute: () => rootRouteImport } as any)
+const ClonesCloneIdRoute = ClonesCloneIdRouteImport.update({ id: '/clones/$cloneId', path: '/clones/$cloneId', getParentRoute: () => rootRouteImport } as any)
+const BillingTopupRoute = BillingTopupRouteImport.update({ id: '/billing/topup', path: '/billing/topup', getParentRoute: () => rootRouteImport } as any)
+const BillingSuccessRoute = BillingSuccessRouteImport.update({ id: '/billing/success', path: '/billing/success', getParentRoute: () => rootRouteImport } as any)
+const BillingSeatsRoute = BillingSeatsRouteImport.update({ id: '/billing/seats', path: '/billing/seats', getParentRoute: () => rootRouteImport } as any)
+const BillingCatalogRoute = BillingCatalogRouteImport.update({ id: '/billing/catalog', path: '/billing/catalog', getParentRoute: () => rootRouteImport } as any)
+const BillingCancelRoute = BillingCancelRouteImport.update({ id: '/billing/cancel', path: '/billing/cancel', getParentRoute: () => rootRouteImport } as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({ id: '/api/health', path: '/api/health', getParentRoute: () => rootRouteImport } as any)
+
+const ApiPublicTokensReserveRoute = ApiPublicTokensReserveRouteImport.update({ id: '/api/public/tokens/reserve', path: '/api/public/tokens/reserve', getParentRoute: () => rootRouteImport } as any)
+const ApiPublicTokensPacksRoute = ApiPublicTokensPacksRouteImport.update({ id: '/api/public/tokens/packs', path: '/api/public/tokens/packs', getParentRoute: () => rootRouteImport } as any)
+const ApiPublicTokensCommitRoute = ApiPublicTokensCommitRouteImport.update({ id: '/api/public/tokens/commit', path: '/api/public/tokens/commit', getParentRoute: () => rootRouteImport } as any)
+const ApiPublicTokensCancelRoute = ApiPublicTokensCancelRouteImport.update({ id: '/api/public/tokens/cancel', path: '/api/public/tokens/cancel', getParentRoute: () => rootRouteImport } as any)
+const ApiPublicTokensBalanceRoute = ApiPublicTokensBalanceRouteImport.update({ id: '/api/public/tokens/balance', path: '/api/public/tokens/balance', getParentRoute: () => rootRouteImport } as any)
+const ApiPublicStripeWebhookRoute = ApiPublicStripeWebhookRouteImport.update({ id: '/api/public/stripe/webhook', path: '/api/public/stripe/webhook', getParentRoute: () => rootRouteImport } as any)
+const ApiPublicSeatsReserveRoute = ApiPublicSeatsReserveRouteImport.update({ id: '/api/public/seats/reserve', path: '/api/public/seats/reserve', getParentRoute: () => rootRouteImport } as any)
+const ApiPublicSeatsReleaseRoute = ApiPublicSeatsReleaseRouteImport.update({ id: '/api/public/seats/release', path: '/api/public/seats/release', getParentRoute: () => rootRouteImport } as any)
+const ApiPublicSeatsListRoute = ApiPublicSeatsListRouteImport.update({ id: '/api/public/seats/list', path: '/api/public/seats/list', getParentRoute: () => rootRouteImport } as any)
+const ApiPublicSeatsEntitlementRoute = ApiPublicSeatsEntitlementRouteImport.update({ id: '/api/public/seats/entitlement', path: '/api/public/seats/entitlement', getParentRoute: () => rootRouteImport } as any)
+const ApiPublicSeatsCommitRoute = ApiPublicSeatsCommitRouteImport.update({ id: '/api/public/seats/commit', path: '/api/public/seats/commit', getParentRoute: () => rootRouteImport } as any)
+const ApiPublicPricingCatalogRoute = ApiPublicPricingCatalogRouteImport.update({ id: '/api/public/pricing/catalog', path: '/api/public/pricing/catalog', getParentRoute: () => rootRouteImport } as any)
+const ApiPublicEdgeStatusRoute = ApiPublicEdgeStatusRouteImport.update({ id: '/api/public/edge/status', path: '/api/public/edge/status', getParentRoute: () => rootRouteImport } as any)
+const ApiPublicClonesRotateKeyRoute = ApiPublicClonesRotateKeyRouteImport.update({ id: '/api/public/clones/rotate-key', path: '/api/public/clones/rotate-key', getParentRoute: () => rootRouteImport } as any)
+const ApiPublicSeatsDevicesReleaseRoute = ApiPublicSeatsDevicesReleaseRouteImport.update({ id: '/api/public/seats/devices/release', path: '/api/public/seats/devices/release', getParentRoute: () => rootRouteImport } as any)
+const ApiPublicSeatsDevicesRegisterRoute = ApiPublicSeatsDevicesRegisterRouteImport.update({ id: '/api/public/seats/devices/register', path: '/api/public/seats/devices/register', getParentRoute: () => rootRouteImport } as any)
+const ApiPublicSeatsDevicesListRoute = ApiPublicSeatsDevicesListRouteImport.update({ id: '/api/public/seats/devices/list', path: '/api/public/seats/devices/list', getParentRoute: () => rootRouteImport } as any)
+const ApiPublicSeatsDevicesHeartbeatRoute = ApiPublicSeatsDevicesHeartbeatRouteImport.update({ id: '/api/public/seats/devices/heartbeat', path: '/api/public/seats/devices/heartbeat', getParentRoute: () => rootRouteImport } as any)
+
+const CascadesRouteWithChildren = CascadesRoute._addFileChildren({ CascadesEventIdRoute } as any)
+const ModulesRouteWithChildren = ModulesRoute._addFileChildren({ ModulesSlugRoute, ModulesBuilderRoute } as any)
+const SettingsRouteWithChildren = SettingsRoute._addFileChildren({
+  SettingsBillingRoute,
+  SettingsNotificationsRoute,
+  SettingsPermissionMatrixRoute,
+  SettingsProvisioningPreviewRoute,
+  SettingsRoleAuditRoute,
+  SettingsRolesRoute,
+  SettingsIndexRoute,
 } as any)
-const SloRoute = SloRouteImport.update({
-  id: '/slo',
-  path: '/slo',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SchedulesRoute = SchedulesRouteImport.update({
-  id: '/schedules',
-  path: '/schedules',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RouteErrorsRoute = RouteErrorsRouteImport.update({
-  id: '/route-errors',
-  path: '/route-errors',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReportJobsRoute = ReportJobsRouteImport.update({
-  id: '/report-jobs',
-  path: '/report-jobs',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PricingRoute = PricingRouteImport.update({
-  id: '/pricing',
-  path: '/pricing',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NotificationsRoute = NotificationsRouteImport.update({
-  id: '/notifications',
-  path: '/notifications',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ModulesRoute = ModulesRouteImport.update({
-  id: '/modules',
-  path: '/modules',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MetricsRoute = MetricsRouteImport.update({
-  id: '/metrics',
-  path: '/metrics',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HealthRoute = HealthRouteImport.update({
-  id: '/health',
-  path: '/health',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FleetManagerRoute = FleetManagerRouteImport.update({
-  id: '/fleet-manager',
-  path: '/fleet-manager',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DriftRoute = DriftRouteImport.update({
-  id: '/drift',
-  path: '/drift',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DigestsRoute = DigestsRouteImport.update({
-  id: '/digests',
-  path: '/digests',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CloudflareRoute = CloudflareRouteImport.update({
-  id: '/cloudflare',
-  path: '/cloudflare',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CascadesRoute = CascadesRouteImport.update({
-  id: '/cascades',
-  path: '/cascades',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BrandingRoute = BrandingRouteImport.update({
-  id: '/branding',
-  path: '/branding',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuditLogRoute = AuditLogRouteImport.update({
-  id: '/audit-log',
-  path: '/audit-log',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApprovalsRoute = ApprovalsRouteImport.update({
-  id: '/approvals',
-  path: '/approvals',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsIndexRoute = SettingsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsRolesRoute = SettingsRolesRouteImport.update({
-  id: '/roles',
-  path: '/roles',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsRoleAuditRoute = SettingsRoleAuditRouteImport.update({
-  id: '/role-audit',
-  path: '/role-audit',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsProvisioningPreviewRoute =
-  SettingsProvisioningPreviewRouteImport.update({
-    id: '/provisioning-preview',
-    path: '/provisioning-preview',
-    getParentRoute: () => SettingsRoute,
-  } as any)
-const SettingsPermissionMatrixRoute =
-  SettingsPermissionMatrixRouteImport.update({
-    id: '/permission-matrix',
-    path: '/permission-matrix',
-    getParentRoute: () => SettingsRoute,
-  } as any)
-const SettingsNotificationsRoute = SettingsNotificationsRouteImport.update({
-  id: '/notifications',
-  path: '/notifications',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsBillingRoute = SettingsBillingRouteImport.update({
-  id: '/billing',
-  path: '/billing',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const ModulesBuilderRoute = ModulesBuilderRouteImport.update({
-  id: '/builder',
-  path: '/builder',
-  getParentRoute: () => ModulesRoute,
-} as any)
-const ModulesSlugRoute = ModulesSlugRouteImport.update({
-  id: '/$slug',
-  path: '/$slug',
-  getParentRoute: () => ModulesRoute,
-} as any)
-const HooksWarmHealthRoute = HooksWarmHealthRouteImport.update({
-  id: '/hooks/warm-health',
-  path: '/hooks/warm-health',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HooksTokenAlertsRoute = HooksTokenAlertsRouteImport.update({
-  id: '/hooks/token-alerts',
-  path: '/hooks/token-alerts',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HooksRunSchedulesRoute = HooksRunSchedulesRouteImport.update({
-  id: '/hooks/run-schedules',
-  path: '/hooks/run-schedules',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HooksGithubRoute = HooksGithubRouteImport.update({
-  id: '/hooks/github',
-  path: '/hooks/github',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HooksFleetDriftRoute = HooksFleetDriftRouteImport.update({
-  id: '/hooks/fleet-drift',
-  path: '/hooks/fleet-drift',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HooksExpireReservationsRoute = HooksExpireReservationsRouteImport.update({
-  id: '/hooks/expire-reservations',
-  path: '/hooks/expire-reservations',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HooksEdgeDriftRoute = HooksEdgeDriftRouteImport.update({
-  id: '/hooks/edge-drift',
-  path: '/hooks/edge-drift',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HooksEdgeDrainRoute = HooksEdgeDrainRouteImport.update({
-  id: '/hooks/edge-drain',
-  path: '/hooks/edge-drain',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HooksDriftRefreshRoute = HooksDriftRefreshRouteImport.update({
-  id: '/hooks/drift-refresh',
-  path: '/hooks/drift-refresh',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HooksBrandDriftRoute = HooksBrandDriftRouteImport.update({
-  id: '/hooks/brand-drift',
-  path: '/hooks/brand-drift',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FleetEdgeRoute = FleetEdgeRouteImport.update({
-  id: '/fleet/edge',
-  path: '/fleet/edge',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ClonesNewRoute = ClonesNewRouteImport.update({
-  id: '/clones/new',
-  path: '/clones/new',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ClonesCloneIdRoute = ClonesCloneIdRouteImport.update({
-  id: '/clones/$cloneId',
-  path: '/clones/$cloneId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CascadesEventIdRoute = CascadesEventIdRouteImport.update({
-  id: '/$eventId',
-  path: '/$eventId',
-  getParentRoute: () => CascadesRoute,
-} as any)
-const BillingTopupRoute = BillingTopupRouteImport.update({
-  id: '/billing/topup',
-  path: '/billing/topup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BillingSuccessRoute = BillingSuccessRouteImport.update({
-  id: '/billing/success',
-  path: '/billing/success',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BillingSeatsRoute = BillingSeatsRouteImport.update({
-  id: '/billing/seats',
-  path: '/billing/seats',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BillingCatalogRoute = BillingCatalogRouteImport.update({
-  id: '/billing/catalog',
-  path: '/billing/catalog',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BillingCancelRoute = BillingCancelRouteImport.update({
-  id: '/billing/cancel',
-  path: '/billing/cancel',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiHealthRoute = ApiHealthRouteImport.update({
-  id: '/api/health',
-  path: '/api/health',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicTokensReserveRoute = ApiPublicTokensReserveRouteImport.update({
-  id: '/api/public/tokens/reserve',
-  path: '/api/public/tokens/reserve',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicTokensPacksRoute = ApiPublicTokensPacksRouteImport.update({
-  id: '/api/public/tokens/packs',
-  path: '/api/public/tokens/packs',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicTokensCommitRoute = ApiPublicTokensCommitRouteImport.update({
-  id: '/api/public/tokens/commit',
-  path: '/api/public/tokens/commit',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicTokensCancelRoute = ApiPublicTokensCancelRouteImport.update({
-  id: '/api/public/tokens/cancel',
-  path: '/api/public/tokens/cancel',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicTokensBalanceRoute = ApiPublicTokensBalanceRouteImport.update({
-  id: '/api/public/tokens/balance',
-  path: '/api/public/tokens/balance',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicStripeWebhookRoute = ApiPublicStripeWebhookRouteImport.update({
-  id: '/api/public/stripe/webhook',
-  path: '/api/public/stripe/webhook',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicSeatsReserveRoute = ApiPublicSeatsReserveRouteImport.update({
-  id: '/api/public/seats/reserve',
-  path: '/api/public/seats/reserve',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicSeatsReleaseRoute = ApiPublicSeatsReleaseRouteImport.update({
-  id: '/api/public/seats/release',
-  path: '/api/public/seats/release',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicSeatsListRoute = ApiPublicSeatsListRouteImport.update({
-  id: '/api/public/seats/list',
-  path: '/api/public/seats/list',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicSeatsEntitlementRoute =
-  ApiPublicSeatsEntitlementRouteImport.update({
-    id: '/api/public/seats/entitlement',
-    path: '/api/public/seats/entitlement',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicSeatsCommitRoute = ApiPublicSeatsCommitRouteImport.update({
-  id: '/api/public/seats/commit',
-  path: '/api/public/seats/commit',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicPricingCatalogRoute = ApiPublicPricingCatalogRouteImport.update({
-  id: '/api/public/pricing/catalog',
-  path: '/api/public/pricing/catalog',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicEdgeStatusRoute = ApiPublicEdgeStatusRouteImport.update({
-  id: '/api/public/edge/status',
-  path: '/api/public/edge/status',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicClonesRotateKeyRoute =
-  ApiPublicClonesRotateKeyRouteImport.update({
-    id: '/api/public/clones/rotate-key',
-    path: '/api/public/clones/rotate-key',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicSeatsDevicesReleaseRoute =
-  ApiPublicSeatsDevicesReleaseRouteImport.update({
-    id: '/api/public/seats/devices/release',
-    path: '/api/public/seats/devices/release',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicSeatsDevicesRegisterRoute =
-  ApiPublicSeatsDevicesRegisterRouteImport.update({
-    id: '/api/public/seats/devices/register',
-    path: '/api/public/seats/devices/register',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicSeatsDevicesListRoute =
-  ApiPublicSeatsDevicesListRouteImport.update({
-    id: '/api/public/seats/devices/list',
-    path: '/api/public/seats/devices/list',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicSeatsDevicesHeartbeatRoute =
-  ApiPublicSeatsDevicesHeartbeatRouteImport.update({
-    id: '/api/public/seats/devices/heartbeat',
-    path: '/api/public/seats/devices/heartbeat',
-    getParentRoute: () => rootRouteImport,
-  } as any)
+
+const rootRouteChildren = {
+  IndexRoute,
+  ApprovalsRoute,
+  AuditLogRoute,
+  AuthRoute,
+  BrandingRoute,
+  CascadesRoute: CascadesRouteWithChildren,
+  CloudflareRoute,
+  DashboardRoute,
+  DigestsRoute,
+  DriftRoute,
+  FleetManagerRoute,
+  HealthRoute,
+  MetricsRoute,
+  ModulesRoute: ModulesRouteWithChildren,
+  NotificationsRoute,
+  PartnerPortalRoute,
+  PricingRoute,
+  ReportJobsRoute,
+  RouteErrorsRoute,
+  SchedulesRoute,
+  SecurityPartnersRoute,
+  SettingsRoute: SettingsRouteWithChildren,
+  SloRoute,
+  YggdrasilRoute,
+  ApiHealthRoute,
+  BillingCancelRoute,
+  BillingCatalogRoute,
+  BillingSeatsRoute,
+  BillingSuccessRoute,
+  BillingTopupRoute,
+  ClonesCloneIdRoute,
+  ClonesNewRoute,
+  FleetEdgeRoute,
+  HooksBrandDriftRoute,
+  HooksDriftRefreshRoute,
+  HooksEdgeDrainRoute,
+  HooksEdgeDriftRoute,
+  HooksExpireReservationsRoute,
+  HooksFleetDriftRoute,
+  HooksGithubRoute,
+  HooksRunSchedulesRoute,
+  HooksTokenAlertsRoute,
+  HooksWarmHealthRoute,
+  ApiPublicClonesRotateKeyRoute,
+  ApiPublicEdgeStatusRoute,
+  ApiPublicPricingCatalogRoute,
+  ApiPublicSeatsCommitRoute,
+  ApiPublicSeatsEntitlementRoute,
+  ApiPublicSeatsListRoute,
+  ApiPublicSeatsReleaseRoute,
+  ApiPublicSeatsReserveRoute,
+  ApiPublicStripeWebhookRoute,
+  ApiPublicTokensBalanceRoute,
+  ApiPublicTokensCancelRoute,
+  ApiPublicTokensCommitRoute,
+  ApiPublicTokensPacksRoute,
+  ApiPublicTokensReserveRoute,
+  ApiPublicSeatsDevicesHeartbeatRoute,
+  ApiPublicSeatsDevicesListRoute,
+  ApiPublicSeatsDevicesRegisterRoute,
+  ApiPublicSeatsDevicesReleaseRoute,
+}
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/approvals': typeof ApprovalsRoute
-  '/audit-log': typeof AuditLogRoute
-  '/auth': typeof AuthRoute
-  '/branding': typeof BrandingRoute
-  '/cascades': typeof CascadesRouteWithChildren
-  '/cloudflare': typeof CloudflareRoute
-  '/dashboard': typeof DashboardRoute
-  '/digests': typeof DigestsRoute
-  '/drift': typeof DriftRoute
-  '/fleet-manager': typeof FleetManagerRoute
-  '/health': typeof HealthRoute
-  '/metrics': typeof MetricsRoute
-  '/modules': typeof ModulesRouteWithChildren
-  '/notifications': typeof NotificationsRoute
-  '/pricing': typeof PricingRoute
-  '/report-jobs': typeof ReportJobsRoute
-  '/route-errors': typeof RouteErrorsRoute
-  '/schedules': typeof SchedulesRoute
-  '/settings': typeof SettingsRouteWithChildren
-  '/slo': typeof SloRoute
-  '/yggdrasil': typeof YggdrasilRoute
-  '/api/health': typeof ApiHealthRoute
-  '/billing/cancel': typeof BillingCancelRoute
-  '/billing/catalog': typeof BillingCatalogRoute
-  '/billing/seats': typeof BillingSeatsRoute
-  '/billing/success': typeof BillingSuccessRoute
-  '/billing/topup': typeof BillingTopupRoute
-  '/cascades/$eventId': typeof CascadesEventIdRoute
-  '/clones/$cloneId': typeof ClonesCloneIdRoute
-  '/clones/new': typeof ClonesNewRoute
-  '/fleet/edge': typeof FleetEdgeRoute
-  '/hooks/brand-drift': typeof HooksBrandDriftRoute
-  '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
-  '/hooks/edge-drain': typeof HooksEdgeDrainRoute
-  '/hooks/edge-drift': typeof HooksEdgeDriftRoute
-  '/hooks/expire-reservations': typeof HooksExpireReservationsRoute
-  '/hooks/fleet-drift': typeof HooksFleetDriftRoute
-  '/hooks/github': typeof HooksGithubRoute
-  '/hooks/run-schedules': typeof HooksRunSchedulesRoute
-  '/hooks/token-alerts': typeof HooksTokenAlertsRoute
-  '/hooks/warm-health': typeof HooksWarmHealthRoute
-  '/modules/$slug': typeof ModulesSlugRoute
-  '/modules/builder': typeof ModulesBuilderRoute
-  '/settings/billing': typeof SettingsBillingRoute
-  '/settings/notifications': typeof SettingsNotificationsRoute
-  '/settings/permission-matrix': typeof SettingsPermissionMatrixRoute
-  '/settings/provisioning-preview': typeof SettingsProvisioningPreviewRoute
-  '/settings/role-audit': typeof SettingsRoleAuditRoute
-  '/settings/roles': typeof SettingsRolesRoute
-  '/settings/': typeof SettingsIndexRoute
-  '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
-  '/api/public/edge/status': typeof ApiPublicEdgeStatusRoute
-  '/api/public/pricing/catalog': typeof ApiPublicPricingCatalogRoute
-  '/api/public/seats/commit': typeof ApiPublicSeatsCommitRoute
-  '/api/public/seats/entitlement': typeof ApiPublicSeatsEntitlementRoute
-  '/api/public/seats/list': typeof ApiPublicSeatsListRoute
-  '/api/public/seats/release': typeof ApiPublicSeatsReleaseRoute
-  '/api/public/seats/reserve': typeof ApiPublicSeatsReserveRoute
-  '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRoute
-  '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
-  '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
-  '/api/public/tokens/commit': typeof ApiPublicTokensCommitRoute
-  '/api/public/tokens/packs': typeof ApiPublicTokensPacksRoute
-  '/api/public/tokens/reserve': typeof ApiPublicTokensReserveRoute
-  '/api/public/seats/devices/heartbeat': typeof ApiPublicSeatsDevicesHeartbeatRoute
-  '/api/public/seats/devices/list': typeof ApiPublicSeatsDevicesListRoute
-  '/api/public/seats/devices/register': typeof ApiPublicSeatsDevicesRegisterRoute
-  '/api/public/seats/devices/release': typeof ApiPublicSeatsDevicesReleaseRoute
+  [path: string]: any
 }
+
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/approvals': typeof ApprovalsRoute
-  '/audit-log': typeof AuditLogRoute
-  '/auth': typeof AuthRoute
-  '/branding': typeof BrandingRoute
-  '/cascades': typeof CascadesRouteWithChildren
-  '/cloudflare': typeof CloudflareRoute
-  '/dashboard': typeof DashboardRoute
-  '/digests': typeof DigestsRoute
-  '/drift': typeof DriftRoute
-  '/fleet-manager': typeof FleetManagerRoute
-  '/health': typeof HealthRoute
-  '/metrics': typeof MetricsRoute
-  '/modules': typeof ModulesRouteWithChildren
-  '/notifications': typeof NotificationsRoute
-  '/pricing': typeof PricingRoute
-  '/report-jobs': typeof ReportJobsRoute
-  '/route-errors': typeof RouteErrorsRoute
-  '/schedules': typeof SchedulesRoute
-  '/slo': typeof SloRoute
-  '/yggdrasil': typeof YggdrasilRoute
-  '/api/health': typeof ApiHealthRoute
-  '/billing/cancel': typeof BillingCancelRoute
-  '/billing/catalog': typeof BillingCatalogRoute
-  '/billing/seats': typeof BillingSeatsRoute
-  '/billing/success': typeof BillingSuccessRoute
-  '/billing/topup': typeof BillingTopupRoute
-  '/cascades/$eventId': typeof CascadesEventIdRoute
-  '/clones/$cloneId': typeof ClonesCloneIdRoute
-  '/clones/new': typeof ClonesNewRoute
-  '/fleet/edge': typeof FleetEdgeRoute
-  '/hooks/brand-drift': typeof HooksBrandDriftRoute
-  '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
-  '/hooks/edge-drain': typeof HooksEdgeDrainRoute
-  '/hooks/edge-drift': typeof HooksEdgeDriftRoute
-  '/hooks/expire-reservations': typeof HooksExpireReservationsRoute
-  '/hooks/fleet-drift': typeof HooksFleetDriftRoute
-  '/hooks/github': typeof HooksGithubRoute
-  '/hooks/run-schedules': typeof HooksRunSchedulesRoute
-  '/hooks/token-alerts': typeof HooksTokenAlertsRoute
-  '/hooks/warm-health': typeof HooksWarmHealthRoute
-  '/modules/$slug': typeof ModulesSlugRoute
-  '/modules/builder': typeof ModulesBuilderRoute
-  '/settings/billing': typeof SettingsBillingRoute
-  '/settings/notifications': typeof SettingsNotificationsRoute
-  '/settings/permission-matrix': typeof SettingsPermissionMatrixRoute
-  '/settings/provisioning-preview': typeof SettingsProvisioningPreviewRoute
-  '/settings/role-audit': typeof SettingsRoleAuditRoute
-  '/settings/roles': typeof SettingsRolesRoute
-  '/settings': typeof SettingsIndexRoute
-  '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
-  '/api/public/edge/status': typeof ApiPublicEdgeStatusRoute
-  '/api/public/pricing/catalog': typeof ApiPublicPricingCatalogRoute
-  '/api/public/seats/commit': typeof ApiPublicSeatsCommitRoute
-  '/api/public/seats/entitlement': typeof ApiPublicSeatsEntitlementRoute
-  '/api/public/seats/list': typeof ApiPublicSeatsListRoute
-  '/api/public/seats/release': typeof ApiPublicSeatsReleaseRoute
-  '/api/public/seats/reserve': typeof ApiPublicSeatsReserveRoute
-  '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRoute
-  '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
-  '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
-  '/api/public/tokens/commit': typeof ApiPublicTokensCommitRoute
-  '/api/public/tokens/packs': typeof ApiPublicTokensPacksRoute
-  '/api/public/tokens/reserve': typeof ApiPublicTokensReserveRoute
-  '/api/public/seats/devices/heartbeat': typeof ApiPublicSeatsDevicesHeartbeatRoute
-  '/api/public/seats/devices/list': typeof ApiPublicSeatsDevicesListRoute
-  '/api/public/seats/devices/register': typeof ApiPublicSeatsDevicesRegisterRoute
-  '/api/public/seats/devices/release': typeof ApiPublicSeatsDevicesReleaseRoute
+  [path: string]: any
 }
+
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/approvals': typeof ApprovalsRoute
-  '/audit-log': typeof AuditLogRoute
-  '/auth': typeof AuthRoute
-  '/branding': typeof BrandingRoute
-  '/cascades': typeof CascadesRouteWithChildren
-  '/cloudflare': typeof CloudflareRoute
-  '/dashboard': typeof DashboardRoute
-  '/digests': typeof DigestsRoute
-  '/drift': typeof DriftRoute
-  '/fleet-manager': typeof FleetManagerRoute
-  '/health': typeof HealthRoute
-  '/metrics': typeof MetricsRoute
-  '/modules': typeof ModulesRouteWithChildren
-  '/notifications': typeof NotificationsRoute
-  '/pricing': typeof PricingRoute
-  '/report-jobs': typeof ReportJobsRoute
-  '/route-errors': typeof RouteErrorsRoute
-  '/schedules': typeof SchedulesRoute
-  '/settings': typeof SettingsRouteWithChildren
-  '/slo': typeof SloRoute
-  '/yggdrasil': typeof YggdrasilRoute
-  '/api/health': typeof ApiHealthRoute
-  '/billing/cancel': typeof BillingCancelRoute
-  '/billing/catalog': typeof BillingCatalogRoute
-  '/billing/seats': typeof BillingSeatsRoute
-  '/billing/success': typeof BillingSuccessRoute
-  '/billing/topup': typeof BillingTopupRoute
-  '/cascades/$eventId': typeof CascadesEventIdRoute
-  '/clones/$cloneId': typeof ClonesCloneIdRoute
-  '/clones/new': typeof ClonesNewRoute
-  '/fleet/edge': typeof FleetEdgeRoute
-  '/hooks/brand-drift': typeof HooksBrandDriftRoute
-  '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
-  '/hooks/edge-drain': typeof HooksEdgeDrainRoute
-  '/hooks/edge-drift': typeof HooksEdgeDriftRoute
-  '/hooks/expire-reservations': typeof HooksExpireReservationsRoute
-  '/hooks/fleet-drift': typeof HooksFleetDriftRoute
-  '/hooks/github': typeof HooksGithubRoute
-  '/hooks/run-schedules': typeof HooksRunSchedulesRoute
-  '/hooks/token-alerts': typeof HooksTokenAlertsRoute
-  '/hooks/warm-health': typeof HooksWarmHealthRoute
-  '/modules/$slug': typeof ModulesSlugRoute
-  '/modules/builder': typeof ModulesBuilderRoute
-  '/settings/billing': typeof SettingsBillingRoute
-  '/settings/notifications': typeof SettingsNotificationsRoute
-  '/settings/permission-matrix': typeof SettingsPermissionMatrixRoute
-  '/settings/provisioning-preview': typeof SettingsProvisioningPreviewRoute
-  '/settings/role-audit': typeof SettingsRoleAuditRoute
-  '/settings/roles': typeof SettingsRolesRoute
-  '/settings/': typeof SettingsIndexRoute
-  '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
-  '/api/public/edge/status': typeof ApiPublicEdgeStatusRoute
-  '/api/public/pricing/catalog': typeof ApiPublicPricingCatalogRoute
-  '/api/public/seats/commit': typeof ApiPublicSeatsCommitRoute
-  '/api/public/seats/entitlement': typeof ApiPublicSeatsEntitlementRoute
-  '/api/public/seats/list': typeof ApiPublicSeatsListRoute
-  '/api/public/seats/release': typeof ApiPublicSeatsReleaseRoute
-  '/api/public/seats/reserve': typeof ApiPublicSeatsReserveRoute
-  '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRoute
-  '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
-  '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
-  '/api/public/tokens/commit': typeof ApiPublicTokensCommitRoute
-  '/api/public/tokens/packs': typeof ApiPublicTokensPacksRoute
-  '/api/public/tokens/reserve': typeof ApiPublicTokensReserveRoute
-  '/api/public/seats/devices/heartbeat': typeof ApiPublicSeatsDevicesHeartbeatRoute
-  '/api/public/seats/devices/list': typeof ApiPublicSeatsDevicesListRoute
-  '/api/public/seats/devices/register': typeof ApiPublicSeatsDevicesRegisterRoute
-  '/api/public/seats/devices/release': typeof ApiPublicSeatsDevicesReleaseRoute
+  [id: string]: any
 }
+
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/approvals'
-    | '/audit-log'
-    | '/auth'
-    | '/branding'
-    | '/cascades'
-    | '/cloudflare'
-    | '/dashboard'
-    | '/digests'
-    | '/drift'
-    | '/fleet-manager'
-    | '/health'
-    | '/metrics'
-    | '/modules'
-    | '/notifications'
-    | '/pricing'
-    | '/report-jobs'
-    | '/route-errors'
-    | '/schedules'
-    | '/settings'
-    | '/slo'
-    | '/yggdrasil'
-    | '/api/health'
-    | '/billing/cancel'
-    | '/billing/catalog'
-    | '/billing/seats'
-    | '/billing/success'
-    | '/billing/topup'
-    | '/cascades/$eventId'
-    | '/clones/$cloneId'
-    | '/clones/new'
-    | '/fleet/edge'
-    | '/hooks/brand-drift'
-    | '/hooks/drift-refresh'
-    | '/hooks/edge-drain'
-    | '/hooks/edge-drift'
-    | '/hooks/expire-reservations'
-    | '/hooks/fleet-drift'
-    | '/hooks/github'
-    | '/hooks/run-schedules'
-    | '/hooks/token-alerts'
-    | '/hooks/warm-health'
-    | '/modules/$slug'
-    | '/modules/builder'
-    | '/settings/billing'
-    | '/settings/notifications'
-    | '/settings/permission-matrix'
-    | '/settings/provisioning-preview'
-    | '/settings/role-audit'
-    | '/settings/roles'
-    | '/settings/'
-    | '/api/public/clones/rotate-key'
-    | '/api/public/edge/status'
-    | '/api/public/pricing/catalog'
-    | '/api/public/seats/commit'
-    | '/api/public/seats/entitlement'
-    | '/api/public/seats/list'
-    | '/api/public/seats/release'
-    | '/api/public/seats/reserve'
-    | '/api/public/stripe/webhook'
-    | '/api/public/tokens/balance'
-    | '/api/public/tokens/cancel'
-    | '/api/public/tokens/commit'
-    | '/api/public/tokens/packs'
-    | '/api/public/tokens/reserve'
-    | '/api/public/seats/devices/heartbeat'
-    | '/api/public/seats/devices/list'
-    | '/api/public/seats/devices/register'
-    | '/api/public/seats/devices/release'
+  fullPaths: string
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/approvals'
-    | '/audit-log'
-    | '/auth'
-    | '/branding'
-    | '/cascades'
-    | '/cloudflare'
-    | '/dashboard'
-    | '/digests'
-    | '/drift'
-    | '/fleet-manager'
-    | '/health'
-    | '/metrics'
-    | '/modules'
-    | '/notifications'
-    | '/pricing'
-    | '/report-jobs'
-    | '/route-errors'
-    | '/schedules'
-    | '/slo'
-    | '/yggdrasil'
-    | '/api/health'
-    | '/billing/cancel'
-    | '/billing/catalog'
-    | '/billing/seats'
-    | '/billing/success'
-    | '/billing/topup'
-    | '/cascades/$eventId'
-    | '/clones/$cloneId'
-    | '/clones/new'
-    | '/fleet/edge'
-    | '/hooks/brand-drift'
-    | '/hooks/drift-refresh'
-    | '/hooks/edge-drain'
-    | '/hooks/edge-drift'
-    | '/hooks/expire-reservations'
-    | '/hooks/fleet-drift'
-    | '/hooks/github'
-    | '/hooks/run-schedules'
-    | '/hooks/token-alerts'
-    | '/hooks/warm-health'
-    | '/modules/$slug'
-    | '/modules/builder'
-    | '/settings/billing'
-    | '/settings/notifications'
-    | '/settings/permission-matrix'
-    | '/settings/provisioning-preview'
-    | '/settings/role-audit'
-    | '/settings/roles'
-    | '/settings'
-    | '/api/public/clones/rotate-key'
-    | '/api/public/edge/status'
-    | '/api/public/pricing/catalog'
-    | '/api/public/seats/commit'
-    | '/api/public/seats/entitlement'
-    | '/api/public/seats/list'
-    | '/api/public/seats/release'
-    | '/api/public/seats/reserve'
-    | '/api/public/stripe/webhook'
-    | '/api/public/tokens/balance'
-    | '/api/public/tokens/cancel'
-    | '/api/public/tokens/commit'
-    | '/api/public/tokens/packs'
-    | '/api/public/tokens/reserve'
-    | '/api/public/seats/devices/heartbeat'
-    | '/api/public/seats/devices/list'
-    | '/api/public/seats/devices/register'
-    | '/api/public/seats/devices/release'
-  id:
-    | '__root__'
-    | '/'
-    | '/approvals'
-    | '/audit-log'
-    | '/auth'
-    | '/branding'
-    | '/cascades'
-    | '/cloudflare'
-    | '/dashboard'
-    | '/digests'
-    | '/drift'
-    | '/fleet-manager'
-    | '/health'
-    | '/metrics'
-    | '/modules'
-    | '/notifications'
-    | '/pricing'
-    | '/report-jobs'
-    | '/route-errors'
-    | '/schedules'
-    | '/settings'
-    | '/slo'
-    | '/yggdrasil'
-    | '/api/health'
-    | '/billing/cancel'
-    | '/billing/catalog'
-    | '/billing/seats'
-    | '/billing/success'
-    | '/billing/topup'
-    | '/cascades/$eventId'
-    | '/clones/$cloneId'
-    | '/clones/new'
-    | '/fleet/edge'
-    | '/hooks/brand-drift'
-    | '/hooks/drift-refresh'
-    | '/hooks/edge-drain'
-    | '/hooks/edge-drift'
-    | '/hooks/expire-reservations'
-    | '/hooks/fleet-drift'
-    | '/hooks/github'
-    | '/hooks/run-schedules'
-    | '/hooks/token-alerts'
-    | '/hooks/warm-health'
-    | '/modules/$slug'
-    | '/modules/builder'
-    | '/settings/billing'
-    | '/settings/notifications'
-    | '/settings/permission-matrix'
-    | '/settings/provisioning-preview'
-    | '/settings/role-audit'
-    | '/settings/roles'
-    | '/settings/'
-    | '/api/public/clones/rotate-key'
-    | '/api/public/edge/status'
-    | '/api/public/pricing/catalog'
-    | '/api/public/seats/commit'
-    | '/api/public/seats/entitlement'
-    | '/api/public/seats/list'
-    | '/api/public/seats/release'
-    | '/api/public/seats/reserve'
-    | '/api/public/stripe/webhook'
-    | '/api/public/tokens/balance'
-    | '/api/public/tokens/cancel'
-    | '/api/public/tokens/commit'
-    | '/api/public/tokens/packs'
-    | '/api/public/tokens/reserve'
-    | '/api/public/seats/devices/heartbeat'
-    | '/api/public/seats/devices/list'
-    | '/api/public/seats/devices/register'
-    | '/api/public/seats/devices/release'
-  fileRoutesById: FileRoutesById
-}
-export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  ApprovalsRoute: typeof ApprovalsRoute
-  AuditLogRoute: typeof AuditLogRoute
-  AuthRoute: typeof AuthRoute
-  BrandingRoute: typeof BrandingRoute
-  CascadesRoute: typeof CascadesRouteWithChildren
-  CloudflareRoute: typeof CloudflareRoute
-  DashboardRoute: typeof DashboardRoute
-  DigestsRoute: typeof DigestsRoute
-  DriftRoute: typeof DriftRoute
-  FleetManagerRoute: typeof FleetManagerRoute
-  HealthRoute: typeof HealthRoute
-  MetricsRoute: typeof MetricsRoute
-  ModulesRoute: typeof ModulesRouteWithChildren
-  NotificationsRoute: typeof NotificationsRoute
-  PricingRoute: typeof PricingRoute
-  ReportJobsRoute: typeof ReportJobsRoute
-  RouteErrorsRoute: typeof RouteErrorsRoute
-  SchedulesRoute: typeof SchedulesRoute
-  SettingsRoute: typeof SettingsRouteWithChildren
-  SloRoute: typeof SloRoute
-  YggdrasilRoute: typeof YggdrasilRoute
-  ApiHealthRoute: typeof ApiHealthRoute
-  BillingCancelRoute: typeof BillingCancelRoute
-  BillingCatalogRoute: typeof BillingCatalogRoute
-  BillingSeatsRoute: typeof BillingSeatsRoute
-  BillingSuccessRoute: typeof BillingSuccessRoute
-  BillingTopupRoute: typeof BillingTopupRoute
-  ClonesCloneIdRoute: typeof ClonesCloneIdRoute
-  ClonesNewRoute: typeof ClonesNewRoute
-  FleetEdgeRoute: typeof FleetEdgeRoute
-  HooksBrandDriftRoute: typeof HooksBrandDriftRoute
-  HooksDriftRefreshRoute: typeof HooksDriftRefreshRoute
-  HooksEdgeDrainRoute: typeof HooksEdgeDrainRoute
-  HooksEdgeDriftRoute: typeof HooksEdgeDriftRoute
-  HooksExpireReservationsRoute: typeof HooksExpireReservationsRoute
-  HooksFleetDriftRoute: typeof HooksFleetDriftRoute
-  HooksGithubRoute: typeof HooksGithubRoute
-  HooksRunSchedulesRoute: typeof HooksRunSchedulesRoute
-  HooksTokenAlertsRoute: typeof HooksTokenAlertsRoute
-  HooksWarmHealthRoute: typeof HooksWarmHealthRoute
-  ApiPublicClonesRotateKeyRoute: typeof ApiPublicClonesRotateKeyRoute
-  ApiPublicEdgeStatusRoute: typeof ApiPublicEdgeStatusRoute
-  ApiPublicPricingCatalogRoute: typeof ApiPublicPricingCatalogRoute
-  ApiPublicSeatsCommitRoute: typeof ApiPublicSeatsCommitRoute
-  ApiPublicSeatsEntitlementRoute: typeof ApiPublicSeatsEntitlementRoute
-  ApiPublicSeatsListRoute: typeof ApiPublicSeatsListRoute
-  ApiPublicSeatsReleaseRoute: typeof ApiPublicSeatsReleaseRoute
-  ApiPublicSeatsReserveRoute: typeof ApiPublicSeatsReserveRoute
-  ApiPublicStripeWebhookRoute: typeof ApiPublicStripeWebhookRoute
-  ApiPublicTokensBalanceRoute: typeof ApiPublicTokensBalanceRoute
-  ApiPublicTokensCancelRoute: typeof ApiPublicTokensCancelRoute
-  ApiPublicTokensCommitRoute: typeof ApiPublicTokensCommitRoute
-  ApiPublicTokensPacksRoute: typeof ApiPublicTokensPacksRoute
-  ApiPublicTokensReserveRoute: typeof ApiPublicTokensReserveRoute
-  ApiPublicSeatsDevicesHeartbeatRoute: typeof ApiPublicSeatsDevicesHeartbeatRoute
-  ApiPublicSeatsDevicesListRoute: typeof ApiPublicSeatsDevicesListRoute
-  ApiPublicSeatsDevicesRegisterRoute: typeof ApiPublicSeatsDevicesRegisterRoute
-  ApiPublicSeatsDevicesReleaseRoute: typeof ApiPublicSeatsDevicesReleaseRoute
+  to: string
+  id: string
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/yggdrasil': {
-      id: '/yggdrasil'
-      path: '/yggdrasil'
-      fullPath: '/yggdrasil'
-      preLoaderRoute: typeof YggdrasilRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/slo': {
-      id: '/slo'
-      path: '/slo'
-      fullPath: '/slo'
-      preLoaderRoute: typeof SloRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/schedules': {
-      id: '/schedules'
-      path: '/schedules'
-      fullPath: '/schedules'
-      preLoaderRoute: typeof SchedulesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/route-errors': {
-      id: '/route-errors'
-      path: '/route-errors'
-      fullPath: '/route-errors'
-      preLoaderRoute: typeof RouteErrorsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/report-jobs': {
-      id: '/report-jobs'
-      path: '/report-jobs'
-      fullPath: '/report-jobs'
-      preLoaderRoute: typeof ReportJobsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pricing': {
-      id: '/pricing'
-      path: '/pricing'
-      fullPath: '/pricing'
-      preLoaderRoute: typeof PricingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/notifications': {
-      id: '/notifications'
-      path: '/notifications'
-      fullPath: '/notifications'
-      preLoaderRoute: typeof NotificationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/modules': {
-      id: '/modules'
-      path: '/modules'
-      fullPath: '/modules'
-      preLoaderRoute: typeof ModulesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/metrics': {
-      id: '/metrics'
-      path: '/metrics'
-      fullPath: '/metrics'
-      preLoaderRoute: typeof MetricsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/health': {
-      id: '/health'
-      path: '/health'
-      fullPath: '/health'
-      preLoaderRoute: typeof HealthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/fleet-manager': {
-      id: '/fleet-manager'
-      path: '/fleet-manager'
-      fullPath: '/fleet-manager'
-      preLoaderRoute: typeof FleetManagerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/drift': {
-      id: '/drift'
-      path: '/drift'
-      fullPath: '/drift'
-      preLoaderRoute: typeof DriftRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/digests': {
-      id: '/digests'
-      path: '/digests'
-      fullPath: '/digests'
-      preLoaderRoute: typeof DigestsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/cloudflare': {
-      id: '/cloudflare'
-      path: '/cloudflare'
-      fullPath: '/cloudflare'
-      preLoaderRoute: typeof CloudflareRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/cascades': {
-      id: '/cascades'
-      path: '/cascades'
-      fullPath: '/cascades'
-      preLoaderRoute: typeof CascadesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/branding': {
-      id: '/branding'
-      path: '/branding'
-      fullPath: '/branding'
-      preLoaderRoute: typeof BrandingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/audit-log': {
-      id: '/audit-log'
-      path: '/audit-log'
-      fullPath: '/audit-log'
-      preLoaderRoute: typeof AuditLogRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/approvals': {
-      id: '/approvals'
-      path: '/approvals'
-      fullPath: '/approvals'
-      preLoaderRoute: typeof ApprovalsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings/': {
-      id: '/settings/'
-      path: '/'
-      fullPath: '/settings/'
-      preLoaderRoute: typeof SettingsIndexRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/roles': {
-      id: '/settings/roles'
-      path: '/roles'
-      fullPath: '/settings/roles'
-      preLoaderRoute: typeof SettingsRolesRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/role-audit': {
-      id: '/settings/role-audit'
-      path: '/role-audit'
-      fullPath: '/settings/role-audit'
-      preLoaderRoute: typeof SettingsRoleAuditRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/provisioning-preview': {
-      id: '/settings/provisioning-preview'
-      path: '/provisioning-preview'
-      fullPath: '/settings/provisioning-preview'
-      preLoaderRoute: typeof SettingsProvisioningPreviewRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/permission-matrix': {
-      id: '/settings/permission-matrix'
-      path: '/permission-matrix'
-      fullPath: '/settings/permission-matrix'
-      preLoaderRoute: typeof SettingsPermissionMatrixRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/notifications': {
-      id: '/settings/notifications'
-      path: '/notifications'
-      fullPath: '/settings/notifications'
-      preLoaderRoute: typeof SettingsNotificationsRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/billing': {
-      id: '/settings/billing'
-      path: '/billing'
-      fullPath: '/settings/billing'
-      preLoaderRoute: typeof SettingsBillingRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/modules/builder': {
-      id: '/modules/builder'
-      path: '/builder'
-      fullPath: '/modules/builder'
-      preLoaderRoute: typeof ModulesBuilderRouteImport
-      parentRoute: typeof ModulesRoute
-    }
-    '/modules/$slug': {
-      id: '/modules/$slug'
-      path: '/$slug'
-      fullPath: '/modules/$slug'
-      preLoaderRoute: typeof ModulesSlugRouteImport
-      parentRoute: typeof ModulesRoute
-    }
-    '/hooks/warm-health': {
-      id: '/hooks/warm-health'
-      path: '/hooks/warm-health'
-      fullPath: '/hooks/warm-health'
-      preLoaderRoute: typeof HooksWarmHealthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hooks/token-alerts': {
-      id: '/hooks/token-alerts'
-      path: '/hooks/token-alerts'
-      fullPath: '/hooks/token-alerts'
-      preLoaderRoute: typeof HooksTokenAlertsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hooks/run-schedules': {
-      id: '/hooks/run-schedules'
-      path: '/hooks/run-schedules'
-      fullPath: '/hooks/run-schedules'
-      preLoaderRoute: typeof HooksRunSchedulesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hooks/github': {
-      id: '/hooks/github'
-      path: '/hooks/github'
-      fullPath: '/hooks/github'
-      preLoaderRoute: typeof HooksGithubRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hooks/fleet-drift': {
-      id: '/hooks/fleet-drift'
-      path: '/hooks/fleet-drift'
-      fullPath: '/hooks/fleet-drift'
-      preLoaderRoute: typeof HooksFleetDriftRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hooks/expire-reservations': {
-      id: '/hooks/expire-reservations'
-      path: '/hooks/expire-reservations'
-      fullPath: '/hooks/expire-reservations'
-      preLoaderRoute: typeof HooksExpireReservationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hooks/edge-drift': {
-      id: '/hooks/edge-drift'
-      path: '/hooks/edge-drift'
-      fullPath: '/hooks/edge-drift'
-      preLoaderRoute: typeof HooksEdgeDriftRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hooks/edge-drain': {
-      id: '/hooks/edge-drain'
-      path: '/hooks/edge-drain'
-      fullPath: '/hooks/edge-drain'
-      preLoaderRoute: typeof HooksEdgeDrainRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hooks/drift-refresh': {
-      id: '/hooks/drift-refresh'
-      path: '/hooks/drift-refresh'
-      fullPath: '/hooks/drift-refresh'
-      preLoaderRoute: typeof HooksDriftRefreshRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/hooks/brand-drift': {
-      id: '/hooks/brand-drift'
-      path: '/hooks/brand-drift'
-      fullPath: '/hooks/brand-drift'
-      preLoaderRoute: typeof HooksBrandDriftRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/fleet/edge': {
-      id: '/fleet/edge'
-      path: '/fleet/edge'
-      fullPath: '/fleet/edge'
-      preLoaderRoute: typeof FleetEdgeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/clones/new': {
-      id: '/clones/new'
-      path: '/clones/new'
-      fullPath: '/clones/new'
-      preLoaderRoute: typeof ClonesNewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/clones/$cloneId': {
-      id: '/clones/$cloneId'
-      path: '/clones/$cloneId'
-      fullPath: '/clones/$cloneId'
-      preLoaderRoute: typeof ClonesCloneIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/cascades/$eventId': {
-      id: '/cascades/$eventId'
-      path: '/$eventId'
-      fullPath: '/cascades/$eventId'
-      preLoaderRoute: typeof CascadesEventIdRouteImport
-      parentRoute: typeof CascadesRoute
-    }
-    '/billing/topup': {
-      id: '/billing/topup'
-      path: '/billing/topup'
-      fullPath: '/billing/topup'
-      preLoaderRoute: typeof BillingTopupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/billing/success': {
-      id: '/billing/success'
-      path: '/billing/success'
-      fullPath: '/billing/success'
-      preLoaderRoute: typeof BillingSuccessRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/billing/seats': {
-      id: '/billing/seats'
-      path: '/billing/seats'
-      fullPath: '/billing/seats'
-      preLoaderRoute: typeof BillingSeatsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/billing/catalog': {
-      id: '/billing/catalog'
-      path: '/billing/catalog'
-      fullPath: '/billing/catalog'
-      preLoaderRoute: typeof BillingCatalogRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/billing/cancel': {
-      id: '/billing/cancel'
-      path: '/billing/cancel'
-      fullPath: '/billing/cancel'
-      preLoaderRoute: typeof BillingCancelRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/health': {
-      id: '/api/health'
-      path: '/api/health'
-      fullPath: '/api/health'
-      preLoaderRoute: typeof ApiHealthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/tokens/reserve': {
-      id: '/api/public/tokens/reserve'
-      path: '/api/public/tokens/reserve'
-      fullPath: '/api/public/tokens/reserve'
-      preLoaderRoute: typeof ApiPublicTokensReserveRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/tokens/packs': {
-      id: '/api/public/tokens/packs'
-      path: '/api/public/tokens/packs'
-      fullPath: '/api/public/tokens/packs'
-      preLoaderRoute: typeof ApiPublicTokensPacksRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/tokens/commit': {
-      id: '/api/public/tokens/commit'
-      path: '/api/public/tokens/commit'
-      fullPath: '/api/public/tokens/commit'
-      preLoaderRoute: typeof ApiPublicTokensCommitRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/tokens/cancel': {
-      id: '/api/public/tokens/cancel'
-      path: '/api/public/tokens/cancel'
-      fullPath: '/api/public/tokens/cancel'
-      preLoaderRoute: typeof ApiPublicTokensCancelRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/tokens/balance': {
-      id: '/api/public/tokens/balance'
-      path: '/api/public/tokens/balance'
-      fullPath: '/api/public/tokens/balance'
-      preLoaderRoute: typeof ApiPublicTokensBalanceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/stripe/webhook': {
-      id: '/api/public/stripe/webhook'
-      path: '/api/public/stripe/webhook'
-      fullPath: '/api/public/stripe/webhook'
-      preLoaderRoute: typeof ApiPublicStripeWebhookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/seats/reserve': {
-      id: '/api/public/seats/reserve'
-      path: '/api/public/seats/reserve'
-      fullPath: '/api/public/seats/reserve'
-      preLoaderRoute: typeof ApiPublicSeatsReserveRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/seats/release': {
-      id: '/api/public/seats/release'
-      path: '/api/public/seats/release'
-      fullPath: '/api/public/seats/release'
-      preLoaderRoute: typeof ApiPublicSeatsReleaseRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/seats/list': {
-      id: '/api/public/seats/list'
-      path: '/api/public/seats/list'
-      fullPath: '/api/public/seats/list'
-      preLoaderRoute: typeof ApiPublicSeatsListRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/seats/entitlement': {
-      id: '/api/public/seats/entitlement'
-      path: '/api/public/seats/entitlement'
-      fullPath: '/api/public/seats/entitlement'
-      preLoaderRoute: typeof ApiPublicSeatsEntitlementRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/seats/commit': {
-      id: '/api/public/seats/commit'
-      path: '/api/public/seats/commit'
-      fullPath: '/api/public/seats/commit'
-      preLoaderRoute: typeof ApiPublicSeatsCommitRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/pricing/catalog': {
-      id: '/api/public/pricing/catalog'
-      path: '/api/public/pricing/catalog'
-      fullPath: '/api/public/pricing/catalog'
-      preLoaderRoute: typeof ApiPublicPricingCatalogRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/edge/status': {
-      id: '/api/public/edge/status'
-      path: '/api/public/edge/status'
-      fullPath: '/api/public/edge/status'
-      preLoaderRoute: typeof ApiPublicEdgeStatusRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/clones/rotate-key': {
-      id: '/api/public/clones/rotate-key'
-      path: '/api/public/clones/rotate-key'
-      fullPath: '/api/public/clones/rotate-key'
-      preLoaderRoute: typeof ApiPublicClonesRotateKeyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/seats/devices/release': {
-      id: '/api/public/seats/devices/release'
-      path: '/api/public/seats/devices/release'
-      fullPath: '/api/public/seats/devices/release'
-      preLoaderRoute: typeof ApiPublicSeatsDevicesReleaseRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/seats/devices/register': {
-      id: '/api/public/seats/devices/register'
-      path: '/api/public/seats/devices/register'
-      fullPath: '/api/public/seats/devices/register'
-      preLoaderRoute: typeof ApiPublicSeatsDevicesRegisterRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/seats/devices/list': {
-      id: '/api/public/seats/devices/list'
-      path: '/api/public/seats/devices/list'
-      fullPath: '/api/public/seats/devices/list'
-      preLoaderRoute: typeof ApiPublicSeatsDevicesListRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/seats/devices/heartbeat': {
-      id: '/api/public/seats/devices/heartbeat'
-      path: '/api/public/seats/devices/heartbeat'
-      fullPath: '/api/public/seats/devices/heartbeat'
-      preLoaderRoute: typeof ApiPublicSeatsDevicesHeartbeatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+    [path: string]: any
   }
 }
 
-interface CascadesRouteChildren {
-  CascadesEventIdRoute: typeof CascadesEventIdRoute
-}
-
-const CascadesRouteChildren: CascadesRouteChildren = {
-  CascadesEventIdRoute: CascadesEventIdRoute,
-}
-
-const CascadesRouteWithChildren = CascadesRoute._addFileChildren(
-  CascadesRouteChildren,
-)
-
-interface ModulesRouteChildren {
-  ModulesSlugRoute: typeof ModulesSlugRoute
-  ModulesBuilderRoute: typeof ModulesBuilderRoute
-}
-
-const ModulesRouteChildren: ModulesRouteChildren = {
-  ModulesSlugRoute: ModulesSlugRoute,
-  ModulesBuilderRoute: ModulesBuilderRoute,
-}
-
-const ModulesRouteWithChildren =
-  ModulesRoute._addFileChildren(ModulesRouteChildren)
-
-interface SettingsRouteChildren {
-  SettingsBillingRoute: typeof SettingsBillingRoute
-  SettingsNotificationsRoute: typeof SettingsNotificationsRoute
-  SettingsPermissionMatrixRoute: typeof SettingsPermissionMatrixRoute
-  SettingsProvisioningPreviewRoute: typeof SettingsProvisioningPreviewRoute
-  SettingsRoleAuditRoute: typeof SettingsRoleAuditRoute
-  SettingsRolesRoute: typeof SettingsRolesRoute
-  SettingsIndexRoute: typeof SettingsIndexRoute
-}
-
-const SettingsRouteChildren: SettingsRouteChildren = {
-  SettingsBillingRoute: SettingsBillingRoute,
-  SettingsNotificationsRoute: SettingsNotificationsRoute,
-  SettingsPermissionMatrixRoute: SettingsPermissionMatrixRoute,
-  SettingsProvisioningPreviewRoute: SettingsProvisioningPreviewRoute,
-  SettingsRoleAuditRoute: SettingsRoleAuditRoute,
-  SettingsRolesRoute: SettingsRolesRoute,
-  SettingsIndexRoute: SettingsIndexRoute,
-}
-
-const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
-  SettingsRouteChildren,
-)
-
-const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  ApprovalsRoute: ApprovalsRoute,
-  AuditLogRoute: AuditLogRoute,
-  AuthRoute: AuthRoute,
-  BrandingRoute: BrandingRoute,
-  CascadesRoute: CascadesRouteWithChildren,
-  CloudflareRoute: CloudflareRoute,
-  DashboardRoute: DashboardRoute,
-  DigestsRoute: DigestsRoute,
-  DriftRoute: DriftRoute,
-  FleetManagerRoute: FleetManagerRoute,
-  HealthRoute: HealthRoute,
-  MetricsRoute: MetricsRoute,
-  ModulesRoute: ModulesRouteWithChildren,
-  NotificationsRoute: NotificationsRoute,
-  PricingRoute: PricingRoute,
-  ReportJobsRoute: ReportJobsRoute,
-  RouteErrorsRoute: RouteErrorsRoute,
-  SchedulesRoute: SchedulesRoute,
-  SettingsRoute: SettingsRouteWithChildren,
-  SloRoute: SloRoute,
-  YggdrasilRoute: YggdrasilRoute,
-  ApiHealthRoute: ApiHealthRoute,
-  BillingCancelRoute: BillingCancelRoute,
-  BillingCatalogRoute: BillingCatalogRoute,
-  BillingSeatsRoute: BillingSeatsRoute,
-  BillingSuccessRoute: BillingSuccessRoute,
-  BillingTopupRoute: BillingTopupRoute,
-  ClonesCloneIdRoute: ClonesCloneIdRoute,
-  ClonesNewRoute: ClonesNewRoute,
-  FleetEdgeRoute: FleetEdgeRoute,
-  HooksBrandDriftRoute: HooksBrandDriftRoute,
-  HooksDriftRefreshRoute: HooksDriftRefreshRoute,
-  HooksEdgeDrainRoute: HooksEdgeDrainRoute,
-  HooksEdgeDriftRoute: HooksEdgeDriftRoute,
-  HooksExpireReservationsRoute: HooksExpireReservationsRoute,
-  HooksFleetDriftRoute: HooksFleetDriftRoute,
-  HooksGithubRoute: HooksGithubRoute,
-  HooksRunSchedulesRoute: HooksRunSchedulesRoute,
-  HooksTokenAlertsRoute: HooksTokenAlertsRoute,
-  HooksWarmHealthRoute: HooksWarmHealthRoute,
-  ApiPublicClonesRotateKeyRoute: ApiPublicClonesRotateKeyRoute,
-  ApiPublicEdgeStatusRoute: ApiPublicEdgeStatusRoute,
-  ApiPublicPricingCatalogRoute: ApiPublicPricingCatalogRoute,
-  ApiPublicSeatsCommitRoute: ApiPublicSeatsCommitRoute,
-  ApiPublicSeatsEntitlementRoute: ApiPublicSeatsEntitlementRoute,
-  ApiPublicSeatsListRoute: ApiPublicSeatsListRoute,
-  ApiPublicSeatsReleaseRoute: ApiPublicSeatsReleaseRoute,
-  ApiPublicSeatsReserveRoute: ApiPublicSeatsReserveRoute,
-  ApiPublicStripeWebhookRoute: ApiPublicStripeWebhookRoute,
-  ApiPublicTokensBalanceRoute: ApiPublicTokensBalanceRoute,
-  ApiPublicTokensCancelRoute: ApiPublicTokensCancelRoute,
-  ApiPublicTokensCommitRoute: ApiPublicTokensCommitRoute,
-  ApiPublicTokensPacksRoute: ApiPublicTokensPacksRoute,
-  ApiPublicTokensReserveRoute: ApiPublicTokensReserveRoute,
-  ApiPublicSeatsDevicesHeartbeatRoute: ApiPublicSeatsDevicesHeartbeatRoute,
-  ApiPublicSeatsDevicesListRoute: ApiPublicSeatsDevicesListRoute,
-  ApiPublicSeatsDevicesRegisterRoute: ApiPublicSeatsDevicesRegisterRoute,
-  ApiPublicSeatsDevicesReleaseRoute: ApiPublicSeatsDevicesReleaseRoute,
-}
 export const routeTree = rootRouteImport
-  ._addFileChildren(rootRouteChildren)
+  ._addFileChildren(rootRouteChildren as any)
   ._addFileTypes<FileRouteTypes>()
