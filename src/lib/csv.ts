@@ -9,7 +9,7 @@ function escape(value: unknown): string {
   return str;
 }
 
-export function toCSV<T extends Record<string, unknown>>(
+export function toCSV<T extends object>(
   rows: T[],
   columns?: { key: keyof T; header?: string }[],
 ): string {
@@ -21,7 +21,12 @@ export function toCSV<T extends Record<string, unknown>>(
       header?: string;
     }[]);
   const header = cols.map((c) => escape(c.header ?? String(c.key))).join(",");
-  const body = rows.map((row) => cols.map((c) => escape(row[c.key])).join(",")).join("\n");
+  const body = rows
+    .map((row) => {
+      const record = row as Record<string, unknown>;
+      return cols.map((c) => escape(record[String(c.key)])).join(",");
+    })
+    .join("\n");
   return `${header}\n${body}`;
 }
 
@@ -37,7 +42,7 @@ export function downloadCSV(filename: string, csv: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function exportRowsAsCSV<T extends Record<string, unknown>>(
+export function exportRowsAsCSV<T extends object>(
   filename: string,
   rows: T[],
   columns?: { key: keyof T; header?: string }[],
