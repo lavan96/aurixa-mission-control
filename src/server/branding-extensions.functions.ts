@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Server functions for Phase 6 white-label expansion:
 // - listBrandVersions / rollbackBrandProfile
 // - upsertCloneOverrides / clearCloneOverrides

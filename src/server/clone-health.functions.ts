@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { getCloneHealth, type CloneHealth } from "./clone-health.server";

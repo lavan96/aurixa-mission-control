@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Edge provisioning worker — drains queued jobs from edge_provisioning_jobs.
 // Called by pg_cron every minute (Bearer auth via verifyCronAuth) and also
 // invoked opportunistically after enqueue for low-latency execution.

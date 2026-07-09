@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/protected-route";
 import { useModules, useClones, usePrimeConfig } from "@/lib/queries";

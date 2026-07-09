@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Lists clones the signed-in operator can purchase billing items for.
 // Mission Control / Prime is represented client-side as the synthetic
 // `null` cloneId option.

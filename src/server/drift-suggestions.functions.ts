@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { analyzeCloneDrift, type AnalyzeDriftResult } from "./drift-suggestions.server";

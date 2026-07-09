@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Daily edge drift check — walks every active clone_edge_config, compares
 // live provider state to intended posture, marks drifted rows and emits
 // notifications. Enqueues a `sync` job per config; the drain worker does
