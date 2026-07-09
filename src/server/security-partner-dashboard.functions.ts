@@ -7,7 +7,6 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 const admin = supabaseAdmin as any;
 
 const Cycle = z.enum(["quarterly", "bi_annual", "annual", "one_off"]);
-
 const REPORT_BUCKET = "security-reports";
 
 type SecurityAssessmentRow = {
@@ -117,20 +116,14 @@ function summarise(row: SecurityAssessmentRow) {
     high_findings: findings.filter((f) => f.severity === "high").length,
     pending_retests: findings.filter((f) => f.retest_status === "pending" || f.retest_status === "failed").length,
     report_count: reports.length,
-    latest_report_at: reports
-      .map((r) => r.submitted_at)
-      .filter(Boolean)
-      .sort()
-      .at(-1) ?? null,
+    latest_report_at: reports.map((r) => r.submitted_at).filter(Boolean).sort().at(-1) ?? null,
   };
 }
 
 export const listSecurityDashboardSummaries = createServerFn({ method: "POST" })
   .middleware([requireOperator])
   .inputValidator((input) =>
-    z
-      .object({ cloneIds: z.array(z.string().uuid()).default([]) })
-      .parse(input ?? {}),
+    z.object({ cloneIds: z.array(z.string().uuid()).default([]) }).parse(input ?? {}),
   )
   .handler(async ({ data }) => {
     let query = admin
@@ -141,18 +134,14 @@ export const listSecurityDashboardSummaries = createServerFn({ method: "POST" })
       .order("created_at", { ascending: false });
 
     if (data.cloneIds.length > 0) query = query.in("clone_id", data.cloneIds);
-
     const { data: rows, error } = await query;
     if (error) throw new Error(error.message);
-
     return { summaries: ((rows ?? []) as SecurityAssessmentRow[]).map(summarise) };
   });
 
 export const getCloneSecurityAssessments = createServerFn({ method: "GET" })
   .middleware([requireOperator])
-  .inputValidator((input: { cloneId: string }) =>
-    z.object({ cloneId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: { cloneId: string }) => z.object({ cloneId: z.string().uuid() }).parse(input))
   .handler(async ({ data }) => {
     const { data: rows, error } = await admin
       .from("security_assessments")
@@ -226,29 +215,38 @@ export const createBulkSecurityAssessments = createServerFn({ method: "POST" })
         continue;
       }
 
-      const assignmentRes = await admin
+      const existingAssignment = await admin
         .from("security_partner_assignments")
-        .upsert(
-          {
+        .select("id")
+        .eq("partner_id", data.partnerId)
+        .eq("clone_id", clone.id)
+        .is("revoked_at", null)
+        .maybeSingle();
+
+      let assignmentId = existingAssignment.data?.id as string | undefined;
+      if (!assignmentId) {
+        const assignmentRes = await admin
+          .from("security_partner_assignments")
+          .insert({
             partner_id: data.partnerId,
             clone_id: clone.id,
             status: "active",
             assigned_by: context.userId,
             assigned_at: now,
             metadata: { created_from: "dashboard_bulk_activation" },
-          },
-          { onConflict: "partner_id,clone_id" },
-        )
-        .select("id")
-        .single();
-      if (assignmentRes.error) throw new Error(assignmentRes.error.message);
+          })
+          .select("id")
+          .single();
+        if (assignmentRes.error) throw new Error(assignmentRes.error.message);
+        assignmentId = assignmentRes.data.id;
+      }
 
       const assessmentRes = await admin
         .from("security_assessments")
         .insert({
           partner_id: data.partnerId,
           clone_id: clone.id,
-          assignment_id: assignmentRes.data.id,
+          assignment_id: assignmentId,
           title: `${clone.name} ${data.cycle.replace("_", "-")} penetration test`,
           cycle: data.cycle,
           status: "pending",
