@@ -1,43 +1,34 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { toast } from "sonner";
+import { ArrowLeft, ExternalLink, Github, Pencil, Plus, RefreshCw, Trash2, Waves, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CloneActivityHistory } from "@/components/clone-activity-history";
+import { CloneBackendCard } from "@/components/clone-backend-card";
+import { CloneDriftPolicyCard } from "@/components/clone-drift-policy-card";
+import { CloneDriftSuggestionsCard } from "@/components/clone-drift-suggestions-card";
+import { CloneEditDialog } from "@/components/clone-edit-dialog";
+import { CloneEdgeCard } from "@/components/clone-edge-card";
+import { CloneHealthCard } from "@/components/clone-health-card";
+import { CloneLibraryPinsCard } from "@/components/clone-library-pins";
+import { CloneSecurityAssessmentsCard } from "@/components/clone-security-assessments-card";
+import { CloneSyncStatusCard } from "@/components/clone-sync-status-card";
+import { CopyButton } from "@/components/copy-button";
 import { ProtectedRoute } from "@/components/protected-route";
-import { useEffect, useState, lazy, Suspense } from "react";
+import { RouteError } from "@/components/route-error";
+import { StatusPill } from "@/components/status-pill";
 import { supabase } from "@/integrations/supabase/client";
+import { formatDistanceToNow } from "@/lib/format";
 import type { Clone, Module } from "@/lib/queries";
 import { useModules } from "@/lib/queries";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { StatusPill } from "@/components/status-pill";
-import { Badge } from "@/components/ui/badge";
-import {
-  ArrowLeft,
-  Github,
-  ExternalLink,
-  
-  Trash2,
-  Waves,
-  Plus,
-  RefreshCw,
-  X,
-  Pencil,
-} from "lucide-react";
-import { toast } from "sonner";
-import { formatDistanceToNow } from "@/lib/format";
-import { CloneActivityHistory } from "@/components/clone-activity-history";
-import { CloneDriftSuggestionsCard } from "@/components/clone-drift-suggestions-card";
-import { CloneDriftPolicyCard } from "@/components/clone-drift-policy-card";
-import { CloneHealthCard } from "@/components/clone-health-card";
-const CloneHealthTimeline = lazy(() =>
-  import("@/components/clone-health-timeline").then((m) => ({ default: m.CloneHealthTimeline })),
-);
-import { CloneBackendCard } from "@/components/clone-backend-card";
 import { bulkSyncModuleFn } from "@/server/module-sync.functions";
-import { CloneLibraryPinsCard } from "@/components/clone-library-pins";
 import type { DriftSuggestion } from "@/server/drift-suggestions.functions";
-import { CloneEditDialog } from "@/components/clone-edit-dialog";
-import { CopyButton } from "@/components/copy-button";
-import { CloneSyncStatusCard } from "@/components/clone-sync-status-card";
-import { CloneEdgeCard } from "@/components/clone-edge-card";
-import { RouteError } from "@/components/route-error";
+
+const CloneHealthTimeline = lazy(() =>
+  import("@/components/clone-health-timeline").then((module) => ({ default: module.CloneHealthTimeline })),
+);
 
 export const Route = createFileRoute("/clones/$cloneId")({
   component: () => (
@@ -61,103 +52,92 @@ function CloneDetail() {
     setLoading(true);
     const { data: c } = await supabase.from("clones").select("*").eq("id", cloneId).maybeSingle();
     setClone(c);
-    const { data: cm } = await supabase
-      .from("clone_modules")
-      .select("module_id, modules(*)")
-      .eq("clone_id", cloneId);
-    setInstalled((cm ?? []).map((r: any) => r.modules).filter(Boolean));
+    const { data: cm } = await supabase.from("clone_modules").select("module_id, modules(*)").eq("clone_id", cloneId);
+    setInstalled((cm ?? []).map((row: any) => row.modules).filter(Boolean));
     setLoading(false);
   };
 
   useEffect(() => {
-    load();
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cloneId]);
 
   const inject = async (moduleId: string) => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    const { error } = await supabase
-      .from("clone_modules")
-      .insert({ clone_id: cloneId, module_id: moduleId, installed_by: user?.id });
+    const { data: auth } = await supabase.auth.getUser();
+    const { error } = await supabase.from("clone_modules").insert({
+      clone_id: cloneId,
+      module_id: moduleId,
+      installed_by: auth.user?.id,
+    });
     if (error) return toast.error(error.message);
-    toast.success("Module injected — pushing commit to repo");
-    const mod = allModules.find((m) => m.id === moduleId);
+    const module = allModules.find((item) => item.id === moduleId);
     await supabase.from("audit_log").insert({
       action: "module.injected",
       entity_type: "clone",
       entity_id: cloneId,
-      actor_user_id: user?.id,
+      actor_user_id: auth.user?.id,
       metadata: { module_id: moduleId },
     });
     await supabase.from("notifications").insert({
       kind: "module_installed",
       severity: "info",
-      title: `Module installed: ${mod?.name ?? "module"}`,
+      title: `Module installed: ${module?.name ?? "module"}`,
       body: clone ? `On ${clone.name}` : null,
       clone_id: cloneId,
       url: `/clones/${cloneId}`,
       metadata: { module_id: moduleId },
     });
-    load();
+    toast.success("Module injected — pushing commit to repo");
+    void load();
   };
+
   const remove = async (moduleId: string) => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { data: auth } = await supabase.auth.getUser();
     await supabase.from("clone_modules").delete().eq("clone_id", cloneId).eq("module_id", moduleId);
-    toast.success("Module removed");
-    const mod = allModules.find((m) => m.id === moduleId);
+    const module = allModules.find((item) => item.id === moduleId);
     await supabase.from("audit_log").insert({
       action: "module.removed",
       entity_type: "clone",
       entity_id: cloneId,
-      actor_user_id: user?.id,
+      actor_user_id: auth.user?.id,
       metadata: { module_id: moduleId },
     });
     await supabase.from("notifications").insert({
       kind: "module_removed",
       severity: "info",
-      title: `Module removed: ${mod?.name ?? "module"}`,
+      title: `Module removed: ${module?.name ?? "module"}`,
       body: clone ? `From ${clone.name}` : null,
       clone_id: cloneId,
       url: `/clones/${cloneId}`,
       metadata: { module_id: moduleId },
     });
-    load();
+    toast.success("Module removed");
+    void load();
   };
+
   const resync = async (moduleId: string) => {
-    const mod = allModules.find((m) => m.id === moduleId);
+    const module = allModules.find((item) => item.id === moduleId);
     setResyncingId(moduleId);
     try {
-      const res = await bulkSyncModuleFn({
-        data: {
-          moduleId,
-          cloneIds: [cloneId],
-          action: "install",
-          cascade: true,
-          cascadeMode: "pr",
-        },
+      const result = await bulkSyncModuleFn({
+        data: { moduleId, cloneIds: [cloneId], action: "install", cascade: true, cascadeMode: "pr" },
       });
-      if (!res.ok) {
-        toast.error(res.error ?? "Re-sync failed");
-        return;
-      }
-      toast.success(`Re-synced ${mod?.name ?? "module"} — cascading scoped files`);
-      load();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Re-sync failed");
+      if (!result.ok) return toast.error(result.error ?? "Re-sync failed");
+      toast.success(`Re-synced ${module?.name ?? "module"} — cascading scoped files`);
+      void load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Re-sync failed");
     } finally {
       setResyncingId(null);
     }
   };
+
   const destroy = async () => {
     if (!confirm("Delete this clone? This cannot be undone.")) return;
-    const cloneName = clone?.name ?? "Clone";
     await supabase.from("notifications").insert({
       kind: "clone_deleted",
       severity: "warning",
-      title: `Clone deleted: ${cloneName}`,
+      title: `Clone deleted: ${clone?.name ?? "Clone"}`,
       metadata: { clone_id: cloneId },
     });
     await supabase.from("clones").delete().eq("id", cloneId);
@@ -165,49 +145,38 @@ function CloneDetail() {
     history.back();
   };
 
-  if (loading) {
-    return <div className="font-mono text-sm text-muted-foreground">loading…</div>;
-  }
+  if (loading) return <div className="font-mono text-sm text-muted-foreground">loading…</div>;
+
   if (!clone) {
     return (
       <div className="space-y-3">
-        <Link
-          to="/dashboard"
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="mr-1 h-4 w-4" /> back
+        <Link to="/dashboard" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="mr-1 h-4 w-4" /> fleet
         </Link>
         <div>Clone not found.</div>
       </div>
     );
   }
 
-  const installedIds = new Set(installed.map((m) => m.id));
-  const available = allModules.filter((m) => !installedIds.has(m.id));
+  const installedIds = new Set(installed.map((module) => module.id));
+  const available = allModules.filter((module) => !installedIds.has(module.id));
 
   return (
     <div className="space-y-6">
-      <Link
-        to="/dashboard"
-        className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
-      >
+      <Link to="/dashboard" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="mr-1 h-4 w-4" /> fleet
       </Link>
 
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
-            clone
-          </p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">clone</p>
           <div className="mt-1 flex items-center gap-2">
             <h1 className="text-3xl font-semibold tracking-tight">{clone.name}</h1>
             <CopyButton value={clone.id} label="clone id" />
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <StatusPill status={clone.sync_status} behind={clone.commits_behind} />
-            <Badge variant="outline" className="font-mono text-[10px] uppercase">
-              {clone.provisioning_method}
-            </Badge>
+            <Badge variant="outline" className="font-mono text-[10px] uppercase">{clone.provisioning_method}</Badge>
             <span className="inline-flex items-center gap-1 font-mono">
               {clone.github_owner}/{clone.github_repo}
               <CopyButton value={`${clone.github_owner}/${clone.github_repo}`} label="repo slug" />
@@ -221,218 +190,94 @@ function CloneDetail() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setEditOpen(true)}>
-            <Pencil className="mr-1.5 h-4 w-4" /> Edit
-          </Button>
-          <Button variant="outline">
-            <Waves className="mr-1.5 h-4 w-4" /> Cascade now
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={destroy}
-            className="text-destructive hover:text-destructive"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          <Button variant="outline" onClick={() => setEditOpen(true)}><Pencil className="mr-1.5 h-4 w-4" /> Edit</Button>
+          <Button variant="outline"><Waves className="mr-1.5 h-4 w-4" /> Cascade now</Button>
+          <Button variant="ghost" onClick={destroy} className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
         </div>
       </div>
 
       <CloneEditDialog clone={clone} open={editOpen} onOpenChange={setEditOpen} onSaved={load} />
 
       <div className="grid gap-3 md:grid-cols-3">
-        <InfoTile
-          label="GitHub"
-          value={clone.github_url ?? "—"}
-          icon={<Github className="h-4 w-4" />}
-          link={clone.github_url}
-        />
-        <InfoTile
-          label="Lovable"
-          value={clone.lovable_project_url ?? "—"}
-          icon={<ExternalLink className="h-4 w-4" />}
-          link={clone.lovable_project_url}
-        />
-        <InfoTile
-          label="Deploy"
-          value={clone.deploy_url ?? "—"}
-          icon={<ExternalLink className="h-4 w-4" />}
-          link={clone.deploy_url}
-        />
+        <InfoTile label="GitHub" value={clone.github_url ?? "—"} icon={<Github className="h-4 w-4" />} link={clone.github_url} />
+        <InfoTile label="Lovable" value={clone.lovable_project_url ?? "—"} icon={<ExternalLink className="h-4 w-4" />} link={clone.lovable_project_url} />
+        <InfoTile label="Deploy" value={clone.deploy_url ?? "—"} icon={<ExternalLink className="h-4 w-4" />} link={clone.deploy_url} />
       </div>
 
       <CloneSyncStatusCard clone={clone} />
-
       <CloneHealthCard cloneId={cloneId} />
-      <Suspense
-        fallback={
-          <Card>
-            <CardContent className="p-6 text-xs text-muted-foreground">
-              Loading timeline…
-            </CardContent>
-          </Card>
-        }
-      >
+      <Suspense fallback={<Card><CardContent className="p-6 text-xs text-muted-foreground">Loading timeline…</CardContent></Card>}>
         <CloneHealthTimeline cloneId={cloneId} />
       </Suspense>
-
       <CloneBackendCard cloneId={cloneId} />
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-base">Module injector</CardTitle>
-          <span className="font-mono text-xs text-muted-foreground">
-            last cascade · {formatDistanceToNow(clone.last_cascade_at)}
-          </span>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <div className="mb-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                installed ({installed.length})
-              </div>
-              <div className="space-y-2">
-                {installed.length === 0 && (
-                  <div className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
-                    No modules installed
-                  </div>
-                )}
-                {installed.map((m) => {
-                  const noGlobs = (m.file_globs ?? []).length === 0;
-                  const isResyncing = resyncingId === m.id;
-                  return (
-                    <div
-                      key={m.id}
-                      className="flex items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-2"
-                    >
-                      <div className="min-w-0">
-                        <div className="font-mono text-sm">{m.name}</div>
-                        <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                          {(m.file_globs ?? []).length} glob
-                          {(m.file_globs ?? []).length === 1 ? "" : "s"}
-                        </div>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => resync(m.id)}
-                          disabled={isResyncing || noGlobs}
-                          title={
-                            noGlobs
-                              ? "Module has no file_globs to push"
-                              : "Re-sync this module's files only"
-                          }
-                          className="h-7 gap-1 px-2 text-muted-foreground hover:text-primary"
-                        >
-                          <RefreshCw
-                            className={`h-3.5 w-3.5 ${isResyncing ? "animate-spin" : ""}`}
-                          />
-                          <span className="font-mono text-[10px] uppercase tracking-wider">
-                            re-sync
-                          </span>
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => remove(m.id)}
-                          disabled={isResyncing}
-                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            <div>
-              <div className="mb-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                available ({available.length})
-              </div>
-              <div className="space-y-2">
-                {available.length === 0 && (
-                  <div className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
-                    All modules injected
-                  </div>
-                )}
-                {available.map((m) => (
-                  <div
-                    key={m.id}
-                    className="flex items-center justify-between rounded-md border border-border bg-surface px-3 py-2"
-                  >
-                    <span className="font-mono text-sm">{m.name}</span>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => inject(m.id)}
-                      className="h-7 w-7 text-muted-foreground hover:text-primary"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
+      <CloneSecurityAssessmentsCard cloneId={cloneId} />
+      <ModuleInjector installed={installed} available={available} resyncingId={resyncingId} inject={inject} remove={remove} resync={resync} />
       <CloneEdgeCard cloneId={cloneId} />
-
-      <CloneDriftSuggestionsCard
-        cloneId={cloneId}
-        suggestions={(clone.drift_suggestions as unknown as DriftSuggestion[] | null) ?? []}
-        lastCheckedAt={clone.last_drift_check_at}
-        onChange={load}
-      />
-
+      <CloneDriftSuggestionsCard cloneId={cloneId} suggestions={(clone.drift_suggestions as unknown as DriftSuggestion[] | null) ?? []} lastCheckedAt={clone.last_drift_check_at} onChange={load} />
       <CloneLibraryPinsCard cloneId={cloneId} />
-
       <CloneDriftPolicyCard cloneId={cloneId} />
-
       <CloneActivityHistory cloneId={cloneId} />
     </div>
   );
 }
 
-function InfoTile({
-  label,
-  value,
-  icon,
-  link,
+function ModuleInjector({
+  installed,
+  available,
+  resyncingId,
+  inject,
+  remove,
+  resync,
 }: {
-  label: string;
-  value: string;
-  icon: React.ReactNode;
-  link?: string | null;
+  installed: Module[];
+  available: Module[];
+  resyncingId: string | null;
+  inject: (moduleId: string) => void;
+  remove: (moduleId: string) => void;
+  resync: (moduleId: string) => void;
 }) {
-  const inner = (
-    <Card className="bg-card">
-      <CardContent className="flex items-center gap-3 p-4">
-        <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-muted-foreground">
-          {icon}
-        </div>
-        <div className="min-w-0">
-          <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-            {label}
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        <CardTitle className="text-base">Module injector</CardTitle>
+        <span className="font-mono text-xs text-muted-foreground">installed · {installed.length}</span>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <div className="mb-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">installed</div>
+            <div className="space-y-2">
+              {installed.length === 0 && <div className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">No modules installed</div>}
+              {installed.map((module) => {
+                const noGlobs = (module.file_globs ?? []).length === 0;
+                const isResyncing = resyncingId === module.id;
+                return (
+                  <div key={module.id} className="flex items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-2">
+                    <div className="min-w-0"><div className="font-mono text-sm">{module.name}</div><div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{(module.file_globs ?? []).length} glob{(module.file_globs ?? []).length === 1 ? "" : "s"}</div></div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => resync(module.id)} disabled={isResyncing || noGlobs} title={noGlobs ? "Module has no file_globs to push" : "Re-sync this module's files only"} className="h-7 gap-1 px-2 text-muted-foreground hover:text-primary"><RefreshCw className={`h-3.5 w-3.5 ${isResyncing ? "animate-spin" : ""}`} /><span className="font-mono text-[10px] uppercase tracking-wider">re-sync</span></Button>
+                      <Button size="icon" variant="ghost" onClick={() => remove(module.id)} className="h-7 w-7 text-muted-foreground hover:text-destructive"><X className="h-4 w-4" /></Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          <div className="truncate text-sm">{value}</div>
+          <div>
+            <div className="mb-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">available</div>
+            <div className="space-y-2">
+              {available.length === 0 && <div className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">All modules installed</div>}
+              {available.map((module) => <div key={module.id} className="flex items-center justify-between rounded-md border border-border bg-surface px-3 py-2"><span className="font-mono text-sm">{module.name}</span><Button size="icon" variant="ghost" onClick={() => inject(module.id)} className="h-7 w-7 text-muted-foreground hover:text-primary"><Plus className="h-4 w-4" /></Button></div>)}
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
   );
-  if (link) {
-    return (
-      <a
-        href={link}
-        target="_blank"
-        rel="noreferrer"
-        className="block transition-opacity hover:opacity-80"
-      >
-        {inner}
-      </a>
-    );
-  }
+}
+
+function InfoTile({ label, value, icon, link }: { label: string; value: string; icon: React.ReactNode; link?: string | null }) {
+  const inner = <Card className="bg-card"><CardContent className="flex items-center gap-3 p-4"><div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-muted-foreground">{icon}</div><div className="min-w-0"><div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div><div className="truncate text-sm">{value}</div></div></CardContent></Card>;
+  if (link) return <a href={link} target="_blank" rel="noreferrer" className="block transition-opacity hover:opacity-80">{inner}</a>;
   return inner;
 }
