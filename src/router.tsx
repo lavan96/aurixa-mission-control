@@ -75,4 +75,11 @@ declare module "@tanstack/react-router" {
   }
 }
 
+declare module "@tanstack/router-core" {
+  interface Register {
+    router: AppRouter;
+  }
+}
+
+
 
