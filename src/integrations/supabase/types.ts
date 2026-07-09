@@ -2651,6 +2651,550 @@ export type Database = {
         }
         Relationships: []
       }
+      security_assessment_comments: {
+        Row: {
+          assessment_id: string
+          author_kind: string
+          author_user_id: string | null
+          body: string
+          clone_id: string
+          created_at: string
+          id: string
+          metadata: Json
+          partner_id: string
+          visibility: string
+        }
+        Insert: {
+          assessment_id: string
+          author_kind: string
+          author_user_id?: string | null
+          body: string
+          clone_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          partner_id: string
+          visibility?: string
+        }
+        Update: {
+          assessment_id?: string
+          author_kind?: string
+          author_user_id?: string | null
+          body?: string
+          clone_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          partner_id?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_assessment_comments_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "security_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_assessment_comments_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_assessment_comments_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "security_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      security_assessment_events: {
+        Row: {
+          actor_kind: string
+          actor_user_id: string | null
+          assessment_id: string | null
+          body: string | null
+          clone_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
+          partner_id: string | null
+        }
+        Insert: {
+          actor_kind?: string
+          actor_user_id?: string | null
+          assessment_id?: string | null
+          body?: string | null
+          clone_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json
+          partner_id?: string | null
+        }
+        Update: {
+          actor_kind?: string
+          actor_user_id?: string | null
+          assessment_id?: string | null
+          body?: string | null
+          clone_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          partner_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_assessment_events_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "security_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_assessment_events_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_assessment_events_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "security_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      security_assessments: {
+        Row: {
+          assignment_id: string | null
+          aurixa_review_status: string
+          client_release_approved: boolean
+          clone_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          cycle: string
+          due_at: string | null
+          emergency_stop_contact: string | null
+          escalation_contacts: Json
+          exclusions: string | null
+          id: string
+          partner_id: string
+          remediation_owner: string | null
+          retest_required: boolean
+          rules_of_engagement: string | null
+          scope_summary: string | null
+          started_at: string | null
+          status: string
+          target_urls: string[]
+          testing_window_end: string | null
+          testing_window_start: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assignment_id?: string | null
+          aurixa_review_status?: string
+          client_release_approved?: boolean
+          clone_id: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          cycle?: string
+          due_at?: string | null
+          emergency_stop_contact?: string | null
+          escalation_contacts?: Json
+          exclusions?: string | null
+          id?: string
+          partner_id: string
+          remediation_owner?: string | null
+          retest_required?: boolean
+          rules_of_engagement?: string | null
+          scope_summary?: string | null
+          started_at?: string | null
+          status?: string
+          target_urls?: string[]
+          testing_window_end?: string | null
+          testing_window_start?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string | null
+          aurixa_review_status?: string
+          client_release_approved?: boolean
+          clone_id?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          cycle?: string
+          due_at?: string | null
+          emergency_stop_contact?: string | null
+          escalation_contacts?: Json
+          exclusions?: string | null
+          id?: string
+          partner_id?: string
+          remediation_owner?: string | null
+          retest_required?: boolean
+          rules_of_engagement?: string | null
+          scope_summary?: string | null
+          started_at?: string | null
+          status?: string
+          target_urls?: string[]
+          testing_window_end?: string | null
+          testing_window_start?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_assessments_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "security_partner_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_assessments_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_assessments_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "security_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      security_findings: {
+        Row: {
+          affected_asset: string | null
+          assessment_id: string
+          clone_id: string
+          created_at: string
+          cvss: string | null
+          cwe: string | null
+          description: string | null
+          evidence: string | null
+          id: string
+          partner_id: string
+          recommendation: string | null
+          resolved_at: string | null
+          retest_status: string
+          severity: string
+          status: string
+          submitted_by: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          affected_asset?: string | null
+          assessment_id: string
+          clone_id: string
+          created_at?: string
+          cvss?: string | null
+          cwe?: string | null
+          description?: string | null
+          evidence?: string | null
+          id?: string
+          partner_id: string
+          recommendation?: string | null
+          resolved_at?: string | null
+          retest_status?: string
+          severity?: string
+          status?: string
+          submitted_by?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          affected_asset?: string | null
+          assessment_id?: string
+          clone_id?: string
+          created_at?: string
+          cvss?: string | null
+          cwe?: string | null
+          description?: string | null
+          evidence?: string | null
+          id?: string
+          partner_id?: string
+          recommendation?: string | null
+          resolved_at?: string | null
+          retest_status?: string
+          severity?: string
+          status?: string
+          submitted_by?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_findings_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "security_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_findings_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_findings_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "security_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      security_partner_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          clone_id: string
+          created_at: string
+          id: string
+          metadata: Json
+          partner_id: string
+          revoked_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          clone_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          partner_id: string
+          revoked_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          clone_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          partner_id?: string
+          revoked_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_partner_assignments_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_partner_assignments_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "security_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      security_partner_memberships: {
+        Row: {
+          accepted_at: string | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          display_name: string | null
+          email: string
+          id: string
+          last_seen_at: string | null
+          partner_id: string
+          role: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          display_name?: string | null
+          email: string
+          id?: string
+          last_seen_at?: string | null
+          partner_id: string
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string
+          id?: string
+          last_seen_at?: string | null
+          partner_id?: string
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_partner_memberships_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "security_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      security_partners: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          metadata: Json
+          name: string
+          notes: string | null
+          primary_contact_email: string | null
+          primary_contact_name: string | null
+          slug: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          metadata?: Json
+          name: string
+          notes?: string | null
+          primary_contact_email?: string | null
+          primary_contact_name?: string | null
+          slug: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          metadata?: Json
+          name?: string
+          notes?: string | null
+          primary_contact_email?: string | null
+          primary_contact_name?: string | null
+          slug?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      security_reports: {
+        Row: {
+          assessment_id: string
+          clone_id: string
+          created_at: string
+          file_path: string | null
+          file_url: string | null
+          id: string
+          label: string
+          notes: string | null
+          partner_id: string
+          report_type: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_at: string
+          submitted_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          assessment_id: string
+          clone_id: string
+          created_at?: string
+          file_path?: string | null
+          file_url?: string | null
+          id?: string
+          label: string
+          notes?: string | null
+          partner_id: string
+          report_type?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string
+          submitted_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assessment_id?: string
+          clone_id?: string
+          created_at?: string
+          file_path?: string | null
+          file_url?: string | null
+          id?: string
+          label?: string
+          notes?: string | null
+          partner_id?: string
+          report_type?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string
+          submitted_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_reports_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "security_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_reports_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_reports_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "security_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       setup_packages: {
         Row: {
           applies_to_plans: string[]
@@ -3262,6 +3806,10 @@ export type Database = {
         Args: { _pack_id: string; _source_ref?: string; _tenant_id: string }
         Returns: Json
       }
+      can_access_security_assessment: {
+        Args: { _assessment_id: string }
+        Returns: boolean
+      }
       can_assign_role: {
         Args: {
           _assigner_id: string
@@ -3317,6 +3865,10 @@ export type Database = {
       highest_role_level: { Args: { _user_id: string }; Returns: number }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_operator: { Args: { _user_id: string }; Returns: boolean }
+      is_security_partner_member: {
+        Args: { _partner_id: string }
+        Returns: boolean
+      }
       purge_log_tables: {
         Args: never
         Returns: {
@@ -3391,6 +3943,10 @@ export type Database = {
       schedule_key_revoke: {
         Args: { _at: string; _key_id: string }
         Returns: Json
+      }
+      security_storage_assessment_id: {
+        Args: { object_name: string }
+        Returns: string
       }
       tenant_usage_summary: { Args: { _tenant_id: string }; Returns: Json }
     }
