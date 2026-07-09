@@ -751,7 +751,6 @@ export const addSecurityAssessmentComment = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    if (!context) throw new Error("unauthenticated");
     const isInternal = await userHasInternalRole(context.supabase, context.userId);
     const email = (context.claims as any)?.email as string | undefined;
     let assessment;
