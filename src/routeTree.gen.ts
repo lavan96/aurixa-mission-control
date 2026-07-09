@@ -234,4 +234,32 @@ const rootRouteChildren = {
   ApiPublicSeatsDevicesReleaseRoute,
 }
 
-export const routeTree = rootRouteImport._addFileChildren(rootRouteChildren as any)
+export interface FileRoutesByFullPath {
+  [path: string]: any
+}
+
+export interface FileRoutesByTo {
+  [path: string]: any
+}
+
+export interface FileRoutesById {
+  [id: string]: any
+}
+
+export interface FileRouteTypes {
+  fileRoutesByFullPath: FileRoutesByFullPath
+  fullPaths: string
+  fileRoutesByTo: FileRoutesByTo
+  to: string
+  id: string
+}
+
+declare module '@tanstack/react-router' {
+  interface FileRoutesByPath {
+    [path: string]: any
+  }
+}
+
+export const routeTree = rootRouteImport
+  ._addFileChildren(rootRouteChildren as any)
+  ._addFileTypes<FileRouteTypes>()
