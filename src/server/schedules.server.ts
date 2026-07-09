@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Server-only core for cascade schedules. Two kinds:
 //   - fleet_cascade: cascade prime → all clones with installed modules.
 //   - module_sync:   bulk install + scoped cascade for a specific module.

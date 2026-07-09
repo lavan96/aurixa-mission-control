@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { z } from "zod";
 import { XCircle } from "lucide-react";

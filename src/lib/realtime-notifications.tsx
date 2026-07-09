@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";

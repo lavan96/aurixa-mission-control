@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createRouter, useRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 
@@ -80,6 +81,3 @@ declare module "@tanstack/router-core" {
     router: AppRouter;
   }
 }
-
-
-

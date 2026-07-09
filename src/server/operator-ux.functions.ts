@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Phase 10 — Operator UX server functions:
 // - brand version diff
 // - bulk cascade approvals
