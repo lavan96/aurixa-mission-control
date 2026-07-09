@@ -31,11 +31,13 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const isPartnerIntent = search.intent === "partner" || search.redirect?.startsWith("/partner-portal");
 
   useEffect(() => {
     if (session) {
+      const defaultDest = isPartnerIntent ? "/partner-portal" : "/dashboard";
       const dest =
-        search.redirect && search.redirect.startsWith("/") ? search.redirect : "/dashboard";
+        search.redirect && search.redirect.startsWith("/") ? search.redirect : defaultDest;
       const params = new URLSearchParams();
       if (search.intent) params.set("intent", search.intent);
       if (search.clone) params.set("clone", search.clone);
@@ -43,7 +45,7 @@ function AuthPage() {
       const sep = dest.includes("?") ? "&" : "?";
       nav({ to: (qs ? `${dest}${sep}${qs}` : dest) as never });
     }
-  }, [session, nav, search.redirect, search.intent, search.clone]);
+  }, [session, nav, search.redirect, search.intent, search.clone, isPartnerIntent]);
 
   const handle = async (mode: "in" | "up") => {
     setBusy(true);
@@ -92,9 +94,15 @@ function AuthPage() {
               <Radio className="h-6 w-6 text-primary" />
             </div>
             <CardTitle className="font-mono tracking-wide">
-              AURIXA SYSTEMS · MISSION CONTROL
+              {isPartnerIntent
+                ? "AURIXA SYSTEMS · SECURITY PARTNER PORTAL"
+                : "AURIXA SYSTEMS · MISSION CONTROL"}
             </CardTitle>
-            <CardDescription>Operator access required</CardDescription>
+            <CardDescription>
+              {isPartnerIntent
+                ? "Restricted cybersecurity partner access for approved testing cycles"
+                : "Operator access required"}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="in">
@@ -129,7 +137,9 @@ function AuthPage() {
                   </Button>
                   {mode === "up" && (
                     <p className="text-xs text-muted-foreground">
-                      The first account created becomes the admin operator automatically.
+                      {isPartnerIntent
+                        ? "Partner access is issued only after Aurixa approves your email and assigns your testing cycles."
+                        : "The first account created becomes the admin operator automatically."}
                     </p>
                   )}
                 </TabsContent>
