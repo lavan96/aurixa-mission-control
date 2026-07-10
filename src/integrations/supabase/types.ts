@@ -524,11 +524,17 @@ export type Database = {
           clone_id: string
           created_at: string
           db_pass: string | null
+          edge_functions: Json
           error_message: string | null
           id: string
           migration_version: string | null
+          migrations_applied: Json
           region: string
+          secret_shells: Json
           service_role_key: string | null
+          source_ref: string | null
+          source_repo: string | null
+          source_sha: string | null
           status: Database["public"]["Enums"]["clone_backend_status"]
           status_detail: string | null
           supabase_project_ref: string | null
@@ -541,11 +547,17 @@ export type Database = {
           clone_id: string
           created_at?: string
           db_pass?: string | null
+          edge_functions?: Json
           error_message?: string | null
           id?: string
           migration_version?: string | null
+          migrations_applied?: Json
           region?: string
+          secret_shells?: Json
           service_role_key?: string | null
+          source_ref?: string | null
+          source_repo?: string | null
+          source_sha?: string | null
           status?: Database["public"]["Enums"]["clone_backend_status"]
           status_detail?: string | null
           supabase_project_ref?: string | null
@@ -558,11 +570,17 @@ export type Database = {
           clone_id?: string
           created_at?: string
           db_pass?: string | null
+          edge_functions?: Json
           error_message?: string | null
           id?: string
           migration_version?: string | null
+          migrations_applied?: Json
           region?: string
+          secret_shells?: Json
           service_role_key?: string | null
+          source_ref?: string | null
+          source_repo?: string | null
+          source_sha?: string | null
           status?: Database["public"]["Enums"]["clone_backend_status"]
           status_detail?: string | null
           supabase_project_ref?: string | null
@@ -3760,10 +3778,16 @@ export type Database = {
           admin_email: string | null
           clone_id: string | null
           created_at: string | null
+          edge_functions: Json | null
           error_message: string | null
           id: string | null
           migration_version: string | null
+          migrations_applied: Json | null
           region: string | null
+          secret_shells: Json | null
+          source_ref: string | null
+          source_repo: string | null
+          source_sha: string | null
           status: Database["public"]["Enums"]["clone_backend_status"] | null
           status_detail: string | null
           supabase_project_ref: string | null
@@ -3774,10 +3798,16 @@ export type Database = {
           admin_email?: string | null
           clone_id?: string | null
           created_at?: string | null
+          edge_functions?: Json | null
           error_message?: string | null
           id?: string | null
           migration_version?: string | null
+          migrations_applied?: Json | null
           region?: string | null
+          secret_shells?: Json | null
+          source_ref?: string | null
+          source_repo?: string | null
+          source_sha?: string | null
           status?: Database["public"]["Enums"]["clone_backend_status"] | null
           status_detail?: string | null
           supabase_project_ref?: string | null
@@ -3788,10 +3818,16 @@ export type Database = {
           admin_email?: string | null
           clone_id?: string | null
           created_at?: string | null
+          edge_functions?: Json | null
           error_message?: string | null
           id?: string | null
           migration_version?: string | null
+          migrations_applied?: Json | null
           region?: string | null
+          secret_shells?: Json | null
+          source_ref?: string | null
+          source_repo?: string | null
+          source_sha?: string | null
           status?: Database["public"]["Enums"]["clone_backend_status"] | null
           status_detail?: string | null
           supabase_project_ref?: string | null

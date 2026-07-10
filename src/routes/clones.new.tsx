@@ -209,9 +209,7 @@ function NewClone() {
               : `${edgeProvider.toUpperCase()} waitlisted — coming soon`,
           );
         } catch (e) {
-          toast.error(
-            `Edge enqueue failed: ${e instanceof Error ? e.message : "unknown"}`,
-          );
+          toast.error(`Edge enqueue failed: ${e instanceof Error ? e.message : "unknown"}`);
         }
       }
 
@@ -422,8 +420,9 @@ function NewClone() {
             <Database className="h-4 w-4 text-primary" /> 5 · Dedicated backend
           </CardTitle>
           <CardDescription>
-            Provision an isolated database and auth system for this clone. The admin user will be
-            auto-created with full access.
+            Provision an isolated Supabase project replicating the prime repo's backend architecture
+            — schemas, tables, RLS, edge functions, and secret names as empty shells. No live data
+            is copied. The admin user will be auto-created with full access.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -482,8 +481,8 @@ function NewClone() {
             <Shield className="h-4 w-4 text-info" /> 6 · Edge security (optional)
           </CardTitle>
           <CardDescription>
-            Wrap the front-end with an edge/CDN provider for WAF, bot mitigation, rate limiting,
-            and DDoS. Cloudflare is live today; AWS &amp; Azure are on the waitlist.
+            Wrap the front-end with an edge/CDN provider for WAF, bot mitigation, rate limiting, and
+            DDoS. Cloudflare is live today; AWS &amp; Azure are on the waitlist.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">

@@ -3,9 +3,11 @@
  * dedicated backend projects for each clone.
  *
  * Requires two secrets:
- *   SUPABASE_MGMT_API_TOKEN  – Personal Access Token from supabase.com/dashboard/account/tokens
- *   SUPABASE_ORG_ID          – Organization ID from supabase.com/dashboard/org/_/general
+ *   SB_MGMT_API_TOKEN  – Personal Access Token from supabase.com/dashboard/account/tokens
+ *   SB_ORG_ID          – Organization ID from supabase.com/dashboard/org/_/general
  */
+
+import type { PrimeBackendSnapshot } from "./prime-backend.server";
 
 const MGMT_API = "https://api.supabase.com/v1";
 
@@ -110,10 +112,11 @@ export async function waitForProjectReady(
 }
 
 /**
- * Retrieve the API keys (anon, service_role) for a project.
+ * Retrieve the API keys for a project. `reveal=true` is required for the
+ * Management API to include raw key values in the response.
  */
 export async function getProjectApiKeys(projectRef: string): Promise<ApiKey[]> {
-  const res = await fetch(`${MGMT_API}/projects/${projectRef}/api-keys`, {
+  const res = await fetch(`${MGMT_API}/projects/${projectRef}/api-keys?reveal=true`, {
     headers: headers(),
   });
   if (!res.ok) {
@@ -121,6 +124,25 @@ export async function getProjectApiKeys(projectRef: string): Promise<ApiKey[]> {
     throw new Error(`Failed to get API keys: ${res.status} — ${body}`);
   }
   return res.json();
+}
+
+/**
+ * Pick the client-safe and privileged keys from a project's key list,
+ * handling both legacy (anon / service_role) and current
+ * (publishable / secret) Supabase key naming.
+ */
+export function selectProjectKeys(keys: ApiKey[]): {
+  anonKey: string | null;
+  serviceRoleKey: string | null;
+} {
+  const byName = (n: string) => keys.find((k) => k.name === n)?.api_key ?? null;
+  const byType = (t: string) =>
+    keys.find((k) => (k as { type?: string }).type === t)?.api_key ?? null;
+  const byPrefix = (p: string) => keys.find((k) => k.api_key?.startsWith(p))?.api_key ?? null;
+  return {
+    anonKey: byName("anon") ?? byType("publishable") ?? byPrefix("sb_publishable_"),
+    serviceRoleKey: byName("service_role") ?? byType("secret") ?? byPrefix("sb_secret_"),
+  };
 }
 
 /**
@@ -150,12 +172,223 @@ export async function runSqlOnProject(projectRef: string, sql: string): Promise<
   return res.json();
 }
 
-// ─── Schema Replication ──────────────────────────────────────────────
+// ─── Prime Architecture Replication ──────────────────────────────────
 
 /**
- * Get the canonical migration SQL from the prime's migration files.
- * In production, this would read from the supabase/migrations directory.
- * For now, we assemble the core schema needed by every clone.
+ * Every clone backend carries its own migration ledger so replays are
+ * idempotent and resumable. Lives in a dedicated `aurixa` schema to keep
+ * the replicated `public` schema byte-identical to the prime's.
+ */
+const TRACKING_TABLE_SQL = `
+create schema if not exists aurixa;
+create table if not exists aurixa.schema_migrations (
+  version text primary key,
+  name text not null,
+  applied_at timestamptz not null default now()
+);
+`.trim();
+
+function sqlLiteral(value: string): string {
+  return `'${value.replace(/'/g, "''")}'`;
+}
+
+export type PrimeMigrationResult = {
+  id: string;
+  name: string;
+  success: boolean;
+  skipped?: boolean;
+  error?: string;
+};
+
+/**
+ * Replay the prime's migrations onto a clone project, in order, skipping
+ * any version already recorded in the clone's ledger. Stops on the first
+ * failure so later migrations never run against a half-applied schema.
+ */
+export async function applyPrimeMigrations(
+  projectRef: string,
+  migrations: Array<{ id: string; name: string; sql: string }>,
+  onStatusUpdate?: (status: string, detail: string) => Promise<void>,
+): Promise<{ results: PrimeMigrationResult[]; latestApplied: string | null }> {
+  await runSqlOnProject(projectRef, TRACKING_TABLE_SQL);
+
+  const appliedRaw = await runSqlOnProject(
+    projectRef,
+    "select version from aurixa.schema_migrations;",
+  );
+  // The query endpoint returns rows as a bare array; tolerate wrapped shapes too.
+  const appliedRows = Array.isArray(appliedRaw)
+    ? appliedRaw
+    : Array.isArray((appliedRaw as { rows?: unknown[] })?.rows)
+      ? (appliedRaw as { rows: unknown[] }).rows
+      : Array.isArray((appliedRaw as { result?: unknown[] })?.result)
+        ? (appliedRaw as { result: unknown[] }).result
+        : [];
+  const applied = new Set(
+    appliedRows
+      .map((r) => (r as { version?: unknown })?.version)
+      .filter((v): v is string => typeof v === "string"),
+  );
+
+  const results: PrimeMigrationResult[] = [];
+  let latestApplied: string | null = null;
+
+  const ordered = [...migrations].sort((a, b) => a.name.localeCompare(b.name));
+  for (let i = 0; i < ordered.length; i++) {
+    const m = ordered[i];
+    if (applied.has(m.id)) {
+      results.push({ id: m.id, name: m.name, success: true, skipped: true });
+      latestApplied = m.id;
+      continue;
+    }
+    await onStatusUpdate?.("migrating", `Applying migration ${i + 1}/${ordered.length}: ${m.name}`);
+    try {
+      await runSqlOnProject(projectRef, m.sql);
+      await runSqlOnProject(
+        projectRef,
+        `insert into aurixa.schema_migrations (version, name) values (${sqlLiteral(m.id)}, ${sqlLiteral(m.name)}) on conflict (version) do nothing;`,
+      );
+      results.push({ id: m.id, name: m.name, success: true });
+      latestApplied = m.id;
+    } catch (e) {
+      results.push({
+        id: m.id,
+        name: m.name,
+        success: false,
+        error: e instanceof Error ? e.message : "SQL failed",
+      });
+      break; // halt replay — schema state beyond this point is undefined
+    }
+  }
+
+  return { results, latestApplied };
+}
+
+export type EdgeFunctionDeployResult = {
+  slug: string;
+  success: boolean;
+  error?: string;
+};
+
+/**
+ * Deploy one edge function bundle to a clone project via the Management API.
+ * File paths are relative to the prime's supabase/functions/ directory, so
+ * `../_shared/x.ts`-style imports inside a function resolve within the bundle.
+ */
+export async function deployEdgeFunction(
+  projectRef: string,
+  fn: {
+    slug: string;
+    entrypointPath: string;
+    importMapPath: string | null;
+    verifyJwt: boolean;
+    files: Array<{ path: string; contentBase64: string }>;
+  },
+): Promise<void> {
+  const form = new FormData();
+  form.append(
+    "metadata",
+    JSON.stringify({
+      name: fn.slug,
+      entrypoint_path: fn.entrypointPath,
+      ...(fn.importMapPath ? { import_map_path: fn.importMapPath } : {}),
+      verify_jwt: fn.verifyJwt,
+    }),
+  );
+  for (const file of fn.files) {
+    const bytes = Buffer.from(file.contentBase64, "base64");
+    form.append("file", new Blob([new Uint8Array(bytes)]), file.path);
+  }
+
+  const res = await fetch(
+    `${MGMT_API}/projects/${projectRef}/functions/deploy?slug=${encodeURIComponent(fn.slug)}`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${getMgmtToken()}` }, // FormData sets its own Content-Type
+      body: form,
+    },
+  );
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Deploy failed for ${fn.slug}: ${res.status} — ${body}`);
+  }
+}
+
+export async function deployEdgeFunctions(
+  projectRef: string,
+  functions: Array<Parameters<typeof deployEdgeFunction>[1]>,
+  onStatusUpdate?: (status: string, detail: string) => Promise<void>,
+): Promise<EdgeFunctionDeployResult[]> {
+  const results: EdgeFunctionDeployResult[] = [];
+  for (let i = 0; i < functions.length; i++) {
+    const fn = functions[i];
+    await onStatusUpdate?.(
+      "migrating",
+      `Deploying edge function ${i + 1}/${functions.length}: ${fn.slug}`,
+    );
+    try {
+      await deployEdgeFunction(projectRef, fn);
+      results.push({ slug: fn.slug, success: true });
+    } catch (e) {
+      // Non-fatal: record and continue so one broken function doesn't block the rest
+      results.push({
+        slug: fn.slug,
+        success: false,
+        error: e instanceof Error ? e.message : "deploy failed",
+      });
+    }
+  }
+  return results;
+}
+
+export type SecretShellResult = {
+  name: string;
+  success: boolean;
+  error?: string;
+};
+
+/** Placeholder written when the API refuses truly empty secret values. */
+const SECRET_SHELL_PLACEHOLDER = "__EMPTY_SHELL__";
+
+/**
+ * Create empty-shell secrets on a clone project: the names the prime's edge
+ * functions expect, with no real values. Operators fill them in later.
+ */
+export async function createSecretShells(
+  projectRef: string,
+  names: string[],
+): Promise<SecretShellResult[]> {
+  if (names.length === 0) return [];
+
+  const post = async (value: string) =>
+    fetch(`${MGMT_API}/projects/${projectRef}/secrets`, {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify(names.map((name) => ({ name, value }))),
+    });
+
+  let res = await post("");
+  if (!res.ok && res.status >= 400 && res.status < 500) {
+    // Some API versions reject empty values — fall back to an explicit placeholder
+    res = await post(SECRET_SHELL_PLACEHOLDER);
+  }
+  if (!res.ok) {
+    const body = await res.text();
+    return names.map((name) => ({
+      name,
+      success: false,
+      error: `secrets API ${res.status} — ${body.slice(0, 300)}`,
+    }));
+  }
+  return names.map((name) => ({ name, success: true }));
+}
+
+// ─── Legacy bootstrap schema (reference only) ────────────────────────
+
+/**
+ * Legacy hand-rolled base schema, kept for the Settings preview page.
+ * Provisioning no longer uses this — clone schemas come from the prime
+ * repo's own migration files (see applyPrimeMigrations).
  */
 export function getCloneBootstrapSql(): string {
   // This is the essential schema every clone needs.
@@ -179,12 +412,21 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 );
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "Profiles viewable by authenticated"
-  ON public.profiles FOR SELECT TO authenticated USING (true);
-CREATE POLICY IF NOT EXISTS "Users can insert own profile"
-  ON public.profiles FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can update own profile"
-  ON public.profiles FOR UPDATE TO authenticated USING (auth.uid() = user_id);
+DO $$ BEGIN
+  CREATE POLICY "Profiles viewable by authenticated"
+    ON public.profiles FOR SELECT TO authenticated USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+DO $$ BEGIN
+  CREATE POLICY "Users can insert own profile"
+    ON public.profiles FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+DO $$ BEGIN
+  CREATE POLICY "Users can update own profile"
+    ON public.profiles FOR UPDATE TO authenticated USING (auth.uid() = user_id);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- User roles table
 CREATE TABLE IF NOT EXISTS public.user_roles (
@@ -376,20 +618,35 @@ EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 -- User roles RLS (hierarchy-aware)
-CREATE POLICY IF NOT EXISTS "Users can read own roles"
-  ON public.user_roles FOR SELECT TO authenticated USING (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Admins and super_admins can read all roles"
-  ON public.user_roles FOR SELECT TO authenticated
-  USING (public.has_role(auth.uid(), 'admin') OR public.has_role(auth.uid(), 'super_admin'));
-CREATE POLICY IF NOT EXISTS "Hierarchy-enforced role assignment"
-  ON public.user_roles FOR INSERT TO authenticated
-  WITH CHECK (public.can_assign_role(auth.uid(), role) AND assigned_by = auth.uid());
-CREATE POLICY IF NOT EXISTS "Hierarchy-enforced role update"
-  ON public.user_roles FOR UPDATE TO authenticated
-  USING (public.can_manage_user(auth.uid(), user_id));
-CREATE POLICY IF NOT EXISTS "Hierarchy-enforced role deletion"
-  ON public.user_roles FOR DELETE TO authenticated
-  USING (public.can_manage_user(auth.uid(), user_id));
+DO $$ BEGIN
+  CREATE POLICY "Users can read own roles"
+    ON public.user_roles FOR SELECT TO authenticated USING (auth.uid() = user_id);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+DO $$ BEGIN
+  CREATE POLICY "Admins and super_admins can read all roles"
+    ON public.user_roles FOR SELECT TO authenticated
+    USING (public.has_role(auth.uid(), 'admin') OR public.has_role(auth.uid(), 'super_admin'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+DO $$ BEGIN
+  CREATE POLICY "Hierarchy-enforced role assignment"
+    ON public.user_roles FOR INSERT TO authenticated
+    WITH CHECK (public.can_assign_role(auth.uid(), role) AND assigned_by = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+DO $$ BEGIN
+  CREATE POLICY "Hierarchy-enforced role update"
+    ON public.user_roles FOR UPDATE TO authenticated
+    USING (public.can_manage_user(auth.uid(), user_id));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+DO $$ BEGIN
+  CREATE POLICY "Hierarchy-enforced role deletion"
+    ON public.user_roles FOR DELETE TO authenticated
+    USING (public.can_manage_user(auth.uid(), user_id));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- Timestamp triggers
 DO $$ BEGIN
@@ -411,7 +668,7 @@ export async function seedAdminUser(
   projectUrl: string,
   adminEmail: string,
   adminPassword: string,
-): Promise<{ userId: string }> {
+): Promise<{ userId: string | null }> {
   // Create user via Supabase Auth Admin API (using service role key)
   const createRes = await fetch(`${projectUrl}/auth/v1/admin/users`, {
     method: "POST",
@@ -430,16 +687,33 @@ export async function seedAdminUser(
 
   if (!createRes.ok) {
     const body = await createRes.text();
+    // Resume path: the admin may already exist from a previous attempt
+    if (createRes.status === 422 || /already.*(registered|exists)/i.test(body)) {
+      return { userId: null };
+    }
     throw new Error(`Failed to create admin user: ${createRes.status} — ${body}`);
   }
 
   const user = await createRes.json();
   const userId = user.id;
 
-  // Insert super_admin role via SQL (system-seeded, assigned_by = NULL)
+  // Best-effort super_admin grant: the clone's schema is whatever the prime
+  // repo defines, so only insert if a user_roles table actually exists, and
+  // never let a role-model mismatch fail the whole provisioning run.
   await runSqlOnProject(
     projectRef,
-    `INSERT INTO public.user_roles (user_id, role) VALUES ('${userId}', 'super_admin') ON CONFLICT DO NOTHING;`,
+    `
+DO $$ BEGIN
+  IF to_regclass('public.user_roles') IS NOT NULL THEN
+    EXECUTE format(
+      'INSERT INTO public.user_roles (user_id, role) VALUES (%L, %L) ON CONFLICT DO NOTHING',
+      '${userId}'::uuid, 'super_admin'
+    );
+  END IF;
+EXCEPTION WHEN others THEN
+  RAISE WARNING 'aurixa: admin role seed skipped: %', SQLERRM;
+END $$;
+    `.trim(),
   );
 
   return { userId };
@@ -452,6 +726,14 @@ export type ProvisionBackendInput = {
   region?: string;
   adminEmail: string;
   adminPassword: string;
+  /** The prime repo's Supabase architecture to replicate onto the new project. */
+  snapshot: PrimeBackendSnapshot;
+  /**
+   * Resume onto a project created by an earlier failed run instead of
+   * creating (and paying for) a fresh one. The migration ledger makes the
+   * replay pick up exactly where it stopped.
+   */
+  existingProjectRef?: string | null;
 };
 
 export type ProvisionBackendResult = {
@@ -459,64 +741,87 @@ export type ProvisionBackendResult = {
   projectUrl: string;
   anonKey: string;
   serviceRoleKey: string;
-  dbPass: string;
-  adminUserId: string;
+  /** null when resuming an existing project — the original password is kept */
+  dbPass: string | null;
+  adminUserId: string | null;
+  migrationsApplied: PrimeMigrationResult[];
+  latestMigration: string | null;
+  edgeFunctions: EdgeFunctionDeployResult[];
+  secretShells: SecretShellResult[];
 };
 
 /**
- * Full pipeline: create project → wait ready → get keys → run migrations → seed admin.
+ * Full pipeline: create project → wait ready → get keys → replay the prime's
+ * migrations → deploy the prime's edge functions → create empty-shell secrets
+ * → seed admin. Structure only — no data ever leaves the prime.
  */
 export async function provisionCloneBackend(
   input: ProvisionBackendInput,
   onStatusUpdate?: (status: string, detail: string) => Promise<void>,
 ): Promise<ProvisionBackendResult> {
-  const dbPass = generateSecurePassword();
+  const { snapshot } = input;
 
-  // Step 1: Create the project
-  await onStatusUpdate?.("provisioning", "Creating Supabase project...");
-  const project = await createSupabaseProject({
-    name: `aurixa-clone-${input.cloneName}`,
-    region: input.region,
-    dbPass,
-  });
+  // Step 1: Create the project (or resume onto a surviving one)
+  let projectRef = input.existingProjectRef ?? null;
+  let dbPass: string | null = null;
+  if (projectRef) {
+    await onStatusUpdate?.("provisioning", `Resuming on existing project ${projectRef}...`);
+  } else {
+    dbPass = generateSecurePassword();
+    await onStatusUpdate?.("provisioning", "Creating Supabase project...");
+    const project = await createSupabaseProject({
+      name: `aurixa-clone-${input.cloneName}`,
+      region: input.region,
+      dbPass,
+    });
+    projectRef = project.id;
+  }
 
   // Step 2: Wait for it to be ready
   await onStatusUpdate?.("provisioning", "Waiting for project to become healthy...");
-  await waitForProjectReady(project.id);
+  await waitForProjectReady(projectRef);
 
   // Step 3: Get API keys
   await onStatusUpdate?.("provisioning", "Retrieving API keys...");
-  const keys = await getProjectApiKeys(project.id);
-  const anonKey = keys.find((k) => k.name === "anon")?.api_key;
-  const serviceRoleKey = keys.find((k) => k.name === "service_role")?.api_key;
-
+  const { anonKey, serviceRoleKey } = selectProjectKeys(await getProjectApiKeys(projectRef));
   if (!anonKey || !serviceRoleKey) {
-    throw new Error("Could not retrieve anon or service_role key from new project");
+    throw new Error("Could not retrieve client/privileged API keys from new project");
   }
 
-  const projectUrl = getProjectUrl(project.id);
+  const projectUrl = getProjectUrl(projectRef);
 
-  // Step 4: Run bootstrap migrations (hardcoded base schema)
-  await onStatusUpdate?.("migrating", "Applying base schema...");
-  const sql = getCloneBootstrapSql();
-  await runSqlOnProject(project.id, sql);
-
-  // Step 4b: Apply clone-applicable migrations from registry
-  await onStatusUpdate?.("migrating", "Applying clone-applicable migrations...");
-  const { applyPendingMigrations, getLatestCloneMigrationId } =
-    await import("./migration-replication.server");
-  const { results: migResults } = await applyPendingMigrations(project.id, null);
-  const migFailures = migResults.filter((r) => !r.success);
-  if (migFailures.length > 0) {
-    console.warn(
-      `Migration warnings during provisioning: ${migFailures.map((f) => f.migrationId).join(", ")}`,
+  // Step 4: Replay the prime repo's migrations (schema, tables, RLS, functions)
+  await onStatusUpdate?.(
+    "migrating",
+    `Replicating ${snapshot.migrations.length} migration(s) from ${snapshot.sourceRepo}@${snapshot.sourceSha.slice(0, 7)}...`,
+  );
+  const { results: migrationsApplied, latestApplied } = await applyPrimeMigrations(
+    projectRef,
+    snapshot.migrations,
+    onStatusUpdate,
+  );
+  const migrationFailure = migrationsApplied.find((r) => !r.success);
+  if (migrationFailure) {
+    throw new Error(
+      `Migration ${migrationFailure.name} failed: ${migrationFailure.error ?? "unknown"} ` +
+        `(project ${projectRef} kept — retry resumes from the failed migration)`,
     );
   }
 
-  // Step 5: Seed admin
+  // Step 5: Deploy the prime's edge functions (non-fatal per function)
+  const edgeFunctions = await deployEdgeFunctions(projectRef, snapshot.functions, onStatusUpdate);
+
+  // Step 6: Create empty-shell secrets for every name the functions reference
+  await onStatusUpdate?.(
+    "migrating",
+    `Creating ${snapshot.secretNames.length} empty secret shell(s)...`,
+  );
+  const secretShells = await createSecretShells(projectRef, snapshot.secretNames);
+
+  // Step 7: Seed admin
   await onStatusUpdate?.("seeding_admin", "Creating admin user...");
   const { userId: adminUserId } = await seedAdminUser(
-    project.id,
+    projectRef,
     serviceRoleKey,
     projectUrl,
     input.adminEmail,
@@ -524,12 +829,16 @@ export async function provisionCloneBackend(
   );
 
   return {
-    projectRef: project.id,
+    projectRef,
     projectUrl,
     anonKey,
     serviceRoleKey,
     dbPass,
     adminUserId,
+    migrationsApplied,
+    latestMigration: latestApplied,
+    edgeFunctions,
+    secretShells,
   };
 }
 

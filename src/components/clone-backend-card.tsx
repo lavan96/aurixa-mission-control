@@ -9,6 +9,9 @@ import {
   CheckCircle2,
   Loader2,
   ArrowUpCircle,
+  GitBranch,
+  Zap,
+  KeyRound,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
@@ -18,6 +21,14 @@ import { cn } from "@/lib/utils";
 
 type BackendStatus = Awaited<ReturnType<typeof getCloneBackendStatus>>["backend"];
 type MigrationStatus = Awaited<ReturnType<typeof getCloneMigrationStatus>>;
+
+type MigrationReport = { id: string; name: string; success: boolean; skipped?: boolean };
+type FunctionReport = { slug: string; success: boolean; error?: string };
+type SecretReport = { name: string; success: boolean; error?: string };
+
+function asReportArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof CheckCircle2 }> = {
   ready: { label: "Healthy", color: "text-success", icon: CheckCircle2 },
@@ -185,6 +196,114 @@ export function CloneBackendCard({ cloneId }: { cloneId: string }) {
                 </span>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Prime replication report */}
+        {backend.source_repo && (
+          <div className="border-t pt-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Replicated Architecture
+              </span>
+              <Badge variant="outline" className="font-mono text-[10px]">
+                <GitBranch className="mr-1 h-3 w-3" />
+                {backend.source_repo}
+                {backend.source_sha ? `@${backend.source_sha.slice(0, 7)}` : ""}
+              </Badge>
+            </div>
+            {(() => {
+              const migrations = asReportArray<MigrationReport>(backend.migrations_applied);
+              const functions = asReportArray<FunctionReport>(backend.edge_functions);
+              const secrets = asReportArray<SecretReport>(backend.secret_shells);
+              const failedFns = functions.filter((f) => !f.success);
+              const failedSecrets = secrets.filter((s) => !s.success);
+              return (
+                <>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="rounded-md border p-2 text-center">
+                      <div className="text-lg font-semibold">
+                        {migrations.filter((m) => m.success).length}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">Migrations</div>
+                    </div>
+                    <div
+                      className={cn(
+                        "rounded-md border p-2 text-center",
+                        failedFns.length > 0 && "border-warning/50",
+                      )}
+                    >
+                      <div className="text-lg font-semibold">
+                        {functions.filter((f) => f.success).length}
+                        <span className="text-xs text-muted-foreground">/{functions.length}</span>
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">
+                        <Zap className="mr-0.5 inline h-2.5 w-2.5" />
+                        Edge functions
+                      </div>
+                    </div>
+                    <div
+                      className={cn(
+                        "rounded-md border p-2 text-center",
+                        failedSecrets.length > 0 && "border-warning/50",
+                      )}
+                    >
+                      <div className="text-lg font-semibold">
+                        {secrets.filter((s) => s.success).length}
+                        <span className="text-xs text-muted-foreground">/{secrets.length}</span>
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">
+                        <KeyRound className="mr-0.5 inline h-2.5 w-2.5" />
+                        Secret shells
+                      </div>
+                    </div>
+                  </div>
+
+                  {failedFns.length > 0 && (
+                    <div className="space-y-1">
+                      {failedFns.map((f) => (
+                        <div
+                          key={f.slug}
+                          className="rounded border border-warning/40 bg-warning/5 p-2 text-xs"
+                        >
+                          <span className="font-mono font-medium">{f.slug}</span>
+                          <span className="text-muted-foreground">
+                            {" "}
+                            — {f.error ?? "deploy failed"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {secrets.length > 0 && (
+                    <details>
+                      <summary className="cursor-pointer text-[11px] text-muted-foreground hover:text-foreground">
+                        Secret shells to fill in ({secrets.length})
+                      </summary>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {secrets.map((s) => (
+                          <Badge
+                            key={s.name}
+                            variant="outline"
+                            className={cn(
+                              "font-mono text-[10px]",
+                              !s.success && "border-warning/60 text-warning",
+                            )}
+                          >
+                            {s.name}
+                          </Badge>
+                        ))}
+                      </div>
+                      <p className="mt-1 text-[10px] text-muted-foreground">
+                        Created empty — set real values in the clone project's Edge Function secrets
+                        before going live.
+                      </p>
+                    </details>
+                  )}
+                </>
+              );
+            })()}
           </div>
         )}
 
