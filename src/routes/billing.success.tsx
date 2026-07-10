@@ -12,10 +12,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   lookupCheckoutSession,
   getCheckoutFulfillmentStatus,
+  lookupCheckoutSessionByHandoff,
+  getCheckoutFulfillmentStatusByHandoff,
 } from "@/lib/checkout-session.functions";
 
 export const Route = createFileRoute("/billing/success")({
-  validateSearch: (s) => z.object({ session_id: z.string().optional() }).parse(s),
+  // `h` = billing handoff token: lets a clone end-user (no Mission Control
+  // login) confirm their own purchase and find the way back to their app.
+  validateSearch: (s) =>
+    z.object({ session_id: z.string().optional(), h: z.string().optional() }).parse(s),
   head: () => ({ meta: [{ title: "Payment received — Mission Control" }] }),
   component: SuccessPage,
 });
@@ -49,13 +54,22 @@ function useStableNow(key: string | undefined) {
 }
 
 function SuccessPage() {
-  const { session_id } = Route.useSearch();
+  const { session_id, h } = Route.useSearch();
   const lookupFn = useServerFn(lookupCheckoutSession);
   const fulfillmentFn = useServerFn(getCheckoutFulfillmentStatus);
+  const lookupByHandoffFn = useServerFn(lookupCheckoutSessionByHandoff);
+  const fulfillmentByHandoffFn = useServerFn(getCheckoutFulfillmentStatusByHandoff);
+
+  // Handoff purchasers (clone end-users) have no operator session — their
+  // (session_id, h) pair authorises the lookup instead.
+  const viaHandoff = !!h;
 
   const { data, isLoading } = useQuery({
-    queryKey: ["checkout-session", session_id],
-    queryFn: () => lookupFn({ data: { sessionId: session_id! } }),
+    queryKey: ["checkout-session", session_id, h ?? null],
+    queryFn: () =>
+      viaHandoff
+        ? lookupByHandoffFn({ data: { sessionId: session_id!, h: h! } })
+        : lookupFn({ data: { sessionId: session_id! } }),
     enabled: !!session_id,
     staleTime: 60_000,
   });
@@ -63,8 +77,11 @@ function SuccessPage() {
   const startedAt = useStableNow(session_id);
 
   const fulfillmentQuery = useQuery({
-    queryKey: ["checkout-fulfillment", session_id],
-    queryFn: () => fulfillmentFn({ data: { sessionId: session_id! } }),
+    queryKey: ["checkout-fulfillment", session_id, h ?? null],
+    queryFn: () =>
+      viaHandoff
+        ? fulfillmentByHandoffFn({ data: { sessionId: session_id!, h: h! } })
+        : fulfillmentFn({ data: { sessionId: session_id! } }),
     enabled: !!session_id,
     refetchInterval: (q) => {
       const latest = q.state.data;
@@ -189,19 +206,34 @@ function SuccessPage() {
           )}
 
           <div className="flex flex-wrap gap-2 pt-2">
-            <Button asChild>
-              <Link to="/settings/billing">Back to billing</Link>
-            </Button>
-            {info?.cloneId ? (
-              <Button asChild variant="outline">
-                <Link to="/pricing" search={{ clone: info.cloneId }}>
-                  Buy more for this client
-                </Link>
-              </Button>
+            {viaHandoff ? (
+              <>
+                {info?.returnUrl && (
+                  <Button asChild>
+                    <a href={info.returnUrl}>Return to {info?.cloneName ?? "your dashboard"}</a>
+                  </Button>
+                )}
+                <Button asChild variant={info?.returnUrl ? "outline" : "default"}>
+                  <Link to="/pricing">View pricing</Link>
+                </Button>
+              </>
             ) : (
-              <Button asChild variant="outline">
-                <Link to="/pricing">View pricing</Link>
-              </Button>
+              <>
+                <Button asChild>
+                  <Link to="/settings/billing">Back to billing</Link>
+                </Button>
+                {info?.cloneId ? (
+                  <Button asChild variant="outline">
+                    <Link to="/pricing" search={{ clone: info.cloneId }}>
+                      Buy more for this client
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button asChild variant="outline">
+                    <Link to="/pricing">View pricing</Link>
+                  </Button>
+                )}
+              </>
             )}
           </div>
         </CardContent>

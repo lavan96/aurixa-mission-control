@@ -35,7 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getPublicPricing } from "@/lib/public-pricing.functions";
-import { createStripeCheckout } from "@/lib/stripe.functions";
+import { createStripeCheckout, createHandoffCheckout } from "@/lib/stripe.functions";
 import { listPurchasableClones } from "@/lib/purchasable-clones.functions";
 import { resolveHandoff } from "@/lib/handoff.functions";
 import { useAuth } from "@/lib/auth";
@@ -105,6 +105,7 @@ function PricingPage() {
   const nav = useNavigate();
   const search = useSearch({ from: "/pricing" }) as PricingSearch;
   const checkoutFn = useServerFn(createStripeCheckout);
+  const handoffCheckoutFn = useServerFn(createHandoffCheckout);
   const fetchClones = useServerFn(listPurchasableClones);
   const [busyId, setBusyId] = useState<string | null>(null);
   const autoLaunchedRef = useRef(false);
@@ -162,7 +163,33 @@ function PricingPage() {
   }, [selectedClone]);
 
   const startCheckout = async (mode: "seat_plan" | "topup" | "setup_package", itemId: string) => {
-    // Unauthenticated: route to auth with redirect + intent + clone + handoff.
+    // Handoff purchases (Phase 3): the single-use token is the credential, so
+    // clone end-users check out without a Mission Control account. The scope
+    // (clone/tenant) comes from the handoff server-side.
+    if (handoff) {
+      setBusyId(itemId);
+      try {
+        const res = await handoffCheckoutFn({
+          data: { handoffId: handoff.handoffId, mode, itemId },
+        });
+        if (res.ok && res.url) {
+          window.location.href = res.url;
+          return;
+        }
+        toast.error(
+          res.ok
+            ? "Checkout could not be started"
+            : `Checkout unavailable: ${res.error.replaceAll("_", " ")}`,
+        );
+      } catch (err) {
+        toast.error((err as Error).message ?? "Checkout failed");
+      } finally {
+        setBusyId(null);
+      }
+      return;
+    }
+
+    // Unauthenticated without a handoff: route to auth with redirect + intent + clone.
     if (!session) {
       nav({
         to: "/auth" as never,
@@ -182,9 +209,7 @@ function PricingPage() {
         ? `/billing/cancel?clone=${encodeURIComponent(cloneId)}`
         : "/billing/cancel";
       const res = await checkoutFn({
-        // Only pass the handoff when it resolved — a stale token would
-        // hard-fail checkout, and unattributed checkout beats no checkout.
-        data: { mode, itemId, cloneId, cancelPath, handoffId: handoff?.handoffId },
+        data: { mode, itemId, cloneId, cancelPath },
       });
       if (res.ok && res.url) {
         window.location.href = res.url;
@@ -204,10 +229,11 @@ function PricingPage() {
 
   // Auto-resume checkout after auth round-trip. The handoff's baked-in intent
   // ('<mode>:<item_id>') gets the same treatment, so an attributed deep link
-  // can land straight in checkout.
+  // can land straight in checkout — with a handoff no session is needed at
+  // all (Phase 3: the token itself authorises checkout).
   useEffect(() => {
     if (autoLaunchedRef.current) return;
-    if (!session) return;
+    if (!session && !handoff) return;
     const intent = search.intent ?? handoff?.intent ?? null;
     if (!intent) return;
     const [mode, itemId] = intent.split(":");

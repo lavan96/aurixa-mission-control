@@ -29,12 +29,38 @@ export function intentMode(intent: string | null | undefined): string | null {
   return mode || null;
 }
 
+/** Parses the item id out of an intent string ('<mode>:<item_id>'), if any. */
+export function intentItemId(intent: string | null | undefined): string | null {
+  if (!intent) return null;
+  const item = intent.split(":")[1]?.trim();
+  return item || null;
+}
+
 /**
- * Picks the landing page for a handoff. Topup intents deep-link straight to
- * the topup page; everything else lands on the full pricing page.
+ * Whether a handoff's intent permits checking out a given mode/item.
+ * No intent = the whole catalog; a bare mode pins the mode; '<mode>:<item>'
+ * pins the exact item. Enforced server-side by the handoff-scoped checkout.
  */
-export function handoffLandingPath(intent: string | null | undefined): string {
-  return intentMode(intent) === "topup" ? "/billing/topup" : "/pricing";
+export function intentAllows(
+  intent: string | null | undefined,
+  mode: string,
+  itemId: string,
+): boolean {
+  const m = intentMode(intent);
+  if (!m) return true;
+  if (m !== mode) return false;
+  const item = intentItemId(intent);
+  return !item || item === itemId;
+}
+
+/**
+ * Picks the landing page for a handoff. Always the public /pricing page:
+ * handoff holders are clone end-users without a Mission Control login, and
+ * /billing/topup sits behind ProtectedRoute. /pricing renders topup packs and
+ * honours the handoff's intent for auto-launch.
+ */
+export function handoffLandingPath(_intent: string | null | undefined): string {
+  return "/pricing";
 }
 
 export function handoffUrl(baseUrl: string, handoffId: string, intent?: string | null): string {
@@ -72,6 +98,37 @@ export function validateReturnUrl(
     }
   }
   return { ok: true, url: parsed.toString() };
+}
+
+export type HandoffRow = {
+  id: string;
+  clone_id: string | null;
+  tenant_id: string | null;
+  origin_user_id: string;
+  origin_username: string | null;
+  origin_source: string;
+  intent: string | null;
+  return_url: string | null;
+  expires_at: string;
+  consumed_at: string | null;
+};
+
+/**
+ * Loads a handoff row with NO validity checks (expired/consumed rows
+ * included). Only for callers that have already proven a right to it — e.g.
+ * the success page after matching a checkout session's handoff_id — never as
+ * a checkout credential; that's loadValidHandoff in purchases.server.
+ */
+export async function loadHandoffById(handoffId: string): Promise<HandoffRow | null> {
+  const { data, error } = await adminAny
+    .from("billing_handoffs")
+    .select(
+      "id, clone_id, tenant_id, origin_user_id, origin_username, origin_source, intent, return_url, expires_at, consumed_at",
+    )
+    .eq("id", handoffId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as HandoffRow;
 }
 
 export async function createHandoff(

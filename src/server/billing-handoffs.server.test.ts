@@ -28,6 +28,8 @@ import {
   createHandoff,
   handoffLandingPath,
   handoffUrl,
+  intentAllows,
+  intentItemId,
   intentMode,
   validateReturnUrl,
 } from "./billing-handoffs.server";
@@ -46,21 +48,44 @@ describe("intentMode / handoffLandingPath / handoffUrl", () => {
     expect(intentMode(undefined)).toBeNull();
   });
 
-  it("routes topup intents to the topup page, everything else to pricing", () => {
-    expect(handoffLandingPath("topup:1234")).toBe("/billing/topup");
-    expect(handoffLandingPath("topup")).toBe("/billing/topup");
+  it("parses the item id out of an intent", () => {
+    expect(intentItemId("topup:1234")).toBe("1234");
+    expect(intentItemId("topup")).toBeNull();
+    expect(intentItemId(null)).toBeNull();
+  });
+
+  it("always lands on the public pricing page (handoff holders have no operator login)", () => {
+    expect(handoffLandingPath("topup:1234")).toBe("/pricing");
+    expect(handoffLandingPath("topup")).toBe("/pricing");
     expect(handoffLandingPath("seat_plan:1")).toBe("/pricing");
-    expect(handoffLandingPath("pricing")).toBe("/pricing");
     expect(handoffLandingPath(null)).toBe("/pricing");
   });
 
   it("builds the deep link, trimming trailing slashes off the base", () => {
     expect(handoffUrl("https://mc.example.com/", "abc", "topup")).toBe(
-      "https://mc.example.com/billing/topup?h=abc",
+      "https://mc.example.com/pricing?h=abc",
     );
     expect(handoffUrl("https://mc.example.com", "abc", null)).toBe(
       "https://mc.example.com/pricing?h=abc",
     );
+  });
+});
+
+describe("intentAllows (handoff-scoped checkout restriction)", () => {
+  it("allows the whole catalog when the handoff has no intent", () => {
+    expect(intentAllows(null, "topup", "item-1")).toBe(true);
+    expect(intentAllows("", "seat_plan", "item-2")).toBe(true);
+  });
+
+  it("pins the mode for bare-mode intents", () => {
+    expect(intentAllows("topup", "topup", "any-pack")).toBe(true);
+    expect(intentAllows("topup", "seat_plan", "any-plan")).toBe(false);
+  });
+
+  it("pins the exact item for '<mode>:<item>' intents", () => {
+    expect(intentAllows("topup:item-1", "topup", "item-1")).toBe(true);
+    expect(intentAllows("topup:item-1", "topup", "item-2")).toBe(false);
+    expect(intentAllows("topup:item-1", "setup_package", "item-1")).toBe(false);
   });
 });
 

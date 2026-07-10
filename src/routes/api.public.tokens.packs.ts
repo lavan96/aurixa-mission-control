@@ -107,7 +107,9 @@ export const Route = createFileRoute("/api/public/tokens/packs")({
                 intent: "topup",
               });
               if (created.ok) {
-                topupUrl = `${base}/billing/topup?tenant=${encodeURIComponent(tenant.tenantId)}&h=${encodeURIComponent(created.id)}`;
+                // Land on the public pricing page: handoff holders are clone
+                // end-users, and /billing/topup sits behind the operator login.
+                topupUrl = `${base}/pricing?h=${encodeURIComponent(created.id)}`;
               }
             }
           }

@@ -10,6 +10,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { loadValidHandoff } from "@/server/purchases.server";
+import { loadHandoffById } from "@/server/billing-handoffs.server";
 
 export type ResolvedHandoff = {
   ok: true;
@@ -45,5 +46,34 @@ export const resolveHandoff = createServerFn({ method: "POST" })
       tenantId: handoff.tenant_id,
       originUsername: handoff.origin_username,
       intent: handoff.intent,
+    };
+  });
+
+/**
+ * Return-link info for the cancel page (Phase 3). By the time a purchaser
+ * lands on /billing/cancel the handoff is already consumed, so resolveHandoff
+ * would reject it — this fn accepts consumed tokens but exposes only the
+ * display-safe "way home": clone name + validated return URL.
+ */
+export const getHandoffReturnInfo = createServerFn({ method: "POST" })
+  .inputValidator((input) => z.object({ h: z.string().uuid() }).parse(input))
+  .handler(async ({ data }) => {
+    const handoff = await loadHandoffById(data.h);
+    if (!handoff) return { ok: false as const, error: "not_found" };
+
+    let cloneName: string | null = null;
+    if (handoff.clone_id) {
+      const { data: clone } = await supabaseAdmin
+        .from("clones")
+        .select("name, slug")
+        .eq("id", handoff.clone_id)
+        .maybeSingle();
+      cloneName = clone?.name ?? clone?.slug ?? null;
+    }
+
+    return {
+      ok: true as const,
+      cloneName,
+      returnUrl: handoff.return_url,
     };
   });
