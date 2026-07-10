@@ -59,9 +59,11 @@ import { Route as CascadesEventIdRouteImport } from './routes/cascades.$eventId'
 import { Route as BillingTopupRouteImport } from './routes/billing.topup'
 import { Route as BillingSuccessRouteImport } from './routes/billing.success'
 import { Route as BillingSeatsRouteImport } from './routes/billing.seats'
+import { Route as BillingPurchasesRouteImport } from './routes/billing.purchases'
 import { Route as BillingCatalogRouteImport } from './routes/billing.catalog'
 import { Route as BillingCancelRouteImport } from './routes/billing.cancel'
 import { Route as ApiHealthRouteImport } from './routes/api.health'
+import { Route as ApiPublicPurchasesRouteImport } from './routes/api.public.purchases'
 import { Route as ApiPublicTokensReserveRouteImport } from './routes/api.public.tokens.reserve'
 import { Route as ApiPublicTokensPacksRouteImport } from './routes/api.public.tokens.packs'
 import { Route as ApiPublicTokensCommitRouteImport } from './routes/api.public.tokens.commit'
@@ -334,6 +336,11 @@ const BillingSeatsRoute = BillingSeatsRouteImport.update({
   path: '/billing/seats',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BillingPurchasesRoute = BillingPurchasesRouteImport.update({
+  id: '/billing/purchases',
+  path: '/billing/purchases',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BillingCatalogRoute = BillingCatalogRouteImport.update({
   id: '/billing/catalog',
   path: '/billing/catalog',
@@ -347,6 +354,11 @@ const BillingCancelRoute = BillingCancelRouteImport.update({
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicPurchasesRoute = ApiPublicPurchasesRouteImport.update({
+  id: '/api/public/purchases',
+  path: '/api/public/purchases',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicTokensReserveRoute = ApiPublicTokensReserveRouteImport.update({
@@ -479,6 +491,7 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/billing/cancel': typeof BillingCancelRoute
   '/billing/catalog': typeof BillingCatalogRoute
+  '/billing/purchases': typeof BillingPurchasesRoute
   '/billing/seats': typeof BillingSeatsRoute
   '/billing/success': typeof BillingSuccessRoute
   '/billing/topup': typeof BillingTopupRoute
@@ -505,6 +518,7 @@ export interface FileRoutesByFullPath {
   '/settings/role-audit': typeof SettingsRoleAuditRoute
   '/settings/roles': typeof SettingsRolesRoute
   '/settings/': typeof SettingsIndexRoute
+  '/api/public/purchases': typeof ApiPublicPurchasesRoute
   '/api/public/billing/handoff': typeof ApiPublicBillingHandoffRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
   '/api/public/edge/status': typeof ApiPublicEdgeStatusRoute
@@ -552,6 +566,7 @@ export interface FileRoutesByTo {
   '/api/health': typeof ApiHealthRoute
   '/billing/cancel': typeof BillingCancelRoute
   '/billing/catalog': typeof BillingCatalogRoute
+  '/billing/purchases': typeof BillingPurchasesRoute
   '/billing/seats': typeof BillingSeatsRoute
   '/billing/success': typeof BillingSuccessRoute
   '/billing/topup': typeof BillingTopupRoute
@@ -578,6 +593,7 @@ export interface FileRoutesByTo {
   '/settings/role-audit': typeof SettingsRoleAuditRoute
   '/settings/roles': typeof SettingsRolesRoute
   '/settings': typeof SettingsIndexRoute
+  '/api/public/purchases': typeof ApiPublicPurchasesRoute
   '/api/public/billing/handoff': typeof ApiPublicBillingHandoffRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
   '/api/public/edge/status': typeof ApiPublicEdgeStatusRoute
@@ -627,6 +643,7 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/billing/cancel': typeof BillingCancelRoute
   '/billing/catalog': typeof BillingCatalogRoute
+  '/billing/purchases': typeof BillingPurchasesRoute
   '/billing/seats': typeof BillingSeatsRoute
   '/billing/success': typeof BillingSuccessRoute
   '/billing/topup': typeof BillingTopupRoute
@@ -653,6 +670,7 @@ export interface FileRoutesById {
   '/settings/role-audit': typeof SettingsRoleAuditRoute
   '/settings/roles': typeof SettingsRolesRoute
   '/settings/': typeof SettingsIndexRoute
+  '/api/public/purchases': typeof ApiPublicPurchasesRoute
   '/api/public/billing/handoff': typeof ApiPublicBillingHandoffRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
   '/api/public/edge/status': typeof ApiPublicEdgeStatusRoute
@@ -703,6 +721,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/billing/cancel'
     | '/billing/catalog'
+    | '/billing/purchases'
     | '/billing/seats'
     | '/billing/success'
     | '/billing/topup'
@@ -729,6 +748,7 @@ export interface FileRouteTypes {
     | '/settings/role-audit'
     | '/settings/roles'
     | '/settings/'
+    | '/api/public/purchases'
     | '/api/public/billing/handoff'
     | '/api/public/clones/rotate-key'
     | '/api/public/edge/status'
@@ -776,6 +796,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/billing/cancel'
     | '/billing/catalog'
+    | '/billing/purchases'
     | '/billing/seats'
     | '/billing/success'
     | '/billing/topup'
@@ -802,6 +823,7 @@ export interface FileRouteTypes {
     | '/settings/role-audit'
     | '/settings/roles'
     | '/settings'
+    | '/api/public/purchases'
     | '/api/public/billing/handoff'
     | '/api/public/clones/rotate-key'
     | '/api/public/edge/status'
@@ -850,6 +872,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/billing/cancel'
     | '/billing/catalog'
+    | '/billing/purchases'
     | '/billing/seats'
     | '/billing/success'
     | '/billing/topup'
@@ -876,6 +899,7 @@ export interface FileRouteTypes {
     | '/settings/role-audit'
     | '/settings/roles'
     | '/settings/'
+    | '/api/public/purchases'
     | '/api/public/billing/handoff'
     | '/api/public/clones/rotate-key'
     | '/api/public/edge/status'
@@ -925,6 +949,7 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   BillingCancelRoute: typeof BillingCancelRoute
   BillingCatalogRoute: typeof BillingCatalogRoute
+  BillingPurchasesRoute: typeof BillingPurchasesRoute
   BillingSeatsRoute: typeof BillingSeatsRoute
   BillingSuccessRoute: typeof BillingSuccessRoute
   BillingTopupRoute: typeof BillingTopupRoute
@@ -941,6 +966,7 @@ export interface RootRouteChildren {
   HooksRunSchedulesRoute: typeof HooksRunSchedulesRoute
   HooksTokenAlertsRoute: typeof HooksTokenAlertsRoute
   HooksWarmHealthRoute: typeof HooksWarmHealthRoute
+  ApiPublicPurchasesRoute: typeof ApiPublicPurchasesRoute
   ApiPublicBillingHandoffRoute: typeof ApiPublicBillingHandoffRoute
   ApiPublicClonesRotateKeyRoute: typeof ApiPublicClonesRotateKeyRoute
   ApiPublicEdgeStatusRoute: typeof ApiPublicEdgeStatusRoute
@@ -1314,6 +1340,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BillingSeatsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/billing/purchases': {
+      id: '/billing/purchases'
+      path: '/billing/purchases'
+      fullPath: '/billing/purchases'
+      preLoaderRoute: typeof BillingPurchasesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/billing/catalog': {
       id: '/billing/catalog'
       path: '/billing/catalog'
@@ -1333,6 +1366,13 @@ declare module '@tanstack/react-router' {
       path: '/api/health'
       fullPath: '/api/health'
       preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/purchases': {
+      id: '/api/public/purchases'
+      path: '/api/public/purchases'
+      fullPath: '/api/public/purchases'
+      preLoaderRoute: typeof ApiPublicPurchasesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/tokens/reserve': {
@@ -1548,6 +1588,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   BillingCancelRoute: BillingCancelRoute,
   BillingCatalogRoute: BillingCatalogRoute,
+  BillingPurchasesRoute: BillingPurchasesRoute,
   BillingSeatsRoute: BillingSeatsRoute,
   BillingSuccessRoute: BillingSuccessRoute,
   BillingTopupRoute: BillingTopupRoute,
@@ -1564,6 +1605,7 @@ const rootRouteChildren: RootRouteChildren = {
   HooksRunSchedulesRoute: HooksRunSchedulesRoute,
   HooksTokenAlertsRoute: HooksTokenAlertsRoute,
   HooksWarmHealthRoute: HooksWarmHealthRoute,
+  ApiPublicPurchasesRoute: ApiPublicPurchasesRoute,
   ApiPublicBillingHandoffRoute: ApiPublicBillingHandoffRoute,
   ApiPublicClonesRotateKeyRoute: ApiPublicClonesRotateKeyRoute,
   ApiPublicEdgeStatusRoute: ApiPublicEdgeStatusRoute,

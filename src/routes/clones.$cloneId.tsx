@@ -13,6 +13,7 @@ import { CloneEditDialog } from "@/components/clone-edit-dialog";
 import { CloneEdgeCard } from "@/components/clone-edge-card";
 import { CloneHealthCard } from "@/components/clone-health-card";
 import { CloneLibraryPinsCard } from "@/components/clone-library-pins";
+import { ClonePurchasesCard } from "@/components/clone-purchases-card";
 import { CloneSecurityAssessmentsCard } from "@/components/clone-security-assessments-card";
 import { CloneSyncStatusCard } from "@/components/clone-sync-status-card";
 import { CopyButton } from "@/components/copy-button";
@@ -210,6 +211,7 @@ function CloneDetail() {
         <CloneHealthTimeline cloneId={cloneId} />
       </Suspense>
       <CloneBackendCard cloneId={cloneId} />
+      <ClonePurchasesCard cloneId={cloneId} />
       <CloneSecurityAssessmentsCard cloneId={cloneId} />
       <ModuleInjector installed={installed} available={available} resyncingId={resyncingId} inject={inject} remove={remove} resync={resync} />
       <CloneEdgeCard cloneId={cloneId} />
