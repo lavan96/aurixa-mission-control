@@ -246,6 +246,10 @@ function PurchasesPage() {
               <SelectItem value="topup">Top-up</SelectItem>
               <SelectItem value="seat_plan">Seat plan</SelectItem>
               <SelectItem value="setup_package">Setup package</SelectItem>
+              <SelectItem value="admin_grant">Admin · token grant</SelectItem>
+              <SelectItem value="admin_topup">Admin · comp top-up</SelectItem>
+              <SelectItem value="admin_plan_change">Admin · plan change</SelectItem>
+              <SelectItem value="admin_seat_change">Admin · seat change</SelectItem>
             </SelectContent>
           </Select>
           <Select value={status} onValueChange={resetPage(setStatus)}>

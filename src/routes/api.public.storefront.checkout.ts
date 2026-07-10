@@ -45,13 +45,14 @@ export const Route = createFileRoute("/api/public/storefront/checkout")({
 
         const url = new URL(request.url);
         const mcOrigin = process.env.PUBLIC_APP_URL ?? `${url.protocol}//${url.host}`;
-        const pricingBase = storefrontPricingBase(mcOrigin);
         const h = encodeURIComponent(data.h);
-        // When the storefront URL is configured, receipts render there
-        // (<site>/pricing/success|cancel). The unconfigured fallback keeps the
-        // flow working end-to-end via Mission Control's own receipt pages.
-        const onStorefront = pricingBase !== `${mcOrigin.replace(/\/+$/, "")}/pricing`
-          || !!process.env.PUBLIC_PRICING_SITE_URL;
+        // When the storefront is configured, receipts render on its own
+        // /pricing/success|cancel pages. The unconfigured fallback keeps the
+        // flow working end-to-end via Mission Control's receipt pages (which
+        // also accept the (session_id, h) pair).
+        const site = process.env.PUBLIC_PRICING_SITE_URL;
+        const onStorefront = !!site && /^https?:\/\//.test(site);
+        const pricingBase = storefrontPricingBase(mcOrigin);
         const successUrl = onStorefront
           ? `${pricingBase}/success?h=${h}&session_id={CHECKOUT_SESSION_ID}`
           : `${mcOrigin}/billing/success?h=${h}&session_id={CHECKOUT_SESSION_ID}`;

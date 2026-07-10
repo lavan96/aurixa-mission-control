@@ -14,7 +14,17 @@ import { aggregatePurchases } from "@/lib/purchase-rollups";
 
 const adminAny = supabaseAdmin as any;
 
-const MODES = ["topup", "seat_plan", "setup_package"] as const;
+// Stripe purchase modes + the discretionary admin_* actions recorded by
+// recordAdminAction — both filterable in the purchases explorer.
+const MODES = [
+  "topup",
+  "seat_plan",
+  "setup_package",
+  "admin_grant",
+  "admin_topup",
+  "admin_plan_change",
+  "admin_seat_change",
+] as const;
 const STATUSES = ["initiated", "completed", "failed", "refunded", "abandoned"] as const;
 
 const ListSchema = z.object({
@@ -167,6 +177,7 @@ export const clonePurchaseSummary = createServerFn({ method: "POST" })
       lifetimeRevenueByCurrency: rollups.revenueByCurrency,
       completedCount: rollups.completedCount,
       attributedCount: rollups.attributedCount,
+      adminActionCount: rollups.adminActionCount,
       recent: all.slice(0, 5),
     };
   });

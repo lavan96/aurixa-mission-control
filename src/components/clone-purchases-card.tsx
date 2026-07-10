@@ -49,7 +49,7 @@ export function ClonePurchasesCard({ cloneId }: { cloneId: string }) {
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-4">
           <MiniStat
             label="Lifetime revenue"
             value={summary ? formatMoneyByCurrency(summary.lifetimeRevenueByCurrency) : "—"}
@@ -58,6 +58,10 @@ export function ClonePurchasesCard({ cloneId }: { cloneId: string }) {
           <MiniStat
             label="User-initiated"
             value={summary ? String(summary.attributedCount) : "—"}
+          />
+          <MiniStat
+            label="Admin actions"
+            value={summary ? String(summary.adminActionCount ?? 0) : "—"}
           />
         </div>
 
