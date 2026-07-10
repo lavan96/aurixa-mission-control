@@ -70,6 +70,10 @@ import { Route as ApiPublicTokensCommitRouteImport } from './routes/api.public.t
 import { Route as ApiPublicTokensCancelRouteImport } from './routes/api.public.tokens.cancel'
 import { Route as ApiPublicTokensBalanceRouteImport } from './routes/api.public.tokens.balance'
 import { Route as ApiPublicStripeWebhookRouteImport } from './routes/api.public.stripe.webhook'
+import { Route as ApiPublicStorefrontSessionRouteImport } from './routes/api.public.storefront.session'
+import { Route as ApiPublicStorefrontHandoffRouteImport } from './routes/api.public.storefront.handoff'
+import { Route as ApiPublicStorefrontCheckoutRouteImport } from './routes/api.public.storefront.checkout'
+import { Route as ApiPublicStorefrontCatalogRouteImport } from './routes/api.public.storefront.catalog'
 import { Route as ApiPublicSeatsReserveRouteImport } from './routes/api.public.seats.reserve'
 import { Route as ApiPublicSeatsReleaseRouteImport } from './routes/api.public.seats.release'
 import { Route as ApiPublicSeatsListRouteImport } from './routes/api.public.seats.list'
@@ -391,6 +395,30 @@ const ApiPublicStripeWebhookRoute = ApiPublicStripeWebhookRouteImport.update({
   path: '/api/public/stripe/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicStorefrontSessionRoute =
+  ApiPublicStorefrontSessionRouteImport.update({
+    id: '/api/public/storefront/session',
+    path: '/api/public/storefront/session',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicStorefrontHandoffRoute =
+  ApiPublicStorefrontHandoffRouteImport.update({
+    id: '/api/public/storefront/handoff',
+    path: '/api/public/storefront/handoff',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicStorefrontCheckoutRoute =
+  ApiPublicStorefrontCheckoutRouteImport.update({
+    id: '/api/public/storefront/checkout',
+    path: '/api/public/storefront/checkout',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicStorefrontCatalogRoute =
+  ApiPublicStorefrontCatalogRouteImport.update({
+    id: '/api/public/storefront/catalog',
+    path: '/api/public/storefront/catalog',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicSeatsReserveRoute = ApiPublicSeatsReserveRouteImport.update({
   id: '/api/public/seats/reserve',
   path: '/api/public/seats/reserve',
@@ -528,6 +556,10 @@ export interface FileRoutesByFullPath {
   '/api/public/seats/list': typeof ApiPublicSeatsListRoute
   '/api/public/seats/release': typeof ApiPublicSeatsReleaseRoute
   '/api/public/seats/reserve': typeof ApiPublicSeatsReserveRoute
+  '/api/public/storefront/catalog': typeof ApiPublicStorefrontCatalogRoute
+  '/api/public/storefront/checkout': typeof ApiPublicStorefrontCheckoutRoute
+  '/api/public/storefront/handoff': typeof ApiPublicStorefrontHandoffRoute
+  '/api/public/storefront/session': typeof ApiPublicStorefrontSessionRoute
   '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
   '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
@@ -603,6 +635,10 @@ export interface FileRoutesByTo {
   '/api/public/seats/list': typeof ApiPublicSeatsListRoute
   '/api/public/seats/release': typeof ApiPublicSeatsReleaseRoute
   '/api/public/seats/reserve': typeof ApiPublicSeatsReserveRoute
+  '/api/public/storefront/catalog': typeof ApiPublicStorefrontCatalogRoute
+  '/api/public/storefront/checkout': typeof ApiPublicStorefrontCheckoutRoute
+  '/api/public/storefront/handoff': typeof ApiPublicStorefrontHandoffRoute
+  '/api/public/storefront/session': typeof ApiPublicStorefrontSessionRoute
   '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
   '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
@@ -680,6 +716,10 @@ export interface FileRoutesById {
   '/api/public/seats/list': typeof ApiPublicSeatsListRoute
   '/api/public/seats/release': typeof ApiPublicSeatsReleaseRoute
   '/api/public/seats/reserve': typeof ApiPublicSeatsReserveRoute
+  '/api/public/storefront/catalog': typeof ApiPublicStorefrontCatalogRoute
+  '/api/public/storefront/checkout': typeof ApiPublicStorefrontCheckoutRoute
+  '/api/public/storefront/handoff': typeof ApiPublicStorefrontHandoffRoute
+  '/api/public/storefront/session': typeof ApiPublicStorefrontSessionRoute
   '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
   '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
@@ -758,6 +798,10 @@ export interface FileRouteTypes {
     | '/api/public/seats/list'
     | '/api/public/seats/release'
     | '/api/public/seats/reserve'
+    | '/api/public/storefront/catalog'
+    | '/api/public/storefront/checkout'
+    | '/api/public/storefront/handoff'
+    | '/api/public/storefront/session'
     | '/api/public/stripe/webhook'
     | '/api/public/tokens/balance'
     | '/api/public/tokens/cancel'
@@ -833,6 +877,10 @@ export interface FileRouteTypes {
     | '/api/public/seats/list'
     | '/api/public/seats/release'
     | '/api/public/seats/reserve'
+    | '/api/public/storefront/catalog'
+    | '/api/public/storefront/checkout'
+    | '/api/public/storefront/handoff'
+    | '/api/public/storefront/session'
     | '/api/public/stripe/webhook'
     | '/api/public/tokens/balance'
     | '/api/public/tokens/cancel'
@@ -909,6 +957,10 @@ export interface FileRouteTypes {
     | '/api/public/seats/list'
     | '/api/public/seats/release'
     | '/api/public/seats/reserve'
+    | '/api/public/storefront/catalog'
+    | '/api/public/storefront/checkout'
+    | '/api/public/storefront/handoff'
+    | '/api/public/storefront/session'
     | '/api/public/stripe/webhook'
     | '/api/public/tokens/balance'
     | '/api/public/tokens/cancel'
@@ -976,6 +1028,10 @@ export interface RootRouteChildren {
   ApiPublicSeatsListRoute: typeof ApiPublicSeatsListRoute
   ApiPublicSeatsReleaseRoute: typeof ApiPublicSeatsReleaseRoute
   ApiPublicSeatsReserveRoute: typeof ApiPublicSeatsReserveRoute
+  ApiPublicStorefrontCatalogRoute: typeof ApiPublicStorefrontCatalogRoute
+  ApiPublicStorefrontCheckoutRoute: typeof ApiPublicStorefrontCheckoutRoute
+  ApiPublicStorefrontHandoffRoute: typeof ApiPublicStorefrontHandoffRoute
+  ApiPublicStorefrontSessionRoute: typeof ApiPublicStorefrontSessionRoute
   ApiPublicStripeWebhookRoute: typeof ApiPublicStripeWebhookRoute
   ApiPublicTokensBalanceRoute: typeof ApiPublicTokensBalanceRoute
   ApiPublicTokensCancelRoute: typeof ApiPublicTokensCancelRoute
@@ -1417,6 +1473,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicStripeWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/storefront/session': {
+      id: '/api/public/storefront/session'
+      path: '/api/public/storefront/session'
+      fullPath: '/api/public/storefront/session'
+      preLoaderRoute: typeof ApiPublicStorefrontSessionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/storefront/handoff': {
+      id: '/api/public/storefront/handoff'
+      path: '/api/public/storefront/handoff'
+      fullPath: '/api/public/storefront/handoff'
+      preLoaderRoute: typeof ApiPublicStorefrontHandoffRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/storefront/checkout': {
+      id: '/api/public/storefront/checkout'
+      path: '/api/public/storefront/checkout'
+      fullPath: '/api/public/storefront/checkout'
+      preLoaderRoute: typeof ApiPublicStorefrontCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/storefront/catalog': {
+      id: '/api/public/storefront/catalog'
+      path: '/api/public/storefront/catalog'
+      fullPath: '/api/public/storefront/catalog'
+      preLoaderRoute: typeof ApiPublicStorefrontCatalogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/seats/reserve': {
       id: '/api/public/seats/reserve'
       path: '/api/public/seats/reserve'
@@ -1615,6 +1699,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicSeatsListRoute: ApiPublicSeatsListRoute,
   ApiPublicSeatsReleaseRoute: ApiPublicSeatsReleaseRoute,
   ApiPublicSeatsReserveRoute: ApiPublicSeatsReserveRoute,
+  ApiPublicStorefrontCatalogRoute: ApiPublicStorefrontCatalogRoute,
+  ApiPublicStorefrontCheckoutRoute: ApiPublicStorefrontCheckoutRoute,
+  ApiPublicStorefrontHandoffRoute: ApiPublicStorefrontHandoffRoute,
+  ApiPublicStorefrontSessionRoute: ApiPublicStorefrontSessionRoute,
   ApiPublicStripeWebhookRoute: ApiPublicStripeWebhookRoute,
   ApiPublicTokensBalanceRoute: ApiPublicTokensBalanceRoute,
   ApiPublicTokensCancelRoute: ApiPublicTokensCancelRoute,

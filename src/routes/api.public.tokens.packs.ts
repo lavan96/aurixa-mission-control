@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { ensureTenant, jsonResponse, resolveCloneApiKey } from "@/server/clone-api-keys.server";
 import { checkRateLimit } from "@/server/token-rate-limit.server";
-import { createHandoff } from "@/server/billing-handoffs.server";
+import { createHandoff, handoffUrl, storefrontPricingBase } from "@/server/billing-handoffs.server";
 
 /**
  * GET /api/public/tokens/packs
@@ -107,9 +107,9 @@ export const Route = createFileRoute("/api/public/tokens/packs")({
                 intent: "topup",
               });
               if (created.ok) {
-                // Land on the public pricing page: handoff holders are clone
-                // end-users, and /billing/topup sits behind the operator login.
-                topupUrl = `${base}/pricing?h=${encodeURIComponent(created.id)}`;
+                // Land on the customer-facing Aurixa Systems pricing page:
+                // user-centric purchases never route through Mission Control.
+                topupUrl = handoffUrl(storefrontPricingBase(base), created.id);
               }
             }
           }

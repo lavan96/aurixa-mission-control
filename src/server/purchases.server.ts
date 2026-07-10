@@ -207,6 +207,53 @@ export async function consumeHandoff(handoffId: string): Promise<void> {
     .is("consumed_at", null);
 }
 
+/**
+ * Records a discretionary (non-Stripe) operator action — token grant, comp
+ * top-up, plan/seat change — into the purchases oversight ledger, so Mission
+ * Control's "secondary manner" of provisioning is as traceable as customer
+ * checkouts. `admin_*` modes carry no revenue and are excluded from purchase
+ * counts by the rollup aggregation. Best-effort by design: bookkeeping must
+ * never fail the underlying grant.
+ */
+export async function recordAdminAction(input: {
+  mode: "admin_grant" | "admin_topup" | "admin_plan_change" | "admin_seat_change";
+  cloneId?: string | null;
+  tenantId?: string | null;
+  itemSlug?: string | null;
+  operatorUserId: string;
+  operatorUsername?: string | null;
+  metadata?: Record<string, unknown>;
+}): Promise<void> {
+  try {
+    let cloneId = input.cloneId ?? null;
+    if (!cloneId && input.tenantId) {
+      const { data: t } = await adminAny
+        .from("tenants")
+        .select("clone_id")
+        .eq("id", input.tenantId)
+        .maybeSingle();
+      cloneId = t?.clone_id ?? null;
+    }
+    const { error } = await adminAny.from("purchases").insert({
+      mode: input.mode,
+      item_slug: input.itemSlug ?? null,
+      quantity: 1,
+      clone_id: cloneId,
+      tenant_id: input.tenantId ?? null,
+      origin_user_id: input.operatorUserId,
+      origin_username: input.operatorUsername ?? null,
+      origin_source: OPERATOR_SOURCE,
+      amount_cents: 0,
+      status: "completed",
+      completed_at: new Date().toISOString(),
+      metadata: input.metadata ?? {},
+    });
+    if (error) throw new Error(error.message);
+  } catch (err) {
+    console.error("recordAdminAction failed", err);
+  }
+}
+
 /** Best-effort display name for an operator-initiated purchase. */
 export async function operatorDisplayName(
   userId: string,

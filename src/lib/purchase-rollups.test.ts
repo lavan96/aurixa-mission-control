@@ -77,8 +77,28 @@ describe("aggregatePurchases", () => {
     const r = aggregatePurchases([]);
     expect(r.completedCount).toBe(0);
     expect(r.attributedShare).toBe(0);
+    expect(r.adminActionCount).toBe(0);
     expect(r.byClone).toEqual([]);
     expect(r.revenueByCurrency).toEqual({});
+  });
+
+  it("tracks discretionary admin_* actions separately from purchases and revenue", () => {
+    const r = aggregatePurchases([
+      row(),
+      row({ mode: "admin_grant", amount_cents: 0, origin_source: "mission_control" }),
+      row({ mode: "admin_plan_change", amount_cents: 0, origin_source: "mission_control" }),
+    ]);
+    expect(r.completedCount).toBe(1);
+    expect(r.adminActionCount).toBe(2);
+    expect(r.revenueByCurrency).toEqual({ AUD: 1000 });
+    // attribution share is over customer purchases only
+    expect(r.attributedShare).toBe(1);
+    // admin modes still visible in the per-mode grouping
+    expect(r.byMode.map((m) => m.mode).sort()).toEqual([
+      "admin_grant",
+      "admin_plan_change",
+      "topup",
+    ]);
   });
 
   it("ignores null amounts without dropping the row from counts", () => {

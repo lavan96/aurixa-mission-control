@@ -1,5 +1,50 @@
 # User-Attributed Pricing & Purchase Workflow — Implementation Plan (Canonical Spec)
 
+---
+
+## ⚠ REVISION 2 (2026-07-10) — Storefront topology. This section supersedes any conflicting statement below.
+
+The original phases (1–4, all implemented) treated Mission Control's `/pricing` route as the
+customer-facing pricing page. The corrected topology separates the three surfaces:
+
+| Surface | Role |
+|---|---|
+| **Aurixa Systems website** (`aurixa-systems` repo) | **THE customer pricing page.** All user-centric monetisation — tokens, plans, seats, from the prime repo and every clone — flows through `aurixasystems…/pricing`. Users never see Mission Control. |
+| **Mission Control** (this repo) | **Headless billing engine + oversight + discretionary control.** (1) Owns Stripe, the webhook, the catalog, handoffs, and the `purchases` ledger — it *monitors* every purchase. (2) Provides the **secondary manner**: operators grant tokens / apply comp top-ups / change billing & seat plans ad-hoc at our discretion, with every action recorded in the same ledger for 100% granular oversight. Its `/pricing` route is now an **operator-gated console** for pushing ad-hoc purchases on behalf of clients — never a customer route. |
+| **Command centers** (`npc-property-dashbord`, prime + clones) | Origin of purchase intent. CTAs mint handoffs exactly as before — Mission Control now mints those links against the **storefront**, so no origin-side logic changed. |
+
+### What implements Revision 2 in this repo
+
+1. **`PUBLIC_PRICING_SITE_URL`** (env): full URL of the storefront pricing page. All handoff
+   deep links (`POST /api/public/billing/handoff`) and packs `topup_url`s are minted against it
+   via `storefrontPricingBase()` (`src/server/billing-handoffs.server.ts`). Unset = falls back
+   to Mission Control's own `/pricing` so nothing breaks mid-rollout.
+2. **Storefront REST API** (CORS-enabled for the static site; possession-based auth — the
+   unguessable handoff token / (session, handoff) pair, never cookies):
+   - `GET  /api/public/storefront/catalog` — public active catalog (plans/packs/setups/addons/reports).
+   - `GET  /api/public/storefront/handoff?h=` — display-safe token resolution (clone name, username, intent).
+   - `POST /api/public/storefront/checkout` — `{ h, mode, item_id, quantity }` → Stripe URL.
+     Success/cancel redirect to `<storefront>/pricing/success|cancel` with the `(session_id, h)` pair.
+   - `GET  /api/public/storefront/session?session_id=&h=` — receipt summary + fulfilment status + validated `return_url`.
+   Shared engines: `src/server/checkout.server.ts` (extracted checkout core + handoff checkout),
+   `src/server/checkout-session.server.ts`, `src/server/public-catalog.server.ts`.
+3. **`/pricing` is operator-gated** (`ProtectedRoute`) and retitled "Pricing Console" — the
+   discretionary purchase surface, alongside `/billing/topup`, `/billing/seats`, `/billing/catalog`.
+4. **Discretionary-action oversight**: `grantTenantTokens`, `applyTenantTopup`,
+   `assignTenantPlan`, `assignSeatPlan` now record `admin_grant` / `admin_topup` /
+   `admin_plan_change` / `admin_seat_change` rows into `purchases`
+   (`recordAdminAction`, amount 0, `origin_source='mission_control'`, operator identity).
+   Rollups count them separately (`adminActionCount`) — never as purchases or revenue —
+   and they are filterable in `/billing/purchases`.
+
+### Deployment addendum
+- Set `PUBLIC_PRICING_SITE_URL` once the aurixa-systems storefront is live; until then the
+  legacy Mission Control landing keeps working.
+- The origin repo's static fallback CTAs point at the storefront constant
+  (`AURIXA_PRICING_URL` in `src/lib/missionControl.ts`) — set the production domain there too.
+
+---
+
 > **Repo role in this plan:** `aurixa-mission-control` is the **system of record**. It owns the
 > pricing page (`/pricing`, branded "Aurixa Systems"), Stripe checkout, the webhook, the billing
 > database, and the operator dashboard. Most of the new surface area lands here.

@@ -39,11 +39,21 @@ import { createStripeCheckout, createHandoffCheckout } from "@/lib/stripe.functi
 import { listPurchasableClones } from "@/lib/purchasable-clones.functions";
 import { resolveHandoff } from "@/lib/handoff.functions";
 import { useAuth } from "@/lib/auth";
+import { ProtectedRoute } from "@/components/protected-route";
 
 type PricingSearch = { intent?: string; clone?: string; h?: string };
 
+// OPERATOR CONSOLE — not the customer route. All user-centric monetisation
+// (prime repo + clones) flows through the Aurixa Systems website's pricing
+// page (PUBLIC_PRICING_SITE_URL), which drives the storefront REST endpoints.
+// This page is Mission Control's discretionary purchase console: operators
+// pushing ad-hoc / specific pricing points on behalf of a client.
 export const Route = createFileRoute("/pricing")({
-  component: PricingPage,
+  component: () => (
+    <ProtectedRoute>
+      <PricingPage />
+    </ProtectedRoute>
+  ),
   validateSearch: (s: Record<string, unknown>): PricingSearch => ({
     intent: typeof s.intent === "string" ? s.intent : undefined,
     clone: typeof s.clone === "string" ? s.clone : undefined,
@@ -51,17 +61,11 @@ export const Route = createFileRoute("/pricing")({
   }),
   head: () => ({
     meta: [
-      { title: "Pricing — Aurixa Systems" },
+      { title: "Pricing Console — Mission Control" },
       {
         name: "description",
         content:
-          "Plans, seats, credits and add-ons. Transparent pricing built for advisory firms, buyers agents and property professionals.",
-      },
-      { property: "og:title", content: "Pricing — Aurixa Systems" },
-      {
-        property: "og:description",
-        content:
-          "Plans, seats, credits and add-ons. Transparent pricing built for advisory firms, buyers agents and property professionals.",
+          "Operator pricing console: push ad-hoc purchases for any client. Customer pricing lives on the Aurixa Systems website.",
       },
     ],
   }),

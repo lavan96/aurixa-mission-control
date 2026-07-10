@@ -4,7 +4,12 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { ensureTenant, jsonResponse, resolveCloneApiKey } from "@/server/clone-api-keys.server";
 import { checkRateLimit } from "@/server/token-rate-limit.server";
-import { createHandoff, handoffUrl, validateReturnUrl } from "@/server/billing-handoffs.server";
+import {
+  createHandoff,
+  handoffUrl,
+  storefrontPricingBase,
+  validateReturnUrl,
+} from "@/server/billing-handoffs.server";
 
 /**
  * POST /api/public/billing/handoff
@@ -109,14 +114,17 @@ export const Route = createFileRoute("/api/public/billing/handoff")({
         });
         if (!created.ok) return jsonResponse({ ok: false, error: created.error }, 500);
 
+        // Handoffs land on the customer-facing Aurixa Systems pricing page
+        // (PUBLIC_PRICING_SITE_URL) — never on Mission Control's operator UI.
         const url = new URL(request.url);
-        const base = process.env.PUBLIC_APP_URL ?? `${url.protocol}//${url.host}`;
+        const mcOrigin = process.env.PUBLIC_APP_URL ?? `${url.protocol}//${url.host}`;
+        const pricingBase = storefrontPricingBase(mcOrigin);
 
         return new Response(
           JSON.stringify({
             ok: true,
             handoff_id: created.id,
-            url: handoffUrl(base, created.id, data.intent),
+            url: handoffUrl(pricingBase, created.id),
             expires_at: created.expiresAt,
           }),
           {

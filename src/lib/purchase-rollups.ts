@@ -25,6 +25,10 @@ export type PurchaseRollups = {
   /** completed purchases initiated outside Mission Control (handoff traffic). */
   attributedCount: number;
   attributedShare: number; // 0..1 of completed purchases
+  /** Discretionary operator actions (admin_* modes: grants, comp top-ups,
+   * plan/seat changes) — tracked for oversight, never counted as purchases
+   * or revenue. */
+  adminActionCount: number;
   byMode: { mode: string; count: number; revenue: MoneyByCurrency }[];
   bySource: { source: string; count: number; revenue: MoneyByCurrency }[];
   byClone: {
@@ -64,12 +68,22 @@ export function formatMoneyByCurrency(money: MoneyByCurrency): string {
     .join(" + ");
 }
 
+/** Discretionary operator actions recorded for oversight (recordAdminAction). */
+export function isAdminAction(mode: string): boolean {
+  return mode.startsWith("admin_");
+}
+
 /**
  * Aggregates COMPLETED purchases only — 'initiated'/'abandoned'/'failed' rows
  * never count as revenue, and refunded rows are excluded as reversed.
+ * Discretionary admin_* rows are counted separately (adminActionCount) and
+ * still appear in the per-mode grouping, but never in purchase counts,
+ * revenue, or the attribution share.
  */
 export function aggregatePurchases(rows: PurchaseRollupRow[]): PurchaseRollups {
-  const completed = rows.filter((r) => r.status === "completed");
+  const allCompleted = rows.filter((r) => r.status === "completed");
+  const adminActions = allCompleted.filter((r) => isAdminAction(r.mode));
+  const completed = allCompleted.filter((r) => !isAdminAction(r.mode));
 
   const revenueByCurrency: MoneyByCurrency = {};
   let attributedCount = 0;
@@ -133,11 +147,20 @@ export function aggregatePurchases(rows: PurchaseRollupRow[]): PurchaseRollups {
   const byRevenueDesc = <T extends { revenue: MoneyByCurrency; count: number }>(a: T, b: T) =>
     totalRevenue(b.revenue) - totalRevenue(a.revenue) || b.count - a.count;
 
+  // Admin actions surface in the per-mode grouping for the explorer, without
+  // touching purchase counts or revenue (their amounts are always 0).
+  for (const row of adminActions) {
+    const mode = byModeMap.get(row.mode) ?? { count: 0, revenue: {} };
+    mode.count += 1;
+    byModeMap.set(row.mode, mode);
+  }
+
   return {
     completedCount: completed.length,
     revenueByCurrency,
     attributedCount,
     attributedShare: completed.length > 0 ? attributedCount / completed.length : 0,
+    adminActionCount: adminActions.length,
     byMode: [...byModeMap.entries()].map(([mode, v]) => ({ mode, ...v })).sort(byRevenueDesc),
     bySource: [...bySourceMap.entries()]
       .map(([source, v]) => ({ source, ...v }))

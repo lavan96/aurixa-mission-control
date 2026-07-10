@@ -2,6 +2,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { operatorDisplayName, recordAdminAction } from "@/server/purchases.server";
 
 // ─── Plan catalog ────────────────────────────────────────────────────
 
@@ -106,6 +107,18 @@ export const assignSeatPlan = createServerFn({ method: "POST" })
       clone_id: data.cloneId,
       url: "/settings/billing",
       metadata: { from: prevPlanId, to: data.seatPlanId } as any,
+    });
+
+    // Discretionary-action oversight (user-attributed pricing workflow):
+    // manual seat-plan changes land in the purchases ledger alongside
+    // customer checkouts.
+    void recordAdminAction({
+      mode: "admin_seat_change",
+      cloneId: data.cloneId,
+      itemSlug: `seat_plan:${data.seatPlanId}`,
+      operatorUserId: userId as string,
+      operatorUsername: await operatorDisplayName(userId as string),
+      metadata: { from: prevPlanId, to: data.seatPlanId, notes: data.notes ?? null },
     });
 
     return { ok: true as const, entitlement: row };

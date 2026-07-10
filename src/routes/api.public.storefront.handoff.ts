@@ -1,0 +1,51 @@
+// @ts-nocheck
+import { createFileRoute } from "@tanstack/react-router";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { loadValidHandoff } from "@/server/purchases.server";
+import { storefrontJson, storefrontPreflight } from "@/server/storefront-cors.server";
+
+/**
+ * GET /api/public/storefront/handoff?h=<uuid>
+ *
+ * Display-safe handoff resolution for the Aurixa Systems pricing page: the
+ * storefront shows "Purchasing for <clone> as <user>" and knows which intent
+ * to auto-launch. The unguessable single-use token is the credential; the
+ * response is deliberately minimal — the raw origin_user_id stays server-side
+ * and checkout re-reads it from the handoff row.
+ */
+export const Route = createFileRoute("/api/public/storefront/handoff")({
+  server: {
+    handlers: {
+      OPTIONS: async () => storefrontPreflight(),
+      GET: async ({ request }) => {
+        const url = new URL(request.url);
+        const h = url.searchParams.get("h") ?? "";
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(h)) {
+          return storefrontJson({ ok: false, error: "handoff_invalid" }, 400);
+        }
+
+        const handoff = await loadValidHandoff(h);
+        if (!handoff) return storefrontJson({ ok: false, error: "handoff_invalid" }, 404);
+
+        let cloneName: string | null = null;
+        if (handoff.clone_id) {
+          const { data: clone } = await supabaseAdmin
+            .from("clones")
+            .select("name, slug")
+            .eq("id", handoff.clone_id)
+            .maybeSingle();
+          cloneName = clone?.name ?? clone?.slug ?? null;
+        }
+
+        return storefrontJson({
+          ok: true,
+          handoff_id: handoff.id,
+          clone_name: cloneName,
+          origin_username: handoff.origin_username,
+          intent: handoff.intent,
+          expires_at: handoff.expires_at,
+        });
+      },
+    },
+  },
+});

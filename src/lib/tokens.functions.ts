@@ -3,6 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { balanceSnapshot, fireTokenWebhook } from "@/server/token-webhooks.server";
+import { operatorDisplayName, recordAdminAction } from "@/server/purchases.server";
 
 async function fanBalanceUpdated(tenantId: string, source: string, cloneId?: string | null) {
   try {
@@ -241,6 +242,16 @@ export const assignTenantPlan = createServerFn({ method: "POST" })
       })
       .eq("id", data.tenantId);
     if (error) return { ok: false as const, error: error.message };
+    // Discretionary-action oversight (user-attributed pricing workflow):
+    // plan changes made from Mission Control land in the purchases ledger.
+    void recordAdminAction({
+      mode: "admin_plan_change",
+      tenantId: data.tenantId,
+      itemSlug: `plan:${data.planId}`,
+      operatorUserId: context.userId as string,
+      operatorUsername: await operatorDisplayName(context.userId as string),
+      metadata: { plan_id: data.planId },
+    });
     return { ok: true as const };
   });
 
@@ -265,6 +276,15 @@ export const grantTenantTokens = createServerFn({ method: "POST" })
     });
     if (error) return { ok: false as const, error: error.message };
     void fanBalanceUpdated(data.tenantId, "admin_grant");
+    // Discretionary-action oversight: grants land in the purchases ledger.
+    void recordAdminAction({
+      mode: "admin_grant",
+      tenantId: data.tenantId,
+      itemSlug: `grant:${data.tokens}`,
+      operatorUserId: context.userId as string,
+      operatorUsername: await operatorDisplayName(context.userId as string),
+      metadata: { tokens: data.tokens, reason: data.reason, expires_at: data.expiresAt ?? null },
+    });
     return result as { ok: boolean; error?: string };
   });
 
@@ -310,6 +330,16 @@ export const applyTenantTopup = createServerFn({ method: "POST" })
     });
     if (error) return { ok: false as const, error: error.message };
     void fanBalanceUpdated(data.tenantId, "admin_topup");
+    // Discretionary-action oversight: comp top-ups land in the purchases
+    // ledger (idempotent replays return above and are not double-recorded).
+    void recordAdminAction({
+      mode: "admin_topup",
+      tenantId: data.tenantId,
+      itemSlug: `pack:${data.packId}`,
+      operatorUserId: context.userId as string,
+      operatorUsername: await operatorDisplayName(context.userId as string),
+      metadata: { pack_id: data.packId, source_ref: effectiveSourceRef ?? null },
+    });
     return result as { ok: boolean; error?: string; tokens?: number };
   });
 

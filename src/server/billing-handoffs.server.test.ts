@@ -23,14 +23,15 @@ vi.mock("@/integrations/supabase/client.server", () => {
   return { supabaseAdmin: { from: () => builder() } };
 });
 
+import { afterEach } from "vitest";
 import {
   HANDOFF_TTL_MINUTES,
   createHandoff,
-  handoffLandingPath,
   handoffUrl,
   intentAllows,
   intentItemId,
   intentMode,
+  storefrontPricingBase,
   validateReturnUrl,
 } from "./billing-handoffs.server";
 
@@ -54,20 +55,32 @@ describe("intentMode / handoffLandingPath / handoffUrl", () => {
     expect(intentItemId(null)).toBeNull();
   });
 
-  it("always lands on the public pricing page (handoff holders have no operator login)", () => {
-    expect(handoffLandingPath("topup:1234")).toBe("/pricing");
-    expect(handoffLandingPath("topup")).toBe("/pricing");
-    expect(handoffLandingPath("seat_plan:1")).toBe("/pricing");
-    expect(handoffLandingPath(null)).toBe("/pricing");
+  it("builds the deep link off the pricing base, trimming trailing slashes", () => {
+    expect(handoffUrl("https://aurixasystems.example.com/pricing/", "abc")).toBe(
+      "https://aurixasystems.example.com/pricing?h=abc",
+    );
+    expect(handoffUrl("https://mc.example.com/pricing", "abc")).toBe(
+      "https://mc.example.com/pricing?h=abc",
+    );
+  });
+});
+
+describe("storefrontPricingBase", () => {
+  afterEach(() => {
+    delete process.env.PUBLIC_PRICING_SITE_URL;
   });
 
-  it("builds the deep link, trimming trailing slashes off the base", () => {
-    expect(handoffUrl("https://mc.example.com/", "abc", "topup")).toBe(
-      "https://mc.example.com/pricing?h=abc",
+  it("prefers the configured Aurixa Systems storefront URL", () => {
+    process.env.PUBLIC_PRICING_SITE_URL = "https://aurixasystems.example.com/pricing/";
+    expect(storefrontPricingBase("https://mc.example.com")).toBe(
+      "https://aurixasystems.example.com/pricing",
     );
-    expect(handoffUrl("https://mc.example.com", "abc", null)).toBe(
-      "https://mc.example.com/pricing?h=abc",
-    );
+  });
+
+  it("falls back to Mission Control's own /pricing when unset or malformed", () => {
+    expect(storefrontPricingBase("https://mc.example.com")).toBe("https://mc.example.com/pricing");
+    process.env.PUBLIC_PRICING_SITE_URL = "not-a-url";
+    expect(storefrontPricingBase("https://mc.example.com")).toBe("https://mc.example.com/pricing");
   });
 });
 

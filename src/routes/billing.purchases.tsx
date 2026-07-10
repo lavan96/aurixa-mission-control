@@ -194,6 +194,11 @@ function PurchasesPage() {
           label="Purchases 30d"
           value={rollups?.completedCount ?? "—"}
           icon={ShoppingCart}
+          hint={
+            rollups?.adminActionCount
+              ? `+ ${rollups.adminActionCount} discretionary admin action${rollups.adminActionCount === 1 ? "" : "s"}`
+              : undefined
+          }
         />
         <StatTile
           label="Clone-initiated"

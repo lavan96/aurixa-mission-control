@@ -54,18 +54,22 @@ export function intentAllows(
 }
 
 /**
- * Picks the landing page for a handoff. Always the public /pricing page:
- * handoff holders are clone end-users without a Mission Control login, and
- * /billing/topup sits behind ProtectedRoute. /pricing renders topup packs and
- * honours the handoff's intent for auto-launch.
+ * Base URL of the CUSTOMER-FACING pricing page. All user-centric monetisation
+ * (tokens, plans, seats — prime repo and every clone) flows through the
+ * Aurixa Systems website's pricing page, configured via
+ * PUBLIC_PRICING_SITE_URL (e.g. https://aurixasystems.com/pricing).
+ * Mission Control's own /pricing is the operator console; it is only used as
+ * the landing fallback when the storefront URL isn't configured yet.
  */
-export function handoffLandingPath(_intent: string | null | undefined): string {
-  return "/pricing";
+export function storefrontPricingBase(fallbackOrigin: string): string {
+  const site = process.env.PUBLIC_PRICING_SITE_URL;
+  if (site && /^https?:\/\//.test(site)) return site.replace(/\/+$/, "");
+  return `${fallbackOrigin.replace(/\/+$/, "")}/pricing`;
 }
 
-export function handoffUrl(baseUrl: string, handoffId: string, intent?: string | null): string {
-  const base = baseUrl.replace(/\/+$/, "");
-  return `${base}${handoffLandingPath(intent)}?h=${encodeURIComponent(handoffId)}`;
+/** Attributed deep link into the pricing page: `<pricingBase>?h=<token>`. */
+export function handoffUrl(pricingBase: string, handoffId: string): string {
+  return `${pricingBase.replace(/\/+$/, "")}?h=${encodeURIComponent(handoffId)}`;
 }
 
 /**
