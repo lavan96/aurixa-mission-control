@@ -9,6 +9,14 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { getStripe } from "@/server/stripe.server";
 import { ensureTenant } from "@/server/clone-api-keys.server";
 import { getRequestHost } from "@tanstack/react-start/server";
+import {
+  OPERATOR_SOURCE,
+  attributionMetadata,
+  consumeHandoff,
+  loadValidHandoff,
+  operatorDisplayName,
+  recordPurchaseInitiated,
+} from "@/server/purchases.server";
 
 type Mode = "topup" | "seat_plan" | "setup_package";
 
@@ -20,6 +28,9 @@ const InputSchema = z.object({
   quantity: z.number().int().min(1).max(100).default(1),
   successPath: z.string().startsWith("/").default("/billing/success"),
   cancelPath: z.string().startsWith("/").default("/billing/cancel"),
+  // Server-minted single-use token that pins the originating clone user
+  // (user-attributed pricing workflow; docs/user-tracking-pricing-workflow-plan.md).
+  handoffId: z.string().uuid().optional(),
 });
 
 type CatalogItem = {
@@ -66,23 +77,55 @@ async function ensureStripeCustomer(tenantId: string): Promise<string> {
 export const createStripeCheckout = createServerFn({ method: "POST" })
   .middleware([requireOperator])
   .inputValidator((input) => InputSchema.parse(input))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const item = await resolveItem(data.mode, data.itemId);
     if (!item) return { ok: false as const, error: "item_not_found" };
     if (!item.is_active) return { ok: false as const, error: "item_inactive" };
     if (!item.stripe_price_id) return { ok: false as const, error: "stripe_price_not_linked" };
 
+    // Resolve who initiated this purchase. A handoff token (minted server-to-
+    // server under a clone API key) pins the originating clone user; otherwise
+    // the purchase is attributed to the signed-in Mission Control operator.
+    const handoff = data.handoffId ? await loadValidHandoff(data.handoffId) : null;
+    if (data.handoffId && !handoff) {
+      return { ok: false as const, error: "handoff_invalid" };
+    }
+    if (handoff?.clone_id && data.cloneId && handoff.clone_id !== data.cloneId) {
+      return { ok: false as const, error: "handoff_clone_mismatch" };
+    }
+    const attribution = handoff
+      ? {
+          originUserId: handoff.origin_user_id,
+          originUsername: handoff.origin_username,
+          originSource: handoff.origin_source,
+          handoffId: handoff.id,
+        }
+      : {
+          originUserId: context.userId as string,
+          originUsername: await operatorDisplayName(
+            context.userId as string,
+            (context.claims as { email?: string } | undefined)?.email ?? null,
+          ),
+          originSource: OPERATOR_SOURCE,
+          handoffId: null,
+        };
+
+    // Scope defaults come from the handoff when the caller didn't specify —
+    // a handoff-initiated purchase always lands on the clone/tenant it was
+    // minted for.
+    const cloneId = data.cloneId ?? handoff?.clone_id ?? null;
+
     // Topups + setup packages need a tenant. If a cloneId is supplied without
     // an explicit tenantId, auto-resolve (or provision) the clone's primary
     // tenant so the pricing page can be fully client-centric.
-    let tenantId = data.tenantId;
+    let tenantId = data.tenantId ?? handoff?.tenant_id ?? undefined;
     if ((data.mode === "topup" || data.mode === "setup_package") && !tenantId) {
-      if (!data.cloneId) return { ok: false as const, error: "tenant_or_clone_required" };
+      if (!cloneId) return { ok: false as const, error: "tenant_or_clone_required" };
       // Look up clone display name for nicer Stripe customer naming.
       const { data: clone } = await supabaseAdmin
         .from("clones")
         .select("id, name, slug")
-        .eq("id", data.cloneId)
+        .eq("id", cloneId)
         .maybeSingle();
       if (!clone) return { ok: false as const, error: "clone_not_found" };
       const ensured = await ensureTenant(clone.id, `clone:${clone.slug ?? clone.id}`, clone.name);
@@ -102,8 +145,11 @@ export const createStripeCheckout = createServerFn({ method: "POST" })
       item_id: data.itemId,
       item_slug: item.slug,
       tenant_id: tenantId ?? "",
-      clone_id: data.cloneId ?? "",
+      clone_id: cloneId ?? "",
       quantity: String(data.quantity),
+      // Attribution contract fields — propagate to the webhook via Stripe so
+      // the purchases ledger knows who initiated this checkout, from where.
+      ...attributionMetadata(attribution),
     };
 
     const session = await getStripe().checkout.sessions.create({
@@ -121,6 +167,20 @@ export const createStripeCheckout = createServerFn({ method: "POST" })
         ? { subscription_data: { metadata: sharedMeta } }
         : { payment_intent_data: { metadata: sharedMeta } }),
     });
+
+    // Attribution bookkeeping. Best-effort insert (never blocks checkout);
+    // the handoff is single-use, so burn it now that a session exists.
+    await recordPurchaseInitiated({
+      sessionId: session.id,
+      mode: data.mode,
+      itemId: data.itemId,
+      itemSlug: item.slug,
+      quantity: data.quantity,
+      cloneId,
+      tenantId: tenantId ?? null,
+      attribution,
+    });
+    if (handoff) await consumeHandoff(handoff.id);
 
     return { ok: true as const, url: session.url, sessionId: session.id };
   });

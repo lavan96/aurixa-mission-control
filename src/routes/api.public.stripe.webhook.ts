@@ -5,6 +5,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import type Stripe from "stripe";
 import { getStripe, getStripeCryptoProvider } from "@/server/stripe.server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import {
+  attributionFromMetadata,
+  finalizePurchaseFromSession,
+  markPurchaseRefunded,
+} from "@/server/purchases.server";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -61,9 +66,65 @@ async function audit(action: string, metadata: Record<string, unknown>) {
   await adminAny.from("audit_log").insert({ action, entity_type: "stripe", metadata });
 }
 
+// Operator-facing signal that an attributed purchase landed. Best effort —
+// notification failures must not fail the webhook (fulfilment already ran).
+async function notifyPurchaseCompleted(session: Stripe.Checkout.Session) {
+  try {
+    const md = (session.metadata ?? {}) as Record<string, string>;
+    const attr = attributionFromMetadata(md);
+    const amount =
+      session.amount_total != null
+        ? `${(session.amount_total / 100).toFixed(2)} ${(session.currency ?? "aud").toUpperCase()}`
+        : "unknown amount";
+    const buyer = attr.originUsername ?? attr.originUserId ?? "unknown user";
+    await adminAny.from("notifications").insert({
+      kind: "purchase_completed",
+      severity: "info",
+      title: `Purchase completed: ${md.item_slug ?? md.mode ?? "item"}`,
+      body: `${buyer} (${attr.originSource}) purchased ${md.item_slug ?? md.item_id ?? "an item"} for ${amount}.`,
+      clone_id: md.clone_id || null,
+      url: "/settings/billing",
+      metadata: {
+        session_id: session.id,
+        mode: md.mode ?? null,
+        item_slug: md.item_slug ?? null,
+        tenant_id: md.tenant_id || null,
+        origin_user_id: attr.originUserId,
+        origin_username: attr.originUsername,
+        origin_source: attr.originSource,
+      },
+    });
+  } catch (err) {
+    console.error("notifyPurchaseCompleted failed", err);
+  }
+}
+
 // ---------- Event handlers ----------
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+  // Fulfil first; then finalise the attribution row. Permanent fulfilment
+  // failures mark the purchase 'failed' before re-throwing so the ledger
+  // reflects reality even for unprocessable events.
+  try {
+    await fulfillCheckout(session);
+  } catch (err) {
+    if (err instanceof PermanentError) {
+      try {
+        await finalizePurchaseFromSession(session, "failed", err.message);
+      } catch (finalizeErr) {
+        console.error("finalizePurchaseFromSession(failed) errored", finalizeErr);
+      }
+    }
+    throw err;
+  }
+
+  // Idempotent upsert keyed on the session id — safe on webhook replays and
+  // covers sessions whose initiated-insert never landed.
+  await finalizePurchaseFromSession(session, "completed");
+  await notifyPurchaseCompleted(session);
+}
+
+async function fulfillCheckout(session: Stripe.Checkout.Session) {
   const md = session.metadata ?? {};
   const mode = md.mode as "topup" | "seat_plan" | "setup_package" | undefined;
   const itemId = md.item_id;
@@ -73,10 +134,18 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   if (mode === "topup") {
     if (!tenantId) throw new PermanentError("missing_tenant");
-    const { data, error } = await supabaseAdmin.rpc("apply_topup", {
+    const attr = attributionFromMetadata(md as Record<string, string>);
+    // adminAny: generated DB types don't yet include apply_topup's _metadata param.
+    const { data, error } = await adminAny.rpc("apply_topup", {
       _tenant_id: tenantId,
       _pack_id: itemId,
       _source_ref: `stripe:${session.id}`,
+      _metadata: {
+        origin_user_id: attr.originUserId,
+        origin_username: attr.originUsername,
+        origin_source: attr.originSource,
+        handoff_id: attr.handoffId,
+      },
     });
     if (error) throw new Error(error.message); // transient (DB / RPC failure)
     if (data && typeof data === "object" && (data as { ok?: boolean }).ok === false) {
@@ -253,6 +322,15 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
     .from("setup_purchases")
     .update(updates)
     .eq("stripe_payment_intent_id", charge.payment_intent as string);
+
+  // Reflect the refund on the attribution ledger too.
+  await markPurchaseRefunded(
+    typeof charge.payment_intent === "string"
+      ? charge.payment_intent
+      : (charge.payment_intent?.id ?? null),
+    refunded,
+    !!charge.refunded,
+  );
 
   await adminAny.from("notifications").insert({
     kind: "tokens_alert",

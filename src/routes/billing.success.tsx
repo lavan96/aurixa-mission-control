@@ -2,7 +2,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { z } from "zod";
 import { useRef } from "react";
-import { CheckCircle2, Building2, Sparkles, Loader2, AlertTriangle } from "lucide-react";
+import { CheckCircle2, Building2, Sparkles, Loader2, AlertTriangle, UserRound } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -119,6 +119,23 @@ function SuccessPage() {
               <div className="text-xs">
                 <div className="text-muted-foreground">Billed to client</div>
                 <div className="font-medium">{target}</div>
+              </div>
+            </div>
+          )}
+
+          {(info?.originUsername || info?.originUserId) && (
+            <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
+              <UserRound className="h-4 w-4 text-muted-foreground" />
+              <div className="text-xs">
+                <div className="text-muted-foreground">Purchased by</div>
+                <div className="font-medium">
+                  {info.originUsername ?? info.originUserId}
+                  {info.originSource && (
+                    <span className="ml-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                      via {info.originSource.replaceAll("_", " ")}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           )}

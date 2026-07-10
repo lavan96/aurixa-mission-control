@@ -43,6 +43,23 @@ export const lookupCheckoutSession = createServerFn({ method: "POST" })
         tenantName = tenant?.display_name ?? tenant?.external_ref ?? null;
       }
 
+      // Attribution (user-attributed pricing workflow): prefer the purchases
+      // row, fall back to session metadata for sessions created mid-deploy.
+      let originUsername = meta.origin_username || null;
+      let originUserId = meta.origin_user_id || null;
+      let originSource = meta.origin_source || null;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: purchase } = await (supabaseAdmin as any)
+        .from("purchases")
+        .select("origin_user_id, origin_username, origin_source")
+        .eq("stripe_checkout_session_id", data.sessionId)
+        .maybeSingle();
+      if (purchase) {
+        originUserId = purchase.origin_user_id ?? originUserId;
+        originUsername = purchase.origin_username ?? originUsername;
+        originSource = purchase.origin_source ?? originSource;
+      }
+
       return {
         ok: true as const,
         mode,
@@ -51,6 +68,9 @@ export const lookupCheckoutSession = createServerFn({ method: "POST" })
         cloneName,
         tenantId,
         tenantName,
+        originUserId,
+        originUsername,
+        originSource,
         amountTotal: session.amount_total,
         currency: session.currency,
         paymentStatus: session.payment_status,
