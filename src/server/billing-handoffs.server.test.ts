@@ -1,0 +1,148 @@
+import { describe, it, expect, beforeEach, vi } from "vitest";
+
+const state = vi.hoisted(() => ({
+  inserted: null as Record<string, unknown> | null,
+  insertResult: {
+    data: null as Record<string, unknown> | null,
+    error: null as { message: string } | null,
+  },
+}));
+
+vi.mock("@/integrations/supabase/client.server", () => {
+  const builder = () => {
+    const b: Record<string, unknown> = {
+      insert: (values: Record<string, unknown>) => {
+        state.inserted = values;
+        return b;
+      },
+      select: () => b,
+      single: async () => state.insertResult,
+    };
+    return b;
+  };
+  return { supabaseAdmin: { from: () => builder() } };
+});
+
+import {
+  HANDOFF_TTL_MINUTES,
+  createHandoff,
+  handoffLandingPath,
+  handoffUrl,
+  intentMode,
+  validateReturnUrl,
+} from "./billing-handoffs.server";
+
+beforeEach(() => {
+  state.inserted = null;
+  state.insertResult = { data: null, error: null };
+});
+
+describe("intentMode / handoffLandingPath / handoffUrl", () => {
+  it("parses the mode prefix out of an intent", () => {
+    expect(intentMode("topup:1234")).toBe("topup");
+    expect(intentMode("seat_plan")).toBe("seat_plan");
+    expect(intentMode("")).toBeNull();
+    expect(intentMode(null)).toBeNull();
+    expect(intentMode(undefined)).toBeNull();
+  });
+
+  it("routes topup intents to the topup page, everything else to pricing", () => {
+    expect(handoffLandingPath("topup:1234")).toBe("/billing/topup");
+    expect(handoffLandingPath("topup")).toBe("/billing/topup");
+    expect(handoffLandingPath("seat_plan:1")).toBe("/pricing");
+    expect(handoffLandingPath("pricing")).toBe("/pricing");
+    expect(handoffLandingPath(null)).toBe("/pricing");
+  });
+
+  it("builds the deep link, trimming trailing slashes off the base", () => {
+    expect(handoffUrl("https://mc.example.com/", "abc", "topup")).toBe(
+      "https://mc.example.com/billing/topup?h=abc",
+    );
+    expect(handoffUrl("https://mc.example.com", "abc", null)).toBe(
+      "https://mc.example.com/pricing?h=abc",
+    );
+  });
+});
+
+describe("validateReturnUrl (open-redirect guard)", () => {
+  it("accepts absent return URLs", () => {
+    expect(validateReturnUrl(null, null)).toEqual({ ok: true, url: null });
+    expect(validateReturnUrl(undefined, "https://clone.example.com")).toEqual({
+      ok: true,
+      url: null,
+    });
+  });
+
+  it("rejects non-https and unparseable URLs", () => {
+    expect(validateReturnUrl("http://clone.example.com/billing", null)).toEqual({
+      ok: false,
+      error: "return_url_not_https",
+    });
+    expect(validateReturnUrl("javascript:alert(1)", null)).toMatchObject({ ok: false });
+    expect(validateReturnUrl("not a url", null)).toEqual({
+      ok: false,
+      error: "return_url_invalid",
+    });
+  });
+
+  it("pins the host to the clone's deploy_url when present", () => {
+    expect(
+      validateReturnUrl("https://clone.example.com/settings", "https://clone.example.com"),
+    ).toEqual({ ok: true, url: "https://clone.example.com/settings" });
+    expect(validateReturnUrl("https://evil.example.net/", "https://clone.example.com")).toEqual({
+      ok: false,
+      error: "return_url_host_mismatch",
+    });
+  });
+
+  it("accepts any https URL when the clone has no (or an unparseable) deploy_url", () => {
+    expect(validateReturnUrl("https://anywhere.example.com/x", null)).toMatchObject({ ok: true });
+    expect(validateReturnUrl("https://anywhere.example.com/x", "not a url")).toMatchObject({
+      ok: true,
+    });
+  });
+});
+
+describe("createHandoff", () => {
+  it("inserts the attribution row with a TTL and returns the id", async () => {
+    state.insertResult = {
+      data: { id: "h-1", expires_at: "2026-07-10T14:00:00Z" },
+      error: null,
+    };
+    const before = Date.now();
+    const res = await createHandoff({
+      cloneId: "c-1",
+      tenantId: "t-1",
+      originUserId: "user-9",
+      originUsername: "Jess",
+      originSource: "clone:npc",
+      intent: "topup",
+      returnUrl: "https://clone.example.com/billing",
+    });
+    expect(res).toEqual({ ok: true, id: "h-1", expiresAt: "2026-07-10T14:00:00Z" });
+    expect(state.inserted).toMatchObject({
+      clone_id: "c-1",
+      tenant_id: "t-1",
+      origin_user_id: "user-9",
+      origin_username: "Jess",
+      origin_source: "clone:npc",
+      intent: "topup",
+      return_url: "https://clone.example.com/billing",
+    });
+    const expires = new Date(state.inserted!.expires_at as string).getTime();
+    const expectedMs = HANDOFF_TTL_MINUTES * 60_000;
+    expect(expires - before).toBeGreaterThan(expectedMs - 5_000);
+    expect(expires - before).toBeLessThan(expectedMs + 5_000);
+  });
+
+  it("propagates insert failures", async () => {
+    state.insertResult = { data: null, error: { message: "rls denied" } };
+    const res = await createHandoff({
+      cloneId: null,
+      tenantId: null,
+      originUserId: "user-9",
+      originSource: "prime:ref",
+    });
+    expect(res).toEqual({ ok: false, error: "rls denied" });
+  });
+});

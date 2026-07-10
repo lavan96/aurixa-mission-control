@@ -76,6 +76,7 @@ import { Route as ApiPublicSeatsCommitRouteImport } from './routes/api.public.se
 import { Route as ApiPublicPricingCatalogRouteImport } from './routes/api.public.pricing.catalog'
 import { Route as ApiPublicEdgeStatusRouteImport } from './routes/api.public.edge.status'
 import { Route as ApiPublicClonesRotateKeyRouteImport } from './routes/api.public.clones.rotate-key'
+import { Route as ApiPublicBillingHandoffRouteImport } from './routes/api.public.billing.handoff'
 import { Route as ApiPublicSeatsDevicesReleaseRouteImport } from './routes/api.public.seats.devices.release'
 import { Route as ApiPublicSeatsDevicesRegisterRouteImport } from './routes/api.public.seats.devices.register'
 import { Route as ApiPublicSeatsDevicesListRouteImport } from './routes/api.public.seats.devices.list'
@@ -420,6 +421,11 @@ const ApiPublicClonesRotateKeyRoute =
     path: '/api/public/clones/rotate-key',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicBillingHandoffRoute = ApiPublicBillingHandoffRouteImport.update({
+  id: '/api/public/billing/handoff',
+  path: '/api/public/billing/handoff',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicSeatsDevicesReleaseRoute =
   ApiPublicSeatsDevicesReleaseRouteImport.update({
     id: '/api/public/seats/devices/release',
@@ -499,6 +505,7 @@ export interface FileRoutesByFullPath {
   '/settings/role-audit': typeof SettingsRoleAuditRoute
   '/settings/roles': typeof SettingsRolesRoute
   '/settings/': typeof SettingsIndexRoute
+  '/api/public/billing/handoff': typeof ApiPublicBillingHandoffRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
   '/api/public/edge/status': typeof ApiPublicEdgeStatusRoute
   '/api/public/pricing/catalog': typeof ApiPublicPricingCatalogRoute
@@ -571,6 +578,7 @@ export interface FileRoutesByTo {
   '/settings/role-audit': typeof SettingsRoleAuditRoute
   '/settings/roles': typeof SettingsRolesRoute
   '/settings': typeof SettingsIndexRoute
+  '/api/public/billing/handoff': typeof ApiPublicBillingHandoffRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
   '/api/public/edge/status': typeof ApiPublicEdgeStatusRoute
   '/api/public/pricing/catalog': typeof ApiPublicPricingCatalogRoute
@@ -645,6 +653,7 @@ export interface FileRoutesById {
   '/settings/role-audit': typeof SettingsRoleAuditRoute
   '/settings/roles': typeof SettingsRolesRoute
   '/settings/': typeof SettingsIndexRoute
+  '/api/public/billing/handoff': typeof ApiPublicBillingHandoffRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
   '/api/public/edge/status': typeof ApiPublicEdgeStatusRoute
   '/api/public/pricing/catalog': typeof ApiPublicPricingCatalogRoute
@@ -720,6 +729,7 @@ export interface FileRouteTypes {
     | '/settings/role-audit'
     | '/settings/roles'
     | '/settings/'
+    | '/api/public/billing/handoff'
     | '/api/public/clones/rotate-key'
     | '/api/public/edge/status'
     | '/api/public/pricing/catalog'
@@ -792,6 +802,7 @@ export interface FileRouteTypes {
     | '/settings/role-audit'
     | '/settings/roles'
     | '/settings'
+    | '/api/public/billing/handoff'
     | '/api/public/clones/rotate-key'
     | '/api/public/edge/status'
     | '/api/public/pricing/catalog'
@@ -865,6 +876,7 @@ export interface FileRouteTypes {
     | '/settings/role-audit'
     | '/settings/roles'
     | '/settings/'
+    | '/api/public/billing/handoff'
     | '/api/public/clones/rotate-key'
     | '/api/public/edge/status'
     | '/api/public/pricing/catalog'
@@ -929,6 +941,7 @@ export interface RootRouteChildren {
   HooksRunSchedulesRoute: typeof HooksRunSchedulesRoute
   HooksTokenAlertsRoute: typeof HooksTokenAlertsRoute
   HooksWarmHealthRoute: typeof HooksWarmHealthRoute
+  ApiPublicBillingHandoffRoute: typeof ApiPublicBillingHandoffRoute
   ApiPublicClonesRotateKeyRoute: typeof ApiPublicClonesRotateKeyRoute
   ApiPublicEdgeStatusRoute: typeof ApiPublicEdgeStatusRoute
   ApiPublicPricingCatalogRoute: typeof ApiPublicPricingCatalogRoute
@@ -1420,6 +1433,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicClonesRotateKeyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/billing/handoff': {
+      id: '/api/public/billing/handoff'
+      path: '/api/public/billing/handoff'
+      fullPath: '/api/public/billing/handoff'
+      preLoaderRoute: typeof ApiPublicBillingHandoffRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/seats/devices/release': {
       id: '/api/public/seats/devices/release'
       path: '/api/public/seats/devices/release'
@@ -1544,6 +1564,7 @@ const rootRouteChildren: RootRouteChildren = {
   HooksRunSchedulesRoute: HooksRunSchedulesRoute,
   HooksTokenAlertsRoute: HooksTokenAlertsRoute,
   HooksWarmHealthRoute: HooksWarmHealthRoute,
+  ApiPublicBillingHandoffRoute: ApiPublicBillingHandoffRoute,
   ApiPublicClonesRotateKeyRoute: ApiPublicClonesRotateKeyRoute,
   ApiPublicEdgeStatusRoute: ApiPublicEdgeStatusRoute,
   ApiPublicPricingCatalogRoute: ApiPublicPricingCatalogRoute,
@@ -1566,3 +1587,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}

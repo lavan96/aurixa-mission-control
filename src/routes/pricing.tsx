@@ -37,15 +37,17 @@ import {
 import { getPublicPricing } from "@/lib/public-pricing.functions";
 import { createStripeCheckout } from "@/lib/stripe.functions";
 import { listPurchasableClones } from "@/lib/purchasable-clones.functions";
+import { resolveHandoff } from "@/lib/handoff.functions";
 import { useAuth } from "@/lib/auth";
 
-type PricingSearch = { intent?: string; clone?: string };
+type PricingSearch = { intent?: string; clone?: string; h?: string };
 
 export const Route = createFileRoute("/pricing")({
   component: PricingPage,
   validateSearch: (s: Record<string, unknown>): PricingSearch => ({
     intent: typeof s.intent === "string" ? s.intent : undefined,
     clone: typeof s.clone === "string" ? s.clone : undefined,
+    h: typeof s.h === "string" ? s.h : undefined,
   }),
   head: () => ({
     meta: [
@@ -113,6 +115,25 @@ function PricingPage() {
     search.clone && search.clone.length > 0 ? search.clone : PRIME_ID,
   );
 
+  // Attributed handoff (user-attributed pricing workflow): an opaque `?h=`
+  // token minted server-to-server that pins which clone user initiated this
+  // visit. Invalid/expired tokens degrade to the normal pricing page.
+  const resolveHandoffFn = useServerFn(resolveHandoff);
+  const { data: handoffData } = useQuery({
+    queryKey: ["billing-handoff", search.h],
+    queryFn: () => resolveHandoffFn({ data: { h: search.h! } }),
+    enabled: !!search.h,
+    staleTime: Infinity,
+    retry: false,
+  });
+  const handoff = handoffData?.ok ? handoffData : null;
+
+  // A valid handoff pins the purchase scope to its clone (Prime when null).
+  useEffect(() => {
+    if (!handoff) return;
+    setSelectedClone(handoff.cloneId ?? PRIME_ID);
+  }, [handoff]);
+
   // Load clones the signed-in operator can purchase for.
   const { data: cloneList } = useQuery({
     queryKey: ["purchasable-clones"],
@@ -123,7 +144,8 @@ function PricingPage() {
   const activeClone =
     selectedClone === PRIME_ID ? null : (clones.find((c) => c.id === selectedClone) ?? null);
 
-  // Keep ?clone=… in sync so it survives the auth round-trip.
+  // Keep ?clone=… (and the handoff token) in sync so they survive the auth
+  // round-trip.
   useEffect(() => {
     const desired = selectedClone === PRIME_ID ? undefined : selectedClone;
     if ((search.clone ?? undefined) === desired) return;
@@ -131,6 +153,7 @@ function PricingPage() {
       to: "/pricing" as never,
       search: {
         ...(search.intent ? { intent: search.intent } : {}),
+        ...(search.h ? { h: search.h } : {}),
         ...(desired ? { clone: desired } : {}),
       } as never,
       replace: true,
@@ -139,13 +162,14 @@ function PricingPage() {
   }, [selectedClone]);
 
   const startCheckout = async (mode: "seat_plan" | "topup" | "setup_package", itemId: string) => {
-    // Unauthenticated: route to auth with redirect + intent + clone.
+    // Unauthenticated: route to auth with redirect + intent + clone + handoff.
     if (!session) {
       nav({
         to: "/auth" as never,
         search: {
           redirect: "/pricing",
           intent: `${mode}:${itemId}`,
+          ...(search.h ? { h: search.h } : {}),
           ...(selectedClone !== PRIME_ID ? { clone: selectedClone } : {}),
         } as never,
       });
@@ -158,7 +182,9 @@ function PricingPage() {
         ? `/billing/cancel?clone=${encodeURIComponent(cloneId)}`
         : "/billing/cancel";
       const res = await checkoutFn({
-        data: { mode, itemId, cloneId, cancelPath },
+        // Only pass the handoff when it resolved — a stale token would
+        // hard-fail checkout, and unattributed checkout beats no checkout.
+        data: { mode, itemId, cloneId, cancelPath, handoffId: handoff?.handoffId },
       });
       if (res.ok && res.url) {
         window.location.href = res.url;
@@ -176,23 +202,30 @@ function PricingPage() {
     }
   };
 
-  // Auto-resume checkout after auth round-trip.
+  // Auto-resume checkout after auth round-trip. The handoff's baked-in intent
+  // ('<mode>:<item_id>') gets the same treatment, so an attributed deep link
+  // can land straight in checkout.
   useEffect(() => {
     if (autoLaunchedRef.current) return;
-    if (!session || !search.intent) return;
-    const [mode, itemId] = search.intent.split(":");
+    if (!session) return;
+    const intent = search.intent ?? handoff?.intent ?? null;
+    if (!intent) return;
+    const [mode, itemId] = intent.split(":");
     if (!mode || !itemId) return;
     if (mode !== "seat_plan" && mode !== "topup" && mode !== "setup_package") return;
     autoLaunchedRef.current = true;
-    // Clear the intent param so we don't loop. Preserve clone.
+    // Clear the intent param so we don't loop. Preserve clone + handoff.
     nav({
       to: "/pricing" as never,
-      search: (search.clone ? { clone: search.clone } : {}) as never,
+      search: {
+        ...(search.h ? { h: search.h } : {}),
+        ...(search.clone ? { clone: search.clone } : {}),
+      } as never,
       replace: true,
     });
     void startCheckout(mode, itemId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, search.intent]);
+  }, [session, search.intent, handoff]);
 
   const plans = useMemo(() => data?.plans ?? [], [data]);
   const packs = data?.packs ?? [];
@@ -303,8 +336,34 @@ function PricingPage() {
             ))}
           </div>
 
+          {/* Attributed handoff — purchase scope is pinned to the clone user
+              who initiated this visit from their command center. */}
+          {handoff && (
+            <div
+              className="reveal-up mx-auto mt-8 flex max-w-xl flex-col items-center gap-2"
+              style={{ animationDelay: "440ms" }}
+            >
+              <span className="font-mono text-[10px] uppercase tracking-[0.35em] text-muted-foreground">
+                Purchasing for
+              </span>
+              <div className="inline-flex h-11 items-center rounded-full border border-primary/40 bg-card/60 px-6 font-mono text-[12px] uppercase tracking-[0.18em] backdrop-blur-xl">
+                {handoff.cloneName ?? "Mission Control · Prime"}
+                {handoff.originUsername && (
+                  <span className="ml-3 normal-case tracking-normal text-muted-foreground">
+                    as {handoff.originUsername}
+                  </span>
+                )}
+              </div>
+              <p className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground/70">
+                {handoff.cloneName
+                  ? `Charges, seats & credits will apply to ${handoff.cloneName}.`
+                  : "Charges will apply to the Mission Control / Prime account."}
+              </p>
+            </div>
+          )}
+
           {/* Clone scope selector — purchases land on the selected client */}
-          {session && (
+          {session && !handoff && (
             <div
               className="reveal-up mx-auto mt-8 flex max-w-xl flex-col items-center gap-2"
               style={{ animationDelay: "440ms" }}

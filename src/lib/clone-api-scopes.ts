@@ -5,7 +5,7 @@
  */
 export type CloneApiScope = {
   value: string;
-  group: "tokens" | "seats" | "devices" | "pricing" | "webhooks" | "edge";
+  group: "tokens" | "seats" | "devices" | "pricing" | "billing" | "webhooks" | "edge";
   label: string;
   description: string;
   default?: boolean;
@@ -45,6 +45,14 @@ export const CLONE_API_SCOPES: CloneApiScope[] = [
     group: "pricing",
     label: "Pricing — read catalog",
     description: "Read seat plans, roles, addons, setup packages, and per-report credit costs.",
+    default: true,
+  },
+  {
+    value: "billing:handoff",
+    group: "billing",
+    label: "Billing — mint handoffs",
+    description:
+      "Mint single-use attributed deep links into the pricing/topup pages, carrying the originating command-center user.",
     default: true,
   },
   {
