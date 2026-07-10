@@ -6,8 +6,10 @@ import { ProtectedRoute } from "@/components/protected-route";
 import { RouteError } from "@/components/route-error";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, Activity, Sparkles, Bell, Bot } from "lucide-react";
+import { BarChart3, Activity, Sparkles, Bell, Bot, ShoppingCart, Users } from "lucide-react";
 import { getFleetMetrics } from "@/server/metrics.functions";
+import { purchaseRollups } from "@/lib/purchases.functions";
+import { formatMoneyByCurrency } from "@/lib/purchase-rollups";
 
 const CascadesByDayChart = lazy(() =>
   import("@/components/charts/metrics-charts").then((m) => ({ default: m.CascadesByDayChart })),
@@ -42,6 +44,16 @@ function MetricsPage() {
   const q = useQuery({ queryKey: ["fleet-metrics"], queryFn: () => fn(), refetchInterval: 60_000 });
   const m = q.data?.summary;
 
+  // Purchase attribution rollups (user-attributed pricing workflow, Phase 4).
+  const rollupsFn = useServerFn(purchaseRollups);
+  const rollupsQ = useQuery({
+    queryKey: ["purchase-rollups", 30],
+    queryFn: () => rollupsFn({ data: { days: 30 } }),
+    refetchInterval: 60_000,
+  });
+  const rollups = rollupsQ.data?.ok ? rollupsQ.data : null;
+  const topClone = rollups?.byClone?.[0] ?? null;
+
   return (
     <div className="space-y-6">
       <header className="flex items-center gap-3">
@@ -75,6 +87,32 @@ function MetricsPage() {
         <Stat label="Cascades failed" value={m?.cascades_failed ?? 0} accent="warning" />
         <Stat label="Drift alerts" value={m?.drift_alerts_30d ?? 0} />
         <Stat label="AI tokens" value={(m?.ai_tokens_30d ?? 0).toLocaleString()} icon={Bot} />
+      </div>
+
+      {/* Revenue attribution (user-attributed pricing workflow) */}
+      <div className="grid gap-3 md:grid-cols-4">
+        <Stat
+          label="Revenue 30d"
+          value={rollups ? formatMoneyByCurrency(rollups.revenueByCurrency) : "—"}
+          icon={ShoppingCart}
+          accent="success"
+        />
+        <Stat
+          label="Purchases 30d"
+          value={rollups?.completedCount ?? "—"}
+          icon={ShoppingCart}
+        />
+        <Stat
+          label="Clone-initiated"
+          value={rollups ? `${Math.round(rollups.attributedShare * 100)}%` : "—"}
+          icon={Users}
+        />
+        <Stat
+          label="Top clone by spend"
+          value={
+            topClone ? (topClone.cloneName ?? (topClone.cloneId ? "unnamed" : "Prime")) : "—"
+          }
+        />
       </div>
 
       <Card>

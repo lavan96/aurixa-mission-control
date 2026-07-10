@@ -15,13 +15,25 @@ export const Route = createFileRoute("/hooks/expire-reservations")({
           const { data, error } = await supabaseAdmin.rpc("expire_stale_reservations");
           if (error) throw new Error(error.message);
           const rev = await supabaseAdmin.rpc("revoke_scheduled_keys");
+          // Sweep expired billing handoffs + abandoned checkouts (best-effort:
+          // a failure here must not mask the reservation expiry result).
+          const cleanup = await supabaseAdmin.rpc("cleanup_billing_attribution");
           await supabaseAdmin.from("audit_log").insert({
             action: "expire_reservations_cron",
             entity_type: "cron",
-            metadata: { result: data, revoked_keys: rev.data },
+            metadata: {
+              result: data,
+              revoked_keys: rev.data,
+              billing_cleanup: cleanup.data ?? cleanup.error?.message,
+            },
           });
           return new Response(
-            JSON.stringify({ success: true, ...(data as object), revoked_keys: rev.data }),
+            JSON.stringify({
+              success: true,
+              ...(data as object),
+              revoked_keys: rev.data,
+              billing_cleanup: cleanup.data,
+            }),
             { headers: { "Content-Type": "application/json" } },
           );
         } catch (e) {

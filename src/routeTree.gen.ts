@@ -59,15 +59,21 @@ import { Route as CascadesEventIdRouteImport } from './routes/cascades.$eventId'
 import { Route as BillingTopupRouteImport } from './routes/billing.topup'
 import { Route as BillingSuccessRouteImport } from './routes/billing.success'
 import { Route as BillingSeatsRouteImport } from './routes/billing.seats'
+import { Route as BillingPurchasesRouteImport } from './routes/billing.purchases'
 import { Route as BillingCatalogRouteImport } from './routes/billing.catalog'
 import { Route as BillingCancelRouteImport } from './routes/billing.cancel'
 import { Route as ApiHealthRouteImport } from './routes/api.health'
+import { Route as ApiPublicPurchasesRouteImport } from './routes/api.public.purchases'
 import { Route as ApiPublicTokensReserveRouteImport } from './routes/api.public.tokens.reserve'
 import { Route as ApiPublicTokensPacksRouteImport } from './routes/api.public.tokens.packs'
 import { Route as ApiPublicTokensCommitRouteImport } from './routes/api.public.tokens.commit'
 import { Route as ApiPublicTokensCancelRouteImport } from './routes/api.public.tokens.cancel'
 import { Route as ApiPublicTokensBalanceRouteImport } from './routes/api.public.tokens.balance'
 import { Route as ApiPublicStripeWebhookRouteImport } from './routes/api.public.stripe.webhook'
+import { Route as ApiPublicStorefrontSessionRouteImport } from './routes/api.public.storefront.session'
+import { Route as ApiPublicStorefrontHandoffRouteImport } from './routes/api.public.storefront.handoff'
+import { Route as ApiPublicStorefrontCheckoutRouteImport } from './routes/api.public.storefront.checkout'
+import { Route as ApiPublicStorefrontCatalogRouteImport } from './routes/api.public.storefront.catalog'
 import { Route as ApiPublicSeatsReserveRouteImport } from './routes/api.public.seats.reserve'
 import { Route as ApiPublicSeatsReleaseRouteImport } from './routes/api.public.seats.release'
 import { Route as ApiPublicSeatsListRouteImport } from './routes/api.public.seats.list'
@@ -76,6 +82,7 @@ import { Route as ApiPublicSeatsCommitRouteImport } from './routes/api.public.se
 import { Route as ApiPublicPricingCatalogRouteImport } from './routes/api.public.pricing.catalog'
 import { Route as ApiPublicEdgeStatusRouteImport } from './routes/api.public.edge.status'
 import { Route as ApiPublicClonesRotateKeyRouteImport } from './routes/api.public.clones.rotate-key'
+import { Route as ApiPublicBillingHandoffRouteImport } from './routes/api.public.billing.handoff'
 import { Route as ApiPublicSeatsDevicesReleaseRouteImport } from './routes/api.public.seats.devices.release'
 import { Route as ApiPublicSeatsDevicesRegisterRouteImport } from './routes/api.public.seats.devices.register'
 import { Route as ApiPublicSeatsDevicesListRouteImport } from './routes/api.public.seats.devices.list'
@@ -333,6 +340,11 @@ const BillingSeatsRoute = BillingSeatsRouteImport.update({
   path: '/billing/seats',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BillingPurchasesRoute = BillingPurchasesRouteImport.update({
+  id: '/billing/purchases',
+  path: '/billing/purchases',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BillingCatalogRoute = BillingCatalogRouteImport.update({
   id: '/billing/catalog',
   path: '/billing/catalog',
@@ -346,6 +358,11 @@ const BillingCancelRoute = BillingCancelRouteImport.update({
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicPurchasesRoute = ApiPublicPurchasesRouteImport.update({
+  id: '/api/public/purchases',
+  path: '/api/public/purchases',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicTokensReserveRoute = ApiPublicTokensReserveRouteImport.update({
@@ -378,6 +395,30 @@ const ApiPublicStripeWebhookRoute = ApiPublicStripeWebhookRouteImport.update({
   path: '/api/public/stripe/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicStorefrontSessionRoute =
+  ApiPublicStorefrontSessionRouteImport.update({
+    id: '/api/public/storefront/session',
+    path: '/api/public/storefront/session',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicStorefrontHandoffRoute =
+  ApiPublicStorefrontHandoffRouteImport.update({
+    id: '/api/public/storefront/handoff',
+    path: '/api/public/storefront/handoff',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicStorefrontCheckoutRoute =
+  ApiPublicStorefrontCheckoutRouteImport.update({
+    id: '/api/public/storefront/checkout',
+    path: '/api/public/storefront/checkout',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicStorefrontCatalogRoute =
+  ApiPublicStorefrontCatalogRouteImport.update({
+    id: '/api/public/storefront/catalog',
+    path: '/api/public/storefront/catalog',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicSeatsReserveRoute = ApiPublicSeatsReserveRouteImport.update({
   id: '/api/public/seats/reserve',
   path: '/api/public/seats/reserve',
@@ -420,6 +461,11 @@ const ApiPublicClonesRotateKeyRoute =
     path: '/api/public/clones/rotate-key',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicBillingHandoffRoute = ApiPublicBillingHandoffRouteImport.update({
+  id: '/api/public/billing/handoff',
+  path: '/api/public/billing/handoff',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicSeatsDevicesReleaseRoute =
   ApiPublicSeatsDevicesReleaseRouteImport.update({
     id: '/api/public/seats/devices/release',
@@ -473,6 +519,7 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/billing/cancel': typeof BillingCancelRoute
   '/billing/catalog': typeof BillingCatalogRoute
+  '/billing/purchases': typeof BillingPurchasesRoute
   '/billing/seats': typeof BillingSeatsRoute
   '/billing/success': typeof BillingSuccessRoute
   '/billing/topup': typeof BillingTopupRoute
@@ -499,6 +546,8 @@ export interface FileRoutesByFullPath {
   '/settings/role-audit': typeof SettingsRoleAuditRoute
   '/settings/roles': typeof SettingsRolesRoute
   '/settings/': typeof SettingsIndexRoute
+  '/api/public/purchases': typeof ApiPublicPurchasesRoute
+  '/api/public/billing/handoff': typeof ApiPublicBillingHandoffRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
   '/api/public/edge/status': typeof ApiPublicEdgeStatusRoute
   '/api/public/pricing/catalog': typeof ApiPublicPricingCatalogRoute
@@ -507,6 +556,10 @@ export interface FileRoutesByFullPath {
   '/api/public/seats/list': typeof ApiPublicSeatsListRoute
   '/api/public/seats/release': typeof ApiPublicSeatsReleaseRoute
   '/api/public/seats/reserve': typeof ApiPublicSeatsReserveRoute
+  '/api/public/storefront/catalog': typeof ApiPublicStorefrontCatalogRoute
+  '/api/public/storefront/checkout': typeof ApiPublicStorefrontCheckoutRoute
+  '/api/public/storefront/handoff': typeof ApiPublicStorefrontHandoffRoute
+  '/api/public/storefront/session': typeof ApiPublicStorefrontSessionRoute
   '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
   '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
@@ -545,6 +598,7 @@ export interface FileRoutesByTo {
   '/api/health': typeof ApiHealthRoute
   '/billing/cancel': typeof BillingCancelRoute
   '/billing/catalog': typeof BillingCatalogRoute
+  '/billing/purchases': typeof BillingPurchasesRoute
   '/billing/seats': typeof BillingSeatsRoute
   '/billing/success': typeof BillingSuccessRoute
   '/billing/topup': typeof BillingTopupRoute
@@ -571,6 +625,8 @@ export interface FileRoutesByTo {
   '/settings/role-audit': typeof SettingsRoleAuditRoute
   '/settings/roles': typeof SettingsRolesRoute
   '/settings': typeof SettingsIndexRoute
+  '/api/public/purchases': typeof ApiPublicPurchasesRoute
+  '/api/public/billing/handoff': typeof ApiPublicBillingHandoffRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
   '/api/public/edge/status': typeof ApiPublicEdgeStatusRoute
   '/api/public/pricing/catalog': typeof ApiPublicPricingCatalogRoute
@@ -579,6 +635,10 @@ export interface FileRoutesByTo {
   '/api/public/seats/list': typeof ApiPublicSeatsListRoute
   '/api/public/seats/release': typeof ApiPublicSeatsReleaseRoute
   '/api/public/seats/reserve': typeof ApiPublicSeatsReserveRoute
+  '/api/public/storefront/catalog': typeof ApiPublicStorefrontCatalogRoute
+  '/api/public/storefront/checkout': typeof ApiPublicStorefrontCheckoutRoute
+  '/api/public/storefront/handoff': typeof ApiPublicStorefrontHandoffRoute
+  '/api/public/storefront/session': typeof ApiPublicStorefrontSessionRoute
   '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
   '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
@@ -619,6 +679,7 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/billing/cancel': typeof BillingCancelRoute
   '/billing/catalog': typeof BillingCatalogRoute
+  '/billing/purchases': typeof BillingPurchasesRoute
   '/billing/seats': typeof BillingSeatsRoute
   '/billing/success': typeof BillingSuccessRoute
   '/billing/topup': typeof BillingTopupRoute
@@ -645,6 +706,8 @@ export interface FileRoutesById {
   '/settings/role-audit': typeof SettingsRoleAuditRoute
   '/settings/roles': typeof SettingsRolesRoute
   '/settings/': typeof SettingsIndexRoute
+  '/api/public/purchases': typeof ApiPublicPurchasesRoute
+  '/api/public/billing/handoff': typeof ApiPublicBillingHandoffRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
   '/api/public/edge/status': typeof ApiPublicEdgeStatusRoute
   '/api/public/pricing/catalog': typeof ApiPublicPricingCatalogRoute
@@ -653,6 +716,10 @@ export interface FileRoutesById {
   '/api/public/seats/list': typeof ApiPublicSeatsListRoute
   '/api/public/seats/release': typeof ApiPublicSeatsReleaseRoute
   '/api/public/seats/reserve': typeof ApiPublicSeatsReserveRoute
+  '/api/public/storefront/catalog': typeof ApiPublicStorefrontCatalogRoute
+  '/api/public/storefront/checkout': typeof ApiPublicStorefrontCheckoutRoute
+  '/api/public/storefront/handoff': typeof ApiPublicStorefrontHandoffRoute
+  '/api/public/storefront/session': typeof ApiPublicStorefrontSessionRoute
   '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
   '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
@@ -694,6 +761,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/billing/cancel'
     | '/billing/catalog'
+    | '/billing/purchases'
     | '/billing/seats'
     | '/billing/success'
     | '/billing/topup'
@@ -720,6 +788,8 @@ export interface FileRouteTypes {
     | '/settings/role-audit'
     | '/settings/roles'
     | '/settings/'
+    | '/api/public/purchases'
+    | '/api/public/billing/handoff'
     | '/api/public/clones/rotate-key'
     | '/api/public/edge/status'
     | '/api/public/pricing/catalog'
@@ -728,6 +798,10 @@ export interface FileRouteTypes {
     | '/api/public/seats/list'
     | '/api/public/seats/release'
     | '/api/public/seats/reserve'
+    | '/api/public/storefront/catalog'
+    | '/api/public/storefront/checkout'
+    | '/api/public/storefront/handoff'
+    | '/api/public/storefront/session'
     | '/api/public/stripe/webhook'
     | '/api/public/tokens/balance'
     | '/api/public/tokens/cancel'
@@ -766,6 +840,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/billing/cancel'
     | '/billing/catalog'
+    | '/billing/purchases'
     | '/billing/seats'
     | '/billing/success'
     | '/billing/topup'
@@ -792,6 +867,8 @@ export interface FileRouteTypes {
     | '/settings/role-audit'
     | '/settings/roles'
     | '/settings'
+    | '/api/public/purchases'
+    | '/api/public/billing/handoff'
     | '/api/public/clones/rotate-key'
     | '/api/public/edge/status'
     | '/api/public/pricing/catalog'
@@ -800,6 +877,10 @@ export interface FileRouteTypes {
     | '/api/public/seats/list'
     | '/api/public/seats/release'
     | '/api/public/seats/reserve'
+    | '/api/public/storefront/catalog'
+    | '/api/public/storefront/checkout'
+    | '/api/public/storefront/handoff'
+    | '/api/public/storefront/session'
     | '/api/public/stripe/webhook'
     | '/api/public/tokens/balance'
     | '/api/public/tokens/cancel'
@@ -839,6 +920,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/billing/cancel'
     | '/billing/catalog'
+    | '/billing/purchases'
     | '/billing/seats'
     | '/billing/success'
     | '/billing/topup'
@@ -865,6 +947,8 @@ export interface FileRouteTypes {
     | '/settings/role-audit'
     | '/settings/roles'
     | '/settings/'
+    | '/api/public/purchases'
+    | '/api/public/billing/handoff'
     | '/api/public/clones/rotate-key'
     | '/api/public/edge/status'
     | '/api/public/pricing/catalog'
@@ -873,6 +957,10 @@ export interface FileRouteTypes {
     | '/api/public/seats/list'
     | '/api/public/seats/release'
     | '/api/public/seats/reserve'
+    | '/api/public/storefront/catalog'
+    | '/api/public/storefront/checkout'
+    | '/api/public/storefront/handoff'
+    | '/api/public/storefront/session'
     | '/api/public/stripe/webhook'
     | '/api/public/tokens/balance'
     | '/api/public/tokens/cancel'
@@ -913,6 +1001,7 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   BillingCancelRoute: typeof BillingCancelRoute
   BillingCatalogRoute: typeof BillingCatalogRoute
+  BillingPurchasesRoute: typeof BillingPurchasesRoute
   BillingSeatsRoute: typeof BillingSeatsRoute
   BillingSuccessRoute: typeof BillingSuccessRoute
   BillingTopupRoute: typeof BillingTopupRoute
@@ -929,6 +1018,8 @@ export interface RootRouteChildren {
   HooksRunSchedulesRoute: typeof HooksRunSchedulesRoute
   HooksTokenAlertsRoute: typeof HooksTokenAlertsRoute
   HooksWarmHealthRoute: typeof HooksWarmHealthRoute
+  ApiPublicPurchasesRoute: typeof ApiPublicPurchasesRoute
+  ApiPublicBillingHandoffRoute: typeof ApiPublicBillingHandoffRoute
   ApiPublicClonesRotateKeyRoute: typeof ApiPublicClonesRotateKeyRoute
   ApiPublicEdgeStatusRoute: typeof ApiPublicEdgeStatusRoute
   ApiPublicPricingCatalogRoute: typeof ApiPublicPricingCatalogRoute
@@ -937,6 +1028,10 @@ export interface RootRouteChildren {
   ApiPublicSeatsListRoute: typeof ApiPublicSeatsListRoute
   ApiPublicSeatsReleaseRoute: typeof ApiPublicSeatsReleaseRoute
   ApiPublicSeatsReserveRoute: typeof ApiPublicSeatsReserveRoute
+  ApiPublicStorefrontCatalogRoute: typeof ApiPublicStorefrontCatalogRoute
+  ApiPublicStorefrontCheckoutRoute: typeof ApiPublicStorefrontCheckoutRoute
+  ApiPublicStorefrontHandoffRoute: typeof ApiPublicStorefrontHandoffRoute
+  ApiPublicStorefrontSessionRoute: typeof ApiPublicStorefrontSessionRoute
   ApiPublicStripeWebhookRoute: typeof ApiPublicStripeWebhookRoute
   ApiPublicTokensBalanceRoute: typeof ApiPublicTokensBalanceRoute
   ApiPublicTokensCancelRoute: typeof ApiPublicTokensCancelRoute
@@ -1301,6 +1396,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BillingSeatsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/billing/purchases': {
+      id: '/billing/purchases'
+      path: '/billing/purchases'
+      fullPath: '/billing/purchases'
+      preLoaderRoute: typeof BillingPurchasesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/billing/catalog': {
       id: '/billing/catalog'
       path: '/billing/catalog'
@@ -1320,6 +1422,13 @@ declare module '@tanstack/react-router' {
       path: '/api/health'
       fullPath: '/api/health'
       preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/purchases': {
+      id: '/api/public/purchases'
+      path: '/api/public/purchases'
+      fullPath: '/api/public/purchases'
+      preLoaderRoute: typeof ApiPublicPurchasesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/tokens/reserve': {
@@ -1362,6 +1471,34 @@ declare module '@tanstack/react-router' {
       path: '/api/public/stripe/webhook'
       fullPath: '/api/public/stripe/webhook'
       preLoaderRoute: typeof ApiPublicStripeWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/storefront/session': {
+      id: '/api/public/storefront/session'
+      path: '/api/public/storefront/session'
+      fullPath: '/api/public/storefront/session'
+      preLoaderRoute: typeof ApiPublicStorefrontSessionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/storefront/handoff': {
+      id: '/api/public/storefront/handoff'
+      path: '/api/public/storefront/handoff'
+      fullPath: '/api/public/storefront/handoff'
+      preLoaderRoute: typeof ApiPublicStorefrontHandoffRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/storefront/checkout': {
+      id: '/api/public/storefront/checkout'
+      path: '/api/public/storefront/checkout'
+      fullPath: '/api/public/storefront/checkout'
+      preLoaderRoute: typeof ApiPublicStorefrontCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/storefront/catalog': {
+      id: '/api/public/storefront/catalog'
+      path: '/api/public/storefront/catalog'
+      fullPath: '/api/public/storefront/catalog'
+      preLoaderRoute: typeof ApiPublicStorefrontCatalogRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/seats/reserve': {
@@ -1418,6 +1555,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/clones/rotate-key'
       fullPath: '/api/public/clones/rotate-key'
       preLoaderRoute: typeof ApiPublicClonesRotateKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/billing/handoff': {
+      id: '/api/public/billing/handoff'
+      path: '/api/public/billing/handoff'
+      fullPath: '/api/public/billing/handoff'
+      preLoaderRoute: typeof ApiPublicBillingHandoffRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/seats/devices/release': {
@@ -1528,6 +1672,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   BillingCancelRoute: BillingCancelRoute,
   BillingCatalogRoute: BillingCatalogRoute,
+  BillingPurchasesRoute: BillingPurchasesRoute,
   BillingSeatsRoute: BillingSeatsRoute,
   BillingSuccessRoute: BillingSuccessRoute,
   BillingTopupRoute: BillingTopupRoute,
@@ -1544,6 +1689,8 @@ const rootRouteChildren: RootRouteChildren = {
   HooksRunSchedulesRoute: HooksRunSchedulesRoute,
   HooksTokenAlertsRoute: HooksTokenAlertsRoute,
   HooksWarmHealthRoute: HooksWarmHealthRoute,
+  ApiPublicPurchasesRoute: ApiPublicPurchasesRoute,
+  ApiPublicBillingHandoffRoute: ApiPublicBillingHandoffRoute,
   ApiPublicClonesRotateKeyRoute: ApiPublicClonesRotateKeyRoute,
   ApiPublicEdgeStatusRoute: ApiPublicEdgeStatusRoute,
   ApiPublicPricingCatalogRoute: ApiPublicPricingCatalogRoute,
@@ -1552,6 +1699,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicSeatsListRoute: ApiPublicSeatsListRoute,
   ApiPublicSeatsReleaseRoute: ApiPublicSeatsReleaseRoute,
   ApiPublicSeatsReserveRoute: ApiPublicSeatsReserveRoute,
+  ApiPublicStorefrontCatalogRoute: ApiPublicStorefrontCatalogRoute,
+  ApiPublicStorefrontCheckoutRoute: ApiPublicStorefrontCheckoutRoute,
+  ApiPublicStorefrontHandoffRoute: ApiPublicStorefrontHandoffRoute,
+  ApiPublicStorefrontSessionRoute: ApiPublicStorefrontSessionRoute,
   ApiPublicStripeWebhookRoute: ApiPublicStripeWebhookRoute,
   ApiPublicTokensBalanceRoute: ApiPublicTokensBalanceRoute,
   ApiPublicTokensCancelRoute: ApiPublicTokensCancelRoute,
@@ -1566,3 +1717,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}

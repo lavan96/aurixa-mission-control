@@ -11,7 +11,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Radio, MailCheck } from "lucide-react";
 import { toast } from "sonner";
 
-type AuthSearch = { redirect?: string; intent?: string; clone?: string };
+type AuthSearch = { redirect?: string; intent?: string; clone?: string; h?: string };
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
@@ -19,6 +19,9 @@ export const Route = createFileRoute("/auth")({
     redirect: typeof s.redirect === "string" ? s.redirect : undefined,
     intent: typeof s.intent === "string" ? s.intent : undefined,
     clone: typeof s.clone === "string" ? s.clone : undefined,
+    // Billing handoff token — must survive the auth round-trip so the
+    // attributed purchase flow can resume (user-attributed pricing workflow).
+    h: typeof s.h === "string" ? s.h : undefined,
   }),
   head: () => ({ meta: [{ title: "Sign in — Aurixa Systems Mission Control" }] }),
 });
@@ -41,11 +44,12 @@ function AuthPage() {
       const params = new URLSearchParams();
       if (search.intent) params.set("intent", search.intent);
       if (search.clone) params.set("clone", search.clone);
+      if (search.h) params.set("h", search.h);
       const qs = params.toString();
       const sep = dest.includes("?") ? "&" : "?";
       nav({ to: (qs ? `${dest}${sep}${qs}` : dest) as never });
     }
-  }, [session, nav, search.redirect, search.intent, search.clone, isPartnerIntent]);
+  }, [session, nav, search.redirect, search.intent, search.clone, search.h, isPartnerIntent]);
 
   const handle = async (mode: "in" | "up") => {
     setBusy(true);

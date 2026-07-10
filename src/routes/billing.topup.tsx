@@ -29,9 +29,13 @@ import {
 import { toast } from "sonner";
 import { listPacks, applyTenantTopup, getTenant } from "@/lib/tokens.functions";
 import { createStripeCheckout } from "@/lib/stripe.functions";
+import { resolveHandoff } from "@/lib/handoff.functions";
 
 const SearchSchema = z.object({
   tenant: z.string().uuid().optional(),
+  // Billing handoff token — pins tenant + originating clone user
+  // (user-attributed pricing workflow).
+  h: z.string().uuid().optional(),
 });
 
 export const Route = createFileRoute("/billing/topup")({
@@ -83,13 +87,26 @@ function TopupPage() {
 }
 
 function TopupBody() {
-  const { tenant } = Route.useSearch();
+  const { tenant: tenantParam, h } = Route.useSearch();
   const qc = useQueryClient();
 
   const packsFn = useServerFn(listPacks);
   const tenantFn = useServerFn(getTenant);
   const topupFn = useServerFn(applyTenantTopup);
   const checkoutFn = useServerFn(createStripeCheckout);
+
+  // Attributed handoff: derives the tenant when the deep link carries `?h=`
+  // instead of a bare `?tenant=`, and pins who initiated the purchase.
+  const resolveHandoffFn = useServerFn(resolveHandoff);
+  const handoffQ = useQuery({
+    queryKey: ["billing-handoff", h],
+    queryFn: () => resolveHandoffFn({ data: { h: h! } }),
+    enabled: !!h,
+    staleTime: Infinity,
+    retry: false,
+  });
+  const handoff = handoffQ.data?.ok ? handoffQ.data : null;
+  const tenant = tenantParam ?? handoff?.tenantId ?? undefined;
 
   async function buyWithStripe(pack: Pack) {
     if (!tenant) {
@@ -102,7 +119,7 @@ function TopupBody() {
     }
     try {
       const r = await checkoutFn({
-        data: { mode: "topup", tenantId: tenant, itemId: pack.id },
+        data: { mode: "topup", tenantId: tenant, itemId: pack.id, handoffId: handoff?.handoffId },
       });
       if (!r.ok) {
         toast.error(r.error);
@@ -245,6 +262,24 @@ function TopupBody() {
           full billing →
         </Link>
       </div>
+
+      {handoff && (
+        <Card className="border-primary/40">
+          <CardContent className="py-4 text-sm">
+            Purchasing for{" "}
+            <span className="font-medium">{handoff.cloneName ?? "Mission Control · Prime"}</span>
+            {handoff.originUsername && (
+              <>
+                {" "}
+                as <span className="font-medium">{handoff.originUsername}</span>
+              </>
+            )}{" "}
+            <span className="text-muted-foreground">
+              — this purchase will be attributed to them.
+            </span>
+          </CardContent>
+        </Card>
+      )}
 
       {tenant && tenantQ.data?.tenant && (
         <Card>
