@@ -34,6 +34,7 @@ import {
   storefrontPricingBase,
   validateReturnUrl,
 } from "./billing-handoffs.server";
+import { DEFAULT_STOREFRONT_PRICING_URL } from "@/lib/storefront";
 
 beforeEach(() => {
   state.inserted = null;
@@ -72,15 +73,13 @@ describe("storefrontPricingBase", () => {
 
   it("prefers the configured Aurixa Systems storefront URL", () => {
     process.env.PUBLIC_PRICING_SITE_URL = "https://aurixasystems.example.com/pricing/";
-    expect(storefrontPricingBase("https://mc.example.com")).toBe(
-      "https://aurixasystems.example.com/pricing",
-    );
+    expect(storefrontPricingBase()).toBe("https://aurixasystems.example.com/pricing");
   });
 
-  it("falls back to Mission Control's own /pricing when unset or malformed", () => {
-    expect(storefrontPricingBase("https://mc.example.com")).toBe("https://mc.example.com/pricing");
+  it("falls back to the default storefront URL when unset or malformed", () => {
+    expect(storefrontPricingBase()).toBe(DEFAULT_STOREFRONT_PRICING_URL);
     process.env.PUBLIC_PRICING_SITE_URL = "not-a-url";
-    expect(storefrontPricingBase("https://mc.example.com")).toBe("https://mc.example.com/pricing");
+    expect(storefrontPricingBase()).toBe(DEFAULT_STOREFRONT_PRICING_URL);
   });
 });
 

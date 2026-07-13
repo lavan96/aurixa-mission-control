@@ -2,6 +2,23 @@
 
 ---
 
+## ⚠ REVISION 3 (2026-07-13) — Mission Control's `/pricing` route removed.
+
+The `/pricing` operator console described in Revision 2 has been fully migrated to the
+Aurixa Systems website. Mission Control no longer serves any `/pricing` route:
+
+- Operator discretionary purchases continue via `/billing/topup`, `/billing/seats`,
+  and `/billing/catalog`.
+- `storefrontPricingBase()` no longer falls back to Mission Control's own `/pricing`;
+  when `PUBLIC_PRICING_SITE_URL` is unset it falls back to the storefront default
+  (`DEFAULT_STOREFRONT_PRICING_URL` in `src/lib/storefront.ts`), so minted handoff
+  links and packs `topup_url`s always land on the Aurixa Systems site.
+- The storefront's `/pricing` page is intentionally **not linked** from the Aurixa
+  Systems site's public navigation (Navbar/Footer) — it is reached only via handoff
+  deep links minted for command-center users, or by direct URL.
+
+---
+
 ## ⚠ REVISION 2 (2026-07-10) — Storefront topology. This section supersedes any conflicting statement below.
 
 The original phases (1–4, all implemented) treated Mission Control's `/pricing` route as the

@@ -16,7 +16,6 @@ import { Route as SecurityPartnersRouteImport } from './routes/security-partners
 import { Route as SchedulesRouteImport } from './routes/schedules'
 import { Route as RouteErrorsRouteImport } from './routes/route-errors'
 import { Route as ReportJobsRouteImport } from './routes/report-jobs'
-import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PartnerPortalRouteImport } from './routes/partner-portal'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as ModulesRouteImport } from './routes/modules'
@@ -121,11 +120,6 @@ const RouteErrorsRoute = RouteErrorsRouteImport.update({
 const ReportJobsRoute = ReportJobsRouteImport.update({
   id: '/report-jobs',
   path: '/report-jobs',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PricingRoute = PricingRouteImport.update({
-  id: '/pricing',
-  path: '/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PartnerPortalRoute = PartnerPortalRouteImport.update({
@@ -508,7 +502,6 @@ export interface FileRoutesByFullPath {
   '/modules': typeof ModulesRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/partner-portal': typeof PartnerPortalRoute
-  '/pricing': typeof PricingRoute
   '/report-jobs': typeof ReportJobsRoute
   '/route-errors': typeof RouteErrorsRoute
   '/schedules': typeof SchedulesRoute
@@ -588,7 +581,6 @@ export interface FileRoutesByTo {
   '/modules': typeof ModulesRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/partner-portal': typeof PartnerPortalRoute
-  '/pricing': typeof PricingRoute
   '/report-jobs': typeof ReportJobsRoute
   '/route-errors': typeof RouteErrorsRoute
   '/schedules': typeof SchedulesRoute
@@ -668,7 +660,6 @@ export interface FileRoutesById {
   '/modules': typeof ModulesRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/partner-portal': typeof PartnerPortalRoute
-  '/pricing': typeof PricingRoute
   '/report-jobs': typeof ReportJobsRoute
   '/route-errors': typeof RouteErrorsRoute
   '/schedules': typeof SchedulesRoute
@@ -750,7 +741,6 @@ export interface FileRouteTypes {
     | '/modules'
     | '/notifications'
     | '/partner-portal'
-    | '/pricing'
     | '/report-jobs'
     | '/route-errors'
     | '/schedules'
@@ -830,7 +820,6 @@ export interface FileRouteTypes {
     | '/modules'
     | '/notifications'
     | '/partner-portal'
-    | '/pricing'
     | '/report-jobs'
     | '/route-errors'
     | '/schedules'
@@ -909,7 +898,6 @@ export interface FileRouteTypes {
     | '/modules'
     | '/notifications'
     | '/partner-portal'
-    | '/pricing'
     | '/report-jobs'
     | '/route-errors'
     | '/schedules'
@@ -990,7 +978,6 @@ export interface RootRouteChildren {
   ModulesRoute: typeof ModulesRouteWithChildren
   NotificationsRoute: typeof NotificationsRoute
   PartnerPortalRoute: typeof PartnerPortalRoute
-  PricingRoute: typeof PricingRoute
   ReportJobsRoute: typeof ReportJobsRoute
   RouteErrorsRoute: typeof RouteErrorsRoute
   SchedulesRoute: typeof SchedulesRoute
@@ -1093,13 +1080,6 @@ declare module '@tanstack/react-router' {
       path: '/report-jobs'
       fullPath: '/report-jobs'
       preLoaderRoute: typeof ReportJobsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pricing': {
-      id: '/pricing'
-      path: '/pricing'
-      fullPath: '/pricing'
-      preLoaderRoute: typeof PricingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/partner-portal': {
@@ -1661,7 +1641,6 @@ const rootRouteChildren: RootRouteChildren = {
   ModulesRoute: ModulesRouteWithChildren,
   NotificationsRoute: NotificationsRoute,
   PartnerPortalRoute: PartnerPortalRoute,
-  PricingRoute: PricingRoute,
   ReportJobsRoute: ReportJobsRoute,
   RouteErrorsRoute: RouteErrorsRoute,
   SchedulesRoute: SchedulesRoute,

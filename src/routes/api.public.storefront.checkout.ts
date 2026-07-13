@@ -52,7 +52,7 @@ export const Route = createFileRoute("/api/public/storefront/checkout")({
         // also accept the (session_id, h) pair).
         const site = process.env.PUBLIC_PRICING_SITE_URL;
         const onStorefront = !!site && /^https?:\/\//.test(site);
-        const pricingBase = storefrontPricingBase(mcOrigin);
+        const pricingBase = storefrontPricingBase();
         const successUrl = onStorefront
           ? `${pricingBase}/success?h=${h}&session_id={CHECKOUT_SESSION_ID}`
           : `${mcOrigin}/billing/success?h=${h}&session_id={CHECKOUT_SESSION_ID}`;
