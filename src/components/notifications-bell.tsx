@@ -12,6 +12,7 @@ import {
   Trash2,
   Boxes,
   Settings,
+  UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -49,6 +50,8 @@ function iconFor(kind: Kind) {
     case "module_installed":
     case "module_removed":
       return Boxes;
+    case "lead_captured":
+      return UserPlus;
     default:
       return CircleDot;
   }

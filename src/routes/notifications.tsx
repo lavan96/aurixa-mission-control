@@ -45,6 +45,7 @@ import {
   Boxes,
   ChevronLeft,
   ChevronRight,
+  UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "@/lib/format";
@@ -84,6 +85,7 @@ const KIND_VALUES = [
   "device_limit_reached",
   "device_registered",
   "device_released",
+  "lead_captured",
 ] as const;
 
 const SEVERITY_VALUES = ["info", "success", "warning", "error"] as const;
@@ -112,6 +114,7 @@ const KIND_OPTIONS: { value: Kind | "all"; label: string }[] = [
   { value: "device_limit_reached" as Kind, label: "Device limit reached" },
   { value: "device_registered" as Kind, label: "Device registered" },
   { value: "device_released" as Kind, label: "Device released" },
+  { value: "lead_captured" as Kind, label: "Lead captured" },
 ];
 
 const SEVERITY_OPTIONS: { value: Severity | "all"; label: string }[] = [
@@ -165,6 +168,8 @@ function iconFor(kind: Kind) {
     case "module_installed":
     case "module_removed":
       return Boxes;
+    case "lead_captured":
+      return UserPlus;
     default:
       return CircleDot;
   }

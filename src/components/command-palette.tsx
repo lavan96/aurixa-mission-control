@@ -33,6 +33,7 @@ import {
   Tag,
   Search,
   TreePine,
+  UserPlus,
 } from "lucide-react";
 import { useClones, useModules, useCascadeEvents } from "@/lib/queries";
 import { formatDistanceToNow } from "@/lib/format";
@@ -173,6 +174,14 @@ export function CommandPalette() {
       label: "Notifications",
       icon: <Bell className="h-4 w-4" />,
       onSelect: () => run(() => navigate({ to: "/notifications" })),
+    },
+    {
+      id: "leads",
+      label: "Waitlist leads",
+      hint: "Leads captured from the website",
+      icon: <UserPlus className="h-4 w-4" />,
+      onSelect: () => run(() => navigate({ to: "/leads" })),
+      keywords: "lead capture waitlist crm contacts",
     },
     {
       id: "cloudflare",
