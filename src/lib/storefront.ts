@@ -5,4 +5,4 @@
  * per deployment (server-side); this constant is the last-resort fallback and
  * the client-side link target. Mirrors AURIXA_PRICING_URL in the prime repo.
  */
-export const DEFAULT_STOREFRONT_PRICING_URL = "https://aurixa-systems.lovable.app/pricing";
+export const DEFAULT_STOREFRONT_PRICING_URL = "https://www.aurixasystems.com.au/pricing";
