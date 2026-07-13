@@ -116,9 +116,7 @@ export const Route = createFileRoute("/api/public/billing/handoff")({
 
         // Handoffs land on the customer-facing Aurixa Systems pricing page
         // (PUBLIC_PRICING_SITE_URL) — never on Mission Control's operator UI.
-        const url = new URL(request.url);
-        const mcOrigin = process.env.PUBLIC_APP_URL ?? `${url.protocol}//${url.host}`;
-        const pricingBase = storefrontPricingBase(mcOrigin);
+        const pricingBase = storefrontPricingBase();
 
         return new Response(
           JSON.stringify({

@@ -15,6 +15,7 @@ import {
   lookupCheckoutSessionByHandoff,
   getCheckoutFulfillmentStatusByHandoff,
 } from "@/lib/checkout-session.functions";
+import { DEFAULT_STOREFRONT_PRICING_URL } from "@/lib/storefront";
 
 export const Route = createFileRoute("/billing/success")({
   // `h` = billing handoff token: lets a clone end-user (no Mission Control
@@ -213,8 +214,9 @@ function SuccessPage() {
                     <a href={info.returnUrl}>Return to {info?.cloneName ?? "your dashboard"}</a>
                   </Button>
                 )}
+                {/* Customer pricing lives on the Aurixa Systems storefront. */}
                 <Button asChild variant={info?.returnUrl ? "outline" : "default"}>
-                  <Link to="/pricing">View pricing</Link>
+                  <a href={DEFAULT_STOREFRONT_PRICING_URL}>View pricing</a>
                 </Button>
               </>
             ) : (
@@ -222,17 +224,9 @@ function SuccessPage() {
                 <Button asChild>
                   <Link to="/settings/billing">Back to billing</Link>
                 </Button>
-                {info?.cloneId ? (
-                  <Button asChild variant="outline">
-                    <Link to="/pricing" search={{ clone: info.cloneId }}>
-                      Buy more for this client
-                    </Link>
-                  </Button>
-                ) : (
-                  <Button asChild variant="outline">
-                    <Link to="/pricing">View pricing</Link>
-                  </Button>
-                )}
+                <Button asChild variant="outline">
+                  <Link to="/billing/catalog">View catalog</Link>
+                </Button>
               </>
             )}
           </div>

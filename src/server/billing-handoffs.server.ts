@@ -6,6 +6,7 @@
 // server-to-server under a clone API key; the browser only ever sees the
 // opaque `?h=<uuid>` — never the identity fields themselves.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { DEFAULT_STOREFRONT_PRICING_URL } from "@/lib/storefront";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const adminAny = supabaseAdmin as any;
@@ -58,13 +59,13 @@ export function intentAllows(
  * (tokens, plans, seats — prime repo and every clone) flows through the
  * Aurixa Systems website's pricing page, configured via
  * PUBLIC_PRICING_SITE_URL (e.g. https://aurixasystems.com/pricing).
- * Mission Control's own /pricing is the operator console; it is only used as
- * the landing fallback when the storefront URL isn't configured yet.
+ * Mission Control has no customer /pricing route, so when the env var is
+ * unset the links fall back to the storefront's default domain.
  */
-export function storefrontPricingBase(fallbackOrigin: string): string {
+export function storefrontPricingBase(): string {
   const site = process.env.PUBLIC_PRICING_SITE_URL;
   if (site && /^https?:\/\//.test(site)) return site.replace(/\/+$/, "");
-  return `${fallbackOrigin.replace(/\/+$/, "")}/pricing`;
+  return DEFAULT_STOREFRONT_PRICING_URL;
 }
 
 /** Attributed deep link into the pricing page: `<pricingBase>?h=<token>`. */

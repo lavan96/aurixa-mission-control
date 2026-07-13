@@ -109,7 +109,7 @@ export const Route = createFileRoute("/api/public/tokens/packs")({
               if (created.ok) {
                 // Land on the customer-facing Aurixa Systems pricing page:
                 // user-centric purchases never route through Mission Control.
-                topupUrl = handoffUrl(storefrontPricingBase(base), created.id);
+                topupUrl = handoffUrl(storefrontPricingBase(), created.id);
               }
             }
           }

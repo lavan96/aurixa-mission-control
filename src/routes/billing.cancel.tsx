@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getHandoffReturnInfo } from "@/lib/handoff.functions";
+import { DEFAULT_STOREFRONT_PRICING_URL } from "@/lib/storefront";
 
 export const Route = createFileRoute("/billing/cancel")({
   // `h` = billing handoff token: gives a clone end-user (no Mission Control
@@ -18,7 +19,7 @@ export const Route = createFileRoute("/billing/cancel")({
 });
 
 function CancelPage() {
-  const { clone, h } = Route.useSearch();
+  const { h } = Route.useSearch();
 
   const returnInfoFn = useServerFn(getHandoffReturnInfo);
   const returnInfoQ = useQuery({
@@ -49,12 +50,12 @@ function CancelPage() {
                 </a>
               </Button>
             )}
-            <Button asChild variant={returnInfo?.returnUrl ? "outline" : "default"}>
-              <Link to="/pricing" search={clone ? { clone } : undefined}>
-                Back to pricing
-              </Link>
-            </Button>
-            {!h && (
+            {h ? (
+              // Customer pricing lives on the Aurixa Systems storefront.
+              <Button asChild variant={returnInfo?.returnUrl ? "outline" : "default"}>
+                <a href={DEFAULT_STOREFRONT_PRICING_URL}>Back to pricing</a>
+              </Button>
+            ) : (
               <Button asChild variant="outline">
                 <Link to="/billing/catalog">View catalog</Link>
               </Button>
