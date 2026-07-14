@@ -31,7 +31,7 @@ export const Route = createFileRoute("/api/public/tokens/balance")({
           supabaseAdmin
             .from("tenants")
             .select(
-              "id, external_ref, display_name, status, current_period_end, billing_plans:plan_id(slug, name, monthly_allowance, overage_policy)",
+              "id, external_ref, display_name, status, current_period_end, billing_exempt, billing_plans:plan_id(slug, name, monthly_allowance, overage_policy)",
             )
             .eq("id", tenant.tenantId)
             .maybeSingle(),
