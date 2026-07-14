@@ -19,6 +19,17 @@ import type { OriginAttribution } from "@/server/purchases.server";
 
 export type CheckoutMode = "topup" | "seat_plan" | "setup_package";
 
+/**
+ * Sanitized, operator-actionable message from a Stripe SDK error. Stripe's
+ * `raw.message` for config failures ("No such price: …", "You must configure
+ * your tax settings…") contains no secrets and is exactly what an operator
+ * needs to see; anything unexpected degrades to the generic Error message.
+ */
+function stripeErrorMessage(err: unknown): string {
+  const e = err as { raw?: { message?: string }; message?: string } | null;
+  return String(e?.raw?.message ?? e?.message ?? "stripe_error").slice(0, 300);
+}
+
 type CatalogItem = {
   id: string;
   slug: string;
@@ -108,7 +119,13 @@ export async function startCheckoutCore(args: CheckoutCoreArgs) {
   let customerId: string | undefined;
   let billingUserId = "";
   if (tenantId) {
-    customerId = await ensureStripeCustomer(tenantId);
+    try {
+      customerId = await ensureStripeCustomer(tenantId);
+    } catch (err) {
+      const msg = stripeErrorMessage(err);
+      console.error("[checkout] ensureStripeCustomer failed:", msg);
+      return { ok: false as const, error: `stripe_customer: ${msg}` };
+    }
     // Operator-assigned tracking id for this tenant/clone — stamped onto every
     // session so payments and the exact products bought are attributable to it
     // regardless of whether checkout arrived via a handoff or a ?uid= link.
@@ -133,7 +150,7 @@ export async function startCheckoutCore(args: CheckoutCoreArgs) {
     ...attributionMetadata(args.attribution),
   };
 
-  const session = await getStripe().checkout.sessions.create({
+  const sessionParams = {
     mode: args.mode === "seat_plan" ? "subscription" : "payment",
     customer: customerId,
     line_items: [{ price: item.stripe_price_id, quantity: args.quantity }],
@@ -147,7 +164,35 @@ export async function startCheckoutCore(args: CheckoutCoreArgs) {
     ...(args.mode === "seat_plan"
       ? { subscription_data: { metadata: sharedMeta } }
       : { payment_intent_data: { metadata: sharedMeta } }),
-  });
+  };
+
+  let session;
+  try {
+    session = await getStripe().checkout.sessions.create(sessionParams);
+  } catch (err) {
+    const msg = stripeErrorMessage(err);
+    // Stripe Tax not being configured on the account must never block a
+    // checkout — retry once without automatic tax and let it succeed.
+    if (/automatic.?tax|tax settings|origin address|head office/i.test(msg)) {
+      console.warn("[checkout] automatic_tax unavailable, retrying without it:", msg);
+      try {
+        session = await getStripe().checkout.sessions.create({
+          ...sessionParams,
+          automatic_tax: { enabled: false },
+        });
+      } catch (retryErr) {
+        const retryMsg = stripeErrorMessage(retryErr);
+        console.error("[checkout] session create failed after tax retry:", retryMsg);
+        return { ok: false as const, error: `stripe: ${retryMsg}` };
+      }
+    } else {
+      // Surface the sanitized Stripe reason ('No such price…', key/mode
+      // mismatches, …) instead of a blind checkout_failed 500 — these are
+      // config errors an operator must see to fix.
+      console.error("[checkout] session create failed:", msg);
+      return { ok: false as const, error: `stripe: ${msg}` };
+    }
+  }
 
   // Attribution bookkeeping. Best-effort insert (never blocks checkout);
   // the handoff is single-use, so burn it now that a session exists.
