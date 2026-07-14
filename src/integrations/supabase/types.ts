@@ -3528,6 +3528,7 @@ export type Database = {
       }
       tenants: {
         Row: {
+          billing_exempt: boolean
           billing_stripe_customer_id: string | null
           billing_user_id: string | null
           clone_id: string | null
@@ -3545,6 +3546,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          billing_exempt?: boolean
           billing_stripe_customer_id?: string | null
           billing_user_id?: string | null
           clone_id?: string | null
@@ -3562,6 +3564,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          billing_exempt?: boolean
           billing_stripe_customer_id?: string | null
           billing_user_id?: string | null
           clone_id?: string | null
