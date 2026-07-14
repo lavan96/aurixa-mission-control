@@ -95,6 +95,10 @@ function NewClone() {
   const provisionBackendFn = useServerFn(provisionBackend);
   const enqueueEdge = useServerFn(enqueueEdgeJob);
 
+  const preflightFn = useServerFn(checkGithubAppPreflight);
+  const [preflight, setPreflight] = useState<GithubPreflightResult | null>(null);
+  const [preflightBusy, setPreflightBusy] = useState(false);
+
   // Default the org field to the prime's default_clone_org once it loads
   useEffect(() => {
     if (prime?.default_clone_org && !transferTarget) {
