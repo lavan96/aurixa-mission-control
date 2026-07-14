@@ -734,6 +734,8 @@ export async function runDetection(args: {
         orphan_files: orphanFiles.length,
         inserted,
         updated,
+        rejected_globs: globRejections.slice(0, 50),
+        rejected_glob_count: globRejections.length,
       },
     });
 
