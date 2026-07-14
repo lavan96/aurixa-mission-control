@@ -47,6 +47,15 @@ export type PrimeEdgeFunction = {
   verifyJwt: boolean;
 };
 
+export type PrimeAuthConfig = {
+  site_url?: string;
+  uri_allow_list?: string;      // comma-separated (Management API shape)
+  jwt_exp?: number;             // seconds
+  disable_signup?: boolean;
+  external_anonymous_users_enabled?: boolean;
+  password_min_length?: number;
+};
+
 export type PrimeBackendSnapshot = {
   /** "owner/repo" the snapshot was taken from */
   sourceRepo: string;
@@ -58,6 +67,9 @@ export type PrimeBackendSnapshot = {
   functions: PrimeEdgeFunction[];
   /** Secret names referenced by edge functions — values are never read */
   secretNames: string[];
+  /** Auth policy replicated from the prime's supabase/config.toml [auth] block.
+   *  Values-only, never secrets — providers/keys are configured per-clone. */
+  authConfig: PrimeAuthConfig | null;
 };
 
 // ─── Pure helpers (unit-tested) ──────────────────────────────────────
