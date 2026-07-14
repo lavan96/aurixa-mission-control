@@ -524,6 +524,81 @@ export type Database = {
         }
         Relationships: []
       }
+      client_supabase_accounts: {
+        Row: {
+          clone_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          org_id: string | null
+          org_slug: string | null
+          owner_email: string
+          owner_name: string | null
+          pat_ciphertext: string | null
+          pat_last4: string | null
+          pat_nonce: string | null
+          plan_tier: string | null
+          region_allowed: string[]
+          revoked_at: string | null
+          updated_at: string
+          verified_at: string | null
+        }
+        Insert: {
+          clone_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          org_id?: string | null
+          org_slug?: string | null
+          owner_email: string
+          owner_name?: string | null
+          pat_ciphertext?: string | null
+          pat_last4?: string | null
+          pat_nonce?: string | null
+          plan_tier?: string | null
+          region_allowed?: string[]
+          revoked_at?: string | null
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Update: {
+          clone_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          org_id?: string | null
+          org_slug?: string | null
+          owner_email?: string
+          owner_name?: string | null
+          pat_ciphertext?: string | null
+          pat_last4?: string | null
+          pat_nonce?: string | null
+          plan_tier?: string | null
+          region_allowed?: string[]
+          revoked_at?: string | null
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_supabase_accounts_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_supabase_accounts_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
+          },
+        ]
+      }
       clone_api_keys: {
         Row: {
           clone_id: string | null
@@ -1172,6 +1247,128 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "edge_providers"
             referencedColumns: ["slug"]
+          },
+        ]
+      }
+      clone_handoffs: {
+        Row: {
+          backend_id: string | null
+          client_account_id: string | null
+          clone_id: string
+          completed_at: string | null
+          consent_signed_at: string | null
+          consent_terms_version: string | null
+          created_at: string
+          created_by: string | null
+          error: string | null
+          id: string
+          initiated_at: string | null
+          metadata: Json
+          path: Database["public"]["Enums"]["handoff_path"]
+          policy_id: string | null
+          rollback_snapshot_id: string | null
+          state: Database["public"]["Enums"]["handoff_state"]
+          target_plan_tier: string | null
+          target_project_ref: string | null
+          target_project_url: string | null
+          target_region: string | null
+          updated_at: string
+        }
+        Insert: {
+          backend_id?: string | null
+          client_account_id?: string | null
+          clone_id: string
+          completed_at?: string | null
+          consent_signed_at?: string | null
+          consent_terms_version?: string | null
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          id?: string
+          initiated_at?: string | null
+          metadata?: Json
+          path?: Database["public"]["Enums"]["handoff_path"]
+          policy_id?: string | null
+          rollback_snapshot_id?: string | null
+          state?: Database["public"]["Enums"]["handoff_state"]
+          target_plan_tier?: string | null
+          target_project_ref?: string | null
+          target_project_url?: string | null
+          target_region?: string | null
+          updated_at?: string
+        }
+        Update: {
+          backend_id?: string | null
+          client_account_id?: string | null
+          clone_id?: string
+          completed_at?: string | null
+          consent_signed_at?: string | null
+          consent_terms_version?: string | null
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          id?: string
+          initiated_at?: string | null
+          metadata?: Json
+          path?: Database["public"]["Enums"]["handoff_path"]
+          policy_id?: string | null
+          rollback_snapshot_id?: string | null
+          state?: Database["public"]["Enums"]["handoff_state"]
+          target_plan_tier?: string | null
+          target_project_ref?: string | null
+          target_project_url?: string | null
+          target_region?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clone_handoffs_backend_id_fkey"
+            columns: ["backend_id"]
+            isOneToOne: false
+            referencedRelation: "clone_backends"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clone_handoffs_backend_id_fkey"
+            columns: ["backend_id"]
+            isOneToOne: false
+            referencedRelation: "clone_backends_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clone_handoffs_client_account_id_fkey"
+            columns: ["client_account_id"]
+            isOneToOne: false
+            referencedRelation: "client_supabase_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clone_handoffs_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clone_handoffs_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
+          },
+          {
+            foreignKeyName: "clone_handoffs_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "handoff_region_plan_policies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clone_handoffs_rollback_snapshot_fk"
+            columns: ["rollback_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "handoff_snapshots"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1939,6 +2136,345 @@ export type Database = {
           summary_markdown?: string
         }
         Relationships: []
+      }
+      handoff_contracts: {
+        Row: {
+          created_at: string
+          handoff_id: string
+          id: string
+          ip_address: string | null
+          metadata: Json
+          pdf_storage_path: string | null
+          signed_at: string | null
+          signed_by_email: string | null
+          signed_by_name: string | null
+          terms_hash: string
+          user_agent: string | null
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          handoff_id: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json
+          pdf_storage_path?: string | null
+          signed_at?: string | null
+          signed_by_email?: string | null
+          signed_by_name?: string | null
+          terms_hash: string
+          user_agent?: string | null
+          version: string
+        }
+        Update: {
+          created_at?: string
+          handoff_id?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json
+          pdf_storage_path?: string | null
+          signed_at?: string | null
+          signed_by_email?: string | null
+          signed_by_name?: string | null
+          terms_hash?: string
+          user_agent?: string | null
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "handoff_contracts_handoff_id_fkey"
+            columns: ["handoff_id"]
+            isOneToOne: false
+            referencedRelation: "clone_handoffs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      handoff_cost_exports: {
+        Row: {
+          error: string | null
+          generated_at: string
+          handoff_id: string
+          id: string
+          period_end: string
+          period_start: string
+          rows_included: number | null
+          status: string
+          storage_path: string | null
+          total_cents: number | null
+          total_tokens: number | null
+        }
+        Insert: {
+          error?: string | null
+          generated_at?: string
+          handoff_id: string
+          id?: string
+          period_end: string
+          period_start: string
+          rows_included?: number | null
+          status?: string
+          storage_path?: string | null
+          total_cents?: number | null
+          total_tokens?: number | null
+        }
+        Update: {
+          error?: string | null
+          generated_at?: string
+          handoff_id?: string
+          id?: string
+          period_end?: string
+          period_start?: string
+          rows_included?: number | null
+          status?: string
+          storage_path?: string | null
+          total_cents?: number | null
+          total_tokens?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "handoff_cost_exports_handoff_id_fkey"
+            columns: ["handoff_id"]
+            isOneToOne: false
+            referencedRelation: "clone_handoffs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      handoff_events: {
+        Row: {
+          actor_user_id: string | null
+          created_at: string
+          details: Json
+          handoff_id: string
+          id: string
+          kind: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          created_at?: string
+          details?: Json
+          handoff_id: string
+          id?: string
+          kind: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          created_at?: string
+          details?: Json
+          handoff_id?: string
+          id?: string
+          kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "handoff_events_handoff_id_fkey"
+            columns: ["handoff_id"]
+            isOneToOne: false
+            referencedRelation: "clone_handoffs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      handoff_parity_reports: {
+        Row: {
+          auth_diff: Json
+          blocking_issues: Json
+          buckets_diff: Json
+          cron_diff: Json
+          edge_functions_diff: Json
+          extensions_diff: Json
+          functions_diff: Json
+          generated_at: string
+          handoff_id: string
+          id: string
+          policies_diff: Json
+          prime_ref: string | null
+          risk_level: string
+          secrets_diff: Json
+          summary: string | null
+          tables_diff: Json
+          target_ref: string | null
+        }
+        Insert: {
+          auth_diff?: Json
+          blocking_issues?: Json
+          buckets_diff?: Json
+          cron_diff?: Json
+          edge_functions_diff?: Json
+          extensions_diff?: Json
+          functions_diff?: Json
+          generated_at?: string
+          handoff_id: string
+          id?: string
+          policies_diff?: Json
+          prime_ref?: string | null
+          risk_level?: string
+          secrets_diff?: Json
+          summary?: string | null
+          tables_diff?: Json
+          target_ref?: string | null
+        }
+        Update: {
+          auth_diff?: Json
+          blocking_issues?: Json
+          buckets_diff?: Json
+          cron_diff?: Json
+          edge_functions_diff?: Json
+          extensions_diff?: Json
+          functions_diff?: Json
+          generated_at?: string
+          handoff_id?: string
+          id?: string
+          policies_diff?: Json
+          prime_ref?: string | null
+          risk_level?: string
+          secrets_diff?: Json
+          summary?: string | null
+          tables_diff?: Json
+          target_ref?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "handoff_parity_reports_handoff_id_fkey"
+            columns: ["handoff_id"]
+            isOneToOne: false
+            referencedRelation: "clone_handoffs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      handoff_region_plan_policies: {
+        Row: {
+          allowed_plans: string[]
+          allowed_regions: string[]
+          created_at: string
+          id: string
+          is_active: boolean
+          min_plan: string | null
+          name: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          allowed_plans?: string[]
+          allowed_regions?: string[]
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          min_plan?: string | null
+          name: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          allowed_plans?: string[]
+          allowed_regions?: string[]
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          min_plan?: string | null
+          name?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      handoff_secret_rotations: {
+        Row: {
+          created_at: string
+          error: string | null
+          handoff_id: string
+          id: string
+          key_ref: string
+          metadata: Json
+          rotated_at: string | null
+          status: string
+          target: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          handoff_id: string
+          id?: string
+          key_ref: string
+          metadata?: Json
+          rotated_at?: string | null
+          status?: string
+          target: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          handoff_id?: string
+          id?: string
+          key_ref?: string
+          metadata?: Json
+          rotated_at?: string | null
+          status?: string
+          target?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "handoff_secret_rotations_handoff_id_fkey"
+            columns: ["handoff_id"]
+            isOneToOne: false
+            referencedRelation: "clone_handoffs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      handoff_snapshots: {
+        Row: {
+          created_at: string
+          error: string | null
+          handoff_id: string
+          id: string
+          kind: string
+          metadata: Json
+          retention_expires_at: string | null
+          sha256: string | null
+          size_bytes: number | null
+          status: string
+          storage_path: string | null
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          handoff_id: string
+          id?: string
+          kind: string
+          metadata?: Json
+          retention_expires_at?: string | null
+          sha256?: string | null
+          size_bytes?: number | null
+          status?: string
+          storage_path?: string | null
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          handoff_id?: string
+          id?: string
+          kind?: string
+          metadata?: Json
+          retention_expires_at?: string | null
+          sha256?: string | null
+          size_bytes?: number | null
+          status?: string
+          storage_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "handoff_snapshots_handoff_id_fkey"
+            columns: ["handoff_id"]
+            isOneToOne: false
+            referencedRelation: "clone_handoffs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       module_cascade_jobs: {
         Row: {
@@ -4516,6 +5052,22 @@ export type Database = {
         | "failed"
         | "suspended"
       drift_severity: "low" | "medium" | "high"
+      handoff_path: "rebuild_twin" | "enterprise_transfer"
+      handoff_state:
+        | "draft"
+        | "dry_run_ready"
+        | "awaiting_client_consent"
+        | "snapshot_pending"
+        | "snapshot_ready"
+        | "twin_provisioning"
+        | "twin_ready"
+        | "data_syncing"
+        | "cutover_scheduled"
+        | "cutover_in_progress"
+        | "complete"
+        | "rolled_back"
+        | "failed"
+        | "canceled"
       lead_status:
         | "new"
         | "contacted"
@@ -4731,6 +5283,23 @@ export const Constants = {
         "suspended",
       ],
       drift_severity: ["low", "medium", "high"],
+      handoff_path: ["rebuild_twin", "enterprise_transfer"],
+      handoff_state: [
+        "draft",
+        "dry_run_ready",
+        "awaiting_client_consent",
+        "snapshot_pending",
+        "snapshot_ready",
+        "twin_provisioning",
+        "twin_ready",
+        "data_syncing",
+        "cutover_scheduled",
+        "cutover_in_progress",
+        "complete",
+        "rolled_back",
+        "failed",
+        "canceled",
+      ],
       lead_status: [
         "new",
         "contacted",

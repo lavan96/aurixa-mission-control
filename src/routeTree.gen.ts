@@ -22,6 +22,7 @@ import { Route as ModulesRouteImport } from './routes/modules'
 import { Route as MetricsRouteImport } from './routes/metrics'
 import { Route as LeadsRouteImport } from './routes/leads'
 import { Route as HealthRouteImport } from './routes/health'
+import { Route as HandoffsRouteImport } from './routes/handoffs'
 import { Route as FleetManagerRouteImport } from './routes/fleet-manager'
 import { Route as DriftRouteImport } from './routes/drift'
 import { Route as DigestsRouteImport } from './routes/digests'
@@ -39,6 +40,7 @@ import { Route as SettingsRoleAuditRouteImport } from './routes/settings.role-au
 import { Route as SettingsProvisioningPreviewRouteImport } from './routes/settings.provisioning-preview'
 import { Route as SettingsPermissionMatrixRouteImport } from './routes/settings.permission-matrix'
 import { Route as SettingsNotificationsRouteImport } from './routes/settings.notifications'
+import { Route as SettingsHandoffPoliciesRouteImport } from './routes/settings.handoff-policies'
 import { Route as SettingsGiftTokensRouteImport } from './routes/settings.gift-tokens'
 import { Route as SettingsBillingRouteImport } from './routes/settings.billing'
 import { Route as ModulesBuilderRouteImport } from './routes/modules.builder'
@@ -56,6 +58,8 @@ import { Route as HooksCascadeDrainRouteImport } from './routes/hooks.cascade-dr
 import { Route as HooksBrandDriftRouteImport } from './routes/hooks.brand-drift'
 import { Route as HooksBackendProvisioningDrainRouteImport } from './routes/hooks.backend-provisioning-drain'
 import { Route as HooksAirtableSyncRouteImport } from './routes/hooks.airtable-sync'
+import { Route as HandoffsNewRouteImport } from './routes/handoffs.new'
+import { Route as HandoffsHandoffIdRouteImport } from './routes/handoffs.$handoffId'
 import { Route as FleetEdgeRouteImport } from './routes/fleet.edge'
 import { Route as ClonesNewRouteImport } from './routes/clones.new'
 import { Route as ClonesCloneIdRouteImport } from './routes/clones.$cloneId'
@@ -160,6 +164,11 @@ const HealthRoute = HealthRouteImport.update({
   path: '/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HandoffsRoute = HandoffsRouteImport.update({
+  id: '/handoffs',
+  path: '/handoffs',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FleetManagerRoute = FleetManagerRouteImport.update({
   id: '/fleet-manager',
   path: '/fleet-manager',
@@ -247,6 +256,11 @@ const SettingsNotificationsRoute = SettingsNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsHandoffPoliciesRoute = SettingsHandoffPoliciesRouteImport.update({
+  id: '/handoff-policies',
+  path: '/handoff-policies',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const SettingsGiftTokensRoute = SettingsGiftTokensRouteImport.update({
   id: '/gift-tokens',
   path: '/gift-tokens',
@@ -332,6 +346,16 @@ const HooksAirtableSyncRoute = HooksAirtableSyncRouteImport.update({
   id: '/hooks/airtable-sync',
   path: '/hooks/airtable-sync',
   getParentRoute: () => rootRouteImport,
+} as any)
+const HandoffsNewRoute = HandoffsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => HandoffsRoute,
+} as any)
+const HandoffsHandoffIdRoute = HandoffsHandoffIdRouteImport.update({
+  id: '/$handoffId',
+  path: '/$handoffId',
+  getParentRoute: () => HandoffsRoute,
 } as any)
 const FleetEdgeRoute = FleetEdgeRouteImport.update({
   id: '/fleet/edge',
@@ -547,6 +571,7 @@ export interface FileRoutesByFullPath {
   '/digests': typeof DigestsRoute
   '/drift': typeof DriftRoute
   '/fleet-manager': typeof FleetManagerRoute
+  '/handoffs': typeof HandoffsRouteWithChildren
   '/health': typeof HealthRoute
   '/leads': typeof LeadsRoute
   '/metrics': typeof MetricsRoute
@@ -571,6 +596,8 @@ export interface FileRoutesByFullPath {
   '/clones/$cloneId': typeof ClonesCloneIdRouteWithChildren
   '/clones/new': typeof ClonesNewRoute
   '/fleet/edge': typeof FleetEdgeRoute
+  '/handoffs/$handoffId': typeof HandoffsHandoffIdRoute
+  '/handoffs/new': typeof HandoffsNewRoute
   '/hooks/airtable-sync': typeof HooksAirtableSyncRoute
   '/hooks/backend-provisioning-drain': typeof HooksBackendProvisioningDrainRoute
   '/hooks/brand-drift': typeof HooksBrandDriftRoute
@@ -588,6 +615,7 @@ export interface FileRoutesByFullPath {
   '/modules/builder': typeof ModulesBuilderRoute
   '/settings/billing': typeof SettingsBillingRoute
   '/settings/gift-tokens': typeof SettingsGiftTokensRoute
+  '/settings/handoff-policies': typeof SettingsHandoffPoliciesRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/permission-matrix': typeof SettingsPermissionMatrixRoute
   '/settings/provisioning-preview': typeof SettingsProvisioningPreviewRoute
@@ -634,6 +662,7 @@ export interface FileRoutesByTo {
   '/digests': typeof DigestsRoute
   '/drift': typeof DriftRoute
   '/fleet-manager': typeof FleetManagerRoute
+  '/handoffs': typeof HandoffsRouteWithChildren
   '/health': typeof HealthRoute
   '/leads': typeof LeadsRoute
   '/metrics': typeof MetricsRoute
@@ -657,6 +686,8 @@ export interface FileRoutesByTo {
   '/clones/$cloneId': typeof ClonesCloneIdRouteWithChildren
   '/clones/new': typeof ClonesNewRoute
   '/fleet/edge': typeof FleetEdgeRoute
+  '/handoffs/$handoffId': typeof HandoffsHandoffIdRoute
+  '/handoffs/new': typeof HandoffsNewRoute
   '/hooks/airtable-sync': typeof HooksAirtableSyncRoute
   '/hooks/backend-provisioning-drain': typeof HooksBackendProvisioningDrainRoute
   '/hooks/brand-drift': typeof HooksBrandDriftRoute
@@ -674,6 +705,7 @@ export interface FileRoutesByTo {
   '/modules/builder': typeof ModulesBuilderRoute
   '/settings/billing': typeof SettingsBillingRoute
   '/settings/gift-tokens': typeof SettingsGiftTokensRoute
+  '/settings/handoff-policies': typeof SettingsHandoffPoliciesRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/permission-matrix': typeof SettingsPermissionMatrixRoute
   '/settings/provisioning-preview': typeof SettingsProvisioningPreviewRoute
@@ -721,6 +753,7 @@ export interface FileRoutesById {
   '/digests': typeof DigestsRoute
   '/drift': typeof DriftRoute
   '/fleet-manager': typeof FleetManagerRoute
+  '/handoffs': typeof HandoffsRouteWithChildren
   '/health': typeof HealthRoute
   '/leads': typeof LeadsRoute
   '/metrics': typeof MetricsRoute
@@ -745,6 +778,8 @@ export interface FileRoutesById {
   '/clones/$cloneId': typeof ClonesCloneIdRouteWithChildren
   '/clones/new': typeof ClonesNewRoute
   '/fleet/edge': typeof FleetEdgeRoute
+  '/handoffs/$handoffId': typeof HandoffsHandoffIdRoute
+  '/handoffs/new': typeof HandoffsNewRoute
   '/hooks/airtable-sync': typeof HooksAirtableSyncRoute
   '/hooks/backend-provisioning-drain': typeof HooksBackendProvisioningDrainRoute
   '/hooks/brand-drift': typeof HooksBrandDriftRoute
@@ -762,6 +797,7 @@ export interface FileRoutesById {
   '/modules/builder': typeof ModulesBuilderRoute
   '/settings/billing': typeof SettingsBillingRoute
   '/settings/gift-tokens': typeof SettingsGiftTokensRoute
+  '/settings/handoff-policies': typeof SettingsHandoffPoliciesRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/permission-matrix': typeof SettingsPermissionMatrixRoute
   '/settings/provisioning-preview': typeof SettingsProvisioningPreviewRoute
@@ -810,6 +846,7 @@ export interface FileRouteTypes {
     | '/digests'
     | '/drift'
     | '/fleet-manager'
+    | '/handoffs'
     | '/health'
     | '/leads'
     | '/metrics'
@@ -834,6 +871,8 @@ export interface FileRouteTypes {
     | '/clones/$cloneId'
     | '/clones/new'
     | '/fleet/edge'
+    | '/handoffs/$handoffId'
+    | '/handoffs/new'
     | '/hooks/airtable-sync'
     | '/hooks/backend-provisioning-drain'
     | '/hooks/brand-drift'
@@ -851,6 +890,7 @@ export interface FileRouteTypes {
     | '/modules/builder'
     | '/settings/billing'
     | '/settings/gift-tokens'
+    | '/settings/handoff-policies'
     | '/settings/notifications'
     | '/settings/permission-matrix'
     | '/settings/provisioning-preview'
@@ -897,6 +937,7 @@ export interface FileRouteTypes {
     | '/digests'
     | '/drift'
     | '/fleet-manager'
+    | '/handoffs'
     | '/health'
     | '/leads'
     | '/metrics'
@@ -920,6 +961,8 @@ export interface FileRouteTypes {
     | '/clones/$cloneId'
     | '/clones/new'
     | '/fleet/edge'
+    | '/handoffs/$handoffId'
+    | '/handoffs/new'
     | '/hooks/airtable-sync'
     | '/hooks/backend-provisioning-drain'
     | '/hooks/brand-drift'
@@ -937,6 +980,7 @@ export interface FileRouteTypes {
     | '/modules/builder'
     | '/settings/billing'
     | '/settings/gift-tokens'
+    | '/settings/handoff-policies'
     | '/settings/notifications'
     | '/settings/permission-matrix'
     | '/settings/provisioning-preview'
@@ -983,6 +1027,7 @@ export interface FileRouteTypes {
     | '/digests'
     | '/drift'
     | '/fleet-manager'
+    | '/handoffs'
     | '/health'
     | '/leads'
     | '/metrics'
@@ -1007,6 +1052,8 @@ export interface FileRouteTypes {
     | '/clones/$cloneId'
     | '/clones/new'
     | '/fleet/edge'
+    | '/handoffs/$handoffId'
+    | '/handoffs/new'
     | '/hooks/airtable-sync'
     | '/hooks/backend-provisioning-drain'
     | '/hooks/brand-drift'
@@ -1024,6 +1071,7 @@ export interface FileRouteTypes {
     | '/modules/builder'
     | '/settings/billing'
     | '/settings/gift-tokens'
+    | '/settings/handoff-policies'
     | '/settings/notifications'
     | '/settings/permission-matrix'
     | '/settings/provisioning-preview'
@@ -1071,6 +1119,7 @@ export interface RootRouteChildren {
   DigestsRoute: typeof DigestsRoute
   DriftRoute: typeof DriftRoute
   FleetManagerRoute: typeof FleetManagerRoute
+  HandoffsRoute: typeof HandoffsRouteWithChildren
   HealthRoute: typeof HealthRoute
   LeadsRoute: typeof LeadsRoute
   MetricsRoute: typeof MetricsRoute
@@ -1228,6 +1277,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/handoffs': {
+      id: '/handoffs'
+      path: '/handoffs'
+      fullPath: '/handoffs'
+      preLoaderRoute: typeof HandoffsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/fleet-manager': {
       id: '/fleet-manager'
       path: '/fleet-manager'
@@ -1345,6 +1401,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/settings/notifications'
       preLoaderRoute: typeof SettingsNotificationsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/handoff-policies': {
+      id: '/settings/handoff-policies'
+      path: '/handoff-policies'
+      fullPath: '/settings/handoff-policies'
+      preLoaderRoute: typeof SettingsHandoffPoliciesRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/settings/gift-tokens': {
@@ -1465,6 +1528,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/hooks/airtable-sync'
       preLoaderRoute: typeof HooksAirtableSyncRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/handoffs/new': {
+      id: '/handoffs/new'
+      path: '/new'
+      fullPath: '/handoffs/new'
+      preLoaderRoute: typeof HandoffsNewRouteImport
+      parentRoute: typeof HandoffsRoute
+    }
+    '/handoffs/$handoffId': {
+      id: '/handoffs/$handoffId'
+      path: '/$handoffId'
+      fullPath: '/handoffs/$handoffId'
+      preLoaderRoute: typeof HandoffsHandoffIdRouteImport
+      parentRoute: typeof HandoffsRoute
     }
     '/fleet/edge': {
       id: '/fleet/edge'
@@ -1747,6 +1824,20 @@ const CascadesRouteWithChildren = CascadesRoute._addFileChildren(
   CascadesRouteChildren,
 )
 
+interface HandoffsRouteChildren {
+  HandoffsHandoffIdRoute: typeof HandoffsHandoffIdRoute
+  HandoffsNewRoute: typeof HandoffsNewRoute
+}
+
+const HandoffsRouteChildren: HandoffsRouteChildren = {
+  HandoffsHandoffIdRoute: HandoffsHandoffIdRoute,
+  HandoffsNewRoute: HandoffsNewRoute,
+}
+
+const HandoffsRouteWithChildren = HandoffsRoute._addFileChildren(
+  HandoffsRouteChildren,
+)
+
 interface ModulesRouteChildren {
   ModulesSlugRoute: typeof ModulesSlugRoute
   ModulesBuilderRoute: typeof ModulesBuilderRoute
@@ -1763,6 +1854,7 @@ const ModulesRouteWithChildren =
 interface SettingsRouteChildren {
   SettingsBillingRoute: typeof SettingsBillingRoute
   SettingsGiftTokensRoute: typeof SettingsGiftTokensRoute
+  SettingsHandoffPoliciesRoute: typeof SettingsHandoffPoliciesRoute
   SettingsNotificationsRoute: typeof SettingsNotificationsRoute
   SettingsPermissionMatrixRoute: typeof SettingsPermissionMatrixRoute
   SettingsProvisioningPreviewRoute: typeof SettingsProvisioningPreviewRoute
@@ -1774,6 +1866,7 @@ interface SettingsRouteChildren {
 const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsBillingRoute: SettingsBillingRoute,
   SettingsGiftTokensRoute: SettingsGiftTokensRoute,
+  SettingsHandoffPoliciesRoute: SettingsHandoffPoliciesRoute,
   SettingsNotificationsRoute: SettingsNotificationsRoute,
   SettingsPermissionMatrixRoute: SettingsPermissionMatrixRoute,
   SettingsProvisioningPreviewRoute: SettingsProvisioningPreviewRoute,
@@ -1810,6 +1903,7 @@ const rootRouteChildren: RootRouteChildren = {
   DigestsRoute: DigestsRoute,
   DriftRoute: DriftRoute,
   FleetManagerRoute: FleetManagerRoute,
+  HandoffsRoute: HandoffsRouteWithChildren,
   HealthRoute: HealthRoute,
   LeadsRoute: LeadsRoute,
   MetricsRoute: MetricsRoute,
