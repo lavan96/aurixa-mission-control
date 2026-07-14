@@ -68,6 +68,18 @@ async function runBackendProvisioning(
       .eq("clone_id", input.cloneId)
       .maybeSingle();
 
+    // Resolve which secret names are safe to forward from the prime env into
+    // this clone (empty shells cause 500s at first function invocation).
+    const { data: forwardRows } = await supabase
+      .from("prime_secret_forwards")
+      .select("name, inherit")
+      .eq("inherit", true);
+    const inheritedSecrets: Record<string, string> = {};
+    for (const row of forwardRows ?? []) {
+      const val = process.env[row.name];
+      if (typeof val === "string" && val.length > 0) inheritedSecrets[row.name] = val;
+    }
+
     const result = await provisionCloneBackend(
       {
         cloneName: input.cloneName,
@@ -76,6 +88,7 @@ async function runBackendProvisioning(
         adminPassword: input.adminPassword,
         snapshot,
         existingProjectRef: existingRow?.supabase_project_ref ?? null,
+        inheritedSecrets,
       },
       updateStatus,
     );
