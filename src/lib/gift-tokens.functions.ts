@@ -129,7 +129,8 @@ export const listGiftCampaigns = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("token_ledger")
       .select("source_ref, tokens, tenant_id, reason, metadata, created_at, created_by")
-      .eq("source", "promotion")
+      .eq("source", "manual")
+      .like("source_ref", "promo:%")
       .order("created_at", { ascending: false })
       .limit(2000);
     if (error) throw new Error(error.message);
