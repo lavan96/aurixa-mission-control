@@ -78,20 +78,54 @@ export async function ensureTenant(
   cloneId: string | null,
   externalRef: string,
   displayName?: string | null,
-): Promise<{ ok: true; tenantId: string } | { ok: false; error: string }> {
-  let q = supabaseAdmin.from("tenants").select("id, plan_id").eq("external_ref", externalRef);
+): Promise<
+  { ok: true; tenantId: string; billingUserId: string | null } | { ok: false; error: string }
+> {
+  // Cast: the billing_* tracking columns are newer than the generated DB types.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const dbAny = supabaseAdmin as any;
+
+  // Operator-assigned billing/tracking identity lives on the clone; copy it
+  // onto the clone's tenant so checkout can stamp it into Stripe metadata and
+  // the purchases ledger (and so ?uid= resolves once a tenant exists).
+  let cloneBillingUserId: string | null = null;
+  let cloneBillingStripeCustomerId: string | null = null;
+  if (cloneId) {
+    const { data: clone } = await dbAny
+      .from("clones")
+      .select("billing_user_id, billing_stripe_customer_id")
+      .eq("id", cloneId)
+      .maybeSingle();
+    cloneBillingUserId = clone?.billing_user_id ?? null;
+    cloneBillingStripeCustomerId = clone?.billing_stripe_customer_id ?? null;
+  }
+
+  let q = dbAny
+    .from("tenants")
+    .select("id, plan_id, billing_user_id")
+    .eq("external_ref", externalRef);
   q = cloneId == null ? q.is("clone_id", null) : q.eq("clone_id", cloneId);
   const existing = await q.maybeSingle();
   if (existing.error) return { ok: false, error: existing.error.message };
 
   if (existing.data) {
-    if (displayName && displayName.length > 0) {
-      await supabaseAdmin
-        .from("tenants")
-        .update({ display_name: displayName })
-        .eq("id", existing.data.id);
+    const patch: Record<string, unknown> = {};
+    if (displayName && displayName.length > 0) patch.display_name = displayName;
+    // Backfill the tracking id if the clone has one and the tenant does not.
+    if (cloneBillingUserId && !existing.data.billing_user_id) {
+      patch.billing_user_id = cloneBillingUserId;
+      if (cloneBillingStripeCustomerId) {
+        patch.billing_stripe_customer_id = cloneBillingStripeCustomerId;
+      }
     }
-    return { ok: true, tenantId: existing.data.id };
+    if (Object.keys(patch).length > 0) {
+      await dbAny.from("tenants").update(patch).eq("id", existing.data.id);
+    }
+    return {
+      ok: true,
+      tenantId: existing.data.id,
+      billingUserId: existing.data.billing_user_id ?? cloneBillingUserId ?? null,
+    };
   }
 
   // Auto-provision tenant on cheapest active plan
@@ -107,12 +141,14 @@ export async function ensureTenant(
   const periodEnd = new Date(now);
   periodEnd.setMonth(periodEnd.getMonth() + 1);
 
-  const insert = await supabaseAdmin
+  const insert = await dbAny
     .from("tenants")
     .insert({
       clone_id: cloneId,
       external_ref: externalRef,
       display_name: displayName ?? null,
+      billing_user_id: cloneBillingUserId,
+      billing_stripe_customer_id: cloneBillingStripeCustomerId,
       plan_id: plan.data?.id ?? null,
       plan_started_at: plan.data ? now.toISOString() : null,
       current_period_start: plan.data ? now.toISOString() : null,
@@ -134,5 +170,5 @@ export async function ensureTenant(
     });
   }
 
-  return { ok: true, tenantId: insert.data.id };
+  return { ok: true, tenantId: insert.data.id, billingUserId: cloneBillingUserId };
 }

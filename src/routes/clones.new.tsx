@@ -82,6 +82,8 @@ function NewClone() {
   const [edgePreset, setEdgePreset] = useState("balanced");
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [notes, setNotes] = useState("");
+  const [billingUserId, setBillingUserId] = useState("");
+  const [billingStripeCustomerId, setBillingStripeCustomerId] = useState("");
   const [busy, setBusy] = useState(false);
   const [dedicatedBackend, setDedicatedBackend] = useState(true);
   const [adminEmail, setAdminEmail] = useState("");
@@ -149,6 +151,8 @@ function NewClone() {
           cloudflareEnabled: cloudflare,
           notes,
           moduleIds: Array.from(picked),
+          billingUserId: billingUserId.trim() || null,
+          billingStripeCustomerId: billingStripeCustomerId.trim() || null,
         },
       });
 
@@ -531,6 +535,41 @@ function NewClone() {
               </div>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">7 · Billing &amp; tracking</CardTitle>
+          <CardDescription>
+            The tracking user ID ties this clone's Stripe payments, purchased products and token
+            usage together. It also becomes the <span className="font-mono">?uid=</span> key the
+            Aurixa Systems pricing page uses to send this client straight into checkout.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label>Tracking user ID</Label>
+            <Input
+              value={billingUserId}
+              onChange={(e) => setBillingUserId(e.target.value)}
+              placeholder="e.g. acme-corp or a CRM user id"
+            />
+            <p className="text-xs text-muted-foreground">
+              Unique per clone. Leave blank to assign later.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label>Stripe customer ID (optional)</Label>
+            <Input
+              value={billingStripeCustomerId}
+              onChange={(e) => setBillingStripeCustomerId(e.target.value)}
+              placeholder="cus_…"
+            />
+            <p className="text-xs text-muted-foreground">
+              Reuse an existing Stripe customer for this client, if you have one.
+            </p>
+          </div>
         </CardContent>
       </Card>
 

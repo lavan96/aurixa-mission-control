@@ -110,7 +110,14 @@ export const Route = createFileRoute("/api/public/tokens/reserve")({
             ),
           )
           .catch(() => {});
-        return jsonResponse(result, 200);
+        // Echo the tenant's operator-assigned tracking id so the caller can
+        // stamp it onto its token-usage rows — payments (attributed by
+        // billing_user_id) and usage then join on a single key.
+        const withBilling =
+          result && typeof result === "object" && !Array.isArray(result)
+            ? { ...result, billing_user_id: tenant.billingUserId ?? null }
+            : result;
+        return jsonResponse(withBilling, 200);
       },
     },
   },
