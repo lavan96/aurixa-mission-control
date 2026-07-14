@@ -816,6 +816,8 @@ CREATE TABLE IF NOT EXISTS public.user_roles (
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (user_id, role)
 );
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.user_roles TO authenticated;
+GRANT ALL ON public.user_roles TO service_role;
 ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
 
 -- ── Hierarchy helper functions ──
