@@ -97,6 +97,16 @@ function NewClone() {
   const [backendRegion, setBackendRegion] = useState("us-east-1");
   const provisionBackendFn = useServerFn(provisionBackend);
   const enqueueEdge = useServerFn(enqueueEdgeJob);
+  // Issue #13: idempotency key for the whole submit. Generated once per
+  // wizard mount so a double-click / retry lands on the same clone row
+  // instead of forking a second GitHub repo. Rotated after a fresh
+  // (non-idempotent) success in case the operator wants to create another.
+  const [idempotencyKey, setIdempotencyKey] = useState<string>(() =>
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  );
+
 
   const preflightFn = useServerFn(checkGithubAppPreflight);
   const [preflight, setPreflight] = useState<GithubPreflightResult | null>(null);
@@ -216,10 +226,14 @@ function NewClone() {
 
     setBusy(true);
     try {
+      // Derive the slug suffix from the idempotency key so retries reuse
+      // the same target repo name — otherwise the second attempt would
+      // race against a partially-created GitHub repo. (Audit finding #13.)
+      const slugSuffix = idempotencyKey.replace(/[^a-z0-9]/gi, "").slice(0, 6).toLowerCase();
       const result = await provision({
         data: {
           name,
-          slug: `${slug}-${Math.random().toString(36).slice(2, 6)}`,
+          slug: `${slug}-${slugSuffix}`,
           method,
           targetOwner: targetOwner || "manual",
           tags: tags
@@ -232,8 +246,10 @@ function NewClone() {
           isolatedTenant,
           billingUserId: billingUserId.trim() || null,
           billingStripeCustomerId: billingStripeCustomerId.trim() || null,
+          idempotencyKey,
         },
       });
+
 
       if (!result.ok) {
         toast.error(result.error);
@@ -241,11 +257,16 @@ function NewClone() {
         return;
       }
 
-      toast.success(
-        method === "clone"
-          ? "Clone registered (independent — wire up the repo manually)"
-          : `Clone provisioned${result.githubUrl ? " on GitHub" : ""}`,
-      );
+      if ("idempotent" in result && result.idempotent) {
+        toast.info("Clone already provisioned for this submission — reusing existing record.");
+      } else {
+        toast.success(
+          method === "clone"
+            ? "Clone registered (independent — wire up the repo manually)"
+            : `Clone provisioned${result.githubUrl ? " on GitHub" : ""}`,
+        );
+      }
+
 
       // Enqueue backend provisioning if enabled. The wizard only awaits the
       // enqueue (fast); the actual provisioning is executed by the pg_cron
