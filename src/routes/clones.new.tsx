@@ -168,29 +168,31 @@ function NewClone() {
           : `Clone provisioned${result.githubUrl ? " on GitHub" : ""}`,
       );
 
-      // Kick off backend provisioning if enabled (non-blocking)
+      // Enqueue backend provisioning if enabled. The wizard only awaits the
+      // enqueue (fast); the actual provisioning is executed by the pg_cron
+      // drain worker so it survives navigation and Worker request limits.
       if (dedicatedBackend) {
-        toast.info("Backend provisioning started — this may take 1-2 minutes");
-        provisionBackendFn({
-          data: {
-            cloneId: result.cloneId,
-            cloneName: name,
-            region: backendRegion,
-            adminEmail,
-            adminPassword,
-            moduleIds: Array.from(picked),
-          },
-        })
-          .then((backendResult) => {
-            if ("ok" in backendResult && backendResult.ok) {
-              toast.success("Dedicated backend is ready!");
-            } else if ("error" in backendResult) {
-              toast.error(`Backend provisioning failed: ${backendResult.error}`);
-            }
-          })
-          .catch(() => {
-            toast.error("Backend provisioning encountered an error");
+        try {
+          const backendResult = await provisionBackendFn({
+            data: {
+              cloneId: result.cloneId,
+              cloneName: name,
+              region: backendRegion,
+              adminEmail,
+              adminPassword,
+              moduleIds: Array.from(picked),
+            },
           });
+          if ("ok" in backendResult && backendResult.ok) {
+            toast.info(
+              "Backend queued — the background worker will provision it in ~1–2 minutes. You can watch progress on the clone page.",
+            );
+          } else if ("error" in backendResult) {
+            toast.error(`Backend queue failed: ${backendResult.error}`);
+          }
+        } catch (e) {
+          toast.error(`Backend queue failed: ${e instanceof Error ? e.message : "unknown"}`);
+        }
       }
 
       // Enqueue edge attach if user chose one.
