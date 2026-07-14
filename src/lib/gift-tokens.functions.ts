@@ -88,7 +88,7 @@ export const bulkGiftTokens = createServerFn({ method: "POST" })
         tenant_id: t.id,
         kind: "grant",
         tokens: data.tokensPerTenant,
-        source: "promotion",
+        source: "manual",
         source_ref: campaignId,
         reason: data.reason,
         expires_at: data.expiresAt ?? null,
