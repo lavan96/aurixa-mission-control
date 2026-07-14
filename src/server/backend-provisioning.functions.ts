@@ -111,8 +111,10 @@ async function runBackendProvisioning(
         status: "ready" as const,
         status_detail:
           partialFailures > 0
-            ? `Backend ready with warnings: ${failedFunctions.length} function deploy(s) and ${failedSecrets.length} secret shell(s) failed`
-            : "Backend is ready — prime architecture replicated",
+            ? `Backend ready with warnings: ${failedFunctions.length} function deploy(s) and ${failedSecrets.length} secret sync(s) failed; ${missingSecrets.length} secret(s) awaiting operator input`
+            : missingSecrets.length > 0
+              ? `Backend ready — ${missingSecrets.length} secret(s) awaiting operator input at /clones/${input.cloneId}/secrets`
+              : "Backend is ready — prime architecture replicated",
         migration_version: result.latestMigration,
         source_repo: snapshot.sourceRepo,
         source_ref: snapshot.sourceRef,
@@ -123,6 +125,20 @@ async function runBackendProvisioning(
         error_message: null,
       })
       .eq("clone_id", input.cloneId);
+
+    // Persist per-name secret status so operators can drive the fill-in UI.
+    if (result.secretShells.length > 0) {
+      await supabase.from("clone_backend_secrets").upsert(
+        result.secretShells.map((s) => ({
+          clone_id: input.cloneId,
+          name: s.name,
+          status: s.status,
+          last_set_at: s.status === "inherited" ? new Date().toISOString() : null,
+          last_error: s.error ?? null,
+        })),
+        { onConflict: "clone_id,name" },
+      );
+    }
 
     // ── Per-module migrations for selected modules ──
     // Applied in dependency order; each module's SQL is wrapped in a
