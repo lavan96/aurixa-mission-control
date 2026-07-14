@@ -111,29 +111,24 @@ async function runBackendProvisioning(
       .eq("clone_id", input.cloneId);
 
     // ── Per-module migrations for selected modules ──
+    // Applied in dependency order; each module's SQL is wrapped in a
+    // transaction so partial failures don't leave a half-applied schema.
     const moduleIds = input.moduleIds ?? [];
-    const moduleApplyResults: Array<{ id: string; name: string; ok: boolean; error?: string }> = [];
+    let moduleApplyResults: Array<{ id: string; name: string; ok: boolean; skipped?: boolean; error?: string }> = [];
     if (moduleIds.length > 0) {
-      const { runSqlOnProject } = await import("./backend-provisioning.server");
+      const { applyModuleMigrations } = await import("./backend-provisioning.server");
       const { data: mods } = await supabase
         .from("modules")
-        .select("id, name, clone_migration_sql, apply_on_install")
+        .select("id, name, clone_migration_sql, apply_on_install, dependencies")
         .in("id", moduleIds);
-      for (const m of mods ?? []) {
-        const sql = (m.clone_migration_sql ?? "").trim();
-        if (!sql || m.apply_on_install === false) continue;
-        try {
-          await runSqlOnProject(result.projectRef, sql);
-          moduleApplyResults.push({ id: m.id, name: m.name, ok: true });
-        } catch (e) {
-          moduleApplyResults.push({
-            id: m.id,
-            name: m.name,
-            ok: false,
-            error: e instanceof Error ? e.message : "sql failed",
-          });
-        }
-      }
+      const inputs = (mods ?? []).map((m) => ({
+        id: m.id,
+        name: m.name,
+        sql: m.clone_migration_sql ?? "",
+        dependencies: (m.dependencies ?? []) as string[],
+        applyOnInstall: m.apply_on_install !== false,
+      }));
+      moduleApplyResults = await applyModuleMigrations(result.projectRef, inputs, updateStatus);
     }
 
     const failedModules = moduleApplyResults.filter((r) => !r.ok);
