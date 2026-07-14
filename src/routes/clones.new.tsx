@@ -164,9 +164,19 @@ function NewClone() {
   }, [method, ownerMode, transferTarget, prime?.default_clone_org, prime?.github_owner, prime?.github_repo]);
 
 
+  // Isolated tenants ALWAYS need a dedicated backend — enforce it as the
+  // wizard's source of truth so the checkbox never drifts out of sync.
+  useEffect(() => {
+    if (isolatedTenant && !dedicatedBackend) setDedicatedBackend(true);
+  }, [isolatedTenant, dedicatedBackend]);
+
   const submit = async () => {
     if (!name.trim()) {
       toast.error("Name is required");
+      return;
+    }
+    if (isolatedTenant && !dedicatedBackend) {
+      toast.error("Isolated tenants require a dedicated backend");
       return;
     }
     if (dedicatedBackend && !adminEmail.trim()) {
