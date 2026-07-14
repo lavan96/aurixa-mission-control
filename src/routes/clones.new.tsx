@@ -431,8 +431,66 @@ function NewClone() {
               placeholder="client-org-or-username"
             />
           )}
+
+          {method !== "clone" && (
+            <div className="pt-1">
+              {preflightBusy && !preflight ? (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Checking GitHub App installation…
+                </div>
+              ) : preflight ? (
+                <Alert
+                  variant={preflight.ok ? "default" : "destructive"}
+                  className={cn(
+                    preflight.ok && "border-success/40 bg-success/5 text-success-foreground",
+                  )}
+                >
+                  <div className="flex items-start gap-2">
+                    {preflight.ok ? (
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 text-success" />
+                    ) : (
+                      <AlertTriangle className="mt-0.5 h-4 w-4" />
+                    )}
+                    <div className="flex-1">
+                      <AlertTitle className="text-xs font-mono uppercase tracking-wider">
+                        {preflight.ok ? "GitHub App ready" : "GitHub App preflight failed"}
+                      </AlertTitle>
+                      <AlertDescription className="mt-1 text-xs">
+                        {preflight.message}
+                        {preflight.hint && (
+                          <div className="mt-1 opacity-80">Hint: {preflight.hint}</div>
+                        )}
+                        <div className="mt-2 flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => runPreflight()}
+                            className="font-mono text-[11px] underline underline-offset-2"
+                            disabled={preflightBusy}
+                          >
+                            re-check
+                          </button>
+                          {!preflight.installationFound && (
+                            <a
+                              href="https://github.com/apps"
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-mono text-[11px] underline underline-offset-2"
+                            >
+                              install app →
+                            </a>
+                          )}
+                        </div>
+                      </AlertDescription>
+                    </div>
+                  </div>
+                </Alert>
+              ) : null}
+            </div>
+          )}
         </CardContent>
       </Card>
+
 
       <Card>
         <CardHeader>
