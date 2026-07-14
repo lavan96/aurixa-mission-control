@@ -1253,6 +1253,7 @@ export async function provisionCloneBackend(
     latestMigration: latestApplied,
     edgeFunctions,
     secretShells,
+    storageBuckets,
   };
 }
 
