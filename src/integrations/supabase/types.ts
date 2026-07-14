@@ -137,6 +137,63 @@ export type Database = {
         }
         Relationships: []
       }
+      billing_handoffs: {
+        Row: {
+          clone_id: string | null
+          consumed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          intent: string | null
+          origin_source: string
+          origin_user_id: string
+          origin_username: string | null
+          return_url: string | null
+          tenant_id: string | null
+        }
+        Insert: {
+          clone_id?: string | null
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          intent?: string | null
+          origin_source: string
+          origin_user_id: string
+          origin_username?: string | null
+          return_url?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          clone_id?: string | null
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          intent?: string | null
+          origin_source?: string
+          origin_user_id?: string
+          origin_username?: string | null
+          return_url?: string | null
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_handoffs_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_handoffs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       billing_plans: {
         Row: {
           created_at: string
@@ -524,11 +581,17 @@ export type Database = {
           clone_id: string
           created_at: string
           db_pass: string | null
+          edge_functions: Json
           error_message: string | null
           id: string
           migration_version: string | null
+          migrations_applied: Json
           region: string
+          secret_shells: Json
           service_role_key: string | null
+          source_ref: string | null
+          source_repo: string | null
+          source_sha: string | null
           status: Database["public"]["Enums"]["clone_backend_status"]
           status_detail: string | null
           supabase_project_ref: string | null
@@ -541,11 +604,17 @@ export type Database = {
           clone_id: string
           created_at?: string
           db_pass?: string | null
+          edge_functions?: Json
           error_message?: string | null
           id?: string
           migration_version?: string | null
+          migrations_applied?: Json
           region?: string
+          secret_shells?: Json
           service_role_key?: string | null
+          source_ref?: string | null
+          source_repo?: string | null
+          source_sha?: string | null
           status?: Database["public"]["Enums"]["clone_backend_status"]
           status_detail?: string | null
           supabase_project_ref?: string | null
@@ -558,11 +627,17 @@ export type Database = {
           clone_id?: string
           created_at?: string
           db_pass?: string | null
+          edge_functions?: Json
           error_message?: string | null
           id?: string
           migration_version?: string | null
+          migrations_applied?: Json
           region?: string
+          secret_shells?: Json
           service_role_key?: string | null
+          source_ref?: string | null
+          source_repo?: string | null
+          source_sha?: string | null
           status?: Database["public"]["Enums"]["clone_backend_status"]
           status_detail?: string | null
           supabase_project_ref?: string | null
@@ -1283,6 +1358,8 @@ export type Database = {
       }
       clones: {
         Row: {
+          billing_stripe_customer_id: string | null
+          billing_user_id: string | null
           cloudflare_enabled: boolean
           cloudflare_zone_id: string | null
           commits_behind: number
@@ -1309,6 +1386,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          billing_stripe_customer_id?: string | null
+          billing_user_id?: string | null
           cloudflare_enabled?: boolean
           cloudflare_zone_id?: string | null
           commits_behind?: number
@@ -1335,6 +1414,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          billing_stripe_customer_id?: string | null
+          billing_user_id?: string | null
           cloudflare_enabled?: boolean
           cloudflare_zone_id?: string | null
           commits_behind?: number
@@ -2302,6 +2383,103 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      purchases: {
+        Row: {
+          amount_cents: number | null
+          clone_id: string | null
+          completed_at: string | null
+          created_at: string
+          currency: string | null
+          handoff_id: string | null
+          id: string
+          item_id: string | null
+          item_slug: string | null
+          metadata: Json
+          mode: string
+          origin_source: string
+          origin_user_id: string | null
+          origin_username: string | null
+          payment_status: string | null
+          quantity: number
+          status: string
+          stripe_checkout_session_id: string | null
+          stripe_payment_intent_id: string | null
+          stripe_subscription_id: string | null
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_cents?: number | null
+          clone_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          currency?: string | null
+          handoff_id?: string | null
+          id?: string
+          item_id?: string | null
+          item_slug?: string | null
+          metadata?: Json
+          mode: string
+          origin_source?: string
+          origin_user_id?: string | null
+          origin_username?: string | null
+          payment_status?: string | null
+          quantity?: number
+          status?: string
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
+          stripe_subscription_id?: string | null
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number | null
+          clone_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          currency?: string | null
+          handoff_id?: string | null
+          id?: string
+          item_id?: string | null
+          item_slug?: string | null
+          metadata?: Json
+          mode?: string
+          origin_source?: string
+          origin_user_id?: string | null
+          origin_username?: string | null
+          payment_status?: string | null
+          quantity?: number
+          status?: string
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
+          stripe_subscription_id?: string | null
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchases_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchases_handoff_id_fkey"
+            columns: ["handoff_id"]
+            isOneToOne: false
+            referencedRelation: "billing_handoffs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       push_delivery_log: {
         Row: {
@@ -3350,6 +3528,8 @@ export type Database = {
       }
       tenants: {
         Row: {
+          billing_stripe_customer_id: string | null
+          billing_user_id: string | null
           clone_id: string | null
           created_at: string
           current_period_end: string | null
@@ -3365,6 +3545,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          billing_stripe_customer_id?: string | null
+          billing_user_id?: string | null
           clone_id?: string | null
           created_at?: string
           current_period_end?: string | null
@@ -3380,6 +3562,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          billing_stripe_customer_id?: string | null
+          billing_user_id?: string | null
           clone_id?: string | null
           created_at?: string
           current_period_end?: string | null
@@ -3820,10 +4004,16 @@ export type Database = {
           admin_email: string | null
           clone_id: string | null
           created_at: string | null
+          edge_functions: Json | null
           error_message: string | null
           id: string | null
           migration_version: string | null
+          migrations_applied: Json | null
           region: string | null
+          secret_shells: Json | null
+          source_ref: string | null
+          source_repo: string | null
+          source_sha: string | null
           status: Database["public"]["Enums"]["clone_backend_status"] | null
           status_detail: string | null
           supabase_project_ref: string | null
@@ -3834,10 +4024,16 @@ export type Database = {
           admin_email?: string | null
           clone_id?: string | null
           created_at?: string | null
+          edge_functions?: Json | null
           error_message?: string | null
           id?: string | null
           migration_version?: string | null
+          migrations_applied?: Json | null
           region?: string | null
+          secret_shells?: Json | null
+          source_ref?: string | null
+          source_repo?: string | null
+          source_sha?: string | null
           status?: Database["public"]["Enums"]["clone_backend_status"] | null
           status_detail?: string | null
           supabase_project_ref?: string | null
@@ -3848,10 +4044,16 @@ export type Database = {
           admin_email?: string | null
           clone_id?: string | null
           created_at?: string | null
+          edge_functions?: Json | null
           error_message?: string | null
           id?: string | null
           migration_version?: string | null
+          migrations_applied?: Json | null
           region?: string | null
+          secret_shells?: Json | null
+          source_ref?: string | null
+          source_repo?: string | null
+          source_sha?: string | null
           status?: Database["public"]["Enums"]["clone_backend_status"] | null
           status_detail?: string | null
           supabase_project_ref?: string | null
@@ -3863,7 +4065,12 @@ export type Database = {
     }
     Functions: {
       apply_topup: {
-        Args: { _pack_id: string; _source_ref?: string; _tenant_id: string }
+        Args: {
+          _metadata?: Json
+          _pack_id: string
+          _source_ref?: string
+          _tenant_id: string
+        }
         Returns: Json
       }
       can_access_security_assessment: {
@@ -3889,6 +4096,7 @@ export type Database = {
         Args: { _key_id: string; _limit?: number }
         Returns: Json
       }
+      cleanup_billing_attribution: { Args: never; Returns: Json }
       commit_seat: { Args: { _seat_id: string }; Returns: Json }
       commit_tokens: {
         Args: { _actual_tokens: number; _job_id: string; _result_meta?: Json }
@@ -4083,6 +4291,7 @@ export type Database = {
         | "device_registered"
         | "device_released"
         | "lead_captured"
+        | "purchase_completed"
       notification_severity: "info" | "success" | "warning" | "error"
       overage_policy: "block" | "topup_only" | "pay_as_you_go"
       provisioning_method: "fork" | "template" | "clone"
@@ -4299,6 +4508,7 @@ export const Constants = {
         "device_registered",
         "device_released",
         "lead_captured",
+        "purchase_completed",
       ],
       notification_severity: ["info", "success", "warning", "error"],
       overage_policy: ["block", "topup_only", "pay_as_you_go"],
