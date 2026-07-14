@@ -40,6 +40,7 @@ import { Route as SettingsRoleAuditRouteImport } from './routes/settings.role-au
 import { Route as SettingsProvisioningPreviewRouteImport } from './routes/settings.provisioning-preview'
 import { Route as SettingsPermissionMatrixRouteImport } from './routes/settings.permission-matrix'
 import { Route as SettingsNotificationsRouteImport } from './routes/settings.notifications'
+import { Route as SettingsHandoffPoliciesRouteImport } from './routes/settings.handoff-policies'
 import { Route as SettingsGiftTokensRouteImport } from './routes/settings.gift-tokens'
 import { Route as SettingsBillingRouteImport } from './routes/settings.billing'
 import { Route as ModulesBuilderRouteImport } from './routes/modules.builder'
@@ -253,6 +254,11 @@ const SettingsPermissionMatrixRoute =
 const SettingsNotificationsRoute = SettingsNotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsHandoffPoliciesRoute = SettingsHandoffPoliciesRouteImport.update({
+  id: '/handoff-policies',
+  path: '/handoff-policies',
   getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsGiftTokensRoute = SettingsGiftTokensRouteImport.update({
@@ -609,6 +615,7 @@ export interface FileRoutesByFullPath {
   '/modules/builder': typeof ModulesBuilderRoute
   '/settings/billing': typeof SettingsBillingRoute
   '/settings/gift-tokens': typeof SettingsGiftTokensRoute
+  '/settings/handoff-policies': typeof SettingsHandoffPoliciesRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/permission-matrix': typeof SettingsPermissionMatrixRoute
   '/settings/provisioning-preview': typeof SettingsProvisioningPreviewRoute
@@ -698,6 +705,7 @@ export interface FileRoutesByTo {
   '/modules/builder': typeof ModulesBuilderRoute
   '/settings/billing': typeof SettingsBillingRoute
   '/settings/gift-tokens': typeof SettingsGiftTokensRoute
+  '/settings/handoff-policies': typeof SettingsHandoffPoliciesRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/permission-matrix': typeof SettingsPermissionMatrixRoute
   '/settings/provisioning-preview': typeof SettingsProvisioningPreviewRoute
@@ -789,6 +797,7 @@ export interface FileRoutesById {
   '/modules/builder': typeof ModulesBuilderRoute
   '/settings/billing': typeof SettingsBillingRoute
   '/settings/gift-tokens': typeof SettingsGiftTokensRoute
+  '/settings/handoff-policies': typeof SettingsHandoffPoliciesRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/permission-matrix': typeof SettingsPermissionMatrixRoute
   '/settings/provisioning-preview': typeof SettingsProvisioningPreviewRoute
@@ -881,6 +890,7 @@ export interface FileRouteTypes {
     | '/modules/builder'
     | '/settings/billing'
     | '/settings/gift-tokens'
+    | '/settings/handoff-policies'
     | '/settings/notifications'
     | '/settings/permission-matrix'
     | '/settings/provisioning-preview'
@@ -970,6 +980,7 @@ export interface FileRouteTypes {
     | '/modules/builder'
     | '/settings/billing'
     | '/settings/gift-tokens'
+    | '/settings/handoff-policies'
     | '/settings/notifications'
     | '/settings/permission-matrix'
     | '/settings/provisioning-preview'
@@ -1060,6 +1071,7 @@ export interface FileRouteTypes {
     | '/modules/builder'
     | '/settings/billing'
     | '/settings/gift-tokens'
+    | '/settings/handoff-policies'
     | '/settings/notifications'
     | '/settings/permission-matrix'
     | '/settings/provisioning-preview'
@@ -1389,6 +1401,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/settings/notifications'
       preLoaderRoute: typeof SettingsNotificationsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/handoff-policies': {
+      id: '/settings/handoff-policies'
+      path: '/handoff-policies'
+      fullPath: '/settings/handoff-policies'
+      preLoaderRoute: typeof SettingsHandoffPoliciesRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/settings/gift-tokens': {
@@ -1835,6 +1854,7 @@ const ModulesRouteWithChildren =
 interface SettingsRouteChildren {
   SettingsBillingRoute: typeof SettingsBillingRoute
   SettingsGiftTokensRoute: typeof SettingsGiftTokensRoute
+  SettingsHandoffPoliciesRoute: typeof SettingsHandoffPoliciesRoute
   SettingsNotificationsRoute: typeof SettingsNotificationsRoute
   SettingsPermissionMatrixRoute: typeof SettingsPermissionMatrixRoute
   SettingsProvisioningPreviewRoute: typeof SettingsProvisioningPreviewRoute
@@ -1846,6 +1866,7 @@ interface SettingsRouteChildren {
 const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsBillingRoute: SettingsBillingRoute,
   SettingsGiftTokensRoute: SettingsGiftTokensRoute,
+  SettingsHandoffPoliciesRoute: SettingsHandoffPoliciesRoute,
   SettingsNotificationsRoute: SettingsNotificationsRoute,
   SettingsPermissionMatrixRoute: SettingsPermissionMatrixRoute,
   SettingsProvisioningPreviewRoute: SettingsProvisioningPreviewRoute,
