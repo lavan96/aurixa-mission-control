@@ -1,0 +1,125 @@
+-- Prime billing exemption + completion of the token-ledger unit repair.
+--
+-- 1. The prime install must run without a billing plan (operator decision:
+--    prime is the testing/master install). Exemption is a per-tenant flag that
+--    defaults to false, so nothing cascades to clone tenants — they keep full
+--    plan/allowance enforcement.
+-- 2. The 20260714171500 repair rescaled bug-era DEBITS but left bug-era
+--    reserve/release rows at raw-LLM scale. Orphaned reservations (jobs never
+--    committed or canceled — no sweeper ever ran) therefore still pin
+--    ~318k phantom tokens in `reserved`, which keeps `available` at 0 and
+--    swallows gifts exactly like the original bug. Rescale those rows, sweep
+--    the expired reservations, and recompute.
+
+-- ── 1. Billing exemption flag (prime only) ──────────────────────────────────
+ALTER TABLE public.tenants
+  ADD COLUMN IF NOT EXISTS billing_exempt boolean NOT NULL DEFAULT false;
+
+-- Prime installs register with tenant_ref 'prime:<project_ref>'. Clones use
+-- their own refs, so this touches no clone tenant.
+UPDATE public.tenants
+SET billing_exempt = true,
+    plan_id = NULL
+WHERE external_ref LIKE 'prime:%';
+
+-- ── 2. Rescale bug-era reserve/release rows (same rule as the debit repair) ─
+UPDATE public.token_ledger
+SET metadata = COALESCE(metadata, '{}'::jsonb)
+      || jsonb_build_object(
+           'unit_corrected', true,
+           'original_tokens', tokens,
+           'corrected_at', now()
+         ),
+    tokens = (SIGN(tokens) * CEIL(ABS(tokens) / 1000.0))::int
+WHERE kind IN ('reserve', 'release')
+  AND ABS(tokens) >= 1000
+  AND created_at < TIMESTAMPTZ '2026-07-14 16:17:00+00'
+  AND (metadata ->> 'unit_corrected') IS NULL;
+
+-- Keep job estimates consistent so releasing a stale job below inserts a
+-- 'release' that matches its (now rescaled) 'reserve'.
+UPDATE public.report_jobs
+SET estimated_tokens = CEIL(estimated_tokens / 1000.0)::int
+WHERE estimated_tokens >= 1000
+  AND created_at < TIMESTAMPTZ '2026-07-14 16:17:00+00';
+
+-- ── 3. Sweep expired reservations that were never committed or canceled ─────
+DO $$
+DECLARE _j UUID;
+BEGIN
+  FOR _j IN
+    SELECT id FROM public.report_jobs
+    WHERE status = 'reserved'
+      AND reservation_expires_at IS NOT NULL
+      AND reservation_expires_at < now()
+  LOOP
+    PERFORM public.cancel_token_reservation(_j, 'stale_reservation_sweep');
+  END LOOP;
+END;
+$$;
+
+-- ── 4. reserve_tokens honours billing_exempt (never blocks exempt tenants) ──
+CREATE OR REPLACE FUNCTION public.reserve_tokens(
+  _tenant_id UUID, _clone_id UUID, _kind TEXT, _estimated_tokens INTEGER,
+  _idempotency_key TEXT, _ttl_seconds INTEGER DEFAULT 600,
+  _request_payload JSONB DEFAULT '{}'::jsonb
+) RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  _existing public.report_jobs%ROWTYPE;
+  _job_id UUID;
+  _available INTEGER;
+  _plan_overage public.overage_policy;
+  _exempt BOOLEAN;
+BEGIN
+  IF _estimated_tokens IS NULL OR _estimated_tokens < 0 THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'invalid_estimate');
+  END IF;
+  PERFORM pg_advisory_xact_lock(hashtextextended(_tenant_id::text, 0));
+  SELECT * INTO _existing FROM public.report_jobs
+   WHERE clone_id = _clone_id AND idempotency_key = _idempotency_key LIMIT 1;
+  IF FOUND THEN
+    SELECT available INTO _available FROM public.token_balances WHERE tenant_id = _existing.tenant_id;
+    RETURN jsonb_build_object('ok', true, 'job_id', _existing.id,
+      'reserved_tokens', _existing.estimated_tokens,
+      'available_after', COALESCE(_available, 0),
+      'idempotent', true, 'status', _existing.status);
+  END IF;
+  PERFORM public.recompute_token_balance(_tenant_id);
+  SELECT available INTO _available FROM public.token_balances WHERE tenant_id = _tenant_id;
+  _available := COALESCE(_available, 0);
+  SELECT bp.overage_policy, t.billing_exempt INTO _plan_overage, _exempt
+    FROM public.tenants t LEFT JOIN public.billing_plans bp ON bp.id = t.plan_id
+   WHERE t.id = _tenant_id;
+  -- Billing-exempt tenants (the prime install) are never funds-gated; every
+  -- other tenant keeps the existing plan/overage enforcement.
+  IF NOT COALESCE(_exempt, false) THEN
+    _plan_overage := COALESCE(_plan_overage, 'block');
+    IF _available < _estimated_tokens AND _plan_overage = 'block' THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'insufficient_funds',
+        'available', _available, 'required', _estimated_tokens);
+    END IF;
+  END IF;
+  INSERT INTO public.report_jobs (
+    tenant_id, clone_id, kind, status, estimated_tokens,
+    idempotency_key, request_payload, reservation_expires_at
+  ) VALUES (
+    _tenant_id, _clone_id, _kind, 'reserved', _estimated_tokens,
+    _idempotency_key, _request_payload, now() + make_interval(secs => _ttl_seconds)
+  ) RETURNING id INTO _job_id;
+  INSERT INTO public.token_ledger (tenant_id, kind, tokens, source, source_ref, report_job_id, reason)
+  VALUES (_tenant_id, 'reserve', _estimated_tokens, 'report', _kind, _job_id, 'reservation');
+  SELECT available INTO _available FROM public.token_balances WHERE tenant_id = _tenant_id;
+  RETURN jsonb_build_object('ok', true, 'job_id', _job_id,
+    'reserved_tokens', _estimated_tokens, 'available_after', COALESCE(_available, 0));
+END;
+$$;
+
+-- ── 5. Recompute all cached balances against the fully repaired ledger ──────
+DO $$
+DECLARE _t UUID;
+BEGIN
+  FOR _t IN SELECT DISTINCT tenant_id FROM public.token_ledger LOOP
+    PERFORM public.recompute_token_balance(_t);
+  END LOOP;
+END;
+$$;
