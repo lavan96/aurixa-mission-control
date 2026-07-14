@@ -1131,6 +1131,7 @@ export type ProvisionBackendResult = {
   latestMigration: string | null;
   edgeFunctions: EdgeFunctionDeployResult[];
   secretShells: SecretShellResult[];
+  storageBuckets: BucketReplicationResult[];
 };
 
 /**
