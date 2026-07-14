@@ -1327,6 +1327,7 @@ export type ProvisionBackendResult = {
   secretShells: SecretShellResult[];
   storageBuckets: BucketReplicationResult[];
   authConfig: AuthConfigResult;
+  cronJobs: CronJobReplicationResult[];
 };
 
 /**
