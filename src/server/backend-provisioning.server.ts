@@ -822,7 +822,40 @@ export type EdgeFunctionDeployResult = {
   slug: string;
   success: boolean;
   error?: string;
+  /** The verify_jwt flag actually deployed to the clone (may differ from the
+   *  prime's flag when Issue #15's anonymous-webhook heuristic overrides it). */
+  verifyJwt?: boolean;
+  /** Non-null when the deployed flag was auto-corrected away from the prime's;
+   *  explains why so operators can audit the decision. */
+  verifyJwtOverrideReason?: string;
 };
+
+/**
+ * Issue #15: Prime's `verify_jwt` flag is snapshot verbatim, but a clone's
+ * JWT audience differs from the prime's — an edge function shipped with
+ * `verify_jwt=true` on the prime will 401 external callers hitting the
+ * clone's URL because their token was minted against a different project.
+ *
+ * Any function that is intended to be reached anonymously (webhooks,
+ * public hooks, cron callbacks, health probes) MUST be deployed with
+ * `verify_jwt=false` on every clone regardless of the prime's setting.
+ * We detect those by slug convention: it is the same convention used by
+ * `/api/public/*` server routes and by Supabase's own function templates.
+ */
+const ANON_FUNCTION_SLUG_PATTERNS: RegExp[] = [
+  /^hooks?[-_]/i, // hook-*, hooks-*
+  /^webhooks?[-_]?/i, // webhook*, webhooks-*
+  /[-_]webhooks?$/i, // *-webhook, *-webhooks
+  /^public[-_]/i, // public-*
+  /^cron[-_]/i, // cron-*
+  /^health(check)?$/i, // health, healthcheck
+  /^stripe[-_]webhook/i,
+  /^github[-_]webhook/i,
+];
+
+export function shouldForceAnonymousFunction(slug: string): boolean {
+  return ANON_FUNCTION_SLUG_PATTERNS.some((rx) => rx.test(slug));
+}
 
 /**
  * Deploy one edge function bundle to a clone project via the Management API.
@@ -838,7 +871,16 @@ export async function deployEdgeFunction(
     verifyJwt: boolean;
     files: Array<{ path: string; contentBase64: string }>;
   },
-): Promise<void> {
+): Promise<{ verifyJwt: boolean; overrideReason: string | null }> {
+  // Issue #15: force anonymous for webhook-style slugs regardless of the
+  // prime's flag, so external callers minted against the prime's audience
+  // (or unauthenticated altogether) still reach the clone's endpoint.
+  const forceAnon = shouldForceAnonymousFunction(fn.slug) && fn.verifyJwt === true;
+  const effectiveVerifyJwt = forceAnon ? false : fn.verifyJwt;
+  const overrideReason = forceAnon
+    ? `slug "${fn.slug}" matches an anonymous-webhook pattern; prime had verify_jwt=true, deployed as false on this clone`
+    : null;
+
   const form = new FormData();
   form.append(
     "metadata",
@@ -846,7 +888,7 @@ export async function deployEdgeFunction(
       name: fn.slug,
       entrypoint_path: fn.entrypointPath,
       ...(fn.importMapPath ? { import_map_path: fn.importMapPath } : {}),
-      verify_jwt: fn.verifyJwt,
+      verify_jwt: effectiveVerifyJwt,
     }),
   );
   for (const file of fn.files) {
@@ -866,6 +908,7 @@ export async function deployEdgeFunction(
     const body = await res.text();
     throw new Error(`Deploy failed for ${fn.slug}: ${res.status} — ${body}`);
   }
+  return { verifyJwt: effectiveVerifyJwt, overrideReason };
 }
 
 export async function deployEdgeFunctions(
@@ -881,8 +924,13 @@ export async function deployEdgeFunctions(
       `Deploying edge function ${i + 1}/${functions.length}: ${fn.slug}`,
     );
     try {
-      await deployEdgeFunction(projectRef, fn);
-      results.push({ slug: fn.slug, success: true });
+      const { verifyJwt, overrideReason } = await deployEdgeFunction(projectRef, fn);
+      results.push({
+        slug: fn.slug,
+        success: true,
+        verifyJwt,
+        ...(overrideReason ? { verifyJwtOverrideReason: overrideReason } : {}),
+      });
     } catch (e) {
       // Non-fatal: record and continue so one broken function doesn't block the rest
       results.push({
