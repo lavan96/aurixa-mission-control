@@ -11,6 +11,7 @@ import {
 } from "./github-app.server";
 import { isBlockedByApproval } from "./cascade-approvals.server";
 import { validateClonePinsServer } from "./library-validation.server";
+import { validateModuleGlobs } from "@/lib/module-globs";
 
 type CascadeResultUpdate = Database["public"]["Tables"]["cascade_results"]["Update"];
 type SupabaseLike = SupabaseClient<Database>;
@@ -303,9 +304,17 @@ async function processClone(args: {
 
   // Module-sync cascades pin the file_globs to a single module so the push
   // only touches that module's files, not every installed module on the clone.
-  const overrideGlobs = Array.isArray(scopeFilter?.module_globs)
+  // Always run overrides through validateModuleGlobs — the pinning caller
+  // could hand us anything (module row, dry-run payload, webhook body).
+  const rawOverride = Array.isArray(scopeFilter?.module_globs)
     ? (scopeFilter!.module_globs as unknown[]).filter((g): g is string => typeof g === "string")
     : null;
+  const overrideGlobs = rawOverride ? validateModuleGlobs(rawOverride).valid : null;
+  if (rawOverride && overrideGlobs && overrideGlobs.length !== rawOverride.length) {
+    console.warn(
+      `[cascade] dropped ${rawOverride.length - overrideGlobs.length} unsafe override glob(s) for clone ${clone.id}`,
+    );
+  }
 
   let installedGlobs: string[];
   let pinSummary: string | null = null;

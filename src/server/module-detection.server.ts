@@ -9,6 +9,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { getAppOctokit, type RepoRef } from "./github-app.server";
 import type { Octokit } from "@octokit/rest";
+import { validateModuleGlobs } from "@/lib/module-globs";
 import crypto from "crypto";
 
 type Supabase = SupabaseClient<Database>;
@@ -602,8 +603,22 @@ export async function runDetection(args: {
     progress("persisting", "Saving detection results…", 85);
     let inserted = 0;
     let updated = 0;
+    const globRejections: Array<{ slug: string; reason: string; glob: string }> = [];
 
     for (const m of routeModules) {
+      // Sanitise file_globs before hitting the DB: a bad glob here poisons
+      // every downstream cascade / tree-walk / re-sync for this module.
+      const { valid: safeGlobs, invalid: badGlobs } = validateModuleGlobs(m.file_globs);
+      for (const bad of badGlobs) {
+        globRejections.push({ slug: m.slug, glob: bad.glob, reason: bad.reason });
+      }
+      m.file_globs = safeGlobs;
+      if (safeGlobs.length === 0) {
+        // Skip modules whose entire glob set was rejected — writing an empty
+        // list would silently disable cascades for this module.
+        continue;
+      }
+
       const { data: existing } = await supabase
         .from("modules")
         .select("id, status")
@@ -719,6 +734,8 @@ export async function runDetection(args: {
         orphan_files: orphanFiles.length,
         inserted,
         updated,
+        rejected_globs: globRejections.slice(0, 50),
+        rejected_glob_count: globRejections.length,
       },
     });
 
