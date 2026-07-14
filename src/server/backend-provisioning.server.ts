@@ -987,6 +987,13 @@ export type ProvisionBackendInput = {
    * replay pick up exactly where it stopped.
    */
   existingProjectRef?: string | null;
+  /**
+   * Real values for secret names the operator marked inheritable in
+   * `prime_secret_forwards`. Passed as a plain map (name → value) so this
+   * module stays server-only. Names not present are recorded as `missing`
+   * on the clone and surfaced to operators via the clone secrets UI.
+   */
+  inheritedSecrets?: Record<string, string>;
 };
 
 export type ProvisionBackendResult = {
