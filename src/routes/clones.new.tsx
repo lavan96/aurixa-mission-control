@@ -226,10 +226,14 @@ function NewClone() {
 
     setBusy(true);
     try {
+      // Derive the slug suffix from the idempotency key so retries reuse
+      // the same target repo name — otherwise the second attempt would
+      // race against a partially-created GitHub repo. (Audit finding #13.)
+      const slugSuffix = idempotencyKey.replace(/[^a-z0-9]/gi, "").slice(0, 6).toLowerCase();
       const result = await provision({
         data: {
           name,
-          slug: `${slug}-${Math.random().toString(36).slice(2, 6)}`,
+          slug: `${slug}-${slugSuffix}`,
           method,
           targetOwner: targetOwner || "manual",
           tags: tags
@@ -242,8 +246,10 @@ function NewClone() {
           isolatedTenant,
           billingUserId: billingUserId.trim() || null,
           billingStripeCustomerId: billingStripeCustomerId.trim() || null,
+          idempotencyKey,
         },
       });
+
 
       if (!result.ok) {
         toast.error(result.error);
