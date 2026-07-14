@@ -40,6 +40,10 @@ async function runBackendProvisioning(
   };
 
   try {
+    const { resolvePrimeSource, fetchPrimeBackendSnapshot } = await import("./prime-backend.server");
+    const { getAppOctokit } = await import("./github-app.server");
+    const { provisionCloneBackend } = await import("./backend-provisioning.server");
+    const { encryptSecret } = await import("./crypto.server");
     // ── Snapshot the prime's backend architecture from GitHub ──
     const source = await resolvePrimeSource(supabase);
     if (!source) {
