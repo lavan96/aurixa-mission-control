@@ -1172,6 +1172,7 @@ export type ProvisionBackendResult = {
   edgeFunctions: EdgeFunctionDeployResult[];
   secretShells: SecretShellResult[];
   storageBuckets: BucketReplicationResult[];
+  authConfig: AuthConfigResult;
 };
 
 /**
