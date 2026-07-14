@@ -18,6 +18,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { provisionClone } from "@/server/clone-provisioning.functions";
 import { provisionBackend } from "@/server/backend-provisioning.functions";
 import { enqueueEdgeJob } from "@/server/edge-provisioning.functions";
+import { checkGithubAppPreflight, type GithubPreflightResult } from "@/lib/github-preflight.functions";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/clones/new")({
   component: () => (
@@ -92,6 +95,10 @@ function NewClone() {
   const provisionBackendFn = useServerFn(provisionBackend);
   const enqueueEdge = useServerFn(enqueueEdgeJob);
 
+  const preflightFn = useServerFn(checkGithubAppPreflight);
+  const [preflight, setPreflight] = useState<GithubPreflightResult | null>(null);
+  const [preflightBusy, setPreflightBusy] = useState(false);
+
   // Default the org field to the prime's default_clone_org once it loads
   useEffect(() => {
     if (prime?.default_clone_org && !transferTarget) {
@@ -104,6 +111,55 @@ function NewClone() {
     n.has(id) ? n.delete(id) : n.add(id);
     setPicked(n);
   };
+
+  const currentTargetOwner = () =>
+    ownerMode === "transfer"
+      ? transferTarget.trim()
+      : prime?.default_clone_org?.trim() || prime?.github_owner?.trim() || "";
+
+  const runPreflight = async (): Promise<GithubPreflightResult | null> => {
+    if (method === "clone") return null;
+    const owner = currentTargetOwner();
+    if (!owner) return null;
+    setPreflightBusy(true);
+    try {
+      const res = await preflightFn({
+        data: {
+          targetOwner: owner,
+          method,
+          templateOwner: method === "template" ? prime?.github_owner ?? null : null,
+          templateRepo: method === "template" ? prime?.github_repo ?? null : null,
+        },
+      });
+      setPreflight(res);
+      return res;
+    } catch (e) {
+      const err: GithubPreflightResult = {
+        ok: false,
+        appConfigured: false,
+        installationFound: false,
+        targetOwner: owner,
+        message: e instanceof Error ? e.message : "Preflight failed",
+      };
+      setPreflight(err);
+      return err;
+    } finally {
+      setPreflightBusy(false);
+    }
+  };
+
+  // Auto-run preflight when the target owner or method changes.
+  useEffect(() => {
+    setPreflight(null);
+    const owner = currentTargetOwner();
+    if (!owner || method === "clone") return;
+    const t = setTimeout(() => {
+      runPreflight();
+    }, 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [method, ownerMode, transferTarget, prime?.default_clone_org, prime?.github_owner, prime?.github_repo]);
+
 
   const submit = async () => {
     if (!name.trim()) {
@@ -134,6 +190,15 @@ function NewClone() {
           : "Set a default clone org in Settings, or pick 'Transfer to client' and enter one",
       );
       return;
+    }
+
+    // GitHub App preflight — fail fast before we create the clone row.
+    if (method !== "clone") {
+      const pf = await runPreflight();
+      if (pf && !pf.ok) {
+        toast.error(pf.message || "GitHub App preflight failed. See details above.");
+        return;
+      }
     }
 
     setBusy(true);
@@ -366,8 +431,66 @@ function NewClone() {
               placeholder="client-org-or-username"
             />
           )}
+
+          {method !== "clone" && (
+            <div className="pt-1">
+              {preflightBusy && !preflight ? (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Checking GitHub App installation…
+                </div>
+              ) : preflight ? (
+                <Alert
+                  variant={preflight.ok ? "default" : "destructive"}
+                  className={cn(
+                    preflight.ok && "border-success/40 bg-success/5 text-success-foreground",
+                  )}
+                >
+                  <div className="flex items-start gap-2">
+                    {preflight.ok ? (
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 text-success" />
+                    ) : (
+                      <AlertTriangle className="mt-0.5 h-4 w-4" />
+                    )}
+                    <div className="flex-1">
+                      <AlertTitle className="text-xs font-mono uppercase tracking-wider">
+                        {preflight.ok ? "GitHub App ready" : "GitHub App preflight failed"}
+                      </AlertTitle>
+                      <AlertDescription className="mt-1 text-xs">
+                        {preflight.message}
+                        {preflight.hint && (
+                          <div className="mt-1 opacity-80">Hint: {preflight.hint}</div>
+                        )}
+                        <div className="mt-2 flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => runPreflight()}
+                            className="font-mono text-[11px] underline underline-offset-2"
+                            disabled={preflightBusy}
+                          >
+                            re-check
+                          </button>
+                          {!preflight.installationFound && (
+                            <a
+                              href="https://github.com/apps"
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-mono text-[11px] underline underline-offset-2"
+                            >
+                              install app →
+                            </a>
+                          )}
+                        </div>
+                      </AlertDescription>
+                    </div>
+                  </div>
+                </Alert>
+              ) : null}
+            </div>
+          )}
         </CardContent>
       </Card>
+
 
       <Card>
         <CardHeader>
