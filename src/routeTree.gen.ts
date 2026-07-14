@@ -22,6 +22,7 @@ import { Route as ModulesRouteImport } from './routes/modules'
 import { Route as MetricsRouteImport } from './routes/metrics'
 import { Route as LeadsRouteImport } from './routes/leads'
 import { Route as HealthRouteImport } from './routes/health'
+import { Route as HandoffsRouteImport } from './routes/handoffs'
 import { Route as FleetManagerRouteImport } from './routes/fleet-manager'
 import { Route as DriftRouteImport } from './routes/drift'
 import { Route as DigestsRouteImport } from './routes/digests'
@@ -158,6 +159,11 @@ const LeadsRoute = LeadsRouteImport.update({
 const HealthRoute = HealthRouteImport.update({
   id: '/health',
   path: '/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HandoffsRoute = HandoffsRouteImport.update({
+  id: '/handoffs',
+  path: '/handoffs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FleetManagerRoute = FleetManagerRouteImport.update({
@@ -547,6 +553,7 @@ export interface FileRoutesByFullPath {
   '/digests': typeof DigestsRoute
   '/drift': typeof DriftRoute
   '/fleet-manager': typeof FleetManagerRoute
+  '/handoffs': typeof HandoffsRoute
   '/health': typeof HealthRoute
   '/leads': typeof LeadsRoute
   '/metrics': typeof MetricsRoute
@@ -634,6 +641,7 @@ export interface FileRoutesByTo {
   '/digests': typeof DigestsRoute
   '/drift': typeof DriftRoute
   '/fleet-manager': typeof FleetManagerRoute
+  '/handoffs': typeof HandoffsRoute
   '/health': typeof HealthRoute
   '/leads': typeof LeadsRoute
   '/metrics': typeof MetricsRoute
@@ -721,6 +729,7 @@ export interface FileRoutesById {
   '/digests': typeof DigestsRoute
   '/drift': typeof DriftRoute
   '/fleet-manager': typeof FleetManagerRoute
+  '/handoffs': typeof HandoffsRoute
   '/health': typeof HealthRoute
   '/leads': typeof LeadsRoute
   '/metrics': typeof MetricsRoute
@@ -810,6 +819,7 @@ export interface FileRouteTypes {
     | '/digests'
     | '/drift'
     | '/fleet-manager'
+    | '/handoffs'
     | '/health'
     | '/leads'
     | '/metrics'
@@ -897,6 +907,7 @@ export interface FileRouteTypes {
     | '/digests'
     | '/drift'
     | '/fleet-manager'
+    | '/handoffs'
     | '/health'
     | '/leads'
     | '/metrics'
@@ -983,6 +994,7 @@ export interface FileRouteTypes {
     | '/digests'
     | '/drift'
     | '/fleet-manager'
+    | '/handoffs'
     | '/health'
     | '/leads'
     | '/metrics'
@@ -1071,6 +1083,7 @@ export interface RootRouteChildren {
   DigestsRoute: typeof DigestsRoute
   DriftRoute: typeof DriftRoute
   FleetManagerRoute: typeof FleetManagerRoute
+  HandoffsRoute: typeof HandoffsRoute
   HealthRoute: typeof HealthRoute
   LeadsRoute: typeof LeadsRoute
   MetricsRoute: typeof MetricsRoute
@@ -1226,6 +1239,13 @@ declare module '@tanstack/react-router' {
       path: '/health'
       fullPath: '/health'
       preLoaderRoute: typeof HealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/handoffs': {
+      id: '/handoffs'
+      path: '/handoffs'
+      fullPath: '/handoffs'
+      preLoaderRoute: typeof HandoffsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/fleet-manager': {
@@ -1810,6 +1830,7 @@ const rootRouteChildren: RootRouteChildren = {
   DigestsRoute: DigestsRoute,
   DriftRoute: DriftRoute,
   FleetManagerRoute: FleetManagerRoute,
+  HandoffsRoute: HandoffsRoute,
   HealthRoute: HealthRoute,
   LeadsRoute: LeadsRoute,
   MetricsRoute: MetricsRoute,
