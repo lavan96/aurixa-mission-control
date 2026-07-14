@@ -78,7 +78,9 @@ export async function ensureTenant(
   cloneId: string | null,
   externalRef: string,
   displayName?: string | null,
-): Promise<{ ok: true; tenantId: string } | { ok: false; error: string }> {
+): Promise<
+  { ok: true; tenantId: string; billingUserId: string | null } | { ok: false; error: string }
+> {
   // Cast: the billing_* tracking columns are newer than the generated DB types.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const dbAny = supabaseAdmin as any;
@@ -119,7 +121,11 @@ export async function ensureTenant(
     if (Object.keys(patch).length > 0) {
       await dbAny.from("tenants").update(patch).eq("id", existing.data.id);
     }
-    return { ok: true, tenantId: existing.data.id };
+    return {
+      ok: true,
+      tenantId: existing.data.id,
+      billingUserId: existing.data.billing_user_id ?? cloneBillingUserId ?? null,
+    };
   }
 
   // Auto-provision tenant on cheapest active plan
@@ -164,5 +170,5 @@ export async function ensureTenant(
     });
   }
 
-  return { ok: true, tenantId: insert.data.id };
+  return { ok: true, tenantId: insert.data.id, billingUserId: cloneBillingUserId };
 }
