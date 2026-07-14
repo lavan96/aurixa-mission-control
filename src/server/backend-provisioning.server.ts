@@ -1194,6 +1194,30 @@ export async function provisionCloneBackend(
   // Step 5: Deploy the prime's edge functions (non-fatal per function)
   const edgeFunctions = await deployEdgeFunctions(projectRef, snapshot.functions, onStatusUpdate);
 
+  // Step 5b: Replicate storage bucket configuration from the prime. Migrations
+  // already replayed the row-level policies on `storage.objects`, but those
+  // policies only match if the buckets themselves exist — otherwise every
+  // signed-URL / upload path silently 404s on the clone. Non-fatal: we
+  // surface per-bucket errors so operators can retry from the clone page.
+  let storageBuckets: BucketReplicationResult[] = [];
+  try {
+    const primeRef = getPrimeProjectRef();
+    await onStatusUpdate?.("migrating", "Replicating storage buckets from prime...");
+    storageBuckets = await replicateStorageBuckets(primeRef, projectRef);
+    const failed = storageBuckets.filter((b) => b.status === "failed");
+    if (failed.length > 0) {
+      await onStatusUpdate?.(
+        "migrating",
+        `${failed.length}/${storageBuckets.length} bucket(s) failed to replicate — operators can retry`,
+      );
+    }
+  } catch (err) {
+    await onStatusUpdate?.(
+      "migrating",
+      `Storage bucket replication skipped: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+
   // Step 6: Sync secrets. Names on the prime forwards whitelist get real
   // values copied over; the rest stay unset and are tracked as `missing` so
   // operators can fill them in. We never write placeholders.
@@ -1206,6 +1230,7 @@ export async function provisionCloneBackend(
     snapshot.secretNames,
     input.inheritedSecrets ?? {},
   );
+
 
   // Step 7: Seed admin
   await onStatusUpdate?.("seeding_admin", "Creating admin user...");
