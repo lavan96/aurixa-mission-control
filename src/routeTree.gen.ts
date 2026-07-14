@@ -52,6 +52,7 @@ import { Route as HooksEdgeDriftRouteImport } from './routes/hooks.edge-drift'
 import { Route as HooksEdgeDrainRouteImport } from './routes/hooks.edge-drain'
 import { Route as HooksDriftRefreshRouteImport } from './routes/hooks.drift-refresh'
 import { Route as HooksBrandDriftRouteImport } from './routes/hooks.brand-drift'
+import { Route as HooksAirtableSyncRouteImport } from './routes/hooks.airtable-sync'
 import { Route as FleetEdgeRouteImport } from './routes/fleet.edge'
 import { Route as ClonesNewRouteImport } from './routes/clones.new'
 import { Route as ClonesCloneIdRouteImport } from './routes/clones.$cloneId'
@@ -306,6 +307,11 @@ const HooksBrandDriftRoute = HooksBrandDriftRouteImport.update({
   path: '/hooks/brand-drift',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HooksAirtableSyncRoute = HooksAirtableSyncRouteImport.update({
+  id: '/hooks/airtable-sync',
+  path: '/hooks/airtable-sync',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FleetEdgeRoute = FleetEdgeRouteImport.update({
   id: '/fleet/edge',
   path: '/fleet/edge',
@@ -533,6 +539,7 @@ export interface FileRoutesByFullPath {
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
   '/fleet/edge': typeof FleetEdgeRoute
+  '/hooks/airtable-sync': typeof HooksAirtableSyncRoute
   '/hooks/brand-drift': typeof HooksBrandDriftRoute
   '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
   '/hooks/edge-drain': typeof HooksEdgeDrainRoute
@@ -613,6 +620,7 @@ export interface FileRoutesByTo {
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
   '/fleet/edge': typeof FleetEdgeRoute
+  '/hooks/airtable-sync': typeof HooksAirtableSyncRoute
   '/hooks/brand-drift': typeof HooksBrandDriftRoute
   '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
   '/hooks/edge-drain': typeof HooksEdgeDrainRoute
@@ -695,6 +703,7 @@ export interface FileRoutesById {
   '/clones/$cloneId': typeof ClonesCloneIdRoute
   '/clones/new': typeof ClonesNewRoute
   '/fleet/edge': typeof FleetEdgeRoute
+  '/hooks/airtable-sync': typeof HooksAirtableSyncRoute
   '/hooks/brand-drift': typeof HooksBrandDriftRoute
   '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
   '/hooks/edge-drain': typeof HooksEdgeDrainRoute
@@ -778,6 +787,7 @@ export interface FileRouteTypes {
     | '/clones/$cloneId'
     | '/clones/new'
     | '/fleet/edge'
+    | '/hooks/airtable-sync'
     | '/hooks/brand-drift'
     | '/hooks/drift-refresh'
     | '/hooks/edge-drain'
@@ -858,6 +868,7 @@ export interface FileRouteTypes {
     | '/clones/$cloneId'
     | '/clones/new'
     | '/fleet/edge'
+    | '/hooks/airtable-sync'
     | '/hooks/brand-drift'
     | '/hooks/drift-refresh'
     | '/hooks/edge-drain'
@@ -939,6 +950,7 @@ export interface FileRouteTypes {
     | '/clones/$cloneId'
     | '/clones/new'
     | '/fleet/edge'
+    | '/hooks/airtable-sync'
     | '/hooks/brand-drift'
     | '/hooks/drift-refresh'
     | '/hooks/edge-drain'
@@ -1020,6 +1032,7 @@ export interface RootRouteChildren {
   ClonesCloneIdRoute: typeof ClonesCloneIdRoute
   ClonesNewRoute: typeof ClonesNewRoute
   FleetEdgeRoute: typeof FleetEdgeRoute
+  HooksAirtableSyncRoute: typeof HooksAirtableSyncRoute
   HooksBrandDriftRoute: typeof HooksBrandDriftRoute
   HooksDriftRefreshRoute: typeof HooksDriftRefreshRoute
   HooksEdgeDrainRoute: typeof HooksEdgeDrainRoute
@@ -1358,6 +1371,13 @@ declare module '@tanstack/react-router' {
       path: '/hooks/brand-drift'
       fullPath: '/hooks/brand-drift'
       preLoaderRoute: typeof HooksBrandDriftRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hooks/airtable-sync': {
+      id: '/hooks/airtable-sync'
+      path: '/hooks/airtable-sync'
+      fullPath: '/hooks/airtable-sync'
+      preLoaderRoute: typeof HooksAirtableSyncRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/fleet/edge': {
@@ -1699,6 +1719,7 @@ const rootRouteChildren: RootRouteChildren = {
   ClonesCloneIdRoute: ClonesCloneIdRoute,
   ClonesNewRoute: ClonesNewRoute,
   FleetEdgeRoute: FleetEdgeRoute,
+  HooksAirtableSyncRoute: HooksAirtableSyncRoute,
   HooksBrandDriftRoute: HooksBrandDriftRoute,
   HooksDriftRefreshRoute: HooksDriftRefreshRoute,
   HooksEdgeDrainRoute: HooksEdgeDrainRoute,
@@ -1738,12 +1759,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
