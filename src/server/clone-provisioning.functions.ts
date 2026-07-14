@@ -23,6 +23,11 @@ export type ProvisionCloneInput = {
   cloudflareEnabled: boolean;
   notes: string;
   moduleIds: string[];
+  // Operator-assigned billing/tracking identity. `billingUserId` is the stable
+  // ?uid= key the storefront pricing page checks out against, and is stamped
+  // into Stripe metadata / the purchases ledger for payment + token tracking.
+  billingUserId?: string | null;
+  billingStripeCustomerId?: string | null;
 };
 
 export type ProvisionCloneResult =
@@ -38,7 +43,12 @@ export const provisionClone = createServerFn({ method: "POST" })
     if (!["fork", "template", "clone"].includes(input.method)) {
       throw new Error("invalid method");
     }
-    return input;
+    const trim = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+    return {
+      ...input,
+      billingUserId: trim(input.billingUserId) || null,
+      billingStripeCustomerId: trim(input.billingStripeCustomerId) || null,
+    };
   })
   .handler(async ({ data, context }): Promise<ProvisionCloneResult> => {
     const { supabase, userId } = context;
@@ -128,6 +138,8 @@ export const provisionClone = createServerFn({ method: "POST" })
         last_synced_sha: lastSyncedSha,
         last_cascade_at: lastSyncedSha ? new Date().toISOString() : null,
         owner_user_id: userId,
+        billing_user_id: data.billingUserId ?? null,
+        billing_stripe_customer_id: data.billingStripeCustomerId ?? null,
         notes: data.notes || null,
       })
       .select()

@@ -106,7 +106,19 @@ export async function startCheckoutCore(args: CheckoutCoreArgs) {
   }
 
   let customerId: string | undefined;
-  if (tenantId) customerId = await ensureStripeCustomer(tenantId);
+  let billingUserId = "";
+  if (tenantId) {
+    customerId = await ensureStripeCustomer(tenantId);
+    // Operator-assigned tracking id for this tenant/clone — stamped onto every
+    // session so payments and the exact products bought are attributable to it
+    // regardless of whether checkout arrived via a handoff or a ?uid= link.
+    const { data: t } = await supabaseAdmin
+      .from("tenants")
+      .select("billing_user_id")
+      .eq("id", tenantId)
+      .maybeSingle();
+    billingUserId = t?.billing_user_id ?? "";
+  }
 
   const sharedMeta = {
     mode: args.mode,
@@ -114,6 +126,7 @@ export async function startCheckoutCore(args: CheckoutCoreArgs) {
     item_slug: item.slug,
     tenant_id: tenantId ?? "",
     clone_id: cloneId ?? "",
+    billing_user_id: billingUserId,
     quantity: String(args.quantity),
     // Attribution contract fields — propagate to the webhook via Stripe so
     // the purchases ledger knows who initiated this checkout, from where.
@@ -194,5 +207,70 @@ export async function startHandoffCheckout(input: HandoffCheckoutInput) {
       handoffId: handoff.id,
     },
     handoffToConsume: handoff.id,
+  });
+}
+
+export type UidCheckoutInput = {
+  billingUserId: string;
+  mode: CheckoutMode;
+  itemId: string;
+  quantity: number;
+  successUrl: string;
+  cancelUrl: string;
+};
+
+/**
+ * `?uid=`-scoped checkout for the public pricing page. The operator-assigned
+ * `billing_user_id` resolves to a clone (admins set it there) or, failing
+ * that, a global/prime tenant carrying the id. Scope is pinned to that
+ * resolution and the uid becomes the attribution origin. Unlike a handoff the
+ * uid is stable and reusable, so nothing is burned.
+ */
+export async function startUidCheckout(input: UidCheckoutInput) {
+  const uid = input.billingUserId.trim();
+  if (!uid) return { ok: false as const, error: "uid_required" };
+
+  const { data: clone } = await supabaseAdmin
+    .from("clones")
+    .select("id, name, slug")
+    .eq("billing_user_id", uid)
+    .maybeSingle();
+
+  let cloneId: string | null = null;
+  let tenantId: string | undefined;
+  let displayName: string | null = null;
+
+  if (clone) {
+    cloneId = clone.id;
+    displayName = clone.name ?? clone.slug ?? null;
+    const ensured = await ensureTenant(clone.id, `clone:${clone.slug ?? clone.id}`, clone.name);
+    if (!ensured.ok) return { ok: false as const, error: ensured.error };
+    tenantId = ensured.tenantId;
+  } else {
+    const { data: tenant } = await supabaseAdmin
+      .from("tenants")
+      .select("id, clone_id, display_name")
+      .eq("billing_user_id", uid)
+      .maybeSingle();
+    if (!tenant) return { ok: false as const, error: "uid_unknown" };
+    tenantId = tenant.id;
+    cloneId = tenant.clone_id ?? null;
+    displayName = tenant.display_name ?? null;
+  }
+
+  return await startCheckoutCore({
+    mode: input.mode,
+    itemId: input.itemId,
+    quantity: input.quantity,
+    cloneId,
+    tenantId,
+    successUrl: input.successUrl,
+    cancelUrl: input.cancelUrl,
+    attribution: {
+      originUserId: uid,
+      originUsername: displayName,
+      originSource: "storefront_uid",
+      handoffId: null,
+    },
   });
 }

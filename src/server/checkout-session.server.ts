@@ -33,6 +33,22 @@ export async function sessionMatchesHandoff(
   }
 }
 
+/**
+ * Proves a session belongs to a `?uid=` purchaser: the session's stamped
+ * `billing_user_id` metadata must equal the uid. Possession of the
+ * (session_id, uid) pair is the authorisation — the session_id only ever
+ * exists in the redirect URL Stripe sent that purchaser to, and the uid is the
+ * operator-assigned tracking id the checkout was scoped to.
+ */
+export async function sessionMatchesUid(sessionId: string, uid: string): Promise<boolean> {
+  try {
+    const session = await getStripe().checkout.sessions.retrieve(sessionId);
+    return (session.metadata?.billing_user_id ?? null) === uid;
+  } catch {
+    return false;
+  }
+}
+
 export async function buildSessionSummary(sessionId: string) {
   const session = await getStripe().checkout.sessions.retrieve(sessionId);
   const meta = (session.metadata ?? {}) as Record<string, string>;

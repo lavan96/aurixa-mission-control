@@ -1,27 +1,36 @@
 // @ts-nocheck
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { startHandoffCheckout } from "@/server/checkout.server";
+import { startHandoffCheckout, startUidCheckout } from "@/server/checkout.server";
 import { storefrontPricingBase } from "@/server/billing-handoffs.server";
 import { storefrontJson, storefrontPreflight } from "@/server/storefront-cors.server";
 
 /**
  * POST /api/public/storefront/checkout
  *
- * Handoff-scoped Stripe checkout for the customer-facing Aurixa Systems
- * pricing page. No login: the single-use, expiring, server-minted handoff
- * token is the credential — it pins the clone/tenant the purchase lands on,
- * restricts the purchasable item to its intent, and burns on session
- * creation. Success/cancel redirect back to the STOREFRONT's own receipt
- * pages (never Mission Control's UI), carrying the (session_id, h) pair the
- * receipt endpoint requires.
+ * Stripe checkout for the customer-facing Aurixa Systems pricing page. No
+ * login. The purchase scope (clone/tenant) is pinned by one of two credentials
+ * carried in the pricing-page link:
+ *   • `h`   — a single-use, expiring, server-minted handoff token (burns on
+ *             session creation; can restrict the item via its intent), or
+ *   • `uid` — the operator-assigned, stable billing_user_id set on the clone
+ *             in Mission Control.
+ * Exactly one must be supplied. Success/cancel redirect back to the
+ * STOREFRONT's own receipt pages (never Mission Control's UI), carrying the
+ * (session_id, credential) pair the receipt endpoint requires.
  */
-const Schema = z.object({
-  h: z.string().uuid(),
-  mode: z.enum(["topup", "seat_plan", "setup_package"]),
-  item_id: z.string().uuid(),
-  quantity: z.number().int().min(1).max(10).default(1),
-});
+const Schema = z
+  .object({
+    h: z.string().uuid().optional(),
+    uid: z.string().min(1).max(200).optional(),
+    mode: z.enum(["topup", "seat_plan", "setup_package"]),
+    item_id: z.string().uuid(),
+    quantity: z.number().int().min(1).max(10).default(1),
+  })
+  .refine((v) => !!v.h !== !!v.uid, {
+    message: "exactly one of h or uid is required",
+    path: ["h"],
+  });
 
 export const Route = createFileRoute("/api/public/storefront/checkout")({
   server: {
@@ -45,30 +54,44 @@ export const Route = createFileRoute("/api/public/storefront/checkout")({
 
         const url = new URL(request.url);
         const mcOrigin = process.env.PUBLIC_APP_URL ?? `${url.protocol}//${url.host}`;
-        const h = encodeURIComponent(data.h);
+        // Receipt credential travels back in the redirect: the same `h` or
+        // `uid` the checkout was scoped to. The receipt endpoint re-checks it
+        // against the session before returning any purchase data.
+        const cred = data.h
+          ? `h=${encodeURIComponent(data.h)}`
+          : `uid=${encodeURIComponent(data.uid as string)}`;
         // When the storefront is configured, receipts render on its own
         // /pricing/success|cancel pages. The unconfigured fallback keeps the
         // flow working end-to-end via Mission Control's receipt pages (which
-        // also accept the (session_id, h) pair).
+        // also accept the (session_id, credential) pair).
         const site = process.env.PUBLIC_PRICING_SITE_URL;
         const onStorefront = !!site && /^https?:\/\//.test(site);
         const pricingBase = storefrontPricingBase();
         const successUrl = onStorefront
-          ? `${pricingBase}/success?h=${h}&session_id={CHECKOUT_SESSION_ID}`
-          : `${mcOrigin}/billing/success?h=${h}&session_id={CHECKOUT_SESSION_ID}`;
+          ? `${pricingBase}/success?${cred}&session_id={CHECKOUT_SESSION_ID}`
+          : `${mcOrigin}/billing/success?${cred}&session_id={CHECKOUT_SESSION_ID}`;
         const cancelUrl = onStorefront
-          ? `${pricingBase}/cancel?h=${h}`
-          : `${mcOrigin}/billing/cancel?h=${h}`;
+          ? `${pricingBase}/cancel?${cred}`
+          : `${mcOrigin}/billing/cancel?${cred}`;
 
         try {
-          const result = await startHandoffCheckout({
-            handoffId: data.h,
-            mode: data.mode,
-            itemId: data.item_id,
-            quantity: data.quantity,
-            successUrl,
-            cancelUrl,
-          });
+          const result = data.h
+            ? await startHandoffCheckout({
+                handoffId: data.h,
+                mode: data.mode,
+                itemId: data.item_id,
+                quantity: data.quantity,
+                successUrl,
+                cancelUrl,
+              })
+            : await startUidCheckout({
+                billingUserId: data.uid as string,
+                mode: data.mode,
+                itemId: data.item_id,
+                quantity: data.quantity,
+                successUrl,
+                cancelUrl,
+              });
           if (!result.ok) return storefrontJson(result, 400);
           return storefrontJson({ ok: true, url: result.url, session_id: result.sessionId });
         } catch (err) {
