@@ -331,6 +331,160 @@ export async function applyAuthConfig(
   }
 }
 
+// ─── pg_cron replication ─────────────────────────────────────────────
+
+/**
+ * A pg_cron job as it lives in the cron.job catalog. `command` is the raw
+ * SQL scheduled by cron; for HTTP-triggered jobs it typically contains a
+ * `net.http_post(url := '...', ...)` call whose URL points at the origin
+ * project's edge functions. When we replay prime migrations onto a clone,
+ * pg_cron re-creates those rows verbatim — meaning every clone's schedule
+ * would fire against the PRIME's URL until we rewrite them below.
+ */
+export type PrimeCronJob = {
+  jobid: number;
+  jobname: string;
+  schedule: string;
+  command: string;
+  active: boolean;
+  database: string;
+};
+
+/**
+ * Snapshot the prime's cron.job catalog via the Management API SQL runner.
+ * Returns an empty list when pg_cron is not installed on the prime (some
+ * projects don't enable the extension), so callers can treat this as
+ * best-effort.
+ */
+export async function fetchPrimeCronJobs(primeRef: string): Promise<PrimeCronJob[]> {
+  try {
+    const rows = (await runSqlOnProject(
+      primeRef,
+      `select jobid, jobname, schedule, command, active, database
+         from cron.job
+        order by jobname`,
+    )) as unknown;
+    if (!Array.isArray(rows)) return [];
+    return rows
+      .map((r) => {
+        const o = r as Record<string, unknown>;
+        return {
+          jobid: Number(o.jobid ?? 0),
+          jobname: String(o.jobname ?? ""),
+          schedule: String(o.schedule ?? ""),
+          command: String(o.command ?? ""),
+          active: Boolean(o.active ?? true),
+          database: String(o.database ?? "postgres"),
+        };
+      })
+      .filter((j) => j.jobname.length > 0);
+  } catch {
+    // pg_cron not enabled on prime, or catalog not readable — nothing to replicate.
+    return [];
+  }
+}
+
+export type CronJobReplicationResult = {
+  jobname: string;
+  status: "replicated" | "skipped" | "failed";
+  rewrote_url: boolean;
+  reason?: string;
+  error?: string;
+};
+
+/**
+ * Rewrite any absolute prime project URLs inside a cron command so the
+ * scheduled action fires against the clone project instead. Handles both
+ * the raw `<ref>.supabase.co` origin and the stable Lovable proxy hosts.
+ * Never rewrites tokens/JWTs — those come from Vault per-project.
+ */
+export function rewriteCronCommand(
+  command: string,
+  primeRef: string,
+  cloneRef: string,
+): { command: string; changed: boolean } {
+  if (!command) return { command, changed: false };
+  const primeHosts = [
+    `${primeRef}.supabase.co`,
+    `${primeRef}.supabase.in`,
+    `${primeRef}.supabase.net`,
+  ];
+  const cloneHost = `${cloneRef}.supabase.co`;
+  let out = command;
+  let changed = false;
+  for (const h of primeHosts) {
+    if (out.includes(h)) {
+      out = out.split(h).join(cloneHost);
+      changed = true;
+    }
+  }
+  return { command: out, changed };
+}
+
+/**
+ * Replicate the prime's pg_cron schedule onto a freshly provisioned clone.
+ * Runs AFTER migration replay (migrations may already have scheduled the
+ * same jobs pointing at prime's URL) — so we unschedule and re-schedule
+ * every prime job with its command URL-rewritten to the clone origin.
+ *
+ * Non-fatal per job: any failure is captured in the returned audit list so
+ * operators can retry from the clone page. Jobs with no scheduled command
+ * (e.g. purely SQL housekeeping like `select expire_stale_reservations()`)
+ * are re-scheduled verbatim — they're portable because they only touch
+ * local tables and Vault-backed helpers.
+ */
+export async function replicateCronJobs(
+  cloneRef: string,
+  primeRef: string,
+  primeJobs: PrimeCronJob[],
+): Promise<CronJobReplicationResult[]> {
+  if (primeJobs.length === 0) return [];
+  // Ensure pg_cron exists on the clone. Extension is idempotent.
+  try {
+    await runSqlOnProject(cloneRef, `create extension if not exists pg_cron;`);
+  } catch (err) {
+    return primeJobs.map((j) => ({
+      jobname: j.jobname,
+      status: "failed" as const,
+      rewrote_url: false,
+      error: `pg_cron unavailable on clone: ${err instanceof Error ? err.message : String(err)}`,
+    }));
+  }
+
+  const results: CronJobReplicationResult[] = [];
+  for (const job of primeJobs) {
+    const { command, changed } = rewriteCronCommand(job.command, primeRef, cloneRef);
+    // Escape single quotes for embedding into SQL literals.
+    const q = (s: string) => s.replace(/'/g, "''");
+    try {
+      // Unschedule any existing job with the same name (silently) then re-schedule.
+      await runSqlOnProject(
+        cloneRef,
+        `do $$ begin
+           perform cron.unschedule('${q(job.jobname)}');
+         exception when others then null; end $$;
+         select cron.schedule('${q(job.jobname)}', '${q(job.schedule)}', $cronbody$${command}$cronbody$);
+         ${job.active ? "" : `update cron.job set active = false where jobname = '${q(job.jobname)}';`}`,
+      );
+      results.push({
+        jobname: job.jobname,
+        status: "replicated",
+        rewrote_url: changed,
+      });
+    } catch (err) {
+      results.push({
+        jobname: job.jobname,
+        status: "failed",
+        rewrote_url: changed,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+  return results;
+}
+
+
+
 
 
 /**
@@ -1173,6 +1327,7 @@ export type ProvisionBackendResult = {
   secretShells: SecretShellResult[];
   storageBuckets: BucketReplicationResult[];
   authConfig: AuthConfigResult;
+  cronJobs: CronJobReplicationResult[];
 };
 
 /**
@@ -1281,6 +1436,31 @@ export async function provisionCloneBackend(
   }
 
 
+  // Step 5d: Replicate the prime's pg_cron schedule. Migrations already
+  // replayed any `cron.schedule(...)` calls verbatim on the clone, which
+  // means every job's `net.http_post` currently fires against the PRIME's
+  // URL. We rewrite each job's command so the clone's schedule fires
+  // against the clone's own edge functions instead. Non-fatal per job.
+  let cronJobs: CronJobReplicationResult[] = [];
+  try {
+    const primeRef = getPrimeProjectRef();
+    await onStatusUpdate?.("migrating", "Replicating pg_cron schedule from prime...");
+    const primeJobs = await fetchPrimeCronJobs(primeRef);
+    cronJobs = await replicateCronJobs(projectRef, primeRef, primeJobs);
+    const failed = cronJobs.filter((c) => c.status === "failed");
+    if (failed.length > 0) {
+      await onStatusUpdate?.(
+        "migrating",
+        `${failed.length}/${cronJobs.length} cron job(s) failed to replicate — operators can retry`,
+      );
+    }
+  } catch (err) {
+    await onStatusUpdate?.(
+      "migrating",
+      `Cron replication skipped: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+
   await onStatusUpdate?.(
     "migrating",
     `Syncing ${snapshot.secretNames.length} secret(s) — inheriting whitelisted values...`,
@@ -1315,8 +1495,10 @@ export async function provisionCloneBackend(
     secretShells,
     storageBuckets,
     authConfig: authConfigResult,
+    cronJobs,
   };
 }
+
 
 function generateSecurePassword(): string {
   const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
