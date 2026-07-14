@@ -197,9 +197,36 @@ async function runBackendProvisioning(
 }
 
 /**
- * Provision a dedicated Supabase backend for a clone: a structural replica
- * of the prime repo's backend (schema + edge functions + empty secret
- * shells), with a fresh admin user and no data.
+ * Worker entry point — called by the pg_cron drain hook after it atomically
+ * claims a pending clone_backends row. Runs full provisioning against the
+ * admin (service-role) Supabase client, since there is no user request in
+ * flight when this executes.
+ */
+export async function runQueuedBackendProvisioning(input: {
+  cloneId: string;
+  cloneName: string;
+  region?: string;
+  adminEmail: string;
+  adminPassword: string;
+  moduleIds?: string[];
+  actorUserId: string | null;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  return runBackendProvisioning(supabaseAdmin as any, input.actorUserId ?? "system", {
+    cloneId: input.cloneId,
+    cloneName: input.cloneName,
+    region: input.region,
+    adminEmail: input.adminEmail,
+    adminPassword: input.adminPassword,
+    moduleIds: input.moduleIds,
+  });
+}
+
+/**
+ * Enqueue a dedicated Supabase backend for a clone. Returns as soon as the
+ * job row is persisted; the actual provisioning (which takes minutes and
+ * exceeds Worker request limits) runs in `hooks/backend-provisioning-drain`
+ * on the pg_cron schedule. The admin password is encrypted at rest while
+ * queued and cleared once the worker seeds the admin user.
  */
 export const provisionBackend = createServerFn({ method: "POST" })
   .middleware([requireAdmin])
@@ -221,50 +248,55 @@ export const provisionBackend = createServerFn({ method: "POST" })
       return input;
     },
   )
-  .handler(async ({ data, context }): Promise<{ ok: true } | { ok: false; error: string }> => {
-    const { supabase, userId } = context;
+  .handler(
+    async ({
+      data,
+      context,
+    }): Promise<{ ok: true; queued: true } | { ok: false; error: string }> => {
+      const { supabase, userId } = context;
 
-    // Check if clone exists
-    const { data: clone } = await supabase
-      .from("clones")
-      .select("id, name")
-      .eq("id", data.cloneId)
-      .single();
+      const { data: clone } = await supabase
+        .from("clones")
+        .select("id, name")
+        .eq("id", data.cloneId)
+        .single();
 
-    if (!clone) {
-      return { ok: false, error: "Clone not found" };
-    }
+      if (!clone) return { ok: false, error: "Clone not found" };
 
-    // Check for existing backend
-    const { data: existing } = await supabase
-      .from("clone_backends")
-      .select("id, status")
-      .eq("clone_id", data.cloneId)
-      .maybeSingle();
+      const { data: existing } = await supabase
+        .from("clone_backends")
+        .select("id, status")
+        .eq("clone_id", data.cloneId)
+        .maybeSingle();
 
-    if (existing && existing.status === "ready") {
-      return { ok: false, error: "This clone already has a provisioned backend" };
-    }
+      if (existing && existing.status === "ready") {
+        return { ok: false, error: "This clone already has a provisioned backend" };
+      }
 
-    // Upsert a pending row
-    const { error: upsertErr } = await supabase.from("clone_backends").upsert(
-      {
-        clone_id: data.cloneId,
-        status: "pending" as const,
-        region: data.region || "us-east-1",
-        admin_email: data.adminEmail,
-        error_message: null,
-        status_detail: "Queued for provisioning",
-      },
-      { onConflict: "clone_id" },
-    );
+      const { error: upsertErr } = await supabase.from("clone_backends").upsert(
+        {
+          clone_id: data.cloneId,
+          status: "pending" as const,
+          region: data.region || "us-east-1",
+          admin_email: data.adminEmail,
+          queued_admin_password_enc: encryptSecret(data.adminPassword),
+          queued_module_ids: data.moduleIds ?? [],
+          queued_at: new Date().toISOString(),
+          worker_started_at: null,
+          worker_finished_at: null,
+          attempts: 0,
+          enqueued_by: userId,
+          error_message: null,
+          status_detail: "Queued — background worker will start within ~60 seconds",
+        },
+        { onConflict: "clone_id" },
+      );
 
-    if (upsertErr) {
-      return { ok: false, error: upsertErr.message };
-    }
+      if (upsertErr) return { ok: false, error: upsertErr.message };
 
-    return runBackendProvisioning(supabase, userId, data);
-  });
+      return { ok: true, queued: true };
+    },
+  );
 
 /**
  * Get the backend status for a clone.
