@@ -259,9 +259,13 @@ function NewClone() {
               region: backendRegion,
               adminEmail,
               adminPassword,
-              moduleIds: Array.from(picked),
+              // Issue #12: do NOT pass moduleIds here. provisionClone has
+              // already written the authoritative set to `clone_modules`;
+              // the backend server fn reads from there so the two tracks
+              // cannot drift if the picker state changes mid-submit.
             },
           });
+
           if ("ok" in backendResult && backendResult.ok) {
             toast.info(
               "Backend queued — the background worker will provision it in ~1–2 minutes. You can watch progress on the clone page.",
