@@ -1436,6 +1436,31 @@ export async function provisionCloneBackend(
   }
 
 
+  // Step 5d: Replicate the prime's pg_cron schedule. Migrations already
+  // replayed any `cron.schedule(...)` calls verbatim on the clone, which
+  // means every job's `net.http_post` currently fires against the PRIME's
+  // URL. We rewrite each job's command so the clone's schedule fires
+  // against the clone's own edge functions instead. Non-fatal per job.
+  let cronJobs: CronJobReplicationResult[] = [];
+  try {
+    const primeRef = getPrimeProjectRef();
+    await onStatusUpdate?.("migrating", "Replicating pg_cron schedule from prime...");
+    const primeJobs = await fetchPrimeCronJobs(primeRef);
+    cronJobs = await replicateCronJobs(projectRef, primeRef, primeJobs);
+    const failed = cronJobs.filter((c) => c.status === "failed");
+    if (failed.length > 0) {
+      await onStatusUpdate?.(
+        "migrating",
+        `${failed.length}/${cronJobs.length} cron job(s) failed to replicate — operators can retry`,
+      );
+    }
+  } catch (err) {
+    await onStatusUpdate?.(
+      "migrating",
+      `Cron replication skipped: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+
   await onStatusUpdate?.(
     "migrating",
     `Syncing ${snapshot.secretNames.length} secret(s) — inheriting whitelisted values...`,
@@ -1470,8 +1495,10 @@ export async function provisionCloneBackend(
     secretShells,
     storageBuckets,
     authConfig: authConfigResult,
+    cronJobs,
   };
 }
+
 
 function generateSecurePassword(): string {
   const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
