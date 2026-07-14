@@ -58,11 +58,12 @@ export const bulkGiftTokens = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const campaignId = `promo:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 8)}`;
     const operatorName = await operatorDisplayName(context.userId as string);
 
     // Resolve target tenants
-    let q = context.supabase.from("tenants").select("id, clone_id, plan_id, status");
+    let q = supabaseAdmin.from("tenants").select("id, clone_id, plan_id, status");
     if (data.scope === "plan") q = q.in("plan_id", data.planIds);
     else if (data.scope === "tenants") q = q.in("id", data.tenantIds);
     if (data.excludeInactive) q = q.eq("status", "active");
