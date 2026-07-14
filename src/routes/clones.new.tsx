@@ -192,6 +192,15 @@ function NewClone() {
       return;
     }
 
+    // GitHub App preflight — fail fast before we create the clone row.
+    if (method !== "clone") {
+      const pf = await runPreflight();
+      if (pf && !pf.ok) {
+        toast.error(pf.message || "GitHub App preflight failed. See details above.");
+        return;
+      }
+    }
+
     setBusy(true);
     try {
       const result = await provision({
