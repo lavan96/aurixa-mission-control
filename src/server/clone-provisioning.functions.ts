@@ -197,15 +197,12 @@ export const provisionClone = createServerFn({ method: "POST" })
                 clone_id: inserted.id,
                 status: "queued" as const,
               });
-              // Kick execution asynchronously so we don't block the response
-              void (async () => {
-                try {
-                  const { executeCascade } = await import("./cascade-engine.server");
-                  await executeCascade(supabaseAdmin, ev.id);
-                } catch (err) {
-                  console.error("[provisionClone] module cascade failed:", err);
-                }
-              })();
+              // Durable execution: the /hooks/cascade-drain worker (pg_cron
+              // every minute) atomically claims pending auto_merge events and
+              // runs executeCascade. This survives Cloudflare Worker request
+              // termination — previously a `void (async () => ...)` invocation
+              // could be killed mid-flight, leaving the fresh clone repo
+              // without its module files. (Audit finding #7.)
             }
           }
         } catch (e) {
