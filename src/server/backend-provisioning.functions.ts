@@ -178,6 +178,7 @@ async function runBackendProvisioning(
         migrations_applied: result.migrationsApplied.length,
         edge_functions: result.edgeFunctions,
         secret_shells: result.secretShells.map((s) => ({ name: s.name, ok: s.success })),
+        storage_buckets: result.storageBuckets,
         module_migrations: moduleApplyResults,
       },
     });
