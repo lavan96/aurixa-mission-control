@@ -551,46 +551,89 @@ export async function deployEdgeFunctions(
   return results;
 }
 
+export type SecretShellStatus = "set" | "missing" | "failed" | "inherited";
+
 export type SecretShellResult = {
   name: string;
+  status: SecretShellStatus;
   success: boolean;
   error?: string;
 };
 
-/** Placeholder written when the API refuses truly empty secret values. */
-const SECRET_SHELL_PLACEHOLDER = "__EMPTY_SHELL__";
-
 /**
- * Create empty-shell secrets on a clone project: the names the prime's edge
- * functions expect, with no real values. Operators fill them in later.
+ * Sync secrets onto a freshly-provisioned clone project.
+ *
+ * For each name the prime's edge functions reference we either:
+ *   - forward a real value from the prime's own env (when the operator marked
+ *     the name inheritable in `prime_secret_forwards`), so the clone's
+ *     functions can boot without 500s, OR
+ *   - leave the secret unset on the clone and record it as `missing` so the
+ *     operator UI can prompt for a value.
+ *
+ * We NEVER write a placeholder onto the clone — that value made every consumer
+ * (Stripe, Lovable AI, VAPID, GitHub) fail at first call.
  */
-export async function createSecretShells(
+export async function syncCloneSecrets(
   projectRef: string,
   names: string[],
+  inheritedValues: Record<string, string>,
 ): Promise<SecretShellResult[]> {
   if (names.length === 0) return [];
 
-  const post = async (value: string) =>
-    fetch(`${MGMT_API}/projects/${projectRef}/secrets`, {
+  const toWrite: { name: string; value: string }[] = [];
+  const results = new Map<string, SecretShellResult>();
+
+  for (const name of names) {
+    const val = inheritedValues[name];
+    if (typeof val === "string" && val.length > 0) {
+      toWrite.push({ name, value: val });
+      results.set(name, { name, status: "inherited", success: true });
+    } else {
+      results.set(name, { name, status: "missing", success: true });
+    }
+  }
+
+  if (toWrite.length > 0) {
+    const res = await fetch(`${MGMT_API}/projects/${projectRef}/secrets`, {
       method: "POST",
       headers: headers(),
-      body: JSON.stringify(names.map((name) => ({ name, value }))),
+      body: JSON.stringify(toWrite),
     });
+    if (!res.ok) {
+      const body = (await res.text()).slice(0, 300);
+      for (const s of toWrite) {
+        results.set(s.name, {
+          name: s.name,
+          status: "failed",
+          success: false,
+          error: `secrets API ${res.status} — ${body}`,
+        });
+      }
+    }
+  }
 
-  let res = await post("");
-  if (!res.ok && res.status >= 400 && res.status < 500) {
-    // Some API versions reject empty values — fall back to an explicit placeholder
-    res = await post(SECRET_SHELL_PLACEHOLDER);
-  }
+  return names.map((n) => results.get(n)!);
+}
+
+/**
+ * Write a single named secret onto a clone project. Used by the admin
+ * "set secret value" server function so operators can fill in what
+ * provisioning could not inherit.
+ */
+export async function setCloneSecretValue(
+  projectRef: string,
+  name: string,
+  value: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const res = await fetch(`${MGMT_API}/projects/${projectRef}/secrets`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify([{ name, value }]),
+  });
   if (!res.ok) {
-    const body = await res.text();
-    return names.map((name) => ({
-      name,
-      success: false,
-      error: `secrets API ${res.status} — ${body.slice(0, 300)}`,
-    }));
+    return { ok: false, error: `secrets API ${res.status} — ${(await res.text()).slice(0, 300)}` };
   }
-  return names.map((name) => ({ name, success: true }));
+  return { ok: true };
 }
 
 // ─── Legacy bootstrap schema (reference only) ────────────────────────
