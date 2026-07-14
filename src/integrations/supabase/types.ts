@@ -1501,6 +1501,7 @@ export type Database = {
           github_repo: string
           github_url: string | null
           id: string
+          idempotency_key: string | null
           isolated_tenant: boolean
           last_cascade_at: string | null
           last_drift_check_at: string | null
@@ -1530,6 +1531,7 @@ export type Database = {
           github_repo: string
           github_url?: string | null
           id?: string
+          idempotency_key?: string | null
           isolated_tenant?: boolean
           last_cascade_at?: string | null
           last_drift_check_at?: string | null
@@ -1559,6 +1561,7 @@ export type Database = {
           github_repo?: string
           github_url?: string | null
           id?: string
+          idempotency_key?: string | null
           isolated_tenant?: boolean
           last_cascade_at?: string | null
           last_drift_check_at?: string | null
