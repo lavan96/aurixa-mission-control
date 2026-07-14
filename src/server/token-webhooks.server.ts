@@ -60,6 +60,9 @@ export async function fireTokenWebhook(
             "content-type": "application/json",
             "x-mc-signature": sig,
             "x-mc-event": event,
+            // Receivers de-dupe on this; without it a receiver can only guess
+            // a key from the payload and may wrongly drop later events.
+            "x-mc-idempotency-key": deliveryId ?? crypto.randomUUID(),
           },
           body,
           signal: AbortSignal.timeout(8000),
@@ -119,6 +122,8 @@ export async function retryDueDeliveries(): Promise<{ retried: number; delivered
           "content-type": "application/json",
           "x-mc-signature": sig,
           "x-mc-event": d.event_type,
+          // Same key on every retry of this delivery so receivers de-dupe.
+          "x-mc-idempotency-key": d.id,
         },
         body,
         signal: AbortSignal.timeout(8000),
