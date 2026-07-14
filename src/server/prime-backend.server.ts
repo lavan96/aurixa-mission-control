@@ -183,6 +183,58 @@ export function parseFunctionConfig(toml: string | null): Map<string, { verifyJw
 }
 
 /**
+ * Extract the `[auth]` block from supabase/config.toml as a Management-API
+ * shaped patch. Only whitelisted, non-secret fields are surfaced — provider
+ * secrets and OAuth client credentials NEVER travel through the snapshot.
+ * Returns null when config.toml is missing or has no [auth] section.
+ */
+export function parseAuthConfig(toml: string | null): PrimeAuthConfig | null {
+  if (!toml) return null;
+  // Grab the [auth] section body up to the next top-level [section].
+  const m = /(^|\n)\[auth\]\s*\n([\s\S]*?)(?=\n\[[A-Za-z_][^\]]*\]|$)/.exec(toml);
+  if (!m) return null;
+  const body = m[2];
+  const out: PrimeAuthConfig = {};
+  const readStr = (key: string): string | undefined => {
+    const rx = new RegExp(`(^|\\n)\\s*${key}\\s*=\\s*"([^"]*)"`);
+    return rx.exec(body)?.[2];
+  };
+  const readNum = (key: string): number | undefined => {
+    const rx = new RegExp(`(^|\\n)\\s*${key}\\s*=\\s*(\\d+)`);
+    const v = rx.exec(body)?.[2];
+    return v ? Number(v) : undefined;
+  };
+  const readBool = (key: string): boolean | undefined => {
+    const rx = new RegExp(`(^|\\n)\\s*${key}\\s*=\\s*(true|false)`);
+    const v = rx.exec(body)?.[2];
+    return v ? v === "true" : undefined;
+  };
+  const readArr = (key: string): string[] | undefined => {
+    const rx = new RegExp(`(^|\\n)\\s*${key}\\s*=\\s*\\[([^\\]]*)\\]`);
+    const v = rx.exec(body)?.[2];
+    if (v === undefined) return undefined;
+    return v
+      .split(",")
+      .map((s) => s.trim().replace(/^["']|["']$/g, ""))
+      .filter(Boolean);
+  };
+
+  const siteUrl = readStr("site_url");
+  if (siteUrl) out.site_url = siteUrl;
+  const redirects = readArr("additional_redirect_urls");
+  if (redirects && redirects.length) out.uri_allow_list = redirects.join(",");
+  const jwtExpiry = readNum("jwt_expiry");
+  if (jwtExpiry !== undefined) out.jwt_exp = jwtExpiry;
+  const enableSignup = readBool("enable_signup");
+  if (enableSignup !== undefined) out.disable_signup = !enableSignup;
+  const enableAnon = readBool("enable_anonymous_sign_ins");
+  if (enableAnon !== undefined) out.external_anonymous_users_enabled = enableAnon;
+  const minPw = readNum("minimum_password_length");
+  if (minPw !== undefined) out.password_min_length = minPw;
+
+  return Object.keys(out).length > 0 ? out : null;
+
+/**
  * Extract secret names referenced by function source code.
  * Matches Deno.env.get("NAME") / .get('NAME') / .get(`NAME`), drops the
  * platform-injected SUPABASE_* values (the secrets API reserves that prefix).
