@@ -264,6 +264,216 @@ export async function applyPrimeMigrations(
   return { results, latestApplied };
 }
 
+// ─── Module Migrations ───────────────────────────────────────────────
+
+/**
+ * Per-clone ledger for module-level migrations. Kept in the `aurixa` schema
+ * alongside `schema_migrations` so the replicated `public` schema stays
+ * byte-identical to the prime's.
+ */
+const MODULE_TRACKING_TABLE_SQL = `
+create schema if not exists aurixa;
+create table if not exists aurixa.module_installations (
+  module_id text primary key,
+  name text not null,
+  applied_at timestamptz not null default now()
+);
+`.trim();
+
+export type ModuleMigrationInput = {
+  id: string;
+  name: string;
+  sql: string;
+  dependencies: string[];
+  applyOnInstall: boolean;
+};
+
+export type ModuleMigrationResult = {
+  id: string;
+  name: string;
+  ok: boolean;
+  skipped?: boolean;
+  error?: string;
+};
+
+/**
+ * Topologically sort modules by `dependencies` (edges from dep -> module).
+ * Returns { ordered, cycle, missingDeps } — modules involved in a cycle or
+ * missing a dep are excluded from `ordered` and reported so the caller can
+ * mark them failed without attempting SQL.
+ */
+export function topoSortModules(
+  modules: ModuleMigrationInput[],
+): {
+  ordered: ModuleMigrationInput[];
+  cycleIds: Set<string>;
+  missingDeps: Map<string, string[]>;
+} {
+  const byId = new Map(modules.map((m) => [m.id, m]));
+  const missingDeps = new Map<string, string[]>();
+  const indegree = new Map<string, number>();
+  const edges = new Map<string, string[]>(); // dep -> [dependents]
+
+  for (const m of modules) {
+    indegree.set(m.id, 0);
+    edges.set(m.id, []);
+  }
+  for (const m of modules) {
+    const missing: string[] = [];
+    for (const dep of m.dependencies ?? []) {
+      if (!byId.has(dep)) {
+        missing.push(dep);
+        continue;
+      }
+      edges.get(dep)!.push(m.id);
+      indegree.set(m.id, (indegree.get(m.id) ?? 0) + 1);
+    }
+    if (missing.length > 0) missingDeps.set(m.id, missing);
+  }
+
+  const queue: string[] = [];
+  for (const [id, deg] of indegree) if (deg === 0) queue.push(id);
+  // Stable order: sort ready set by name so replays are deterministic.
+  queue.sort((a, b) => byId.get(a)!.name.localeCompare(byId.get(b)!.name));
+
+  const ordered: ModuleMigrationInput[] = [];
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    ordered.push(byId.get(id)!);
+    const next: string[] = [];
+    for (const dependent of edges.get(id) ?? []) {
+      indegree.set(dependent, (indegree.get(dependent) ?? 0) - 1);
+      if (indegree.get(dependent) === 0) next.push(dependent);
+    }
+    next.sort((a, b) => byId.get(a)!.name.localeCompare(byId.get(b)!.name));
+    queue.push(...next);
+  }
+
+  const cycleIds = new Set<string>();
+  for (const [id, deg] of indegree) {
+    if (deg > 0 && !ordered.find((m) => m.id === id)) cycleIds.add(id);
+  }
+
+  return { ordered, cycleIds, missingDeps };
+}
+
+/**
+ * Apply per-module SQL to a clone project in dependency order. Each module's
+ * SQL is wrapped in a transaction alongside its ledger insert so a failure
+ * leaves the schema untouched. Modules whose dependencies failed (or that
+ * are part of a cycle / missing deps) are skipped rather than run against a
+ * half-applied schema.
+ */
+export async function applyModuleMigrations(
+  projectRef: string,
+  modules: ModuleMigrationInput[],
+  onStatusUpdate?: (status: string, detail: string) => Promise<void>,
+): Promise<ModuleMigrationResult[]> {
+  const eligible = modules.filter((m) => m.applyOnInstall !== false && m.sql.trim().length > 0);
+  if (eligible.length === 0) return [];
+
+  await runSqlOnProject(projectRef, MODULE_TRACKING_TABLE_SQL);
+
+  const appliedRaw = await runSqlOnProject(
+    projectRef,
+    "select module_id from aurixa.module_installations;",
+  );
+  const appliedRows = Array.isArray(appliedRaw)
+    ? appliedRaw
+    : Array.isArray((appliedRaw as { rows?: unknown[] })?.rows)
+      ? (appliedRaw as { rows: unknown[] }).rows
+      : Array.isArray((appliedRaw as { result?: unknown[] })?.result)
+        ? (appliedRaw as { result: unknown[] }).result
+        : [];
+  const alreadyApplied = new Set(
+    appliedRows
+      .map((r) => (r as { module_id?: unknown })?.module_id)
+      .filter((v): v is string => typeof v === "string"),
+  );
+
+  const { ordered, cycleIds, missingDeps } = topoSortModules(eligible);
+  const results: ModuleMigrationResult[] = [];
+  const failed = new Set<string>();
+
+  // Report modules excluded from `ordered` up front.
+  for (const m of eligible) {
+    if (missingDeps.has(m.id)) {
+      const missing = missingDeps.get(m.id)!;
+      results.push({
+        id: m.id,
+        name: m.name,
+        ok: false,
+        error: `Missing dependencies (not selected/available): ${missing.join(", ")}`,
+      });
+      failed.add(m.id);
+    } else if (cycleIds.has(m.id)) {
+      results.push({
+        id: m.id,
+        name: m.name,
+        ok: false,
+        error: "Dependency cycle — cannot determine install order",
+      });
+      failed.add(m.id);
+    }
+  }
+
+  for (let i = 0; i < ordered.length; i++) {
+    const m = ordered[i];
+    if (failed.has(m.id)) continue;
+
+    if (alreadyApplied.has(m.id)) {
+      results.push({ id: m.id, name: m.name, ok: true, skipped: true });
+      continue;
+    }
+
+    const depFailed = (m.dependencies ?? []).find((d) => failed.has(d));
+    if (depFailed) {
+      results.push({
+        id: m.id,
+        name: m.name,
+        ok: false,
+        error: `Skipped — dependency failed: ${depFailed}`,
+      });
+      failed.add(m.id);
+      continue;
+    }
+
+    await onStatusUpdate?.(
+      "migrating",
+      `Applying module ${i + 1}/${ordered.length}: ${m.name}`,
+    );
+
+    // Wrap the module's SQL + ledger insert in a single transaction so a
+    // partial failure rolls back cleanly.
+    const wrapped = `begin;\n${m.sql}\n;insert into aurixa.module_installations (module_id, name) values (${sqlLiteral(
+      m.id,
+    )}, ${sqlLiteral(m.name)}) on conflict (module_id) do nothing;\ncommit;`;
+
+    try {
+      await runSqlOnProject(projectRef, wrapped);
+      results.push({ id: m.id, name: m.name, ok: true });
+    } catch (e) {
+      // Best-effort rollback — Supabase Management API auto-aborts the
+      // transaction on error, but we send an explicit rollback in case a
+      // trailing statement left an open txn state on some paths.
+      try {
+        await runSqlOnProject(projectRef, "rollback;");
+      } catch {
+        /* ignore */
+      }
+      results.push({
+        id: m.id,
+        name: m.name,
+        ok: false,
+        error: e instanceof Error ? e.message : "SQL failed",
+      });
+      failed.add(m.id);
+    }
+  }
+
+  return results;
+}
+
 export type EdgeFunctionDeployResult = {
   slug: string;
   success: boolean;
