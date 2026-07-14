@@ -578,14 +578,19 @@ export type Database = {
         Row: {
           admin_email: string | null
           anon_key: string | null
+          attempts: number
           clone_id: string
           created_at: string
           db_pass: string | null
           edge_functions: Json
+          enqueued_by: string | null
           error_message: string | null
           id: string
           migration_version: string | null
           migrations_applied: Json
+          queued_admin_password_enc: string | null
+          queued_at: string | null
+          queued_module_ids: string[] | null
           region: string
           secret_shells: Json
           service_role_key: string | null
@@ -597,18 +602,25 @@ export type Database = {
           supabase_project_ref: string | null
           supabase_url: string | null
           updated_at: string
+          worker_finished_at: string | null
+          worker_started_at: string | null
         }
         Insert: {
           admin_email?: string | null
           anon_key?: string | null
+          attempts?: number
           clone_id: string
           created_at?: string
           db_pass?: string | null
           edge_functions?: Json
+          enqueued_by?: string | null
           error_message?: string | null
           id?: string
           migration_version?: string | null
           migrations_applied?: Json
+          queued_admin_password_enc?: string | null
+          queued_at?: string | null
+          queued_module_ids?: string[] | null
           region?: string
           secret_shells?: Json
           service_role_key?: string | null
@@ -620,18 +632,25 @@ export type Database = {
           supabase_project_ref?: string | null
           supabase_url?: string | null
           updated_at?: string
+          worker_finished_at?: string | null
+          worker_started_at?: string | null
         }
         Update: {
           admin_email?: string | null
           anon_key?: string | null
+          attempts?: number
           clone_id?: string
           created_at?: string
           db_pass?: string | null
           edge_functions?: Json
+          enqueued_by?: string | null
           error_message?: string | null
           id?: string
           migration_version?: string | null
           migrations_applied?: Json
+          queued_admin_password_enc?: string | null
+          queued_at?: string | null
+          queued_module_ids?: string[] | null
           region?: string
           secret_shells?: Json
           service_role_key?: string | null
@@ -643,6 +662,8 @@ export type Database = {
           supabase_project_ref?: string | null
           supabase_url?: string | null
           updated_at?: string
+          worker_finished_at?: string | null
+          worker_started_at?: string | null
         }
         Relationships: []
       }
