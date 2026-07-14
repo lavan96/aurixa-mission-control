@@ -89,6 +89,9 @@ function NewClone() {
   const [billingStripeCustomerId, setBillingStripeCustomerId] = useState("");
   const [busy, setBusy] = useState(false);
   const [dedicatedBackend, setDedicatedBackend] = useState(true);
+  // Isolated tenant: hard-requires a dedicated backend. Defaults true for
+  // template/independent clones (typical client-isolated setup). (Audit #11.)
+  const [isolatedTenant, setIsolatedTenant] = useState(true);
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [backendRegion, setBackendRegion] = useState("us-east-1");
@@ -161,9 +164,19 @@ function NewClone() {
   }, [method, ownerMode, transferTarget, prime?.default_clone_org, prime?.github_owner, prime?.github_repo]);
 
 
+  // Isolated tenants ALWAYS need a dedicated backend — enforce it as the
+  // wizard's source of truth so the checkbox never drifts out of sync.
+  useEffect(() => {
+    if (isolatedTenant && !dedicatedBackend) setDedicatedBackend(true);
+  }, [isolatedTenant, dedicatedBackend]);
+
   const submit = async () => {
     if (!name.trim()) {
       toast.error("Name is required");
+      return;
+    }
+    if (isolatedTenant && !dedicatedBackend) {
+      toast.error("Isolated tenants require a dedicated backend");
       return;
     }
     if (dedicatedBackend && !adminEmail.trim()) {
@@ -216,6 +229,7 @@ function NewClone() {
           cloudflareEnabled: cloudflare,
           notes,
           moduleIds: Array.from(picked),
+          isolatedTenant,
           billingUserId: billingUserId.trim() || null,
           billingStripeCustomerId: billingStripeCustomerId.trim() || null,
         },
@@ -555,12 +569,37 @@ function NewClone() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <label className="flex cursor-pointer items-center gap-3">
+          <label className="flex cursor-pointer items-start gap-3 rounded-md border border-border/70 bg-muted/30 p-3">
+            <Checkbox
+              checked={isolatedTenant}
+              onCheckedChange={(v) => setIsolatedTenant(!!v)}
+              className="mt-0.5"
+            />
+            <div className="space-y-0.5">
+              <div className="text-sm font-medium">Isolated tenant</div>
+              <div className="text-xs text-muted-foreground">
+                Locks this clone to its own dedicated backend. Recommended for client-owned deployments.
+                While enabled, the backend cannot be deleted and this clone cannot fall back to the prime database.
+              </div>
+            </div>
+          </label>
+          <label
+            className={cn(
+              "flex items-center gap-3",
+              isolatedTenant ? "cursor-not-allowed opacity-70" : "cursor-pointer",
+            )}
+          >
             <Checkbox
               checked={dedicatedBackend}
-              onCheckedChange={(v) => setDedicatedBackend(!!v)}
+              onCheckedChange={(v) => !isolatedTenant && setDedicatedBackend(!!v)}
+              disabled={isolatedTenant}
             />
-            <span className="text-sm">Provision a dedicated backend for this clone</span>
+            <span className="text-sm">
+              Provision a dedicated backend for this clone
+              {isolatedTenant && (
+                <span className="ml-2 text-xs text-muted-foreground">(required — isolated tenant)</span>
+              )}
+            </span>
           </label>
           {dedicatedBackend && (
             <div className="grid gap-4 md:grid-cols-2 rounded-md border border-border p-4">
