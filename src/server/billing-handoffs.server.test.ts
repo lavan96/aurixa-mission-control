@@ -89,9 +89,12 @@ describe("intentAllows (handoff-scoped checkout restriction)", () => {
     expect(intentAllows("", "seat_plan", "item-2")).toBe(true);
   });
 
-  it("pins the mode for bare-mode intents", () => {
+  it("treats bare-mode intents as advisory — the full catalog stays purchasable", () => {
     expect(intentAllows("topup", "topup", "any-pack")).toBe(true);
-    expect(intentAllows("topup", "seat_plan", "any-plan")).toBe(false);
+    // A buyer who entered via "Top up credits" may buy a plan instead: the
+    // pricing page sells everything, so a bare mode must not reject checkout.
+    expect(intentAllows("topup", "seat_plan", "any-plan")).toBe(true);
+    expect(intentAllows("seat_plan", "setup_package", "any-setup")).toBe(true);
   });
 
   it("pins the exact item for '<mode>:<item>' intents", () => {
