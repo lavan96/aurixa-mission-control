@@ -97,6 +97,16 @@ function NewClone() {
   const [backendRegion, setBackendRegion] = useState("us-east-1");
   const provisionBackendFn = useServerFn(provisionBackend);
   const enqueueEdge = useServerFn(enqueueEdgeJob);
+  // Issue #13: idempotency key for the whole submit. Generated once per
+  // wizard mount so a double-click / retry lands on the same clone row
+  // instead of forking a second GitHub repo. Rotated after a fresh
+  // (non-idempotent) success in case the operator wants to create another.
+  const [idempotencyKey, setIdempotencyKey] = useState<string>(() =>
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  );
+
 
   const preflightFn = useServerFn(checkGithubAppPreflight);
   const [preflight, setPreflight] = useState<GithubPreflightResult | null>(null);
