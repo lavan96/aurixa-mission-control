@@ -334,39 +334,41 @@ export const retryBackendProvisioning = createServerFn({ method: "POST" })
     }
     return input;
   })
-  .handler(async ({ data, context }): Promise<{ ok: true } | { ok: false; error: string }> => {
-    const { supabase, userId } = context;
+  .handler(
+    async ({
+      data,
+      context,
+    }): Promise<{ ok: true; queued: true } | { ok: false; error: string }> => {
+      const { supabase, userId } = context;
 
-    const { data: backend } = await supabase
-      .from("clone_backends")
-      .select("status, region")
-      .eq("clone_id", data.cloneId)
-      .maybeSingle();
+      const { data: backend } = await supabase
+        .from("clone_backends")
+        .select("status, region")
+        .eq("clone_id", data.cloneId)
+        .maybeSingle();
 
-    if (!backend || backend.status !== "failed") {
-      return { ok: false, error: "Can only retry failed provisioning" };
-    }
+      if (!backend || backend.status !== "failed") {
+        return { ok: false, error: "Can only retry failed provisioning" };
+      }
 
-    // Reset to pending, then re-run
-    await supabase
-      .from("clone_backends")
-      .update({ status: "pending" as const, error_message: null })
-      .eq("clone_id", data.cloneId);
+      const { error: upsertErr } = await supabase
+        .from("clone_backends")
+        .update({
+          status: "pending" as const,
+          error_message: null,
+          queued_admin_password_enc: encryptSecret(data.adminPassword),
+          admin_email: data.adminEmail,
+          queued_at: new Date().toISOString(),
+          worker_started_at: null,
+          worker_finished_at: null,
+          attempts: 0,
+          enqueued_by: userId,
+          status_detail: "Requeued — background worker will retry within ~60 seconds",
+        })
+        .eq("clone_id", data.cloneId);
 
-    // Get clone name
-    const { data: clone } = await supabase
-      .from("clones")
-      .select("name")
-      .eq("id", data.cloneId)
-      .single();
+      if (upsertErr) return { ok: false, error: upsertErr.message };
 
-    if (!clone) return { ok: false, error: "Clone not found" };
-
-    return runBackendProvisioning(supabase, userId, {
-      cloneId: data.cloneId,
-      cloneName: clone.name,
-      region: backend.region ?? undefined,
-      adminEmail: data.adminEmail,
-      adminPassword: data.adminPassword,
-    });
-  });
+      return { ok: true, queued: true };
+    },
+  );
