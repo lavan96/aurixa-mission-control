@@ -296,6 +296,42 @@ export async function replicateStorageBuckets(
   return results;
 }
 
+/**
+ * Replicate the prime's [auth] block (site_url, redirect allow-list, JWT
+ * expiry, signup toggles, password policy) onto a target clone via the
+ * Management API. Only whitelisted, non-secret fields are patched — OAuth
+ * provider credentials are configured per-clone. Non-fatal: failures are
+ * returned so provisioning can proceed even if auth config is rejected.
+ */
+export type AuthConfigResult =
+  | { status: "applied"; fields: string[] }
+  | { status: "skipped"; reason: string }
+  | { status: "failed"; error: string };
+
+export async function applyAuthConfig(
+  projectRef: string,
+  authConfig: import("./prime-backend.server").PrimeAuthConfig | null,
+): Promise<AuthConfigResult> {
+  if (!authConfig || Object.keys(authConfig).length === 0) {
+    return { status: "skipped", reason: "no [auth] block in prime config.toml" };
+  }
+  try {
+    const res = await fetch(`${MGMT_API}/projects/${projectRef}/config/auth`, {
+      method: "PATCH",
+      headers: headers(),
+      body: JSON.stringify(authConfig),
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      return { status: "failed", error: `${res.status} — ${body}` };
+    }
+    return { status: "applied", fields: Object.keys(authConfig) };
+  } catch (err) {
+    return { status: "failed", error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+
 
 /**
  * Every clone backend carries its own migration ledger so replays are
