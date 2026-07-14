@@ -399,3 +399,120 @@ export const retryBackendProvisioning = createServerFn({ method: "POST" })
       return { ok: true, queued: true };
     },
   );
+
+// ─── Clone secret management ────────────────────────────────────────
+
+/** List the per-name secret status for a clone's backend. Admin-only. */
+export const listCloneBackendSecrets = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((input: { cloneId: string }) => {
+    if (!input?.cloneId?.trim()) throw new Error("cloneId is required");
+    return input;
+  })
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: rows, error } = await supabase
+      .from("clone_backend_secrets")
+      .select("name, status, last_set_at, last_error, updated_at")
+      .eq("clone_id", data.cloneId)
+      .order("status", { ascending: true })
+      .order("name", { ascending: true });
+    if (error) return { ok: false as const, error: error.message };
+    return { ok: true as const, secrets: rows ?? [] };
+  });
+
+/**
+ * Push a real value for a named secret onto the clone's Supabase project
+ * and update the tracking row. Admin-only.
+ */
+export const setCloneBackendSecret = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((input: { cloneId: string; name: string; value: string }) => {
+    if (!input?.cloneId?.trim()) throw new Error("cloneId is required");
+    if (!input?.name?.trim()) throw new Error("name is required");
+    if (typeof input?.value !== "string" || input.value.length === 0) {
+      throw new Error("value is required");
+    }
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(input.name)) {
+      throw new Error("invalid secret name");
+    }
+    return input;
+  })
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: backend } = await supabase
+      .from("clone_backends")
+      .select("supabase_project_ref, status")
+      .eq("clone_id", data.cloneId)
+      .maybeSingle();
+    if (!backend?.supabase_project_ref) {
+      return { ok: false as const, error: "Clone backend not provisioned yet" };
+    }
+    const { setCloneSecretValue } = await import("./backend-provisioning.server");
+    const res = await setCloneSecretValue(backend.supabase_project_ref, data.name, data.value);
+    const now = new Date().toISOString();
+    await supabase.from("clone_backend_secrets").upsert(
+      {
+        clone_id: data.cloneId,
+        name: data.name,
+        status: res.ok ? "set" : "failed",
+        last_set_at: res.ok ? now : null,
+        last_error: res.ok ? null : res.error,
+        set_by: userId,
+      },
+      { onConflict: "clone_id,name" },
+    );
+    await supabase.from("audit_log").insert({
+      action: "clone_backend.secret_set",
+      entity_type: "clone",
+      entity_id: data.cloneId,
+      actor_user_id: userId,
+      metadata: { name: data.name, ok: res.ok, error: res.ok ? null : res.error },
+    });
+    return res.ok ? { ok: true as const } : { ok: false as const, error: res.error };
+  });
+
+/** List the operator-managed prime→clone secret forwarding whitelist. Admin-only. */
+export const listPrimeSecretForwards = createServerFn({ method: "GET" })
+  .middleware([requireAdmin])
+  .handler(async ({ context }) => {
+    const { supabase } = context;
+    const { data, error } = await supabase
+      .from("prime_secret_forwards")
+      .select("name, inherit, description, updated_at")
+      .order("name", { ascending: true });
+    if (error) return { ok: false as const, error: error.message };
+    // Attach whether the prime environment actually has a value for each name.
+    const rows = (data ?? []).map((r) => ({
+      ...r,
+      present_in_prime_env:
+        typeof process.env[r.name] === "string" && (process.env[r.name] as string).length > 0,
+    }));
+    return { ok: true as const, forwards: rows };
+  });
+
+/** Upsert a prime→clone secret forwarding rule. Admin-only. */
+export const upsertPrimeSecretForward = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((input: { name: string; inherit: boolean; description?: string | null }) => {
+    if (!input?.name?.trim()) throw new Error("name is required");
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(input.name)) {
+      throw new Error("invalid secret name");
+    }
+    return input;
+  })
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { error } = await supabase.from("prime_secret_forwards").upsert(
+      {
+        name: data.name,
+        inherit: data.inherit,
+        description: data.description ?? null,
+        created_by: userId,
+      },
+      { onConflict: "name" },
+    );
+    if (error) return { ok: false as const, error: error.message };
+    return { ok: true as const };
+  });
+
