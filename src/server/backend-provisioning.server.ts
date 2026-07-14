@@ -489,10 +489,28 @@ export async function replicateCronJobs(
 
 /**
  * Every clone backend carries its own migration ledger so replays are
- * idempotent and resumable. Lives in a dedicated `aurixa` schema to keep
- * the replicated `public` schema byte-identical to the prime's.
+ * idempotent and resumable.
+ *
+ * Issue #14: we now write to Supabase's canonical
+ * `supabase_migrations.schema_migrations` table (matching the Supabase CLI /
+ * dashboard convention) instead of only a Lovable-invented
+ * `aurixa.schema_migrations` ledger. That way if an operator later connects
+ * the clone project to the Supabase CLI (`supabase db push`), the CLI
+ * recognises the applied versions and does not attempt to re-run them.
+ *
+ * We still write to (and read from) `aurixa.schema_migrations` so clones
+ * provisioned before this change stay idempotent — any version recorded in
+ * either ledger is treated as applied.
  */
 const TRACKING_TABLE_SQL = `
+create schema if not exists supabase_migrations;
+create table if not exists supabase_migrations.schema_migrations (
+  version text primary key,
+  statements text[],
+  name text
+);
+-- Legacy Lovable-only ledger, kept as a mirror for older tooling / health
+-- checks and for clones provisioned before Issue #14.
 create schema if not exists aurixa;
 create table if not exists aurixa.schema_migrations (
   version text primary key,
@@ -525,9 +543,14 @@ export async function applyPrimeMigrations(
 ): Promise<{ results: PrimeMigrationResult[]; latestApplied: string | null }> {
   await runSqlOnProject(projectRef, TRACKING_TABLE_SQL);
 
+  // Union both the canonical Supabase ledger and the legacy aurixa ledger,
+  // so a clone that was partially applied under either scheme stays
+  // idempotent. (Issue #14.)
   const appliedRaw = await runSqlOnProject(
     projectRef,
-    "select version from aurixa.schema_migrations;",
+    `select version from supabase_migrations.schema_migrations
+     union
+     select version from aurixa.schema_migrations;`,
   );
   // The query endpoint returns rows as a bare array; tolerate wrapped shapes too.
   const appliedRows = Array.isArray(appliedRaw)
@@ -557,9 +580,17 @@ export async function applyPrimeMigrations(
     await onStatusUpdate?.("migrating", `Applying migration ${i + 1}/${ordered.length}: ${m.name}`);
     try {
       await runSqlOnProject(projectRef, m.sql);
+      // Record in BOTH ledgers: canonical Supabase table is the source of
+      // truth going forward, aurixa is kept as a mirror so older tooling /
+      // health checks keep working. (Issue #14.)
       await runSqlOnProject(
         projectRef,
-        `insert into aurixa.schema_migrations (version, name) values (${sqlLiteral(m.id)}, ${sqlLiteral(m.name)}) on conflict (version) do nothing;`,
+        `insert into supabase_migrations.schema_migrations (version, name, statements)
+           values (${sqlLiteral(m.id)}, ${sqlLiteral(m.name)}, ARRAY[]::text[])
+           on conflict (version) do nothing;
+         insert into aurixa.schema_migrations (version, name)
+           values (${sqlLiteral(m.id)}, ${sqlLiteral(m.name)})
+           on conflict (version) do nothing;`,
       );
       results.push({ id: m.id, name: m.name, success: true });
       latestApplied = m.id;
