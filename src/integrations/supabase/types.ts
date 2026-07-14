@@ -524,17 +524,11 @@ export type Database = {
           clone_id: string
           created_at: string
           db_pass: string | null
-          edge_functions: Json
           error_message: string | null
           id: string
           migration_version: string | null
-          migrations_applied: Json
           region: string
-          secret_shells: Json
           service_role_key: string | null
-          source_ref: string | null
-          source_repo: string | null
-          source_sha: string | null
           status: Database["public"]["Enums"]["clone_backend_status"]
           status_detail: string | null
           supabase_project_ref: string | null
@@ -547,17 +541,11 @@ export type Database = {
           clone_id: string
           created_at?: string
           db_pass?: string | null
-          edge_functions?: Json
           error_message?: string | null
           id?: string
           migration_version?: string | null
-          migrations_applied?: Json
           region?: string
-          secret_shells?: Json
           service_role_key?: string | null
-          source_ref?: string | null
-          source_repo?: string | null
-          source_sha?: string | null
           status?: Database["public"]["Enums"]["clone_backend_status"]
           status_detail?: string | null
           supabase_project_ref?: string | null
@@ -570,17 +558,11 @@ export type Database = {
           clone_id?: string
           created_at?: string
           db_pass?: string | null
-          edge_functions?: Json
           error_message?: string | null
           id?: string
           migration_version?: string | null
-          migrations_applied?: Json
           region?: string
-          secret_shells?: Json
           service_role_key?: string | null
-          source_ref?: string | null
-          source_repo?: string | null
-          source_sha?: string | null
           status?: Database["public"]["Enums"]["clone_backend_status"]
           status_detail?: string | null
           supabase_project_ref?: string | null
@@ -3771,66 +3753,6 @@ export type Database = {
         }
         Relationships: []
       }
-      waitlist_leads: {
-        Row: {
-          created_at: string
-          dedupe_key: string | null
-          email: string
-          entity_classification: string | null
-          entity_name: string | null
-          first_name: string
-          id: string
-          last_name: string
-          metadata: Json
-          mobile_number: string | null
-          notes: string | null
-          page: string | null
-          source: string
-          status: Database["public"]["Enums"]["lead_status"]
-          submitted_at: string | null
-          tech_stack_bottlenecks: string | null
-          transaction_volume: string | null
-        }
-        Insert: {
-          created_at?: string
-          dedupe_key?: string | null
-          email: string
-          entity_classification?: string | null
-          entity_name?: string | null
-          first_name: string
-          id?: string
-          last_name: string
-          metadata?: Json
-          mobile_number?: string | null
-          notes?: string | null
-          page?: string | null
-          source?: string
-          status?: Database["public"]["Enums"]["lead_status"]
-          submitted_at?: string | null
-          tech_stack_bottlenecks?: string | null
-          transaction_volume?: string | null
-        }
-        Update: {
-          created_at?: string
-          dedupe_key?: string | null
-          email?: string
-          entity_classification?: string | null
-          entity_name?: string | null
-          first_name?: string
-          id?: string
-          last_name?: string
-          metadata?: Json
-          mobile_number?: string | null
-          notes?: string | null
-          page?: string | null
-          source?: string
-          status?: Database["public"]["Enums"]["lead_status"]
-          submitted_at?: string | null
-          tech_stack_bottlenecks?: string | null
-          transaction_volume?: string | null
-        }
-        Relationships: []
-      }
     }
     Views: {
       clone_backends_safe: {
@@ -3838,16 +3760,10 @@ export type Database = {
           admin_email: string | null
           clone_id: string | null
           created_at: string | null
-          edge_functions: Json | null
           error_message: string | null
           id: string | null
           migration_version: string | null
-          migrations_applied: Json | null
           region: string | null
-          secret_shells: Json | null
-          source_ref: string | null
-          source_repo: string | null
-          source_sha: string | null
           status: Database["public"]["Enums"]["clone_backend_status"] | null
           status_detail: string | null
           supabase_project_ref: string | null
@@ -3858,16 +3774,10 @@ export type Database = {
           admin_email?: string | null
           clone_id?: string | null
           created_at?: string | null
-          edge_functions?: Json | null
           error_message?: string | null
           id?: string | null
           migration_version?: string | null
-          migrations_applied?: Json | null
           region?: string | null
-          secret_shells?: Json | null
-          source_ref?: string | null
-          source_repo?: string | null
-          source_sha?: string | null
           status?: Database["public"]["Enums"]["clone_backend_status"] | null
           status_detail?: string | null
           supabase_project_ref?: string | null
@@ -3878,16 +3788,10 @@ export type Database = {
           admin_email?: string | null
           clone_id?: string | null
           created_at?: string | null
-          edge_functions?: Json | null
           error_message?: string | null
           id?: string | null
           migration_version?: string | null
-          migrations_applied?: Json | null
           region?: string | null
-          secret_shells?: Json | null
-          source_ref?: string | null
-          source_repo?: string | null
-          source_sha?: string | null
           status?: Database["public"]["Enums"]["clone_backend_status"] | null
           status_detail?: string | null
           supabase_project_ref?: string | null
@@ -4075,12 +3979,6 @@ export type Database = {
         | "failed"
         | "suspended"
       drift_severity: "low" | "medium" | "high"
-      lead_status:
-        | "new"
-        | "contacted"
-        | "qualified"
-        | "disqualified"
-        | "converted"
       ledger_kind:
         | "grant"
         | "topup"
@@ -4118,7 +4016,6 @@ export type Database = {
         | "device_limit_reached"
         | "device_registered"
         | "device_released"
-        | "lead_captured"
       notification_severity: "info" | "success" | "warning" | "error"
       overage_policy: "block" | "topup_only" | "pay_as_you_go"
       provisioning_method: "fork" | "template" | "clone"
@@ -4289,13 +4186,6 @@ export const Constants = {
         "suspended",
       ],
       drift_severity: ["low", "medium", "high"],
-      lead_status: [
-        "new",
-        "contacted",
-        "qualified",
-        "disqualified",
-        "converted",
-      ],
       ledger_kind: [
         "grant",
         "topup",
@@ -4334,7 +4224,6 @@ export const Constants = {
         "device_limit_reached",
         "device_registered",
         "device_released",
-        "lead_captured",
       ],
       notification_severity: ["info", "success", "warning", "error"],
       overage_policy: ["block", "topup_only", "pay_as_you_go"],
