@@ -112,6 +112,55 @@ function NewClone() {
     setPicked(n);
   };
 
+  const currentTargetOwner = () =>
+    ownerMode === "transfer"
+      ? transferTarget.trim()
+      : prime?.default_clone_org?.trim() || prime?.github_owner?.trim() || "";
+
+  const runPreflight = async (): Promise<GithubPreflightResult | null> => {
+    if (method === "clone") return null;
+    const owner = currentTargetOwner();
+    if (!owner) return null;
+    setPreflightBusy(true);
+    try {
+      const res = await preflightFn({
+        data: {
+          targetOwner: owner,
+          method,
+          templateOwner: method === "template" ? prime?.github_owner ?? null : null,
+          templateRepo: method === "template" ? prime?.github_repo ?? null : null,
+        },
+      });
+      setPreflight(res);
+      return res;
+    } catch (e) {
+      const err: GithubPreflightResult = {
+        ok: false,
+        appConfigured: false,
+        installationFound: false,
+        targetOwner: owner,
+        message: e instanceof Error ? e.message : "Preflight failed",
+      };
+      setPreflight(err);
+      return err;
+    } finally {
+      setPreflightBusy(false);
+    }
+  };
+
+  // Auto-run preflight when the target owner or method changes.
+  useEffect(() => {
+    setPreflight(null);
+    const owner = currentTargetOwner();
+    if (!owner || method === "clone") return;
+    const t = setTimeout(() => {
+      runPreflight();
+    }, 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [method, ownerMode, transferTarget, prime?.default_clone_org, prime?.github_owner, prime?.github_repo]);
+
+
   const submit = async () => {
     if (!name.trim()) {
       toast.error("Name is required");
