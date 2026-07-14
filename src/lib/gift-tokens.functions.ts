@@ -85,7 +85,7 @@ export const bulkGiftTokens = createServerFn({ method: "POST" })
 
     for (const t of targets) {
       // Insert ledger row directly to include metadata (grant_tokens RPC doesn't accept it)
-      const { error: gErr } = await context.supabase.from("token_ledger").insert({
+      const { error: gErr } = await supabaseAdmin.from("token_ledger").insert({
         tenant_id: t.id,
         kind: "grant",
         tokens: data.tokensPerTenant,
