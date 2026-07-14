@@ -233,6 +233,9 @@ export function parseAuthConfig(toml: string | null): PrimeAuthConfig | null {
   if (minPw !== undefined) out.password_min_length = minPw;
 
   return Object.keys(out).length > 0 ? out : null;
+}
+
+
 
 /**
  * Extract secret names referenced by function source code.
