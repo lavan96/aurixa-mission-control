@@ -11,6 +11,7 @@ import {
 } from "./github-app.server";
 import { isBlockedByApproval } from "./cascade-approvals.server";
 import { validateClonePinsServer } from "./library-validation.server";
+import { validateModuleGlobs } from "@/lib/module-globs";
 
 type CascadeResultUpdate = Database["public"]["Tables"]["cascade_results"]["Update"];
 type SupabaseLike = SupabaseClient<Database>;
