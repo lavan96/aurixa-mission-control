@@ -9,6 +9,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { getAppOctokit, type RepoRef } from "./github-app.server";
 import type { Octokit } from "@octokit/rest";
+import { validateModuleGlobs } from "@/lib/module-globs";
 import crypto from "crypto";
 
 type Supabase = SupabaseClient<Database>;
