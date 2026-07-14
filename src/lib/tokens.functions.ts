@@ -275,9 +275,11 @@ export const grantTenantTokens = createServerFn({ method: "POST" })
       _expires_at: data.expiresAt ?? undefined,
     });
     if (error) return { ok: false as const, error: error.message };
-    void fanBalanceUpdated(data.tenantId, "admin_grant");
+    // Awaited: serverless runtimes cancel promises left in flight after the
+    // response, which silently dropped these webhooks/oversight rows.
+    await fanBalanceUpdated(data.tenantId, "admin_grant");
     // Discretionary-action oversight: grants land in the purchases ledger.
-    void recordAdminAction({
+    await recordAdminAction({
       mode: "admin_grant",
       tenantId: data.tenantId,
       itemSlug: `grant:${data.tokens}`,
@@ -329,10 +331,10 @@ export const applyTenantTopup = createServerFn({ method: "POST" })
       _source_ref: effectiveSourceRef,
     });
     if (error) return { ok: false as const, error: error.message };
-    void fanBalanceUpdated(data.tenantId, "admin_topup");
+    await fanBalanceUpdated(data.tenantId, "admin_topup");
     // Discretionary-action oversight: comp top-ups land in the purchases
     // ledger (idempotent replays return above and are not double-recorded).
-    void recordAdminAction({
+    await recordAdminAction({
       mode: "admin_topup",
       tenantId: data.tenantId,
       itemSlug: `pack:${data.packId}`,
@@ -366,7 +368,7 @@ export const refundReportJob = createServerFn({ method: "POST" })
         .select("tenant_id, clone_id")
         .eq("id", data.jobId)
         .maybeSingle();
-      if (job?.tenant_id) void fanBalanceUpdated(job.tenant_id, "admin_refund", job.clone_id);
+      if (job?.tenant_id) await fanBalanceUpdated(job.tenant_id, "admin_refund", job.clone_id);
     }
     return r;
   });

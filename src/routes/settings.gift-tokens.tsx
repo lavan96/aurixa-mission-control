@@ -82,6 +82,11 @@ function GiftTokensPage() {
       toast.success(
         `Gifted ${res.totalTokensIssued.toLocaleString()} tokens to ${res.granted} tenants (${res.campaignId})`,
       );
+      if (res.failures?.length) {
+        toast.warning(
+          `${res.failures.length} tenant(s) failed: ${res.failures[0]?.error ?? "unknown error"}`,
+        );
+      }
       qc.invalidateQueries({ queryKey: ["gift-campaigns"] });
       qc.invalidateQueries({ queryKey: ["tenants"] });
     },

@@ -82,6 +82,7 @@ export const bulkGiftTokens = createServerFn({ method: "POST" })
 
     let granted = 0;
     const failures: Array<{ tenantId: string; error: string }> = [];
+    const sideEffects: Array<Promise<unknown>> = [];
 
     for (const t of targets) {
       // Insert ledger row directly to include metadata (grant_tokens RPC doesn't accept it)
@@ -101,15 +102,28 @@ export const bulkGiftTokens = createServerFn({ method: "POST" })
         continue;
       }
       granted++;
-      void fanBalanceUpdated(t.id, t.clone_id);
-      void recordAdminAction({
+      sideEffects.push(fanBalanceUpdated(t.id, t.clone_id));
+      sideEffects.push(recordAdminAction({
         mode: "admin_grant",
         tenantId: t.id,
         itemSlug: `promo:${campaignId}`,
         operatorUserId: context.userId as string,
         operatorUsername: operatorName,
         metadata: { ...metadata, tokens: data.tokensPerTenant, reason: data.reason },
-      });
+      }));
+    }
+
+    // Serverless runtimes cancel in-flight promises once the response is sent,
+    // so the clone-facing webhooks / oversight rows must be awaited — firing
+    // them with `void` silently dropped every balance-updated webhook.
+    await Promise.allSettled(sideEffects);
+
+    if (granted === 0) {
+      return {
+        ok: false as const,
+        error: failures[0]?.error ?? "no_grants_applied",
+        failures,
+      };
     }
 
     return {
