@@ -58,6 +58,7 @@ import { Route as HooksBrandDriftRouteImport } from './routes/hooks.brand-drift'
 import { Route as HooksBackendProvisioningDrainRouteImport } from './routes/hooks.backend-provisioning-drain'
 import { Route as HooksAirtableSyncRouteImport } from './routes/hooks.airtable-sync'
 import { Route as HandoffsNewRouteImport } from './routes/handoffs.new'
+import { Route as HandoffsHandoffIdRouteImport } from './routes/handoffs.$handoffId'
 import { Route as FleetEdgeRouteImport } from './routes/fleet.edge'
 import { Route as ClonesNewRouteImport } from './routes/clones.new'
 import { Route as ClonesCloneIdRouteImport } from './routes/clones.$cloneId'
@@ -345,6 +346,11 @@ const HandoffsNewRoute = HandoffsNewRouteImport.update({
   path: '/new',
   getParentRoute: () => HandoffsRoute,
 } as any)
+const HandoffsHandoffIdRoute = HandoffsHandoffIdRouteImport.update({
+  id: '/$handoffId',
+  path: '/$handoffId',
+  getParentRoute: () => HandoffsRoute,
+} as any)
 const FleetEdgeRoute = FleetEdgeRouteImport.update({
   id: '/fleet/edge',
   path: '/fleet/edge',
@@ -584,6 +590,7 @@ export interface FileRoutesByFullPath {
   '/clones/$cloneId': typeof ClonesCloneIdRouteWithChildren
   '/clones/new': typeof ClonesNewRoute
   '/fleet/edge': typeof FleetEdgeRoute
+  '/handoffs/$handoffId': typeof HandoffsHandoffIdRoute
   '/handoffs/new': typeof HandoffsNewRoute
   '/hooks/airtable-sync': typeof HooksAirtableSyncRoute
   '/hooks/backend-provisioning-drain': typeof HooksBackendProvisioningDrainRoute
@@ -672,6 +679,7 @@ export interface FileRoutesByTo {
   '/clones/$cloneId': typeof ClonesCloneIdRouteWithChildren
   '/clones/new': typeof ClonesNewRoute
   '/fleet/edge': typeof FleetEdgeRoute
+  '/handoffs/$handoffId': typeof HandoffsHandoffIdRoute
   '/handoffs/new': typeof HandoffsNewRoute
   '/hooks/airtable-sync': typeof HooksAirtableSyncRoute
   '/hooks/backend-provisioning-drain': typeof HooksBackendProvisioningDrainRoute
@@ -762,6 +770,7 @@ export interface FileRoutesById {
   '/clones/$cloneId': typeof ClonesCloneIdRouteWithChildren
   '/clones/new': typeof ClonesNewRoute
   '/fleet/edge': typeof FleetEdgeRoute
+  '/handoffs/$handoffId': typeof HandoffsHandoffIdRoute
   '/handoffs/new': typeof HandoffsNewRoute
   '/hooks/airtable-sync': typeof HooksAirtableSyncRoute
   '/hooks/backend-provisioning-drain': typeof HooksBackendProvisioningDrainRoute
@@ -853,6 +862,7 @@ export interface FileRouteTypes {
     | '/clones/$cloneId'
     | '/clones/new'
     | '/fleet/edge'
+    | '/handoffs/$handoffId'
     | '/handoffs/new'
     | '/hooks/airtable-sync'
     | '/hooks/backend-provisioning-drain'
@@ -941,6 +951,7 @@ export interface FileRouteTypes {
     | '/clones/$cloneId'
     | '/clones/new'
     | '/fleet/edge'
+    | '/handoffs/$handoffId'
     | '/handoffs/new'
     | '/hooks/airtable-sync'
     | '/hooks/backend-provisioning-drain'
@@ -1030,6 +1041,7 @@ export interface FileRouteTypes {
     | '/clones/$cloneId'
     | '/clones/new'
     | '/fleet/edge'
+    | '/handoffs/$handoffId'
     | '/handoffs/new'
     | '/hooks/airtable-sync'
     | '/hooks/backend-provisioning-drain'
@@ -1505,6 +1517,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HandoffsNewRouteImport
       parentRoute: typeof HandoffsRoute
     }
+    '/handoffs/$handoffId': {
+      id: '/handoffs/$handoffId'
+      path: '/$handoffId'
+      fullPath: '/handoffs/$handoffId'
+      preLoaderRoute: typeof HandoffsHandoffIdRouteImport
+      parentRoute: typeof HandoffsRoute
+    }
     '/fleet/edge': {
       id: '/fleet/edge'
       path: '/fleet/edge'
@@ -1787,10 +1806,12 @@ const CascadesRouteWithChildren = CascadesRoute._addFileChildren(
 )
 
 interface HandoffsRouteChildren {
+  HandoffsHandoffIdRoute: typeof HandoffsHandoffIdRoute
   HandoffsNewRoute: typeof HandoffsNewRoute
 }
 
 const HandoffsRouteChildren: HandoffsRouteChildren = {
+  HandoffsHandoffIdRoute: HandoffsHandoffIdRoute,
   HandoffsNewRoute: HandoffsNewRoute,
 }
 
