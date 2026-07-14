@@ -72,6 +72,7 @@ import { Route as ApiPublicTokensCancelRouteImport } from './routes/api.public.t
 import { Route as ApiPublicTokensBalanceRouteImport } from './routes/api.public.tokens.balance'
 import { Route as ApiPublicStripeWebhookRouteImport } from './routes/api.public.stripe.webhook'
 import { Route as ApiPublicStorefrontSessionRouteImport } from './routes/api.public.storefront.session'
+import { Route as ApiPublicStorefrontIdentityRouteImport } from './routes/api.public.storefront.identity'
 import { Route as ApiPublicStorefrontHandoffRouteImport } from './routes/api.public.storefront.handoff'
 import { Route as ApiPublicStorefrontCheckoutRouteImport } from './routes/api.public.storefront.checkout'
 import { Route as ApiPublicStorefrontCatalogRouteImport } from './routes/api.public.storefront.catalog'
@@ -408,6 +409,12 @@ const ApiPublicStorefrontSessionRoute =
     path: '/api/public/storefront/session',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicStorefrontIdentityRoute =
+  ApiPublicStorefrontIdentityRouteImport.update({
+    id: '/api/public/storefront/identity',
+    path: '/api/public/storefront/identity',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicStorefrontHandoffRoute =
   ApiPublicStorefrontHandoffRouteImport.update({
     id: '/api/public/storefront/handoff',
@@ -573,6 +580,7 @@ export interface FileRoutesByFullPath {
   '/api/public/storefront/catalog': typeof ApiPublicStorefrontCatalogRoute
   '/api/public/storefront/checkout': typeof ApiPublicStorefrontCheckoutRoute
   '/api/public/storefront/handoff': typeof ApiPublicStorefrontHandoffRoute
+  '/api/public/storefront/identity': typeof ApiPublicStorefrontIdentityRoute
   '/api/public/storefront/session': typeof ApiPublicStorefrontSessionRoute
   '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
@@ -654,6 +662,7 @@ export interface FileRoutesByTo {
   '/api/public/storefront/catalog': typeof ApiPublicStorefrontCatalogRoute
   '/api/public/storefront/checkout': typeof ApiPublicStorefrontCheckoutRoute
   '/api/public/storefront/handoff': typeof ApiPublicStorefrontHandoffRoute
+  '/api/public/storefront/identity': typeof ApiPublicStorefrontIdentityRoute
   '/api/public/storefront/session': typeof ApiPublicStorefrontSessionRoute
   '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
@@ -737,6 +746,7 @@ export interface FileRoutesById {
   '/api/public/storefront/catalog': typeof ApiPublicStorefrontCatalogRoute
   '/api/public/storefront/checkout': typeof ApiPublicStorefrontCheckoutRoute
   '/api/public/storefront/handoff': typeof ApiPublicStorefrontHandoffRoute
+  '/api/public/storefront/identity': typeof ApiPublicStorefrontIdentityRoute
   '/api/public/storefront/session': typeof ApiPublicStorefrontSessionRoute
   '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
@@ -821,6 +831,7 @@ export interface FileRouteTypes {
     | '/api/public/storefront/catalog'
     | '/api/public/storefront/checkout'
     | '/api/public/storefront/handoff'
+    | '/api/public/storefront/identity'
     | '/api/public/storefront/session'
     | '/api/public/stripe/webhook'
     | '/api/public/tokens/balance'
@@ -902,6 +913,7 @@ export interface FileRouteTypes {
     | '/api/public/storefront/catalog'
     | '/api/public/storefront/checkout'
     | '/api/public/storefront/handoff'
+    | '/api/public/storefront/identity'
     | '/api/public/storefront/session'
     | '/api/public/stripe/webhook'
     | '/api/public/tokens/balance'
@@ -984,6 +996,7 @@ export interface FileRouteTypes {
     | '/api/public/storefront/catalog'
     | '/api/public/storefront/checkout'
     | '/api/public/storefront/handoff'
+    | '/api/public/storefront/identity'
     | '/api/public/storefront/session'
     | '/api/public/stripe/webhook'
     | '/api/public/tokens/balance'
@@ -1057,6 +1070,7 @@ export interface RootRouteChildren {
   ApiPublicStorefrontCatalogRoute: typeof ApiPublicStorefrontCatalogRoute
   ApiPublicStorefrontCheckoutRoute: typeof ApiPublicStorefrontCheckoutRoute
   ApiPublicStorefrontHandoffRoute: typeof ApiPublicStorefrontHandoffRoute
+  ApiPublicStorefrontIdentityRoute: typeof ApiPublicStorefrontIdentityRoute
   ApiPublicStorefrontSessionRoute: typeof ApiPublicStorefrontSessionRoute
   ApiPublicStripeWebhookRoute: typeof ApiPublicStripeWebhookRoute
   ApiPublicTokensBalanceRoute: typeof ApiPublicTokensBalanceRoute
@@ -1513,6 +1527,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicStorefrontSessionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/storefront/identity': {
+      id: '/api/public/storefront/identity'
+      path: '/api/public/storefront/identity'
+      fullPath: '/api/public/storefront/identity'
+      preLoaderRoute: typeof ApiPublicStorefrontIdentityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/storefront/handoff': {
       id: '/api/public/storefront/handoff'
       path: '/api/public/storefront/handoff'
@@ -1744,6 +1765,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicStorefrontCatalogRoute: ApiPublicStorefrontCatalogRoute,
   ApiPublicStorefrontCheckoutRoute: ApiPublicStorefrontCheckoutRoute,
   ApiPublicStorefrontHandoffRoute: ApiPublicStorefrontHandoffRoute,
+  ApiPublicStorefrontIdentityRoute: ApiPublicStorefrontIdentityRoute,
   ApiPublicStorefrontSessionRoute: ApiPublicStorefrontSessionRoute,
   ApiPublicStripeWebhookRoute: ApiPublicStripeWebhookRoute,
   ApiPublicTokensBalanceRoute: ApiPublicTokensBalanceRoute,
