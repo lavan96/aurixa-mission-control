@@ -210,6 +210,7 @@ export async function runQueuedBackendProvisioning(input: {
   moduleIds?: string[];
   actorUserId: string | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   return runBackendProvisioning(supabaseAdmin as any, input.actorUserId ?? "system", {
     cloneId: input.cloneId,
     cloneName: input.cloneName,
