@@ -47,6 +47,15 @@ export type PrimeEdgeFunction = {
   verifyJwt: boolean;
 };
 
+export type PrimeAuthConfig = {
+  site_url?: string;
+  uri_allow_list?: string;      // comma-separated (Management API shape)
+  jwt_exp?: number;             // seconds
+  disable_signup?: boolean;
+  external_anonymous_users_enabled?: boolean;
+  password_min_length?: number;
+};
+
 export type PrimeBackendSnapshot = {
   /** "owner/repo" the snapshot was taken from */
   sourceRepo: string;
@@ -58,6 +67,9 @@ export type PrimeBackendSnapshot = {
   functions: PrimeEdgeFunction[];
   /** Secret names referenced by edge functions — values are never read */
   secretNames: string[];
+  /** Auth policy replicated from the prime's supabase/config.toml [auth] block.
+   *  Values-only, never secrets — providers/keys are configured per-clone. */
+  authConfig: PrimeAuthConfig | null;
 };
 
 // ─── Pure helpers (unit-tested) ──────────────────────────────────────
@@ -169,6 +181,61 @@ export function parseFunctionConfig(toml: string | null): Map<string, { verifyJw
   }
   return out;
 }
+
+/**
+ * Extract the `[auth]` block from supabase/config.toml as a Management-API
+ * shaped patch. Only whitelisted, non-secret fields are surfaced — provider
+ * secrets and OAuth client credentials NEVER travel through the snapshot.
+ * Returns null when config.toml is missing or has no [auth] section.
+ */
+export function parseAuthConfig(toml: string | null): PrimeAuthConfig | null {
+  if (!toml) return null;
+  // Grab the [auth] section body up to the next top-level [section].
+  const m = /(^|\n)\[auth\]\s*\n([\s\S]*?)(?=\n\[[A-Za-z_][^\]]*\]|$)/.exec(toml);
+  if (!m) return null;
+  const body = m[2];
+  const out: PrimeAuthConfig = {};
+  const readStr = (key: string): string | undefined => {
+    const rx = new RegExp(`(^|\\n)\\s*${key}\\s*=\\s*"([^"]*)"`);
+    return rx.exec(body)?.[2];
+  };
+  const readNum = (key: string): number | undefined => {
+    const rx = new RegExp(`(^|\\n)\\s*${key}\\s*=\\s*(\\d+)`);
+    const v = rx.exec(body)?.[2];
+    return v ? Number(v) : undefined;
+  };
+  const readBool = (key: string): boolean | undefined => {
+    const rx = new RegExp(`(^|\\n)\\s*${key}\\s*=\\s*(true|false)`);
+    const v = rx.exec(body)?.[2];
+    return v ? v === "true" : undefined;
+  };
+  const readArr = (key: string): string[] | undefined => {
+    const rx = new RegExp(`(^|\\n)\\s*${key}\\s*=\\s*\\[([^\\]]*)\\]`);
+    const v = rx.exec(body)?.[2];
+    if (v === undefined) return undefined;
+    return v
+      .split(",")
+      .map((s) => s.trim().replace(/^["']|["']$/g, ""))
+      .filter(Boolean);
+  };
+
+  const siteUrl = readStr("site_url");
+  if (siteUrl) out.site_url = siteUrl;
+  const redirects = readArr("additional_redirect_urls");
+  if (redirects && redirects.length) out.uri_allow_list = redirects.join(",");
+  const jwtExpiry = readNum("jwt_expiry");
+  if (jwtExpiry !== undefined) out.jwt_exp = jwtExpiry;
+  const enableSignup = readBool("enable_signup");
+  if (enableSignup !== undefined) out.disable_signup = !enableSignup;
+  const enableAnon = readBool("enable_anonymous_sign_ins");
+  if (enableAnon !== undefined) out.external_anonymous_users_enabled = enableAnon;
+  const minPw = readNum("minimum_password_length");
+  if (minPw !== undefined) out.password_min_length = minPw;
+
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+
 
 /**
  * Extract secret names referenced by function source code.
@@ -412,5 +479,6 @@ export async function fetchPrimeBackendSnapshot(
     migrations,
     functions,
     secretNames,
+    authConfig: parseAuthConfig(configToml),
   };
 }
