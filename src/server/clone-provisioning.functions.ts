@@ -63,10 +63,33 @@ export const provisionClone = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<ProvisionCloneResult> => {
     const { supabase, userId } = context;
 
+    // ─── Issue #13: idempotency short-circuit ─────────────────────────
+    // If the same operator resubmits with the same key (double-click,
+    // network retry, tab-switch-then-back), return the existing clone
+    // instead of forking a second GitHub repo. Enforced by the partial
+    // unique index on (owner_user_id, idempotency_key).
+    if (data.idempotencyKey) {
+      const { data: existing } = await supabase
+        .from("clones")
+        .select("id, github_url")
+        .eq("owner_user_id", userId)
+        .eq("idempotency_key", data.idempotencyKey)
+        .maybeSingle();
+      if (existing) {
+        return {
+          ok: true,
+          cloneId: existing.id,
+          githubUrl: existing.github_url,
+          idempotent: true,
+        };
+      }
+    }
+
     const { data: prime } = await supabase.from("prime_config").select("*").limit(1).maybeSingle();
     if (!prime) {
       return { ok: false, error: "Prime not configured — set it up in Settings first" };
     }
+
 
     let githubOwner = data.targetOwner;
     let githubRepo = data.slug;
