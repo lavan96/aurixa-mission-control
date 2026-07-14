@@ -39,19 +39,23 @@ export function intentItemId(intent: string | null | undefined): string | null {
 
 /**
  * Whether a handoff's intent permits checking out a given mode/item.
- * No intent = the whole catalog; a bare mode pins the mode; '<mode>:<item>'
- * pins the exact item. Enforced server-side by the handoff-scoped checkout.
+ * Enforced server-side by the handoff-scoped checkout.
+ *
+ * A bare mode intent ('topup', 'seat_plan', …) is ADVISORY: it records which
+ * CTA launched the visit, but the buyer lands on the full pricing page where
+ * every plan/pack/package is purchasable — a "Top up credits" entry must not
+ * reject the buyer for choosing a plan instead (handoff_intent_mismatch).
+ * Only an exact '<mode>:<item>' pin — the auto-launch deep-link case —
+ * restricts checkout, and then to precisely that item.
  */
 export function intentAllows(
   intent: string | null | undefined,
   mode: string,
   itemId: string,
 ): boolean {
-  const m = intentMode(intent);
-  if (!m) return true;
-  if (m !== mode) return false;
   const item = intentItemId(intent);
-  return !item || item === itemId;
+  if (!item) return true;
+  return intentMode(intent) === mode && item === itemId;
 }
 
 /**
