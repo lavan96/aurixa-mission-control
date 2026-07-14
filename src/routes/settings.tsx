@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/protected-route";
 import { cn } from "@/lib/utils";
-import { Cog, BellRing, Shield, Eye, ScrollText, Grid3x3, Wallet } from "lucide-react";
+import { Cog, BellRing, Shield, Eye, ScrollText, Grid3x3, Wallet, Gift } from "lucide-react";
 
 export const Route = createFileRoute("/settings")({
   component: () => (
