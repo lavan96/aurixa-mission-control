@@ -229,6 +229,7 @@ function NewClone() {
           cloudflareEnabled: cloudflare,
           notes,
           moduleIds: Array.from(picked),
+          isolatedTenant,
           billingUserId: billingUserId.trim() || null,
           billingStripeCustomerId: billingStripeCustomerId.trim() || null,
         },
