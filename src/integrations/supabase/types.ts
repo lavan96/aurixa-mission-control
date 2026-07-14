@@ -186,6 +186,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "billing_handoffs_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
+          },
+          {
             foreignKeyName: "billing_handoffs_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -404,6 +411,13 @@ export type Database = {
             referencedRelation: "clones"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "cascade_results_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
+          },
         ]
       }
       cascade_schedules: {
@@ -568,6 +582,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "clone_api_keys_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
+          },
+          {
             foreignKeyName: "clone_api_keys_rotated_from_fkey"
             columns: ["rotated_from"]
             isOneToOne: false
@@ -624,6 +645,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clones"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clone_backend_secrets_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
           },
         ]
       }
@@ -1043,6 +1071,13 @@ export type Database = {
             referencedRelation: "clones"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "clone_drift_policies_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: true
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
+          },
         ]
       }
       clone_edge_config: {
@@ -1118,6 +1153,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "clone_edge_config_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
+          },
+          {
             foreignKeyName: "clone_edge_config_posture_preset_fkey"
             columns: ["posture_preset"]
             isOneToOne: false
@@ -1165,6 +1207,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "clones"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clone_health_snapshots_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: true
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
           },
         ]
       }
@@ -1239,6 +1288,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clones"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clone_modules_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
           },
           {
             foreignKeyName: "clone_modules_module_id_fkey"
@@ -1445,6 +1501,7 @@ export type Database = {
           github_repo: string
           github_url: string | null
           id: string
+          isolated_tenant: boolean
           last_cascade_at: string | null
           last_drift_check_at: string | null
           last_synced_sha: string | null
@@ -1473,6 +1530,7 @@ export type Database = {
           github_repo: string
           github_url?: string | null
           id?: string
+          isolated_tenant?: boolean
           last_cascade_at?: string | null
           last_drift_check_at?: string | null
           last_synced_sha?: string | null
@@ -1501,6 +1559,7 @@ export type Database = {
           github_repo?: string
           github_url?: string | null
           id?: string
+          isolated_tenant?: boolean
           last_cascade_at?: string | null
           last_drift_check_at?: string | null
           last_synced_sha?: string | null
@@ -1694,6 +1753,13 @@ export type Database = {
             referencedRelation: "clones"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "edge_audit_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
+          },
         ]
       }
       edge_posture_presets: {
@@ -1824,6 +1890,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clones"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "edge_provisioning_jobs_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
           },
           {
             foreignKeyName: "edge_provisioning_jobs_provider_slug_fkey"
@@ -2390,6 +2463,13 @@ export type Database = {
             referencedRelation: "clones"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "notifications_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
+          },
         ]
       }
       prime_config: {
@@ -2565,6 +2645,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clones"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchases_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
           },
           {
             foreignKeyName: "purchases_handoff_id_fkey"
@@ -2752,6 +2839,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clones"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_jobs_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
           },
           {
             foreignKeyName: "report_jobs_tenant_id_fkey"
@@ -2983,6 +3077,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "security_assessment_comments_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
+          },
+          {
             foreignKeyName: "security_assessment_comments_partner_id_fkey"
             columns: ["partner_id"]
             isOneToOne: false
@@ -3042,6 +3143,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clones"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_assessment_events_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
           },
           {
             foreignKeyName: "security_assessment_events_partner_id_fkey"
@@ -3150,6 +3258,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "security_assessments_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
+          },
+          {
             foreignKeyName: "security_assessments_partner_id_fkey"
             columns: ["partner_id"]
             isOneToOne: false
@@ -3235,6 +3350,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "security_findings_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
+          },
+          {
             foreignKeyName: "security_findings_partner_id_fkey"
             columns: ["partner_id"]
             isOneToOne: false
@@ -3287,6 +3409,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clones"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_partner_assignments_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
           },
           {
             foreignKeyName: "security_partner_assignments_partner_id_fkey"
@@ -3464,6 +3593,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clones"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_reports_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
           },
           {
             foreignKeyName: "security_reports_partner_id_fkey"
@@ -3689,6 +3825,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clones"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenants_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
           },
           {
             foreignKeyName: "tenants_plan_id_fkey"
@@ -4166,6 +4309,20 @@ export type Database = {
         }
         Relationships: []
       }
+      clones_missing_isolated_backend: {
+        Row: {
+          backend_status: string | null
+          clone_id: string | null
+          created_at: string | null
+          name: string | null
+          owner_user_id: string | null
+          provisioning_method:
+            | Database["public"]["Enums"]["provisioning_method"]
+            | null
+          slug: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       apply_topup: {
@@ -4201,6 +4358,11 @@ export type Database = {
         Returns: Json
       }
       cleanup_billing_attribution: { Args: never; Returns: Json }
+      clone_has_dedicated_backend: {
+        Args: { _clone_id: string }
+        Returns: boolean
+      }
+      clone_requires_backend: { Args: { _clone_id: string }; Returns: boolean }
       commit_seat: { Args: { _seat_id: string }; Returns: Json }
       commit_tokens: {
         Args: { _actual_tokens: number; _job_id: string; _result_meta?: Json }
