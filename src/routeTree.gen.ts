@@ -20,6 +20,7 @@ import { Route as PartnerPortalRouteImport } from './routes/partner-portal'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as ModulesRouteImport } from './routes/modules'
 import { Route as MetricsRouteImport } from './routes/metrics'
+import { Route as LeadsRouteImport } from './routes/leads'
 import { Route as HealthRouteImport } from './routes/health'
 import { Route as FleetManagerRouteImport } from './routes/fleet-manager'
 import { Route as DriftRouteImport } from './routes/drift'
@@ -79,6 +80,7 @@ import { Route as ApiPublicSeatsListRouteImport } from './routes/api.public.seat
 import { Route as ApiPublicSeatsEntitlementRouteImport } from './routes/api.public.seats.entitlement'
 import { Route as ApiPublicSeatsCommitRouteImport } from './routes/api.public.seats.commit'
 import { Route as ApiPublicPricingCatalogRouteImport } from './routes/api.public.pricing.catalog'
+import { Route as ApiPublicLeadsCaptureRouteImport } from './routes/api.public.leads.capture'
 import { Route as ApiPublicEdgeStatusRouteImport } from './routes/api.public.edge.status'
 import { Route as ApiPublicClonesRotateKeyRouteImport } from './routes/api.public.clones.rotate-key'
 import { Route as ApiPublicBillingHandoffRouteImport } from './routes/api.public.billing.handoff'
@@ -140,6 +142,11 @@ const ModulesRoute = ModulesRouteImport.update({
 const MetricsRoute = MetricsRouteImport.update({
   id: '/metrics',
   path: '/metrics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LeadsRoute = LeadsRouteImport.update({
+  id: '/leads',
+  path: '/leads',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HealthRoute = HealthRouteImport.update({
@@ -444,6 +451,11 @@ const ApiPublicPricingCatalogRoute = ApiPublicPricingCatalogRouteImport.update({
   path: '/api/public/pricing/catalog',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicLeadsCaptureRoute = ApiPublicLeadsCaptureRouteImport.update({
+  id: '/api/public/leads/capture',
+  path: '/api/public/leads/capture',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicEdgeStatusRoute = ApiPublicEdgeStatusRouteImport.update({
   id: '/api/public/edge/status',
   path: '/api/public/edge/status',
@@ -498,6 +510,7 @@ export interface FileRoutesByFullPath {
   '/drift': typeof DriftRoute
   '/fleet-manager': typeof FleetManagerRoute
   '/health': typeof HealthRoute
+  '/leads': typeof LeadsRoute
   '/metrics': typeof MetricsRoute
   '/modules': typeof ModulesRouteWithChildren
   '/notifications': typeof NotificationsRoute
@@ -543,6 +556,7 @@ export interface FileRoutesByFullPath {
   '/api/public/billing/handoff': typeof ApiPublicBillingHandoffRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
   '/api/public/edge/status': typeof ApiPublicEdgeStatusRoute
+  '/api/public/leads/capture': typeof ApiPublicLeadsCaptureRoute
   '/api/public/pricing/catalog': typeof ApiPublicPricingCatalogRoute
   '/api/public/seats/commit': typeof ApiPublicSeatsCommitRoute
   '/api/public/seats/entitlement': typeof ApiPublicSeatsEntitlementRoute
@@ -577,6 +591,7 @@ export interface FileRoutesByTo {
   '/drift': typeof DriftRoute
   '/fleet-manager': typeof FleetManagerRoute
   '/health': typeof HealthRoute
+  '/leads': typeof LeadsRoute
   '/metrics': typeof MetricsRoute
   '/modules': typeof ModulesRouteWithChildren
   '/notifications': typeof NotificationsRoute
@@ -621,6 +636,7 @@ export interface FileRoutesByTo {
   '/api/public/billing/handoff': typeof ApiPublicBillingHandoffRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
   '/api/public/edge/status': typeof ApiPublicEdgeStatusRoute
+  '/api/public/leads/capture': typeof ApiPublicLeadsCaptureRoute
   '/api/public/pricing/catalog': typeof ApiPublicPricingCatalogRoute
   '/api/public/seats/commit': typeof ApiPublicSeatsCommitRoute
   '/api/public/seats/entitlement': typeof ApiPublicSeatsEntitlementRoute
@@ -656,6 +672,7 @@ export interface FileRoutesById {
   '/drift': typeof DriftRoute
   '/fleet-manager': typeof FleetManagerRoute
   '/health': typeof HealthRoute
+  '/leads': typeof LeadsRoute
   '/metrics': typeof MetricsRoute
   '/modules': typeof ModulesRouteWithChildren
   '/notifications': typeof NotificationsRoute
@@ -701,6 +718,7 @@ export interface FileRoutesById {
   '/api/public/billing/handoff': typeof ApiPublicBillingHandoffRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
   '/api/public/edge/status': typeof ApiPublicEdgeStatusRoute
+  '/api/public/leads/capture': typeof ApiPublicLeadsCaptureRoute
   '/api/public/pricing/catalog': typeof ApiPublicPricingCatalogRoute
   '/api/public/seats/commit': typeof ApiPublicSeatsCommitRoute
   '/api/public/seats/entitlement': typeof ApiPublicSeatsEntitlementRoute
@@ -737,6 +755,7 @@ export interface FileRouteTypes {
     | '/drift'
     | '/fleet-manager'
     | '/health'
+    | '/leads'
     | '/metrics'
     | '/modules'
     | '/notifications'
@@ -782,6 +801,7 @@ export interface FileRouteTypes {
     | '/api/public/billing/handoff'
     | '/api/public/clones/rotate-key'
     | '/api/public/edge/status'
+    | '/api/public/leads/capture'
     | '/api/public/pricing/catalog'
     | '/api/public/seats/commit'
     | '/api/public/seats/entitlement'
@@ -816,6 +836,7 @@ export interface FileRouteTypes {
     | '/drift'
     | '/fleet-manager'
     | '/health'
+    | '/leads'
     | '/metrics'
     | '/modules'
     | '/notifications'
@@ -860,6 +881,7 @@ export interface FileRouteTypes {
     | '/api/public/billing/handoff'
     | '/api/public/clones/rotate-key'
     | '/api/public/edge/status'
+    | '/api/public/leads/capture'
     | '/api/public/pricing/catalog'
     | '/api/public/seats/commit'
     | '/api/public/seats/entitlement'
@@ -894,6 +916,7 @@ export interface FileRouteTypes {
     | '/drift'
     | '/fleet-manager'
     | '/health'
+    | '/leads'
     | '/metrics'
     | '/modules'
     | '/notifications'
@@ -939,6 +962,7 @@ export interface FileRouteTypes {
     | '/api/public/billing/handoff'
     | '/api/public/clones/rotate-key'
     | '/api/public/edge/status'
+    | '/api/public/leads/capture'
     | '/api/public/pricing/catalog'
     | '/api/public/seats/commit'
     | '/api/public/seats/entitlement'
@@ -974,6 +998,7 @@ export interface RootRouteChildren {
   DriftRoute: typeof DriftRoute
   FleetManagerRoute: typeof FleetManagerRoute
   HealthRoute: typeof HealthRoute
+  LeadsRoute: typeof LeadsRoute
   MetricsRoute: typeof MetricsRoute
   ModulesRoute: typeof ModulesRouteWithChildren
   NotificationsRoute: typeof NotificationsRoute
@@ -1009,6 +1034,7 @@ export interface RootRouteChildren {
   ApiPublicBillingHandoffRoute: typeof ApiPublicBillingHandoffRoute
   ApiPublicClonesRotateKeyRoute: typeof ApiPublicClonesRotateKeyRoute
   ApiPublicEdgeStatusRoute: typeof ApiPublicEdgeStatusRoute
+  ApiPublicLeadsCaptureRoute: typeof ApiPublicLeadsCaptureRoute
   ApiPublicPricingCatalogRoute: typeof ApiPublicPricingCatalogRoute
   ApiPublicSeatsCommitRoute: typeof ApiPublicSeatsCommitRoute
   ApiPublicSeatsEntitlementRoute: typeof ApiPublicSeatsEntitlementRoute
@@ -1108,6 +1134,13 @@ declare module '@tanstack/react-router' {
       path: '/metrics'
       fullPath: '/metrics'
       preLoaderRoute: typeof MetricsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/leads': {
+      id: '/leads'
+      path: '/leads'
+      fullPath: '/leads'
+      preLoaderRoute: typeof LeadsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/health': {
@@ -1523,6 +1556,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPricingCatalogRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/leads/capture': {
+      id: '/api/public/leads/capture'
+      path: '/api/public/leads/capture'
+      fullPath: '/api/public/leads/capture'
+      preLoaderRoute: typeof ApiPublicLeadsCaptureRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/edge/status': {
       id: '/api/public/edge/status'
       path: '/api/public/edge/status'
@@ -1637,6 +1677,7 @@ const rootRouteChildren: RootRouteChildren = {
   DriftRoute: DriftRoute,
   FleetManagerRoute: FleetManagerRoute,
   HealthRoute: HealthRoute,
+  LeadsRoute: LeadsRoute,
   MetricsRoute: MetricsRoute,
   ModulesRoute: ModulesRouteWithChildren,
   NotificationsRoute: NotificationsRoute,
@@ -1672,6 +1713,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicBillingHandoffRoute: ApiPublicBillingHandoffRoute,
   ApiPublicClonesRotateKeyRoute: ApiPublicClonesRotateKeyRoute,
   ApiPublicEdgeStatusRoute: ApiPublicEdgeStatusRoute,
+  ApiPublicLeadsCaptureRoute: ApiPublicLeadsCaptureRoute,
   ApiPublicPricingCatalogRoute: ApiPublicPricingCatalogRoute,
   ApiPublicSeatsCommitRoute: ApiPublicSeatsCommitRoute,
   ApiPublicSeatsEntitlementRoute: ApiPublicSeatsEntitlementRoute,

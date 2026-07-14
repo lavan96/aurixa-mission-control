@@ -3771,6 +3771,66 @@ export type Database = {
         }
         Relationships: []
       }
+      waitlist_leads: {
+        Row: {
+          created_at: string
+          dedupe_key: string | null
+          email: string
+          entity_classification: string | null
+          entity_name: string | null
+          first_name: string
+          id: string
+          last_name: string
+          metadata: Json
+          mobile_number: string | null
+          notes: string | null
+          page: string | null
+          source: string
+          status: Database["public"]["Enums"]["lead_status"]
+          submitted_at: string | null
+          tech_stack_bottlenecks: string | null
+          transaction_volume: string | null
+        }
+        Insert: {
+          created_at?: string
+          dedupe_key?: string | null
+          email: string
+          entity_classification?: string | null
+          entity_name?: string | null
+          first_name: string
+          id?: string
+          last_name: string
+          metadata?: Json
+          mobile_number?: string | null
+          notes?: string | null
+          page?: string | null
+          source?: string
+          status?: Database["public"]["Enums"]["lead_status"]
+          submitted_at?: string | null
+          tech_stack_bottlenecks?: string | null
+          transaction_volume?: string | null
+        }
+        Update: {
+          created_at?: string
+          dedupe_key?: string | null
+          email?: string
+          entity_classification?: string | null
+          entity_name?: string | null
+          first_name?: string
+          id?: string
+          last_name?: string
+          metadata?: Json
+          mobile_number?: string | null
+          notes?: string | null
+          page?: string | null
+          source?: string
+          status?: Database["public"]["Enums"]["lead_status"]
+          submitted_at?: string | null
+          tech_stack_bottlenecks?: string | null
+          transaction_volume?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       clone_backends_safe: {
@@ -4015,6 +4075,12 @@ export type Database = {
         | "failed"
         | "suspended"
       drift_severity: "low" | "medium" | "high"
+      lead_status:
+        | "new"
+        | "contacted"
+        | "qualified"
+        | "disqualified"
+        | "converted"
       ledger_kind:
         | "grant"
         | "topup"
@@ -4052,6 +4118,7 @@ export type Database = {
         | "device_limit_reached"
         | "device_registered"
         | "device_released"
+        | "lead_captured"
       notification_severity: "info" | "success" | "warning" | "error"
       overage_policy: "block" | "topup_only" | "pay_as_you_go"
       provisioning_method: "fork" | "template" | "clone"
@@ -4222,6 +4289,13 @@ export const Constants = {
         "suspended",
       ],
       drift_severity: ["low", "medium", "high"],
+      lead_status: [
+        "new",
+        "contacted",
+        "qualified",
+        "disqualified",
+        "converted",
+      ],
       ledger_kind: [
         "grant",
         "topup",
@@ -4260,6 +4334,7 @@ export const Constants = {
         "device_limit_reached",
         "device_registered",
         "device_released",
+        "lead_captured",
       ],
       notification_severity: ["info", "success", "warning", "error"],
       overage_policy: ["block", "topup_only", "pay_as_you_go"],

@@ -28,6 +28,7 @@ import {
   AlertTriangle,
   Users,
   ShoppingCart,
+  UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "@/components/notifications-bell";
@@ -46,6 +47,7 @@ import {
 
 const NAV = [
   { to: "/dashboard", label: "Fleet", icon: LayoutDashboard },
+  { to: "/leads", label: "Leads", icon: UserPlus },
   { to: "/health", label: "Health", icon: Activity },
   { to: "/clones/new", label: "New Clone", icon: GitFork },
   { to: "/modules", label: "Modules", icon: Boxes },

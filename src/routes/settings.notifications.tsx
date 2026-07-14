@@ -19,6 +19,7 @@ import {
   Smartphone,
   Monitor,
   Loader2,
+  UserPlus,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -130,6 +131,12 @@ const KINDS: {
     label: "Module removed",
     description: "Module removed from a clone.",
     icon: Boxes,
+  },
+  {
+    value: "lead_captured",
+    label: "Lead captured",
+    description: "A new waitlist lead came in from the Aurixa Systems website.",
+    icon: UserPlus,
   },
 ];
 
