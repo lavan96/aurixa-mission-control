@@ -2,11 +2,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireAdmin } from "@/integrations/supabase/role-middleware";
-import { provisionCloneBackend } from "./backend-provisioning.server";
-import { fetchPrimeBackendSnapshot, resolvePrimeSource } from "./prime-backend.server";
-import { getAppOctokit } from "./github-app.server";
-import { encryptSecret } from "./crypto.server";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 /**
  * Backend provisioning server functions.
@@ -45,6 +40,10 @@ async function runBackendProvisioning(
   };
 
   try {
+    const { resolvePrimeSource, fetchPrimeBackendSnapshot } = await import("./prime-backend.server");
+    const { getAppOctokit } = await import("./github-app.server");
+    const { provisionCloneBackend } = await import("./backend-provisioning.server");
+    const { encryptSecret } = await import("./crypto.server");
     // ── Snapshot the prime's backend architecture from GitHub ──
     const source = await resolvePrimeSource(supabase);
     if (!source) {
@@ -211,6 +210,7 @@ export async function runQueuedBackendProvisioning(input: {
   moduleIds?: string[];
   actorUserId: string | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   return runBackendProvisioning(supabaseAdmin as any, input.actorUserId ?? "system", {
     cloneId: input.cloneId,
     cloneName: input.cloneName,
@@ -254,6 +254,7 @@ export const provisionBackend = createServerFn({ method: "POST" })
       context,
     }): Promise<{ ok: true; queued: true } | { ok: false; error: string }> => {
       const { supabase, userId } = context;
+      const { encryptSecret } = await import("./crypto.server");
 
       const { data: clone } = await supabase
         .from("clones")
@@ -340,6 +341,7 @@ export const retryBackendProvisioning = createServerFn({ method: "POST" })
       context,
     }): Promise<{ ok: true; queued: true } | { ok: false; error: string }> => {
       const { supabase, userId } = context;
+      const { encryptSecret } = await import("./crypto.server");
 
       const { data: backend } = await supabase
         .from("clone_backends")
