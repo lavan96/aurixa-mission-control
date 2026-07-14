@@ -66,6 +66,7 @@ import { Route as BillingPurchasesRouteImport } from './routes/billing.purchases
 import { Route as BillingCatalogRouteImport } from './routes/billing.catalog'
 import { Route as BillingCancelRouteImport } from './routes/billing.cancel'
 import { Route as ApiHealthRouteImport } from './routes/api.health'
+import { Route as ClonesCloneIdSecretsRouteImport } from './routes/clones.$cloneId.secrets'
 import { Route as ApiPublicPurchasesRouteImport } from './routes/api.public.purchases'
 import { Route as ApiPublicTokensReserveRouteImport } from './routes/api.public.tokens.reserve'
 import { Route as ApiPublicTokensPacksRouteImport } from './routes/api.public.tokens.packs'
@@ -381,6 +382,11 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClonesCloneIdSecretsRoute = ClonesCloneIdSecretsRouteImport.update({
+  id: '/secrets',
+  path: '/secrets',
+  getParentRoute: () => ClonesCloneIdRoute,
+} as any)
 const ApiPublicPurchasesRoute = ApiPublicPurchasesRouteImport.update({
   id: '/api/public/purchases',
   path: '/api/public/purchases',
@@ -556,7 +562,7 @@ export interface FileRoutesByFullPath {
   '/billing/success': typeof BillingSuccessRoute
   '/billing/topup': typeof BillingTopupRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
-  '/clones/$cloneId': typeof ClonesCloneIdRoute
+  '/clones/$cloneId': typeof ClonesCloneIdRouteWithChildren
   '/clones/new': typeof ClonesNewRoute
   '/fleet/edge': typeof FleetEdgeRoute
   '/hooks/airtable-sync': typeof HooksAirtableSyncRoute
@@ -582,6 +588,7 @@ export interface FileRoutesByFullPath {
   '/settings/roles': typeof SettingsRolesRoute
   '/settings/': typeof SettingsIndexRoute
   '/api/public/purchases': typeof ApiPublicPurchasesRoute
+  '/clones/$cloneId/secrets': typeof ClonesCloneIdSecretsRoute
   '/api/public/billing/handoff': typeof ApiPublicBillingHandoffRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
   '/api/public/edge/status': typeof ApiPublicEdgeStatusRoute
@@ -640,7 +647,7 @@ export interface FileRoutesByTo {
   '/billing/success': typeof BillingSuccessRoute
   '/billing/topup': typeof BillingTopupRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
-  '/clones/$cloneId': typeof ClonesCloneIdRoute
+  '/clones/$cloneId': typeof ClonesCloneIdRouteWithChildren
   '/clones/new': typeof ClonesNewRoute
   '/fleet/edge': typeof FleetEdgeRoute
   '/hooks/airtable-sync': typeof HooksAirtableSyncRoute
@@ -666,6 +673,7 @@ export interface FileRoutesByTo {
   '/settings/roles': typeof SettingsRolesRoute
   '/settings': typeof SettingsIndexRoute
   '/api/public/purchases': typeof ApiPublicPurchasesRoute
+  '/clones/$cloneId/secrets': typeof ClonesCloneIdSecretsRoute
   '/api/public/billing/handoff': typeof ApiPublicBillingHandoffRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
   '/api/public/edge/status': typeof ApiPublicEdgeStatusRoute
@@ -726,7 +734,7 @@ export interface FileRoutesById {
   '/billing/success': typeof BillingSuccessRoute
   '/billing/topup': typeof BillingTopupRoute
   '/cascades/$eventId': typeof CascadesEventIdRoute
-  '/clones/$cloneId': typeof ClonesCloneIdRoute
+  '/clones/$cloneId': typeof ClonesCloneIdRouteWithChildren
   '/clones/new': typeof ClonesNewRoute
   '/fleet/edge': typeof FleetEdgeRoute
   '/hooks/airtable-sync': typeof HooksAirtableSyncRoute
@@ -752,6 +760,7 @@ export interface FileRoutesById {
   '/settings/roles': typeof SettingsRolesRoute
   '/settings/': typeof SettingsIndexRoute
   '/api/public/purchases': typeof ApiPublicPurchasesRoute
+  '/clones/$cloneId/secrets': typeof ClonesCloneIdSecretsRoute
   '/api/public/billing/handoff': typeof ApiPublicBillingHandoffRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
   '/api/public/edge/status': typeof ApiPublicEdgeStatusRoute
@@ -839,6 +848,7 @@ export interface FileRouteTypes {
     | '/settings/roles'
     | '/settings/'
     | '/api/public/purchases'
+    | '/clones/$cloneId/secrets'
     | '/api/public/billing/handoff'
     | '/api/public/clones/rotate-key'
     | '/api/public/edge/status'
@@ -923,6 +933,7 @@ export interface FileRouteTypes {
     | '/settings/roles'
     | '/settings'
     | '/api/public/purchases'
+    | '/clones/$cloneId/secrets'
     | '/api/public/billing/handoff'
     | '/api/public/clones/rotate-key'
     | '/api/public/edge/status'
@@ -1008,6 +1019,7 @@ export interface FileRouteTypes {
     | '/settings/roles'
     | '/settings/'
     | '/api/public/purchases'
+    | '/clones/$cloneId/secrets'
     | '/api/public/billing/handoff'
     | '/api/public/clones/rotate-key'
     | '/api/public/edge/status'
@@ -1067,7 +1079,7 @@ export interface RootRouteChildren {
   BillingSeatsRoute: typeof BillingSeatsRoute
   BillingSuccessRoute: typeof BillingSuccessRoute
   BillingTopupRoute: typeof BillingTopupRoute
-  ClonesCloneIdRoute: typeof ClonesCloneIdRoute
+  ClonesCloneIdRoute: typeof ClonesCloneIdRouteWithChildren
   ClonesNewRoute: typeof ClonesNewRoute
   FleetEdgeRoute: typeof FleetEdgeRoute
   HooksAirtableSyncRoute: typeof HooksAirtableSyncRoute
@@ -1511,6 +1523,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/clones/$cloneId/secrets': {
+      id: '/clones/$cloneId/secrets'
+      path: '/secrets'
+      fullPath: '/clones/$cloneId/secrets'
+      preLoaderRoute: typeof ClonesCloneIdSecretsRouteImport
+      parentRoute: typeof ClonesCloneIdRoute
+    }
     '/api/public/purchases': {
       id: '/api/public/purchases'
       path: '/api/public/purchases'
@@ -1747,6 +1766,18 @@ const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
   SettingsRouteChildren,
 )
 
+interface ClonesCloneIdRouteChildren {
+  ClonesCloneIdSecretsRoute: typeof ClonesCloneIdSecretsRoute
+}
+
+const ClonesCloneIdRouteChildren: ClonesCloneIdRouteChildren = {
+  ClonesCloneIdSecretsRoute: ClonesCloneIdSecretsRoute,
+}
+
+const ClonesCloneIdRouteWithChildren = ClonesCloneIdRoute._addFileChildren(
+  ClonesCloneIdRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApprovalsRoute: ApprovalsRoute,
@@ -1779,7 +1810,7 @@ const rootRouteChildren: RootRouteChildren = {
   BillingSeatsRoute: BillingSeatsRoute,
   BillingSuccessRoute: BillingSuccessRoute,
   BillingTopupRoute: BillingTopupRoute,
-  ClonesCloneIdRoute: ClonesCloneIdRoute,
+  ClonesCloneIdRoute: ClonesCloneIdRouteWithChildren,
   ClonesNewRoute: ClonesNewRoute,
   FleetEdgeRoute: FleetEdgeRoute,
   HooksAirtableSyncRoute: HooksAirtableSyncRoute,

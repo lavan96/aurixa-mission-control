@@ -279,26 +279,34 @@ export function CloneBackendCard({ cloneId }: { cloneId: string }) {
                   {secrets.length > 0 && (
                     <details>
                       <summary className="cursor-pointer text-[11px] text-muted-foreground hover:text-foreground">
-                        Secret shells to fill in ({secrets.length})
+                        Secret sync ({secrets.length})
                       </summary>
                       <div className="mt-1 flex flex-wrap gap-1">
-                        {secrets.map((s) => (
-                          <Badge
-                            key={s.name}
-                            variant="outline"
-                            className={cn(
-                              "font-mono text-[10px]",
-                              !s.success && "border-warning/60 text-warning",
-                            )}
-                          >
-                            {s.name}
-                          </Badge>
-                        ))}
+                        {secrets.map((s) => {
+                          const status = (s as any).status as string | undefined;
+                          const isMissing = status === "missing" || (!status && !s.success);
+                          const isFailed = status === "failed";
+                          return (
+                            <Badge
+                              key={s.name}
+                              variant="outline"
+                              className={cn(
+                                "font-mono text-[10px]",
+                                isMissing && "border-warning/60 text-warning",
+                                isFailed && "border-destructive/60 text-destructive",
+                              )}
+                            >
+                              {s.name}
+                            </Badge>
+                          );
+                        })}
                       </div>
-                      <p className="mt-1 text-[10px] text-muted-foreground">
-                        Created empty — set real values in the clone project's Edge Function secrets
-                        before going live.
-                      </p>
+                      <a
+                        href={`/clones/${cloneId}/secrets`}
+                        className="mt-2 inline-flex items-center gap-1 text-[10px] font-medium text-primary hover:underline"
+                      >
+                        Manage secret values →
+                      </a>
                     </details>
                   )}
                 </>

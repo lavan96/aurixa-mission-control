@@ -574,6 +574,50 @@ export type Database = {
           },
         ]
       }
+      clone_backend_secrets: {
+        Row: {
+          clone_id: string
+          created_at: string
+          id: string
+          last_error: string | null
+          last_set_at: string | null
+          name: string
+          set_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          clone_id: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          last_set_at?: string | null
+          name: string
+          set_by?: string | null
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          clone_id?: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          last_set_at?: string | null
+          name?: string
+          set_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clone_backend_secrets_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clone_backends: {
         Row: {
           admin_email: string | null
@@ -2374,6 +2418,33 @@ export type Database = {
           github_repo?: string
           id?: string
           notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      prime_secret_forwards: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          inherit: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          inherit?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          inherit?: boolean
+          name?: string
           updated_at?: string
         }
         Relationships: []
