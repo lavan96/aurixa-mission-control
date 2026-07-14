@@ -1071,12 +1071,18 @@ export async function provisionCloneBackend(
   // Step 5: Deploy the prime's edge functions (non-fatal per function)
   const edgeFunctions = await deployEdgeFunctions(projectRef, snapshot.functions, onStatusUpdate);
 
-  // Step 6: Create empty-shell secrets for every name the functions reference
+  // Step 6: Sync secrets. Names on the prime forwards whitelist get real
+  // values copied over; the rest stay unset and are tracked as `missing` so
+  // operators can fill them in. We never write placeholders.
   await onStatusUpdate?.(
     "migrating",
-    `Creating ${snapshot.secretNames.length} empty secret shell(s)...`,
+    `Syncing ${snapshot.secretNames.length} secret(s) — inheriting whitelisted values...`,
   );
-  const secretShells = await createSecretShells(projectRef, snapshot.secretNames);
+  const secretShells = await syncCloneSecrets(
+    projectRef,
+    snapshot.secretNames,
+    input.inheritedSecrets ?? {},
+  );
 
   // Step 7: Seed admin
   await onStatusUpdate?.("seeding_admin", "Creating admin user...");
