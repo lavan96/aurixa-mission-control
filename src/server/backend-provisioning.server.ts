@@ -1313,6 +1313,7 @@ export async function provisionCloneBackend(
     edgeFunctions,
     secretShells,
     storageBuckets,
+    authConfig: authConfigResult,
   };
 }
 
