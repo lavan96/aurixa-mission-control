@@ -52,6 +52,7 @@ import { Route as HooksExpireReservationsRouteImport } from './routes/hooks.expi
 import { Route as HooksEdgeDriftRouteImport } from './routes/hooks.edge-drift'
 import { Route as HooksEdgeDrainRouteImport } from './routes/hooks.edge-drain'
 import { Route as HooksDriftRefreshRouteImport } from './routes/hooks.drift-refresh'
+import { Route as HooksCascadeDrainRouteImport } from './routes/hooks.cascade-drain'
 import { Route as HooksBrandDriftRouteImport } from './routes/hooks.brand-drift'
 import { Route as HooksBackendProvisioningDrainRouteImport } from './routes/hooks.backend-provisioning-drain'
 import { Route as HooksAirtableSyncRouteImport } from './routes/hooks.airtable-sync'
@@ -311,6 +312,11 @@ const HooksDriftRefreshRoute = HooksDriftRefreshRouteImport.update({
   path: '/hooks/drift-refresh',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HooksCascadeDrainRoute = HooksCascadeDrainRouteImport.update({
+  id: '/hooks/cascade-drain',
+  path: '/hooks/cascade-drain',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HooksBrandDriftRoute = HooksBrandDriftRouteImport.update({
   id: '/hooks/brand-drift',
   path: '/hooks/brand-drift',
@@ -568,6 +574,7 @@ export interface FileRoutesByFullPath {
   '/hooks/airtable-sync': typeof HooksAirtableSyncRoute
   '/hooks/backend-provisioning-drain': typeof HooksBackendProvisioningDrainRoute
   '/hooks/brand-drift': typeof HooksBrandDriftRoute
+  '/hooks/cascade-drain': typeof HooksCascadeDrainRoute
   '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
   '/hooks/edge-drain': typeof HooksEdgeDrainRoute
   '/hooks/edge-drift': typeof HooksEdgeDriftRoute
@@ -653,6 +660,7 @@ export interface FileRoutesByTo {
   '/hooks/airtable-sync': typeof HooksAirtableSyncRoute
   '/hooks/backend-provisioning-drain': typeof HooksBackendProvisioningDrainRoute
   '/hooks/brand-drift': typeof HooksBrandDriftRoute
+  '/hooks/cascade-drain': typeof HooksCascadeDrainRoute
   '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
   '/hooks/edge-drain': typeof HooksEdgeDrainRoute
   '/hooks/edge-drift': typeof HooksEdgeDriftRoute
@@ -740,6 +748,7 @@ export interface FileRoutesById {
   '/hooks/airtable-sync': typeof HooksAirtableSyncRoute
   '/hooks/backend-provisioning-drain': typeof HooksBackendProvisioningDrainRoute
   '/hooks/brand-drift': typeof HooksBrandDriftRoute
+  '/hooks/cascade-drain': typeof HooksCascadeDrainRoute
   '/hooks/drift-refresh': typeof HooksDriftRefreshRoute
   '/hooks/edge-drain': typeof HooksEdgeDrainRoute
   '/hooks/edge-drift': typeof HooksEdgeDriftRoute
@@ -828,6 +837,7 @@ export interface FileRouteTypes {
     | '/hooks/airtable-sync'
     | '/hooks/backend-provisioning-drain'
     | '/hooks/brand-drift'
+    | '/hooks/cascade-drain'
     | '/hooks/drift-refresh'
     | '/hooks/edge-drain'
     | '/hooks/edge-drift'
@@ -913,6 +923,7 @@ export interface FileRouteTypes {
     | '/hooks/airtable-sync'
     | '/hooks/backend-provisioning-drain'
     | '/hooks/brand-drift'
+    | '/hooks/cascade-drain'
     | '/hooks/drift-refresh'
     | '/hooks/edge-drain'
     | '/hooks/edge-drift'
@@ -999,6 +1010,7 @@ export interface FileRouteTypes {
     | '/hooks/airtable-sync'
     | '/hooks/backend-provisioning-drain'
     | '/hooks/brand-drift'
+    | '/hooks/cascade-drain'
     | '/hooks/drift-refresh'
     | '/hooks/edge-drain'
     | '/hooks/edge-drift'
@@ -1085,6 +1097,7 @@ export interface RootRouteChildren {
   HooksAirtableSyncRoute: typeof HooksAirtableSyncRoute
   HooksBackendProvisioningDrainRoute: typeof HooksBackendProvisioningDrainRoute
   HooksBrandDriftRoute: typeof HooksBrandDriftRoute
+  HooksCascadeDrainRoute: typeof HooksCascadeDrainRoute
   HooksDriftRefreshRoute: typeof HooksDriftRefreshRoute
   HooksEdgeDrainRoute: typeof HooksEdgeDrainRoute
   HooksEdgeDriftRoute: typeof HooksEdgeDriftRoute
@@ -1423,6 +1436,13 @@ declare module '@tanstack/react-router' {
       path: '/hooks/drift-refresh'
       fullPath: '/hooks/drift-refresh'
       preLoaderRoute: typeof HooksDriftRefreshRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hooks/cascade-drain': {
+      id: '/hooks/cascade-drain'
+      path: '/hooks/cascade-drain'
+      fullPath: '/hooks/cascade-drain'
+      preLoaderRoute: typeof HooksCascadeDrainRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/hooks/brand-drift': {
@@ -1816,6 +1836,7 @@ const rootRouteChildren: RootRouteChildren = {
   HooksAirtableSyncRoute: HooksAirtableSyncRoute,
   HooksBackendProvisioningDrainRoute: HooksBackendProvisioningDrainRoute,
   HooksBrandDriftRoute: HooksBrandDriftRoute,
+  HooksCascadeDrainRoute: HooksCascadeDrainRoute,
   HooksDriftRefreshRoute: HooksDriftRefreshRoute,
   HooksEdgeDrainRoute: HooksEdgeDrainRoute,
   HooksEdgeDriftRoute: HooksEdgeDriftRoute,
