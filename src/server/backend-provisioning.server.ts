@@ -1259,9 +1259,27 @@ export async function provisionCloneBackend(
     );
   }
 
-  // Step 6: Sync secrets. Names on the prime forwards whitelist get real
-  // values copied over; the rest stay unset and are tracked as `missing` so
-  // operators can fill them in. We never write placeholders.
+  // Step 5c: Replicate the prime's [auth] policy (site URL, redirect allow-list,
+  // JWT expiry, signup + password rules). Non-fatal — surface the result so
+  // operators can retry from the clone page if the Management API rejects it.
+  let authConfigResult: AuthConfigResult = { status: "skipped", reason: "not attempted" };
+  try {
+    await onStatusUpdate?.("migrating", "Replicating auth policy from prime config.toml...");
+    authConfigResult = await applyAuthConfig(projectRef, snapshot.authConfig);
+    if (authConfigResult.status === "failed") {
+      await onStatusUpdate?.(
+        "migrating",
+        `Auth policy replication failed (non-fatal): ${authConfigResult.error}`,
+      );
+    }
+  } catch (err) {
+    authConfigResult = {
+      status: "failed",
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+
+
   await onStatusUpdate?.(
     "migrating",
     `Syncing ${snapshot.secretNames.length} secret(s) — inheriting whitelisted values...`,
