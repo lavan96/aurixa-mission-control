@@ -144,6 +144,7 @@ export const provisionClone = createServerFn({ method: "POST" })
         billing_user_id: data.billingUserId ?? null,
         billing_stripe_customer_id: data.billingStripeCustomerId ?? null,
         notes: data.notes || null,
+        isolated_tenant: data.isolatedTenant === true,
       })
       .select()
       .single();
