@@ -257,11 +257,16 @@ function NewClone() {
         return;
       }
 
-      toast.success(
-        method === "clone"
-          ? "Clone registered (independent — wire up the repo manually)"
-          : `Clone provisioned${result.githubUrl ? " on GitHub" : ""}`,
-      );
+      if ("idempotent" in result && result.idempotent) {
+        toast.info("Clone already provisioned for this submission — reusing existing record.");
+      } else {
+        toast.success(
+          method === "clone"
+            ? "Clone registered (independent — wire up the repo manually)"
+            : `Clone provisioned${result.githubUrl ? " on GitHub" : ""}`,
+        );
+      }
+
 
       // Enqueue backend provisioning if enabled. The wizard only awaits the
       // enqueue (fast); the actual provisioning is executed by the pg_cron
