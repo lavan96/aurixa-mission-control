@@ -479,5 +479,6 @@ export async function fetchPrimeBackendSnapshot(
     migrations,
     functions,
     secretNames,
+    authConfig: parseAuthConfig(configToml),
   };
 }
