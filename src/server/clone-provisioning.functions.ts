@@ -23,9 +23,12 @@ export type ProvisionCloneInput = {
   cloudflareEnabled: boolean;
   notes: string;
   moduleIds: string[];
-  // Operator-assigned billing/tracking identity. `billingUserId` is the stable
-  // ?uid= key the storefront pricing page checks out against, and is stamped
-  // into Stripe metadata / the purchases ledger for payment + token tracking.
+  // When true, this clone must run on its own dedicated Supabase backend.
+  // The wizard enqueues backend provisioning immediately after; DB triggers
+  // prevent the backend from being deleted while this flag is set.
+  // (Audit finding #11.)
+  isolatedTenant?: boolean;
+  // Operator-assigned billing/tracking identity.
   billingUserId?: string | null;
   billingStripeCustomerId?: string | null;
 };
