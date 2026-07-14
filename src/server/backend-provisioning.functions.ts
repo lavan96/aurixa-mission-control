@@ -82,6 +82,7 @@ async function runBackendProvisioning(
 
     const failedFunctions = result.edgeFunctions.filter((f) => !f.success);
     const failedSecrets = result.secretShells.filter((s) => !s.success);
+    const missingSecrets = result.secretShells.filter((s) => s.status === "missing");
     const partialFailures = failedFunctions.length + failedSecrets.length;
 
     // Store credentials + replication report, mark ready
