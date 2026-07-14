@@ -278,6 +278,7 @@ export type Database = {
         Row: {
           approved_at: string | null
           approved_by: string | null
+          attempts: number
           completed_at: string | null
           created_at: string
           id: string
@@ -292,10 +293,13 @@ export type Database = {
           summary: string | null
           trigger: Database["public"]["Enums"]["cascade_trigger"]
           updated_at: string
+          worker_finished_at: string | null
+          worker_started_at: string | null
         }
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
+          attempts?: number
           completed_at?: string | null
           created_at?: string
           id?: string
@@ -310,10 +314,13 @@ export type Database = {
           summary?: string | null
           trigger: Database["public"]["Enums"]["cascade_trigger"]
           updated_at?: string
+          worker_finished_at?: string | null
+          worker_started_at?: string | null
         }
         Update: {
           approved_at?: string | null
           approved_by?: string | null
+          attempts?: number
           completed_at?: string | null
           created_at?: string
           id?: string
@@ -328,6 +335,8 @@ export type Database = {
           summary?: string | null
           trigger?: Database["public"]["Enums"]["cascade_trigger"]
           updated_at?: string
+          worker_finished_at?: string | null
+          worker_started_at?: string | null
         }
         Relationships: []
       }
