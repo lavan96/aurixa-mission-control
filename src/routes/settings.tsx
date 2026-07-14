@@ -19,6 +19,7 @@ const TABS = [
   { to: "/settings/role-audit", label: "Role Audit", icon: ScrollText, exact: false },
   { to: "/settings/billing", label: "Billing", icon: Wallet, exact: false },
   { to: "/settings/gift-tokens", label: "Gift Tokens", icon: Gift, exact: false },
+  { to: "/settings/handoff-policies", label: "Handoff Policies", icon: ArrowRightLeft, exact: false },
   { to: "/settings/provisioning-preview", label: "Provisioning", icon: Eye, exact: false },
   { to: "/settings/permission-matrix", label: "Matrix", icon: Grid3x3, exact: false },
 ] as const;
