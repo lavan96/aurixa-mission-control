@@ -254,6 +254,7 @@ export const provisionBackend = createServerFn({ method: "POST" })
       context,
     }): Promise<{ ok: true; queued: true } | { ok: false; error: string }> => {
       const { supabase, userId } = context;
+      const { encryptSecret } = await import("./crypto.server");
 
       const { data: clone } = await supabase
         .from("clones")
