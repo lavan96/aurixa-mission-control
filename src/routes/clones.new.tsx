@@ -89,6 +89,9 @@ function NewClone() {
   const [billingStripeCustomerId, setBillingStripeCustomerId] = useState("");
   const [busy, setBusy] = useState(false);
   const [dedicatedBackend, setDedicatedBackend] = useState(true);
+  // Isolated tenant: hard-requires a dedicated backend. Defaults true for
+  // template/independent clones (typical client-isolated setup). (Audit #11.)
+  const [isolatedTenant, setIsolatedTenant] = useState(true);
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [backendRegion, setBackendRegion] = useState("us-east-1");
