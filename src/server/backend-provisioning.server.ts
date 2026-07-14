@@ -172,7 +172,130 @@ export async function runSqlOnProject(projectRef: string, sql: string): Promise<
   return res.json();
 }
 
-// ─── Prime Architecture Replication ──────────────────────────────────
+// ─── Storage Bucket Replication ──────────────────────────────────────
+
+/**
+ * Shape of a storage bucket as returned by (and accepted by) the Supabase
+ * Management API's storage endpoints. Public/private, size caps, and mime
+ * allowlists are configuration that must be replicated onto every clone —
+ * the row-level policies on `storage.objects` come with the prime's
+ * migrations, so a bucket that never gets created leaves those policies
+ * unable to match anything on the clone (the app then silently fails uploads).
+ */
+export type StorageBucketConfig = {
+  id: string;
+  name: string;
+  public: boolean;
+  file_size_limit: number | null;
+  allowed_mime_types: string[] | null;
+};
+
+function normalizeBucket(raw: unknown): StorageBucketConfig | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const id = typeof r.id === "string" ? r.id : typeof r.name === "string" ? r.name : null;
+  if (!id) return null;
+  return {
+    id,
+    name: typeof r.name === "string" ? r.name : id,
+    public: r.public === true,
+    file_size_limit: typeof r.file_size_limit === "number" ? r.file_size_limit : null,
+    allowed_mime_types: Array.isArray(r.allowed_mime_types)
+      ? r.allowed_mime_types.filter((m): m is string => typeof m === "string")
+      : null,
+  };
+}
+
+/**
+ * Derive the prime project's ref from the server-side Supabase URL. Used to
+ * point the Management API at the prime when we take a bucket snapshot.
+ */
+export function getPrimeProjectRef(): string {
+  const url = process.env.SUPABASE_URL;
+  if (!url) throw new Error("SUPABASE_URL is not configured — cannot derive prime project ref");
+  const m = /^https?:\/\/([a-z0-9]+)\.supabase\.(co|in|net)/i.exec(url);
+  if (!m) throw new Error(`SUPABASE_URL is not a Supabase project URL: ${url}`);
+  return m[1];
+}
+
+/**
+ * List every storage bucket on a project (config only — no object contents).
+ */
+export async function listProjectStorageBuckets(
+  projectRef: string,
+): Promise<StorageBucketConfig[]> {
+  const res = await fetch(`${MGMT_API}/projects/${projectRef}/storage/buckets`, {
+    headers: headers(),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Failed to list storage buckets on ${projectRef}: ${res.status} — ${body}`);
+  }
+  const raw = (await res.json()) as unknown[];
+  return raw.map(normalizeBucket).filter((b): b is StorageBucketConfig => b !== null);
+}
+
+/**
+ * Create a bucket on the target project with the same visibility, size cap,
+ * and mime allowlist as the source. Idempotent: a bucket that already exists
+ * (409) is treated as success so retries and re-runs are safe.
+ */
+export type BucketReplicationResult = {
+  id: string;
+  status: "created" | "exists" | "failed";
+  error?: string;
+};
+
+export async function createStorageBucket(
+  projectRef: string,
+  bucket: StorageBucketConfig,
+): Promise<BucketReplicationResult> {
+  const body = {
+    id: bucket.id,
+    name: bucket.name,
+    public: bucket.public,
+    file_size_limit: bucket.file_size_limit,
+    allowed_mime_types: bucket.allowed_mime_types,
+  };
+  const res = await fetch(`${MGMT_API}/projects/${projectRef}/storage/buckets`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify(body),
+  });
+  if (res.ok) return { id: bucket.id, status: "created" };
+  const text = await res.text();
+  // Treat "already exists" as a success — this endpoint is idempotent by intent.
+  if (res.status === 409 || /already exists|duplicate/i.test(text)) {
+    return { id: bucket.id, status: "exists" };
+  }
+  return { id: bucket.id, status: "failed", error: `${res.status} — ${text}` };
+}
+
+/**
+ * Copy every bucket configuration from the prime to the target clone.
+ * Bucket contents (`storage.objects` rows and blobs) are intentionally NOT
+ * replicated — a clone starts empty; only structure travels.
+ */
+export async function replicateStorageBuckets(
+  primeRef: string,
+  targetRef: string,
+): Promise<BucketReplicationResult[]> {
+  const primeBuckets = await listProjectStorageBuckets(primeRef);
+  const results: BucketReplicationResult[] = [];
+  for (const bucket of primeBuckets) {
+    try {
+      results.push(await createStorageBucket(targetRef, bucket));
+    } catch (err) {
+      results.push({
+        id: bucket.id,
+        status: "failed",
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+  return results;
+}
+
 
 /**
  * Every clone backend carries its own migration ledger so replays are
@@ -663,6 +786,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.profiles TO authenticated;
+GRANT ALL ON public.profiles TO service_role;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 DO $$ BEGIN
@@ -691,6 +816,8 @@ CREATE TABLE IF NOT EXISTS public.user_roles (
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (user_id, role)
 );
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.user_roles TO authenticated;
+GRANT ALL ON public.user_roles TO service_role;
 ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
 
 -- ── Hierarchy helper functions ──
@@ -1008,6 +1135,7 @@ export type ProvisionBackendResult = {
   latestMigration: string | null;
   edgeFunctions: EdgeFunctionDeployResult[];
   secretShells: SecretShellResult[];
+  storageBuckets: BucketReplicationResult[];
 };
 
 /**
@@ -1071,6 +1199,30 @@ export async function provisionCloneBackend(
   // Step 5: Deploy the prime's edge functions (non-fatal per function)
   const edgeFunctions = await deployEdgeFunctions(projectRef, snapshot.functions, onStatusUpdate);
 
+  // Step 5b: Replicate storage bucket configuration from the prime. Migrations
+  // already replayed the row-level policies on `storage.objects`, but those
+  // policies only match if the buckets themselves exist — otherwise every
+  // signed-URL / upload path silently 404s on the clone. Non-fatal: we
+  // surface per-bucket errors so operators can retry from the clone page.
+  let storageBuckets: BucketReplicationResult[] = [];
+  try {
+    const primeRef = getPrimeProjectRef();
+    await onStatusUpdate?.("migrating", "Replicating storage buckets from prime...");
+    storageBuckets = await replicateStorageBuckets(primeRef, projectRef);
+    const failed = storageBuckets.filter((b) => b.status === "failed");
+    if (failed.length > 0) {
+      await onStatusUpdate?.(
+        "migrating",
+        `${failed.length}/${storageBuckets.length} bucket(s) failed to replicate — operators can retry`,
+      );
+    }
+  } catch (err) {
+    await onStatusUpdate?.(
+      "migrating",
+      `Storage bucket replication skipped: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+
   // Step 6: Sync secrets. Names on the prime forwards whitelist get real
   // values copied over; the rest stay unset and are tracked as `missing` so
   // operators can fill them in. We never write placeholders.
@@ -1083,6 +1235,7 @@ export async function provisionCloneBackend(
     snapshot.secretNames,
     input.inheritedSecrets ?? {},
   );
+
 
   // Step 7: Seed admin
   await onStatusUpdate?.("seeding_admin", "Creating admin user...");
@@ -1105,6 +1258,7 @@ export async function provisionCloneBackend(
     latestMigration: latestApplied,
     edgeFunctions,
     secretShells,
+    storageBuckets,
   };
 }
 

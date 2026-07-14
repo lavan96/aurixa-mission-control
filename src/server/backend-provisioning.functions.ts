@@ -178,12 +178,14 @@ async function runBackendProvisioning(
         migrations_applied: result.migrationsApplied.length,
         edge_functions: result.edgeFunctions,
         secret_shells: result.secretShells.map((s) => ({ name: s.name, ok: s.success })),
+        storage_buckets: result.storageBuckets,
         module_migrations: moduleApplyResults,
       },
     });
 
     // Notification
-    const warnings = partialFailures + failedModules.length;
+    const failedBuckets = result.storageBuckets.filter((b) => b.status === "failed");
+    const warnings = partialFailures + failedModules.length + failedBuckets.length;
     await supabase.from("notifications").insert({
       kind: "clone_created" as const,
       severity: warnings > 0 ? ("warning" as const) : ("success" as const),
@@ -191,7 +193,7 @@ async function runBackendProvisioning(
       body:
         warnings > 0
           ? `Replica of ${snapshot.sourceRepo} ready (${result.projectRef}) with ${warnings} warning(s) — review the clone page.`
-          : `Replicated ${snapshot.sourceRepo}@${snapshot.sourceSha.slice(0, 7)}: ${result.migrationsApplied.length} migrations, ${result.edgeFunctions.length} edge functions, ${result.secretShells.length} secret shells (${result.projectRef})`,
+          : `Replicated ${snapshot.sourceRepo}@${snapshot.sourceSha.slice(0, 7)}: ${result.migrationsApplied.length} migrations, ${result.edgeFunctions.length} edge functions, ${result.storageBuckets.length} buckets, ${result.secretShells.length} secret shells (${result.projectRef})`,
       clone_id: input.cloneId,
       url: `/clones/${input.cloneId}`,
       metadata: {
@@ -199,6 +201,7 @@ async function runBackendProvisioning(
         source_repo: snapshot.sourceRepo,
         source_sha: snapshot.sourceSha,
         edge_functions: result.edgeFunctions,
+        storage_buckets: result.storageBuckets,
         module_migrations: moduleApplyResults,
       },
     });
