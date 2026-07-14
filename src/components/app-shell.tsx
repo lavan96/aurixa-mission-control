@@ -70,6 +70,7 @@ const NAV = [
   { to: "/billing/seats", label: "Seats", icon: Users },
   { to: "/billing/purchases", label: "Purchases", icon: ShoppingCart },
   { to: "/billing/catalog", label: "Pricing Catalog", icon: Receipt },
+  { to: "/handoffs", label: "Handoffs", icon: ArrowRightLeft },
   { to: "/yggdrasil", label: "Yggdrasil", icon: TreePine },
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
