@@ -44,7 +44,8 @@ import {
   pollObservabilityNow,
   OBSERVABILITY_MODES,
 } from "@/lib/handoff-observability.functions";
-import { ArrowRight, Camera, KeyRound, FileDown, ScrollText, ShieldCheck, Github, Link as LinkIcon, Copy, Trash2, FileText, Users, Radio } from "lucide-react";
+import { upsertBillingSplit, getBillingSplit } from "@/lib/handoff-billing.functions";
+import { ArrowRight, Camera, KeyRound, FileDown, ScrollText, ShieldCheck, Github, Link as LinkIcon, Copy, Trash2, FileText, Users, Radio, Receipt } from "lucide-react";
 
 export const Route = createFileRoute("/handoffs/$handoffId")({
   component: () => (
