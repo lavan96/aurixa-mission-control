@@ -2282,6 +2282,106 @@ export type Database = {
         }
         Relationships: []
       }
+      handoff_audit_events: {
+        Row: {
+          action: string | null
+          actor: string | null
+          handoff_id: string
+          id: string
+          occurred_at: string | null
+          payload: Json
+          received_at: string
+          source_event_id: string
+          source_project_ref: string | null
+          source_table: string | null
+        }
+        Insert: {
+          action?: string | null
+          actor?: string | null
+          handoff_id: string
+          id?: string
+          occurred_at?: string | null
+          payload?: Json
+          received_at?: string
+          source_event_id: string
+          source_project_ref?: string | null
+          source_table?: string | null
+        }
+        Update: {
+          action?: string | null
+          actor?: string | null
+          handoff_id?: string
+          id?: string
+          occurred_at?: string | null
+          payload?: Json
+          received_at?: string
+          source_event_id?: string
+          source_project_ref?: string | null
+          source_table?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "handoff_audit_events_handoff_id_fkey"
+            columns: ["handoff_id"]
+            isOneToOne: false
+            referencedRelation: "clone_handoffs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      handoff_audit_shippers: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          endpoint_url: string
+          filter: Json
+          handoff_id: string
+          hmac_secret: string
+          id: string
+          last_error: string | null
+          last_event_at: string | null
+          last_shipped_at: string | null
+          total_shipped: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          endpoint_url: string
+          filter?: Json
+          handoff_id: string
+          hmac_secret: string
+          id?: string
+          last_error?: string | null
+          last_event_at?: string | null
+          last_shipped_at?: string | null
+          total_shipped?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          endpoint_url?: string
+          filter?: Json
+          handoff_id?: string
+          hmac_secret?: string
+          id?: string
+          last_error?: string | null
+          last_event_at?: string | null
+          last_shipped_at?: string | null
+          total_shipped?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "handoff_audit_shippers_handoff_id_fkey"
+            columns: ["handoff_id"]
+            isOneToOne: true
+            referencedRelation: "clone_handoffs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       handoff_billing_splits: {
         Row: {
           aurixa_products_kept: Json
