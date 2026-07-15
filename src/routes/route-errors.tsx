@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CopyButton } from "@/components/copy-button";
+import { ListPager } from "@/components/list-pager";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "@/lib/format";
 import { AlertTriangle, RefreshCw, Search, Filter, ExternalLink, Download } from "lucide-react";
@@ -66,6 +67,7 @@ function RouteErrorsPage() {
   const [windowKey, setWindowKey] = useUrlState<Window>("window", "7d");
   const [search, setSearch] = useUrlState<string>("q", "");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
 
   const load = async () => {
     setLoading(true);
@@ -130,6 +132,18 @@ function RouteErrorsPage() {
 
   const total = rows.length;
   const distinctRoutes = grouped.length;
+
+  // Cap rendered groups; the fetch already limits to 1000 rows, but a noisy
+  // window can still produce many distinct routes. Paginate client-side.
+  const PAGE_SIZE = 20;
+  const pageCount = Math.max(1, Math.ceil(grouped.length / PAGE_SIZE));
+  const clampedPage = Math.min(page, pageCount - 1);
+  const pageGroups = grouped.slice(clampedPage * PAGE_SIZE, (clampedPage + 1) * PAGE_SIZE);
+
+  // Reset to the first page whenever the filter/window changes.
+  useEffect(() => {
+    setPage(0);
+  }, [search, windowKey]);
 
   return (
     <div className="space-y-6">
@@ -230,7 +244,7 @@ function RouteErrorsPage() {
               No route errors recorded for this window. 🎉
             </div>
           ) : (
-            grouped.map((g) => {
+            pageGroups.map((g) => {
               const open = expandedId === g.route_path;
               return (
                 <div
@@ -313,6 +327,7 @@ function RouteErrorsPage() {
               );
             })
           )}
+          <ListPager page={clampedPage} pageCount={pageCount} onPage={setPage} />
         </CardContent>
       </Card>
     </div>

@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ListPager } from "@/components/list-pager";
 import { ProtectedRoute } from "@/components/protected-route";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +26,12 @@ function DigestsPage() {
   const genFn = useServerFn(aiGenerateFleetDigest);
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ["digests"], queryFn: () => listFn() });
+  const [page, setPage] = useState(0);
+  const digests = q.data?.digests ?? [];
+  const PAGE_SIZE = 8;
+  const pageCount = Math.max(1, Math.ceil(digests.length / PAGE_SIZE));
+  const clampedPage = Math.min(page, pageCount - 1);
+  const pageDigests = digests.slice(clampedPage * PAGE_SIZE, (clampedPage + 1) * PAGE_SIZE);
   const gen = useMutation({
     mutationFn: () => genFn(),
     onSuccess: () => {
@@ -58,7 +66,7 @@ function DigestsPage() {
         </Button>
       </header>
 
-      {q.data?.digests.length === 0 ? (
+      {digests.length === 0 ? (
         <Card>
           <CardContent className="p-10 text-center text-sm text-muted-foreground">
             No digests yet. Click <strong>Generate now</strong> to produce the first one.
@@ -66,7 +74,7 @@ function DigestsPage() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {q.data?.digests.map((d) => (
+          {pageDigests.map((d) => (
             <Card key={d.id}>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -96,6 +104,7 @@ function DigestsPage() {
               </CardContent>
             </Card>
           ))}
+          <ListPager page={clampedPage} pageCount={pageCount} onPage={setPage} />
         </div>
       )}
     </div>
