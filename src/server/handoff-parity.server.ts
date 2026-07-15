@@ -28,9 +28,13 @@ import {
   listProjectEdgeFunctionSlugs,
   listProjectSecretNames,
   getProjectAuthConfig,
+  fetchRealtimePublicationTables,
+  REQUIRED_EXTENSIONS,
   type StorageBucketConfig,
   type PrimeCronJob,
+  type RealtimePublicationTable,
 } from "./backend-provisioning.server";
+
 
 type Row = Record<string, unknown>;
 
