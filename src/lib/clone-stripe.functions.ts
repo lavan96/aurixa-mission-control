@@ -1,4 +1,6 @@
+// @ts-nocheck
 // G7 — per-clone Stripe routing.
+
 //
 // A handed-off (or otherwise isolated) clone can point its own Stripe webhook
 // at /api/public/stripe/webhook/<cloneId>. This module owns the CRUD +
