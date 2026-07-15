@@ -21,6 +21,8 @@ import {
   requestCostExport,
   runParityDryRun,
   runCutoverOrchestrator,
+  rollbackHandoffCutover,
+
   replicateHandoffAuthUsers,
   replicateHandoffStorageObjects,
 
@@ -162,6 +164,27 @@ function HandoffDetail() {
     },
     onError: (e: any) => toast.error(e?.message ?? "Orchestrator failed"),
   });
+
+  // G18 — cutover rollback: reverses landed rotations in reverse order and
+  // flags the pinned snapshot for restore.
+  const rollback = useMutation({
+    mutationFn: () => rollbackHandoffCutover({ data: { handoff_id: handoffId } }),
+    onSuccess: (r: any) => {
+      qc.invalidateQueries({ queryKey: ["handoff", handoffId] });
+      if (r?.ok === false && r?.error) {
+        toast.error(r.error === "wrong_state" ? `Cannot roll back from ${r.state}` : r.error);
+        return;
+      }
+      toast.success(
+        `Rollback → ${r?.final_state} · ${r?.rolled_back ?? 0} reversed` +
+          (r?.manual_required ? ` · ${r.manual_required} manual` : "") +
+          (r?.failed ? ` · ${r.failed} failed` : "") +
+          (r?.snapshot_restore_requested ? " · snapshot restore requested" : ""),
+      );
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Rollback failed"),
+  });
+
 
   // G16 — auth users replication (twin_ready / data_syncing).
   const authReplicate = useMutation({
@@ -337,6 +360,18 @@ function HandoffDetail() {
               >
                 {orchestrate.isPending ? "Orchestrating…" : "Run cutover orchestrator (G15)"}
               </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => {
+                  if (confirm("Roll back this cutover? Reverses landed rotations and requests snapshot restore.")) rollback.mutate();
+                }}
+                disabled={rollback.isPending}
+                title="G18 — reverse landed rotations and flag the pinned snapshot for restore"
+              >
+                {rollback.isPending ? "Rolling back…" : "Roll back cutover (G18)"}
+              </Button>
+
               {(["clone_repo", "cloudflare", "stripe_endpoint", "github_webhook", "edge_function_env"] as const).map((t) => (
                 <Button key={t} size="sm" variant="outline" onClick={() => rotate.mutate(t)}>+ {t}</Button>
               ))}

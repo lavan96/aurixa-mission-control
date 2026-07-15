@@ -131,6 +131,112 @@ export async function executeRotation(row: any): Promise<ExecuteOutcome> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// G18 — Rotation rollback executor.
+//
+// Reverses a rotation that has already landed. The behaviour depends on the
+// target:
+//   - edge_function_env : if the operator pinned the pre-cutover value in
+//                         `metadata.previous_secret_value` when planning the
+//                         rotation, POST it back to the client project via
+//                         Mgmt API. Otherwise we can't recover the old value
+//                         (Mgmt API doesn't return secret values), so we mark
+//                         the rollback as `manual_required` with a clear
+//                         instruction for the operator.
+//   - bookkeeping       : record `rolled_back_at` + rollback evidence in
+//                         metadata; the physical undo happens externally.
+// ---------------------------------------------------------------------------
+
+export type RollbackOutcome = {
+  status: "rolled_back" | "failed" | "manual_required";
+  error?: string;
+  audit: Record<string, unknown>;
+};
+
+async function rollbackEdgeFunctionEnv(row: any): Promise<RollbackOutcome> {
+  const md = (row.metadata ?? {}) as any;
+  const projectRef = md.project_ref as string | undefined;
+  const secretName = md.secret_name as string | undefined;
+  const previous = md.previous_secret_value as string | undefined;
+  const clientAccountId = md.client_account_id as string | undefined;
+
+  if (!projectRef || !secretName || !clientAccountId) {
+    return {
+      status: "failed",
+      error: "metadata must include project_ref, secret_name, client_account_id",
+      audit: { missing: true },
+    };
+  }
+  if (!previous) {
+    return {
+      status: "manual_required",
+      error: "no_previous_value_pinned",
+      audit: {
+        instruction: `Re-set '${secretName}' on project ${projectRef} to the pre-cutover value manually via Supabase Mgmt API.`,
+      },
+    };
+  }
+
+  const { data: acct } = await supabaseAdmin
+    .from("client_supabase_accounts")
+    .select("id, pat_ciphertext, status")
+    .eq("id", clientAccountId)
+    .maybeSingle();
+  if (!acct?.pat_ciphertext) return { status: "failed", error: "no_client_pat", audit: {} };
+  if (acct.status === "revoked")
+    return { status: "failed", error: "client_pat_revoked", audit: {} };
+
+  const { decryptSecret } = await import("@/server/crypto.server");
+  const pat = decryptSecret(String(acct.pat_ciphertext));
+  const res = await fetch(
+    `https://api.supabase.com/v1/projects/${projectRef}/secrets`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${pat}`, "Content-Type": "application/json" },
+      body: JSON.stringify([{ name: secretName, value: previous }]),
+    },
+  );
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    return {
+      status: "failed",
+      error: `mgmt_api_${res.status}`,
+      audit: { response: text.slice(0, 400) },
+    };
+  }
+  return {
+    status: "rolled_back",
+    audit: {
+      project_ref: projectRef,
+      secret_name: secretName,
+      rolled_back_via: "supabase_mgmt_api",
+    },
+  };
+}
+
+function rollbackBookkeeping(row: any): RollbackOutcome {
+  const md = (row.metadata ?? {}) as any;
+  return {
+    status: "rolled_back",
+    audit: {
+      rolled_back_via: "bookkeeping",
+      rollback_evidence: md.rollback_evidence ?? null,
+      note: "Physical undo happens externally; ledger marks the reversal for audit.",
+    },
+  };
+}
+
+export async function rollbackRotation(row: any): Promise<RollbackOutcome> {
+  const target = row.target as RotationTarget;
+  try {
+    if (target === "edge_function_env") return await rollbackEdgeFunctionEnv(row);
+    return rollbackBookkeeping(row);
+  } catch (e: any) {
+    return { status: "failed", error: String(e?.message ?? e), audit: {} };
+  }
+}
+
+
 // The default rotation plan enqueued when a handoff enters cutover. Each entry
 // is `(target, key_ref, hint)`; hint lands in `metadata.hint` so operators
 // know what secret to supply.
