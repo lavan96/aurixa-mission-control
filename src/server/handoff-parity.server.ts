@@ -429,6 +429,8 @@ export async function computeParity(primeRef: string, targetRef: string): Promis
   const edgeFns = diffEdgeFunctions(prime, target);
   const secrets = diffSecrets(prime, target);
   const authCfg = diffAuthConfig(prime, target);
+  const requiredExt = diffRequiredExtensions(target);
+  const realtime = diffRealtime(prime, target);
 
   const blocking: string[] = [];
   if (tables.missing_in_target.length) blocking.push(`missing_tables:${tables.missing_in_target.length}`);
@@ -440,6 +442,9 @@ export async function computeParity(primeRef: string, targetRef: string): Promis
   if (buckets.missing_in_target.length) blocking.push(`missing_buckets:${buckets.missing_in_target.length}`);
   if (secrets.missing_in_target.length) blocking.push(`missing_secrets:${secrets.missing_in_target.length}`);
   if (edgeFns.missing_in_target.length) blocking.push(`missing_edge_functions:${edgeFns.missing_in_target.length}`);
+  if (requiredExt.missing_in_target.length) blocking.push(`missing_required_extensions:${requiredExt.missing_in_target.length}`);
+  if (realtime.missing_in_target.length) blocking.push(`missing_realtime_tables:${realtime.missing_in_target.length}`);
+
 
   let risk: ParityResult["risk_level"] = "low";
   if (
