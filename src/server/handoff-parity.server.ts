@@ -95,6 +95,37 @@ const EXTENSIONS_SQL = `
    order by name
 `;
 
+// G5 — Table privileges (GRANTs) for the roles the Data API cares about.
+// Without these, RLS alone leaves tables unreachable via PostgREST.
+const GRANTS_SQL = `
+  select table_name, grantee, privilege_type
+    from information_schema.table_privileges
+   where table_schema = 'public'
+     and grantee in ('anon', 'authenticated', 'service_role')
+   order by table_name, grantee, privilege_type
+`;
+
+// G5 — Enum types and their labels in public.
+const ENUMS_SQL = `
+  select t.typname as name, e.enumlabel as label, e.enumsortorder as ord
+    from pg_type t
+    join pg_namespace n on n.oid = t.typnamespace
+    join pg_enum e on e.enumtypid = t.oid
+   where n.nspname = 'public'
+   order by t.typname, e.enumsortorder
+`;
+
+// G5 — Triggers on public tables (skip internal RI/constraint triggers).
+const TRIGGERS_SQL = `
+  select event_object_table as table_name,
+         trigger_name,
+         action_timing,
+         event_manipulation
+    from information_schema.triggers
+   where trigger_schema = 'public'
+   order by table_name, trigger_name, event_manipulation
+`;
+
 // ── Fetch snapshots ───────────────────────────────────────────────────
 
 async function snapshotProject(ref: string) {
