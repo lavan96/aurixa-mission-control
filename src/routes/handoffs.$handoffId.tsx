@@ -161,6 +161,24 @@ function HandoffDetail() {
     onError: (e: any) => toast.error(e?.message ?? "Orchestrator failed"),
   });
 
+  // G16 — auth users replication (twin_ready / data_syncing).
+  const authReplicate = useMutation({
+    mutationFn: () => replicateHandoffAuthUsers({ data: { handoff_id: handoffId } }),
+    onSuccess: (r: any) => {
+      qc.invalidateQueries({ queryKey: ["handoff", handoffId] });
+      if (r?.ok === false) {
+        toast.error(`Auth replication failed: ${r.error}${r.detail ? ` — ${r.detail}` : ""}`);
+        return;
+      }
+      const msg = `Auth replicated · scanned ${r.scanned} · imported ${r.imported} · skipped ${r.skipped}${r.failed ? ` · failed ${r.failed}` : ""}${r.truncated ? " · truncated" : ""}${r.advanced ? " · advanced → data_syncing" : ""}`;
+      if (r.failed > 0) toast.warning(msg);
+      else toast.success(msg);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Auth replication failed"),
+  });
+
+
+
 
 
   const exportCost = useMutation({
