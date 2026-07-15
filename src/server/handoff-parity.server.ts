@@ -486,6 +486,3 @@ export async function computeParity(primeRef: string, targetRef: string): Promis
     summary,
   };
 }
-
-  };
-}
