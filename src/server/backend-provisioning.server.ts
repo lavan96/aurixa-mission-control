@@ -565,28 +565,102 @@ export async function replicateStorageBuckets(
  * returned so provisioning can proceed even if auth config is rejected.
  */
 export type AuthConfigResult =
-  | { status: "applied"; fields: string[] }
+  | { status: "applied"; fields: string[]; siteUrl?: string; redirectCount?: number }
   | { status: "skipped"; reason: string }
   | { status: "failed"; error: string };
+
+/**
+ * Origins for THIS clone — used to rewrite the prime's [auth] block so the
+ * new backend accepts sign-ins from the clone's actual frontend host(s)
+ * instead of the prime's Cloudflare/Lovable URL (G8).
+ */
+export type CloneOrigins = {
+  /** Preferred canonical origin (e.g. https://client.example.com). */
+  siteUrl?: string | null;
+  /** Any other origins we should whitelist (deploy_url, lovable preview, cloudflare zone, etc.). */
+  additionalRedirectUrls?: (string | null | undefined)[];
+};
+
+/** Normalize a URL/host into a redirect entry. Returns null if unusable. */
+function normalizeOriginEntry(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  let s = raw.trim();
+  if (!s) return null;
+  if (!/^https?:\/\//i.test(s)) s = `https://${s}`;
+  try {
+    const u = new URL(s);
+    if (!u.hostname || u.hostname === "localhost") return null;
+    return `${u.protocol}//${u.host}`;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Build the final auth patch: start from the prime's whitelisted block,
+ * then override site_url + uri_allow_list with values scoped to the clone.
+ * The prime's own hostnames are DROPPED — a customer's clone must never
+ * accept OAuth callbacks or magic-link redirects for the prime domain.
+ */
+export function buildAuthConfigPatch(
+  primeAuth: import("./prime-backend.server").PrimeAuthConfig | null,
+  origins: CloneOrigins | null | undefined,
+): import("./prime-backend.server").PrimeAuthConfig | null {
+  const base = primeAuth ? { ...primeAuth } : null;
+
+  const site = normalizeOriginEntry(origins?.siteUrl ?? null);
+  const extras = (origins?.additionalRedirectUrls ?? [])
+    .map(normalizeOriginEntry)
+    .filter((v): v is string => v !== null);
+
+  if (!site && extras.length === 0) return base;
+
+  const patch = { ...(base ?? {}) };
+
+  if (site) patch.site_url = site;
+
+  // Merge site + extras + wildcard callback path, dedupe, drop prime entries.
+  const redirectSet = new Set<string>();
+  if (site) {
+    redirectSet.add(site);
+    redirectSet.add(`${site}/*`);
+    redirectSet.add(`${site}/auth/callback`);
+  }
+  for (const extra of extras) {
+    redirectSet.add(extra);
+    redirectSet.add(`${extra}/*`);
+    redirectSet.add(`${extra}/auth/callback`);
+  }
+  patch.uri_allow_list = Array.from(redirectSet).join(",");
+
+  return Object.keys(patch).length > 0 ? patch : null;
+}
 
 export async function applyAuthConfig(
   projectRef: string,
   authConfig: import("./prime-backend.server").PrimeAuthConfig | null,
+  origins?: CloneOrigins | null,
 ): Promise<AuthConfigResult> {
-  if (!authConfig || Object.keys(authConfig).length === 0) {
-    return { status: "skipped", reason: "no [auth] block in prime config.toml" };
+  const patch = buildAuthConfigPatch(authConfig, origins ?? null);
+  if (!patch || Object.keys(patch).length === 0) {
+    return { status: "skipped", reason: "no [auth] block in prime config.toml and no clone origins provided" };
   }
   try {
     const res = await fetch(`${MGMT_API}/projects/${projectRef}/config/auth`, {
       method: "PATCH",
       headers: headers(),
-      body: JSON.stringify(authConfig),
+      body: JSON.stringify(patch),
     });
     if (!res.ok) {
       const body = await res.text();
       return { status: "failed", error: `${res.status} — ${body}` };
     }
-    return { status: "applied", fields: Object.keys(authConfig) };
+    return {
+      status: "applied",
+      fields: Object.keys(patch),
+      siteUrl: patch.site_url,
+      redirectCount: patch.uri_allow_list ? patch.uri_allow_list.split(",").filter(Boolean).length : 0,
+    };
   } catch (err) {
     return { status: "failed", error: err instanceof Error ? err.message : String(err) };
   }
@@ -1795,6 +1869,12 @@ export type ProvisionBackendInput = {
    * on the clone and surfaced to operators via the clone secrets UI.
    */
   inheritedSecrets?: Record<string, string>;
+  /**
+   * The clone's own frontend origins. Used to rewrite the prime's
+   * [auth] `site_url` + `uri_allow_list` so the new backend accepts
+   * sign-ins from the clone's own hosts, not the prime's (G8).
+   */
+  cloneOrigins?: CloneOrigins;
 };
 
 export type ProvisionBackendResult = {
@@ -1938,7 +2018,7 @@ export async function provisionCloneBackend(
   let authConfigResult: AuthConfigResult = { status: "skipped", reason: "not attempted" };
   try {
     await onStatusUpdate?.("migrating", "Replicating auth policy from prime config.toml...");
-    authConfigResult = await applyAuthConfig(projectRef, snapshot.authConfig);
+    authConfigResult = await applyAuthConfig(projectRef, snapshot.authConfig, input.cloneOrigins ?? null);
     if (authConfigResult.status === "failed") {
       await onStatusUpdate?.(
         "migrating",
