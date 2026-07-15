@@ -5,7 +5,7 @@
  */
 export type CloneApiScope = {
   value: string;
-  group: "tokens" | "seats" | "devices" | "pricing" | "billing" | "webhooks" | "edge";
+  group: "tokens" | "seats" | "devices" | "pricing" | "billing" | "webhooks" | "edge" | "health";
   label: string;
   description: string;
   default?: boolean;
