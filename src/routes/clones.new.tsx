@@ -754,6 +754,43 @@ function NewClone() {
 
       <Card>
         <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Layers className="h-4 w-4 text-info" /> 6b · Subdomain hosting
+          </CardTitle>
+          <CardDescription>
+            Every clone gets an <code className="rounded bg-muted px-1 text-xs">&lt;slug&gt;.aurixasystems.com.au</code>{" "}
+            subdomain via Cloudflare DNS. Dormant if Cloudflare isn't configured yet — the record fans out automatically once{" "}
+            <a href="/settings/domains" className="underline">Settings → Domains</a> is populated.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <label className="flex cursor-pointer items-center gap-3">
+            <Checkbox checked={subdomainEnabled} onCheckedChange={(v) => setSubdomainEnabled(!!v)} />
+            <span className="text-sm">Reserve a subdomain for this clone</span>
+          </label>
+          {subdomainEnabled && (
+            <div className="grid gap-3 rounded-md border border-border p-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Subdomain (leave blank to use the clone slug)</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={subdomainSlug}
+                    onChange={(e) => setSubdomainSlug(e.target.value)}
+                    placeholder={name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "my-clone"}
+                  />
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">.aurixasystems.com.au</span>
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground self-end">
+                Reserved slugs (www, api, admin, …) are blocked. Availability is checked on submit; conflicts surface as an error.
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle className="text-base">7 · Billing &amp; tracking</CardTitle>
           <CardDescription>
             The tracking user ID ties this clone's Stripe payments, purchased products and token
