@@ -34,7 +34,7 @@ import {
 } from "@/lib/handoff-invites.functions";
 import { verifyCloneRepoGithubAccess, type CloneGithubAccessRow } from "@/lib/clone-github-access.functions";
 import { getHandoffContractDocumentUrl } from "@/lib/handoff-terms.functions";
-import { ArrowRight, Camera, KeyRound, FileDown, ScrollText, ShieldCheck, Github, Link as LinkIcon, Copy, Trash2, FileText } from "lucide-react";
+import { ArrowRight, Camera, KeyRound, FileDown, ScrollText, ShieldCheck, Github, Link as LinkIcon, Copy, Trash2, FileText, Users } from "lucide-react";
 
 export const Route = createFileRoute("/handoffs/$handoffId")({
   component: () => (
