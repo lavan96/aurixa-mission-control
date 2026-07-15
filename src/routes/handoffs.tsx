@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { listHandoffs } from "@/lib/handoffs.functions";
-import { ArrowRightLeft, Plus } from "lucide-react";
+import { getPrimeOrgCapacity } from "@/lib/org-capacity.functions";
+import { ArrowRightLeft, Plus, Gauge } from "lucide-react";
 
 export const Route = createFileRoute("/handoffs")({
   component: () => (
@@ -26,7 +27,19 @@ function stateVariant(state: string): "default" | "secondary" | "destructive" | 
 
 function HandoffsPage() {
   const q = useQuery({ queryKey: ["handoffs"], queryFn: () => listHandoffs() });
+  const cap = useQuery({
+    queryKey: ["handoffs", "prime-org-capacity"],
+    queryFn: () => getPrimeOrgCapacity(),
+    retry: false,
+    staleTime: 60_000,
+  });
   const rows = q.data ?? [];
+  const capData: any = cap.data;
+  const capTone = capData?.hardBlock
+    ? "destructive"
+    : capData?.wouldExceed
+    ? "secondary"
+    : "default";
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -44,6 +57,53 @@ function HandoffsPage() {
           </Link>
         </Button>
       </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Gauge className="h-4 w-4" /> Prime Supabase org capacity (G10)
+              </CardTitle>
+              <CardDescription>
+                Preflight check that runs before every new project create. Handoff twin
+                builds also run this against the client's PAT.
+              </CardDescription>
+            </div>
+            {capData && (
+              <Badge variant={capTone as any}>
+                {capData.activeProjects}/{capData.softLimit} projects
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="text-sm space-y-1">
+          {cap.isLoading && <p className="text-muted-foreground">Checking…</p>}
+          {cap.error && (
+            <p className="text-destructive">
+              Capacity check failed: {String((cap.error as Error).message)}
+            </p>
+          )}
+          {capData && (
+            <>
+              <p>
+                Org: <span className="font-mono">{capData.orgName ?? capData.orgId}</span> · Plan:{" "}
+                <span className="font-mono">{capData.planTier ?? "unknown"}</span>
+              </p>
+              {capData.reason && (
+                <p className={capData.hardBlock ? "text-destructive" : "text-amber-500"}>
+                  {capData.reason}
+                </p>
+              )}
+              {!capData.reason && (
+                <p className="text-muted-foreground">
+                  Headroom OK — provisioning may proceed.
+                </p>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       {q.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
 
