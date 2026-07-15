@@ -639,4 +639,208 @@ export const markSecretRotation = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
+// ---------------------------------------------------------------------------
+// G15 — Cutover orchestrator.
+//
+// Walks queued rotations in canonical order, executes each via
+// `executeRotation`, and drives the handoff state machine:
+//   twin_ready | data_syncing | cutover_scheduled → cutover_in_progress
+//   all rotations rotated/skipped                 → complete
+//   any rotation failed                           → rolled_back (if
+//                                                   rollback_snapshot_id set)
+//                                                   otherwise failed
+// Bookkeeping targets that come back `in_progress` (awaiting operator
+// evidence) are treated as soft-stops: the orchestrator halts without
+// failing so the operator can supply evidence and re-run.
+// ---------------------------------------------------------------------------
+
+const ROTATION_PRIORITY: Record<string, number> = {
+  stripe_endpoint: 10,
+  github_webhook: 20,
+  cloudflare: 30,
+  clone_repo: 40,
+  edge_function_env: 50,
+  webhook_consumer: 60,
+  other: 70,
+};
+
+export const runCutoverOrchestrator = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((input) => z.object({ handoff_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: handoff, error: hErr } = await context.supabase
+      .from("clone_handoffs")
+      .select("id, state, rollback_snapshot_id")
+      .eq("id", data.handoff_id)
+      .maybeSingle();
+    if (hErr) throw hErr;
+    if (!handoff) return { ok: false as const, error: "not_found" };
+
+    const CUTOVER_ENTRY = new Set([
+      "twin_ready",
+      "data_syncing",
+      "cutover_scheduled",
+      "cutover_in_progress",
+    ]);
+    if (!CUTOVER_ENTRY.has(handoff.state)) {
+      return { ok: false as const, error: "wrong_state", state: handoff.state };
+    }
+
+    // Enter cutover_in_progress.
+    if (handoff.state !== "cutover_in_progress") {
+      await context.supabase
+        .from("clone_handoffs")
+        .update({ state: "cutover_in_progress", initiated_at: new Date().toISOString() })
+        .eq("id", data.handoff_id);
+      await context.supabase.from("handoff_events").insert({
+        handoff_id: data.handoff_id,
+        kind: "handoff.cutover_started",
+        actor_user_id: context.userId,
+        details: { from: handoff.state },
+      });
+    }
+
+    const { data: rows, error: rErr } = await context.supabase
+      .from("handoff_secret_rotations")
+      .select("*")
+      .eq("handoff_id", data.handoff_id);
+    if (rErr) throw rErr;
+    const all = rows ?? [];
+    if (all.length === 0) {
+      return { ok: false as const, error: "no_rotations_planned" };
+    }
+
+    const pending = all
+      .filter((r: any) => r.status !== "rotated" && r.status !== "skipped")
+      .sort(
+        (a: any, b: any) =>
+          (ROTATION_PRIORITY[a.target] ?? 99) - (ROTATION_PRIORITY[b.target] ?? 99),
+      );
+
+    const { executeRotation } = await import("@/server/handoff-rotations.server");
+    const results: Array<{
+      id: string;
+      target: string;
+      key_ref: string;
+      status: string;
+      error?: string | null;
+    }> = [];
+
+    for (const row of pending) {
+      await context.supabase
+        .from("handoff_secret_rotations")
+        .update({ status: "in_progress" })
+        .eq("id", row.id);
+      const outcome = await executeRotation(row);
+      const patch: Record<string, unknown> = {
+        status: outcome.status,
+        error: outcome.error ?? null,
+        metadata: {
+          ...(row.metadata ?? {}),
+          last_execution: {
+            at: new Date().toISOString(),
+            actor: context.userId,
+            via: "orchestrator",
+            ...outcome.audit,
+          },
+        },
+      };
+      if (outcome.status === "rotated") {
+        patch.rotated_at = new Date().toISOString();
+        if ((row.metadata as any)?.secret_value) {
+          const cleaned = { ...(row.metadata as any) };
+          delete cleaned.secret_value;
+          cleaned.last_execution = (patch.metadata as any).last_execution;
+          patch.metadata = cleaned;
+        }
+      }
+      await context.supabase.from("handoff_secret_rotations").update(patch).eq("id", row.id);
+      await context.supabase.from("handoff_events").insert({
+        handoff_id: data.handoff_id,
+        kind: `handoff.rotation_${outcome.status}`,
+        actor_user_id: context.userId,
+        details: {
+          rotation_id: row.id,
+          target: row.target,
+          key_ref: row.key_ref,
+          via: "orchestrator",
+          error: outcome.error ?? null,
+        },
+      });
+      results.push({
+        id: row.id,
+        target: row.target,
+        key_ref: row.key_ref,
+        status: outcome.status,
+        error: outcome.error ?? null,
+      });
+
+      if (outcome.status === "failed") {
+        const nextState = handoff.rollback_snapshot_id ? "rolled_back" : "failed";
+        await context.supabase
+          .from("clone_handoffs")
+          .update({
+            state: nextState,
+            error: `rotation_failed:${row.target}:${row.key_ref}`,
+            completed_at: new Date().toISOString(),
+          })
+          .eq("id", data.handoff_id);
+        await context.supabase.from("handoff_events").insert({
+          handoff_id: data.handoff_id,
+          kind: "handoff.cutover_aborted",
+          actor_user_id: context.userId,
+          details: {
+            reason: "rotation_failed",
+            target: row.target,
+            key_ref: row.key_ref,
+            transitioned_to: nextState,
+            rollback_snapshot_id: handoff.rollback_snapshot_id ?? null,
+          },
+        });
+        return {
+          ok: false as const,
+          error: "rotation_failed",
+          transitioned_to: nextState,
+          results,
+        };
+      }
+      if (outcome.status === "in_progress") {
+        // Awaiting external evidence — stop orchestrator without failing.
+        return {
+          ok: true as const,
+          halted: "awaiting_evidence" as const,
+          rotation_id: row.id,
+          target: row.target,
+          key_ref: row.key_ref,
+          results,
+        };
+      }
+    }
+
+    // Re-check: are ALL rotations now terminal?
+    const { data: after } = await context.supabase
+      .from("handoff_secret_rotations")
+      .select("id, status")
+      .eq("handoff_id", data.handoff_id);
+    const outstanding = (after ?? []).filter(
+      (r: any) => r.status !== "rotated" && r.status !== "skipped",
+    );
+    if (outstanding.length > 0) {
+      return { ok: true as const, halted: "outstanding" as const, outstanding, results };
+    }
+
+    await context.supabase
+      .from("clone_handoffs")
+      .update({ state: "complete", completed_at: new Date().toISOString() })
+      .eq("id", data.handoff_id);
+    await context.supabase.from("handoff_events").insert({
+      handoff_id: data.handoff_id,
+      kind: "handoff.cutover_completed",
+      actor_user_id: context.userId,
+      details: { rotations: results.length },
+    });
+    return { ok: true as const, complete: true, results };
+  });
+
+
 
