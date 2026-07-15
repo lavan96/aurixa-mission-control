@@ -49,7 +49,7 @@ export const getHandoff = createServerFn({ method: "POST" })
   .middleware([requireAdmin])
   .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const [handoff, events, snapshots, parity, rotations, contracts, exports_] =
+    const [handoff, events, snapshots, parity, rotations, contracts, exports_, storageReps] =
       await Promise.all([
         context.supabase
           .from("clone_handoffs")
@@ -88,6 +88,11 @@ export const getHandoff = createServerFn({ method: "POST" })
           .select("*")
           .eq("handoff_id", data.id)
           .order("generated_at", { ascending: false }),
+        context.supabase
+          .from("handoff_storage_replications")
+          .select("*")
+          .eq("handoff_id", data.id)
+          .order("bucket_id", { ascending: true }),
       ]);
     if (handoff.error) throw handoff.error;
     return {
@@ -98,8 +103,10 @@ export const getHandoff = createServerFn({ method: "POST" })
       rotations: rotations.data ?? [],
       contracts: contracts.data ?? [],
       cost_exports: exports_.data ?? [],
+      storage_replications: storageReps.data ?? [],
     };
   });
+
 
 export const createHandoff = createServerFn({ method: "POST" })
   .middleware([requireAdmin])
@@ -1011,6 +1018,244 @@ export const replicateHandoffAuthUsers = createServerFn({ method: "POST" })
       errors: outcome.errors,
     };
   });
+
+// ---------------------------------------------------------------------------
+// G17 — Storage objects replication (data_syncing).
+//
+// Bulk-copies every object in every storage bucket from the clone's
+// current backend to the client-owned twin. Idempotent (skips objects
+// already on target), resumable (per-bucket cursor persisted in
+// `handoff_storage_replications`), and paced by a per-invocation budget
+// so a single Worker request never runs too long. Operators re-invoke
+// until every bucket reports `complete`.
+// ---------------------------------------------------------------------------
+
+export const replicateHandoffStorageObjects = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((input) => z.object({ handoff_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: handoff, error: hErr } = await context.supabase
+      .from("clone_handoffs")
+      .select("id, state, clone_id, backend_id, client_account_id, metadata")
+      .eq("id", data.handoff_id)
+      .maybeSingle();
+    if (hErr) throw hErr;
+    if (!handoff) return { ok: false as const, error: "not_found" };
+
+    const ENTRY = new Set(["twin_ready", "data_syncing", "cutover_scheduled"]);
+    if (!ENTRY.has(handoff.state)) {
+      return { ok: false as const, error: "wrong_state", state: handoff.state };
+    }
+    if (!handoff.client_account_id) {
+      return { ok: false as const, error: "no_client_account" };
+    }
+
+    // Resolve source project ref — the clone's currently-owned dedicated backend.
+    let sourceQuery = context.supabase
+      .from("clone_backends")
+      .select("supabase_project_ref, status")
+      .eq("clone_id", handoff.clone_id)
+      .not("supabase_project_ref", "is", null)
+      .not("status", "in", "(failed,deleted,destroyed)")
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (handoff.backend_id) {
+      sourceQuery = context.supabase
+        .from("clone_backends")
+        .select("supabase_project_ref, status")
+        .eq("id", handoff.backend_id)
+        .limit(1);
+    }
+    const { data: source, error: sErr } = await sourceQuery.maybeSingle();
+    if (sErr) throw sErr;
+    if (!source?.supabase_project_ref) {
+      return { ok: false as const, error: "no_source_backend" };
+    }
+
+    // Resolve target project ref (parity report → handoff metadata).
+    const { data: parity } = await context.supabase
+      .from("handoff_parity_reports")
+      .select("target_ref")
+      .eq("handoff_id", data.handoff_id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const targetRef =
+      parity?.target_ref ??
+      (handoff.metadata as any)?.target_project_ref ??
+      null;
+    if (!targetRef) {
+      return { ok: false as const, error: "no_target_ref_pinned" };
+    }
+
+    // Decrypt client PAT.
+    const { data: acct, error: aErr } = await context.supabase
+      .from("client_supabase_accounts")
+      .select("id, pat_ciphertext, status")
+      .eq("id", handoff.client_account_id)
+      .maybeSingle();
+    if (aErr) throw aErr;
+    if (!acct?.pat_ciphertext) return { ok: false as const, error: "no_client_pat" };
+    if (acct.status === "revoked")
+      return { ok: false as const, error: "client_pat_revoked" };
+    const { decryptSecret } = await import("@/server/crypto.server");
+    const targetPat = decryptSecret(String(acct.pat_ciphertext));
+
+    // Load prior per-bucket replication state so we can resume.
+    const { data: priorStates } = await context.supabase
+      .from("handoff_storage_replications")
+      .select("bucket_id, status, cursor_prefix")
+      .eq("handoff_id", data.handoff_id);
+
+    const { replicateStorageObjects } = await import(
+      "@/server/handoff-storage-replication.server"
+    );
+
+    let outcome;
+    try {
+      outcome = await replicateStorageObjects({
+        sourceRef: source.supabase_project_ref,
+        targetRef,
+        targetPat,
+        bucketStates: (priorStates ?? []).map((s) => ({
+          bucket_id: s.bucket_id,
+          status: s.status ?? "pending",
+          cursor_prefix: s.cursor_prefix ?? null,
+        })),
+      });
+    } catch (e: any) {
+      await context.supabase.from("handoff_events").insert({
+        handoff_id: data.handoff_id,
+        kind: "handoff.storage_replication_failed",
+        actor_user_id: context.userId,
+        details: { error: String(e?.message ?? e) },
+      });
+      return { ok: false as const, error: "replication_crashed", detail: String(e?.message ?? e) };
+    }
+
+    // Upsert per-bucket ledger rows. Preserve counters by adding to prior
+    // totals so re-runs accumulate scanned/copied numbers correctly.
+    const priorByBucket = new Map(
+      (priorStates ?? []).map((s: any) => [s.bucket_id, s]),
+    );
+    // Refetch counters we don't already have to avoid clobbering totals.
+    const { data: priorCounts } = await context.supabase
+      .from("handoff_storage_replications")
+      .select("bucket_id, objects_scanned, objects_copied, objects_skipped, objects_failed, bytes_copied")
+      .eq("handoff_id", data.handoff_id);
+    const countsByBucket = new Map(
+      (priorCounts ?? []).map((c: any) => [c.bucket_id, c]),
+    );
+
+    for (const b of outcome.buckets) {
+      const prev = countsByBucket.get(b.bucket_id) ?? {
+        objects_scanned: 0,
+        objects_copied: 0,
+        objects_skipped: 0,
+        objects_failed: 0,
+        bytes_copied: 0,
+      };
+      const row = {
+        handoff_id: data.handoff_id,
+        bucket_id: b.bucket_id,
+        status: b.status,
+        cursor_prefix: b.cursor_prefix,
+        objects_scanned: (prev.objects_scanned ?? 0) + b.objects_scanned,
+        objects_copied: (prev.objects_copied ?? 0) + b.objects_copied,
+        objects_skipped: (prev.objects_skipped ?? 0) + b.objects_skipped,
+        objects_failed: (prev.objects_failed ?? 0) + b.objects_failed,
+        bytes_copied: Number(prev.bytes_copied ?? 0) + b.bytes_copied,
+        last_error: b.last_error ?? null,
+        last_run_at: new Date().toISOString(),
+        completed_at: b.status === "complete" ? new Date().toISOString() : null,
+      };
+      await context.supabase
+        .from("handoff_storage_replications")
+        .upsert(row, { onConflict: "handoff_id,bucket_id" });
+    }
+
+    await context.supabase.from("handoff_events").insert({
+      handoff_id: data.handoff_id,
+      kind: outcome.ok
+        ? outcome.incomplete
+          ? "handoff.storage_replication_progressed"
+          : "handoff.storage_replicated"
+        : "handoff.storage_replication_partial",
+      actor_user_id: context.userId,
+      details: {
+        source_ref: source.supabase_project_ref,
+        target_ref: targetRef,
+        incomplete: outcome.incomplete,
+        budget_exhausted: outcome.budget_exhausted,
+        buckets: outcome.buckets.map((b) => ({
+          bucket_id: b.bucket_id,
+          status: b.status,
+          copied: b.objects_copied,
+          skipped: b.objects_skipped,
+          failed: b.objects_failed,
+          bytes: b.bytes_copied,
+        })),
+      },
+    });
+
+    // Advance twin_ready → data_syncing on first successful run;
+    // advance data_syncing → cutover_scheduled only when every bucket is
+    // complete AND at least one object was copied or already-present.
+    let advanced = false;
+    if (handoff.state === "twin_ready" && outcome.ok) {
+      const { error: updErr } = await context.supabase
+        .from("clone_handoffs")
+        .update({ state: "data_syncing" })
+        .eq("id", data.handoff_id);
+      if (!updErr) {
+        advanced = true;
+        await context.supabase.from("handoff_events").insert({
+          handoff_id: data.handoff_id,
+          kind: "handoff.transitioned",
+          actor_user_id: context.userId,
+          details: {
+            from: "twin_ready",
+            to: "data_syncing",
+            note: "auto: storage replication started",
+          },
+        });
+      }
+    } else if (
+      handoff.state === "data_syncing" &&
+      outcome.ok &&
+      !outcome.incomplete &&
+      outcome.buckets.length > 0
+    ) {
+      const { error: updErr } = await context.supabase
+        .from("clone_handoffs")
+        .update({ state: "cutover_scheduled" })
+        .eq("id", data.handoff_id);
+      if (!updErr) {
+        advanced = true;
+        await context.supabase.from("handoff_events").insert({
+          handoff_id: data.handoff_id,
+          kind: "handoff.transitioned",
+          actor_user_id: context.userId,
+          details: {
+            from: "data_syncing",
+            to: "cutover_scheduled",
+            note: "auto: storage replication complete",
+          },
+        });
+      }
+    }
+
+    return {
+      ok: outcome.ok,
+      advanced,
+      incomplete: outcome.incomplete,
+      budget_exhausted: outcome.budget_exhausted,
+      source_ref: source.supabase_project_ref,
+      target_ref: targetRef,
+      buckets: outcome.buckets,
+    };
+  });
+
 
 
 
