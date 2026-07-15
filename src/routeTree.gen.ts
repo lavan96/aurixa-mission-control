@@ -93,6 +93,7 @@ import { Route as ApiPublicSeatsEntitlementRouteImport } from './routes/api.publ
 import { Route as ApiPublicSeatsCommitRouteImport } from './routes/api.public.seats.commit'
 import { Route as ApiPublicPricingCatalogRouteImport } from './routes/api.public.pricing.catalog'
 import { Route as ApiPublicLeadsCaptureRouteImport } from './routes/api.public.leads.capture'
+import { Route as ApiPublicHandoffsConsentRouteImport } from './routes/api.public.handoffs.consent'
 import { Route as ApiPublicEdgeStatusRouteImport } from './routes/api.public.edge.status'
 import { Route as ApiPublicClonesRotateKeyRouteImport } from './routes/api.public.clones.rotate-key'
 import { Route as ApiPublicBillingHandoffRouteImport } from './routes/api.public.billing.handoff'
@@ -531,6 +532,12 @@ const ApiPublicLeadsCaptureRoute = ApiPublicLeadsCaptureRouteImport.update({
   path: '/api/public/leads/capture',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHandoffsConsentRoute =
+  ApiPublicHandoffsConsentRouteImport.update({
+    id: '/api/public/handoffs/consent',
+    path: '/api/public/handoffs/consent',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicEdgeStatusRoute = ApiPublicEdgeStatusRouteImport.update({
   id: '/api/public/edge/status',
   path: '/api/public/edge/status',
@@ -648,6 +655,7 @@ export interface FileRoutesByFullPath {
   '/api/public/billing/handoff': typeof ApiPublicBillingHandoffRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
   '/api/public/edge/status': typeof ApiPublicEdgeStatusRoute
+  '/api/public/handoffs/consent': typeof ApiPublicHandoffsConsentRoute
   '/api/public/leads/capture': typeof ApiPublicLeadsCaptureRoute
   '/api/public/pricing/catalog': typeof ApiPublicPricingCatalogRoute
   '/api/public/seats/commit': typeof ApiPublicSeatsCommitRoute
@@ -741,6 +749,7 @@ export interface FileRoutesByTo {
   '/api/public/billing/handoff': typeof ApiPublicBillingHandoffRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
   '/api/public/edge/status': typeof ApiPublicEdgeStatusRoute
+  '/api/public/handoffs/consent': typeof ApiPublicHandoffsConsentRoute
   '/api/public/leads/capture': typeof ApiPublicLeadsCaptureRoute
   '/api/public/pricing/catalog': typeof ApiPublicPricingCatalogRoute
   '/api/public/seats/commit': typeof ApiPublicSeatsCommitRoute
@@ -836,6 +845,7 @@ export interface FileRoutesById {
   '/api/public/billing/handoff': typeof ApiPublicBillingHandoffRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
   '/api/public/edge/status': typeof ApiPublicEdgeStatusRoute
+  '/api/public/handoffs/consent': typeof ApiPublicHandoffsConsentRoute
   '/api/public/leads/capture': typeof ApiPublicLeadsCaptureRoute
   '/api/public/pricing/catalog': typeof ApiPublicPricingCatalogRoute
   '/api/public/seats/commit': typeof ApiPublicSeatsCommitRoute
@@ -932,6 +942,7 @@ export interface FileRouteTypes {
     | '/api/public/billing/handoff'
     | '/api/public/clones/rotate-key'
     | '/api/public/edge/status'
+    | '/api/public/handoffs/consent'
     | '/api/public/leads/capture'
     | '/api/public/pricing/catalog'
     | '/api/public/seats/commit'
@@ -1025,6 +1036,7 @@ export interface FileRouteTypes {
     | '/api/public/billing/handoff'
     | '/api/public/clones/rotate-key'
     | '/api/public/edge/status'
+    | '/api/public/handoffs/consent'
     | '/api/public/leads/capture'
     | '/api/public/pricing/catalog'
     | '/api/public/seats/commit'
@@ -1119,6 +1131,7 @@ export interface FileRouteTypes {
     | '/api/public/billing/handoff'
     | '/api/public/clones/rotate-key'
     | '/api/public/edge/status'
+    | '/api/public/handoffs/consent'
     | '/api/public/leads/capture'
     | '/api/public/pricing/catalog'
     | '/api/public/seats/commit'
@@ -1197,6 +1210,7 @@ export interface RootRouteChildren {
   ApiPublicBillingHandoffRoute: typeof ApiPublicBillingHandoffRoute
   ApiPublicClonesRotateKeyRoute: typeof ApiPublicClonesRotateKeyRoute
   ApiPublicEdgeStatusRoute: typeof ApiPublicEdgeStatusRoute
+  ApiPublicHandoffsConsentRoute: typeof ApiPublicHandoffsConsentRoute
   ApiPublicLeadsCaptureRoute: typeof ApiPublicLeadsCaptureRoute
   ApiPublicPricingCatalogRoute: typeof ApiPublicPricingCatalogRoute
   ApiPublicSeatsCommitRoute: typeof ApiPublicSeatsCommitRoute
@@ -1811,6 +1825,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicLeadsCaptureRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/handoffs/consent': {
+      id: '/api/public/handoffs/consent'
+      path: '/api/public/handoffs/consent'
+      fullPath: '/api/public/handoffs/consent'
+      preLoaderRoute: typeof ApiPublicHandoffsConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/edge/status': {
       id: '/api/public/edge/status'
       path: '/api/public/edge/status'
@@ -2020,6 +2041,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicBillingHandoffRoute: ApiPublicBillingHandoffRoute,
   ApiPublicClonesRotateKeyRoute: ApiPublicClonesRotateKeyRoute,
   ApiPublicEdgeStatusRoute: ApiPublicEdgeStatusRoute,
+  ApiPublicHandoffsConsentRoute: ApiPublicHandoffsConsentRoute,
   ApiPublicLeadsCaptureRoute: ApiPublicLeadsCaptureRoute,
   ApiPublicPricingCatalogRoute: ApiPublicPricingCatalogRoute,
   ApiPublicSeatsCommitRoute: ApiPublicSeatsCommitRoute,
