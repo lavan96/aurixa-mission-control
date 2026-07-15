@@ -2,17 +2,22 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/protected-route";
 import { RouteError } from "@/components/route-error";
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Sparkles, AlertTriangle, CheckCircle2, ExternalLink } from "lucide-react";
+import { Sparkles, AlertTriangle, CheckCircle2, ExternalLink, RefreshCw } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { applyDriftSuggestion, dismissDriftSuggestion } from "@/server/drift-suggestions.functions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "@/lib/format";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
+import { DriftListSkeleton } from "@/components/list-skeletons";
+import { useUrlState } from "@/lib/use-url-state";
 
 export const Route = createFileRoute("/drift")({
   errorComponent: RouteError,
@@ -44,34 +49,35 @@ type Row = {
 };
 
 function DriftDashboard() {
-  const [rows, setRows] = useState<Row[]>([]);
-  const [loading, setLoading] = useState(true);
   const apply = useServerFn(applyDriftSuggestion);
   const dismiss = useServerFn(dismissDriftSuggestion);
   const [busy, setBusy] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"all" | "low" | "medium" | "high">("all");
+  // Persist the risk filter in the URL so it survives reload and is shareable.
+  const [filter, setFilter] = useUrlState<"all" | "low" | "medium" | "high">("risk", "all");
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    const { data } = await supabase.from("clones").select("id, name, drift_suggestions");
-    const out: Row[] = [];
-    for (const c of data ?? []) {
-      const sugs = (c.drift_suggestions as unknown as Suggestion[] | null) ?? [];
-      for (const s of sugs) {
-        if (s.status === "open") out.push({ cloneId: c.id, cloneName: c.name, suggestion: s });
+  const query = useQuery({
+    queryKey: ["drift-suggestions"],
+    queryFn: async (): Promise<Row[]> => {
+      const { data, error } = await supabase.from("clones").select("id, name, drift_suggestions");
+      if (error) throw error;
+      const out: Row[] = [];
+      for (const c of data ?? []) {
+        const sugs = (c.drift_suggestions as unknown as Suggestion[] | null) ?? [];
+        for (const s of sugs) {
+          if (s.status === "open") out.push({ cloneId: c.id, cloneName: c.name, suggestion: s });
+        }
       }
-    }
-    out.sort((a, b) => {
-      const rank = { high: 0, medium: 1, low: 2 } as const;
-      return rank[a.suggestion.risk] - rank[b.suggestion.risk];
-    });
-    setRows(out);
-    setLoading(false);
-  }, []);
+      out.sort((a, b) => {
+        const rank = { high: 0, medium: 1, low: 2 } as const;
+        return rank[a.suggestion.risk] - rank[b.suggestion.risk];
+      });
+      return out;
+    },
+  });
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  const rows = query.data ?? [];
+  const loading = query.isPending;
+  const refresh = () => query.refetch();
 
   const filtered = filter === "all" ? rows : rows.filter((r) => r.suggestion.risk === filter);
 
@@ -81,14 +87,14 @@ function DriftDashboard() {
     if (!res.ok) toast.error(res.error);
     else toast.success(`Applied · cascade ${res.cascade_event_id.slice(0, 8)}`);
     setBusy(null);
-    refresh();
+    void refresh();
   };
 
   const onDismiss = async (r: Row) => {
     setBusy(r.suggestion.id);
     await dismiss({ data: { cloneId: r.cloneId, suggestionId: r.suggestion.id } });
     setBusy(null);
-    refresh();
+    void refresh();
   };
 
   const groups: Record<string, Row[]> = {};
@@ -96,15 +102,23 @@ function DriftDashboard() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
-          fleet-wide
-        </p>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight">Drift dashboard</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          All open AI suggestions across the fleet, grouped by category.
-        </p>
-      </header>
+      <PageHeader
+        eyebrow="fleet-wide"
+        title="Drift dashboard"
+        description="All open AI suggestions across the fleet, grouped by category."
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            aria-label="Refresh drift suggestions"
+            onClick={() => void refresh()}
+            disabled={query.isFetching}
+          >
+            <RefreshCw className={cn("mr-1.5 h-4 w-4", query.isFetching && "animate-spin")} />
+            Refresh
+          </Button>
+        }
+      />
 
       <div className="flex flex-wrap items-center gap-2">
         {(["all", "high", "medium", "low"] as const).map((f) => (
@@ -122,14 +136,32 @@ function DriftDashboard() {
       </div>
 
       {loading ? (
-        <div className="font-mono text-sm text-muted-foreground">loading…</div>
+        <DriftListSkeleton count={4} />
+      ) : query.error ? (
+        <EmptyState
+          icon={<AlertTriangle />}
+          title="Couldn't load drift suggestions"
+          description={
+            query.error instanceof Error
+              ? query.error.message
+              : "Something went wrong fetching fleet drift."
+          }
+          action={
+            <Button variant="outline" onClick={() => void refresh()}>
+              <RefreshCw className="mr-1.5 h-4 w-4" /> Retry
+            </Button>
+          }
+        />
       ) : filtered.length === 0 ? (
-        <Card>
-          <CardContent className="p-10 text-center text-sm text-muted-foreground">
-            <Sparkles className="mx-auto mb-2 h-8 w-8 opacity-50" />
-            No open suggestions. Run drift analysis on individual clones to populate this dashboard.
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={<Sparkles />}
+          title={rows.length === 0 ? "No open suggestions" : "No suggestions match this filter"}
+          description={
+            rows.length === 0
+              ? "Run drift analysis on individual clones to populate this dashboard."
+              : "Try switching the risk filter to see more suggestions."
+          }
+        />
       ) : (
         Object.entries(groups).map(([cat, items]) => (
           <Card key={cat}>

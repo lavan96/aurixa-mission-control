@@ -10,12 +10,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { ShieldCheck, ShieldAlert, RefreshCw, Inbox } from "lucide-react";
+import { ShieldCheck, ShieldAlert, RefreshCw, Inbox, AlertTriangle } from "lucide-react";
 import { listPendingApprovals } from "@/server/operator-ux.functions";
 import { approveCascade, rejectCascade } from "@/server/cascade-approvals.functions";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "@/lib/format";
 import { Link } from "@tanstack/react-router";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
+import { CardRowSkeleton } from "@/components/list-skeletons";
 
 export const Route = createFileRoute("/approvals")({
   component: () => (
@@ -36,6 +39,13 @@ function ApprovalsPage() {
   const [reason, setReason] = useState("");
 
   const events = q.data?.ok ? q.data.events : [];
+  const loadError = q.isError
+    ? q.error instanceof Error
+      ? q.error.message
+      : "Failed to load approvals."
+    : q.data && !q.data.ok
+      ? q.data.error
+      : null;
 
   const toggle = (id: string) => {
     setPicked((p) => {
@@ -74,28 +84,30 @@ function ApprovalsPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-warning/15 ring-1 ring-warning/40">
-          <ShieldCheck className="h-5 w-5 text-warning" />
-        </div>
-        <div className="flex-1">
-          <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
-            queue
-          </p>
-          <h1 className="text-3xl font-semibold tracking-tight">Approvals</h1>
-          <p className="text-sm text-muted-foreground">
-            High-blast-radius cascades waiting for a second operator.
-          </p>
-        </div>
-        <Button variant="ghost" size="icon" onClick={() => q.refetch()}>
-          <RefreshCw className="h-4 w-4" />
-        </Button>
-      </header>
+      <PageHeader
+        eyebrow="queue"
+        icon={<ShieldCheck className="h-7 w-7 text-warning" />}
+        title="Approvals"
+        description="High-blast-radius cascades waiting for a second operator."
+        actions={
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Refresh approvals"
+            onClick={() => void q.refetch()}
+            disabled={q.isFetching}
+          >
+            <RefreshCw className={`h-4 w-4 ${q.isFetching ? "animate-spin" : ""}`} />
+          </Button>
+        }
+      />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <div>
-            <CardTitle className="text-base">{events.length} awaiting review</CardTitle>
+            <CardTitle className="text-base">
+              {q.isPending ? "…" : events.length} awaiting review
+            </CardTitle>
             <CardDescription>
               Select multiple events to approve or reject in one shot.
             </CardDescription>
@@ -126,11 +138,29 @@ function ApprovalsPage() {
               rows={2}
             />
           )}
-          {events.length === 0 ? (
-            <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
-              <Inbox className="mx-auto mb-2 h-8 w-8 opacity-50" />
-              No cascades waiting for approval.
+          {q.isPending ? (
+            <div className="space-y-2">
+              <CardRowSkeleton />
+              <CardRowSkeleton />
+              <CardRowSkeleton />
             </div>
+          ) : loadError ? (
+            <EmptyState
+              icon={<AlertTriangle />}
+              title="Couldn't load approvals"
+              description={loadError}
+              action={
+                <Button variant="outline" onClick={() => void q.refetch()}>
+                  <RefreshCw className="mr-1.5 h-4 w-4" /> Retry
+                </Button>
+              }
+            />
+          ) : events.length === 0 ? (
+            <EmptyState
+              icon={<Inbox />}
+              title="No cascades waiting"
+              description="High-blast-radius cascades that need a second operator will appear here."
+            />
           ) : (
             <div className="space-y-2">
               {events.map((e) => (
