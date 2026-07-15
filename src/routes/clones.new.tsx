@@ -83,6 +83,12 @@ function NewClone() {
   const [edgeProvider, setEdgeProvider] = useState<"cloudflare" | "aws" | "azure">("cloudflare");
   const [edgeHostname, setEdgeHostname] = useState("");
   const [edgePreset, setEdgePreset] = useState("balanced");
+  const [subdomainEnabled, setSubdomainEnabled] = useState(true);
+  const [subdomainSlug, setSubdomainSlug] = useState("");
+  const requestSubdomain = useServerFn(
+    // lazy import to avoid pulling admin functions into non-admin call sites
+    require("@/server/subdomain-hosting.functions").requestCloneSubdomain,
+  );
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [notes, setNotes] = useState("");
   const [billingUserId, setBillingUserId] = useState("");
