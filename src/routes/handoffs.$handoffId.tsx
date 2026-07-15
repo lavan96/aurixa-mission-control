@@ -15,10 +15,14 @@ import {
   transitionHandoff,
   recordHandoffSnapshot,
   recordSecretRotation,
+  planStandardRotations,
+  executeSecretRotation,
+  markSecretRotation,
   requestCostExport,
   runParityDryRun,
   HANDOFF_STATE_ORDER,
 } from "@/lib/handoffs.functions";
+
 import {
   createHandoffInvite,
   listHandoffInvites,
@@ -55,9 +59,20 @@ function HandoffDetail() {
   const advance = useMutation({
     mutationFn: (to: string) =>
       transitionHandoff({ data: { id: handoffId, to_state: to as any } }),
-    onSuccess: () => {
+    onSuccess: (r: any) => {
       qc.invalidateQueries({ queryKey: ["handoff", handoffId] });
+      if (r?.ok === false && r.error === "rotations_incomplete") {
+        toast.error(
+          `Blocked — ${r.outstanding?.length ?? 0} rotation(s) not rotated/skipped`,
+        );
+        return;
+      }
+      if (r?.ok === false) {
+        toast.error(r.error ?? "Failed");
+        return;
+      }
       toast.success("State advanced");
+
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed"),
   });
@@ -83,6 +98,40 @@ function HandoffDetail() {
       toast.success("Rotation enqueued");
     },
   });
+
+  // G14 — one-click plan of the default rotation set.
+  const planRotations = useMutation({
+    mutationFn: () => planStandardRotations({ data: { handoff_id: handoffId } }),
+    onSuccess: (r: any) => {
+      qc.invalidateQueries({ queryKey: ["handoff", handoffId] });
+      toast.success(`Planned ${r.inserted ?? 0} rotation(s)`);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Plan failed"),
+  });
+
+  // G14 — execute a single rotation via its executor.
+  const runRotation = useMutation({
+    mutationFn: (id: string) => executeSecretRotation({ data: { id } }),
+    onSuccess: (r: any) => {
+      qc.invalidateQueries({ queryKey: ["handoff", handoffId] });
+      if (r?.ok === false) return toast.error(r.error ?? "Failed");
+      if (r.status === "rotated") toast.success("Rotated");
+      else if (r.status === "in_progress") toast.info("Awaiting external evidence");
+      else toast.error(`Rotation ${r.status}: ${r.error ?? ""}`);
+    },
+  });
+
+  // G14 — manual acknowledge (out-of-band rotate).
+  const ackRotation = useMutation({
+    mutationFn: (v: { id: string; status: "rotated" | "skipped" | "failed"; evidence?: string }) =>
+      markSecretRotation({ data: v }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["handoff", handoffId] });
+      toast.success("Rotation acknowledged");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed"),
+  });
+
 
   const exportCost = useMutation({
     mutationFn: () => {
@@ -195,25 +244,65 @@ function HandoffDetail() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2"><KeyRound className="h-4 w-4" /> Secret rotations (E5)</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2"><KeyRound className="h-4 w-4" /> Secret rotations (E5 · G14)</CardTitle>
+            <CardDescription>
+              Plan and execute the cutover rotation set. `complete` is blocked
+              until every row is <em>rotated</em> or <em>skipped</em>.
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
+          <CardContent className="space-y-3 text-sm">
             <div className="flex flex-wrap gap-2">
+              <Button size="sm" onClick={() => planRotations.mutate()} disabled={planRotations.isPending}>
+                {planRotations.isPending ? "Planning…" : "Plan default rotation set"}
+              </Button>
               {(["clone_repo", "cloudflare", "stripe_endpoint", "github_webhook", "edge_function_env"] as const).map((t) => (
-                <Button key={t} size="sm" variant="outline" onClick={() => rotate.mutate(t)}>{t}</Button>
+                <Button key={t} size="sm" variant="outline" onClick={() => rotate.mutate(t)}>+ {t}</Button>
               ))}
             </div>
-            <ul className="mt-2 space-y-1">
-              {d.rotations.map((r: any) => (
-                <li key={r.id} className="flex justify-between border-b py-1">
-                  <span>{r.target} · {r.key_ref}</span>
-                  <Badge variant="outline">{r.status}</Badge>
-                </li>
-              ))}
+            <ul className="space-y-2">
+              {d.rotations.map((r: any) => {
+                const evidence = (r.metadata as any)?.manual_ack?.evidence
+                  ?? (r.metadata as any)?.last_execution?.rotated_via
+                  ?? (r.metadata as any)?.hint;
+                return (
+                  <li key={r.id} className="rounded border p-2 space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="font-mono text-xs truncate">{r.target} · {r.key_ref}</div>
+                        {evidence && <div className="text-xs text-muted-foreground truncate">{evidence}</div>}
+                        {r.error && <div className="text-xs text-destructive">{r.error}</div>}
+                      </div>
+                      <Badge variant={r.status === "rotated" ? "outline" : r.status === "failed" ? "destructive" : "secondary"}>
+                        {r.status}
+                      </Badge>
+                    </div>
+                    {r.status !== "rotated" && r.status !== "skipped" && (
+                      <div className="flex flex-wrap gap-1">
+                        <Button size="sm" variant="outline" onClick={() => runRotation.mutate(r.id)} disabled={runRotation.isPending}>
+                          Execute
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => {
+                          const ev = window.prompt("Evidence (URL or note) for rotated:");
+                          if (ev) ackRotation.mutate({ id: r.id, status: "rotated", evidence: ev });
+                        }}>Mark rotated</Button>
+                        <Button size="sm" variant="ghost" onClick={() => {
+                          const ev = window.prompt("Reason to skip:");
+                          if (ev) ackRotation.mutate({ id: r.id, status: "skipped", evidence: ev });
+                        }}>Skip</Button>
+                        <Button size="sm" variant="ghost" onClick={() => {
+                          const ev = window.prompt("Failure note:");
+                          if (ev) ackRotation.mutate({ id: r.id, status: "failed", evidence: ev });
+                        }}>Mark failed</Button>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
               {d.rotations.length === 0 && <li className="text-muted-foreground">none</li>}
             </ul>
           </CardContent>
         </Card>
+
 
         <Card>
           <CardHeader>

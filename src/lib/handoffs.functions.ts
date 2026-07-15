@@ -154,7 +154,23 @@ export const transitionHandoff = createServerFn({ method: "POST" })
     if (TERMINAL_STATES.has(current.state) && current.state !== data.to_state) {
       return { ok: false as const, error: "terminal_state" };
     }
+    // G14 — block `complete` until every queued rotation is rotated/skipped.
+    if (data.to_state === "complete") {
+      const { data: outstanding } = await context.supabase
+        .from("handoff_secret_rotations")
+        .select("id, target, key_ref, status")
+        .eq("handoff_id", data.id)
+        .not("status", "in", "(rotated,skipped)");
+      if (outstanding && outstanding.length > 0) {
+        return {
+          ok: false as const,
+          error: "rotations_incomplete",
+          outstanding,
+        };
+      }
+    }
     const patch: Record<string, unknown> = { state: data.to_state };
+
     if (data.to_state === "twin_provisioning" || data.to_state === "snapshot_pending") {
       patch.initiated_at = new Date().toISOString();
     }
@@ -456,4 +472,171 @@ export const runParityDryRun = createServerFn({ method: "POST" })
   });
 
 export const HANDOFF_STATE_ORDER = STATE_ORDER;
+
+// ---------------------------------------------------------------------------
+// G14 — Secret rotation cutover executor.
+// ---------------------------------------------------------------------------
+
+// Enqueue the default rotation plan for a handoff. Idempotent: rows are keyed
+// by (handoff_id, target, key_ref).
+export const planStandardRotations = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((input) => z.object({ handoff_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { DEFAULT_ROTATION_PLAN } = await import("@/server/handoff-rotations.server");
+    const { data: existing } = await context.supabase
+      .from("handoff_secret_rotations")
+      .select("target, key_ref")
+      .eq("handoff_id", data.handoff_id);
+    const seen = new Set(
+      (existing ?? []).map((r: any) => `${r.target}::${r.key_ref}`),
+    );
+    const rows = DEFAULT_ROTATION_PLAN.filter(
+      (p) => !seen.has(`${p.target}::${p.key_ref}`),
+    ).map((p) => ({
+      handoff_id: data.handoff_id,
+      target: p.target,
+      key_ref: p.key_ref,
+      status: "pending" as const,
+      metadata: { hint: p.hint },
+    }));
+    if (rows.length === 0) {
+      return { ok: true as const, inserted: 0, skipped: DEFAULT_ROTATION_PLAN.length };
+    }
+    const { error } = await context.supabase
+      .from("handoff_secret_rotations")
+      .insert(rows);
+    if (error) throw error;
+    await context.supabase.from("handoff_events").insert({
+      handoff_id: data.handoff_id,
+      kind: "handoff.rotations_planned",
+      actor_user_id: context.userId,
+      details: { inserted: rows.length },
+    });
+    return { ok: true as const, inserted: rows.length };
+  });
+
+// Execute a queued rotation. Advances pending → in_progress → rotated/failed.
+export const executeSecretRotation = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: row, error: rErr } = await context.supabase
+      .from("handoff_secret_rotations")
+      .select("*")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (rErr) throw rErr;
+    if (!row) return { ok: false as const, error: "not_found" };
+    if (row.status === "rotated" || row.status === "skipped") {
+      return { ok: true as const, idempotent: true, status: row.status };
+    }
+    await context.supabase
+      .from("handoff_secret_rotations")
+      .update({ status: "in_progress" })
+      .eq("id", data.id);
+
+    const { executeRotation } = await import("@/server/handoff-rotations.server");
+    const outcome = await executeRotation(row);
+
+    const patch: Record<string, unknown> = {
+      status: outcome.status,
+      metadata: {
+        ...(row.metadata ?? {}),
+        last_execution: {
+          at: new Date().toISOString(),
+          actor: context.userId,
+          ...outcome.audit,
+        },
+        // Scrub the raw secret_value once the API call succeeded — never let
+        // a plaintext secret loiter in the audit row.
+        ...(outcome.status === "rotated" && (row.metadata as any)?.secret_value
+          ? { secret_value: undefined }
+          : {}),
+      },
+      error: outcome.error ?? null,
+    };
+    if (outcome.status === "rotated") patch.rotated_at = new Date().toISOString();
+    // If secret_value was scrubbed, delete key explicitly.
+    if (outcome.status === "rotated" && (row.metadata as any)?.secret_value) {
+      const cleaned = { ...(row.metadata as any) };
+      delete cleaned.secret_value;
+      cleaned.last_execution = (patch.metadata as any).last_execution;
+      patch.metadata = cleaned;
+    }
+    const { error: uErr } = await context.supabase
+      .from("handoff_secret_rotations")
+      .update(patch)
+      .eq("id", data.id);
+    if (uErr) throw uErr;
+    await context.supabase.from("handoff_events").insert({
+      handoff_id: row.handoff_id,
+      kind: `handoff.rotation_${outcome.status}`,
+      actor_user_id: context.userId,
+      details: {
+        rotation_id: data.id,
+        target: row.target,
+        key_ref: row.key_ref,
+        error: outcome.error ?? null,
+      },
+    });
+    return { ok: true as const, status: outcome.status, error: outcome.error ?? null };
+  });
+
+// Manual override — used when the physical rotate happened out-of-band.
+export const markSecretRotation = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((input) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        status: z.enum(["rotated", "skipped", "failed"]),
+        evidence: z.string().min(1).max(2000).optional(),
+        error: z.string().max(2000).nullable().optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("handoff_secret_rotations")
+      .select("*")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error) throw error;
+    if (!row) return { ok: false as const, error: "not_found" };
+    const patch: Record<string, unknown> = {
+      status: data.status,
+      error: data.error ?? null,
+      metadata: {
+        ...(row.metadata ?? {}),
+        manual_ack: {
+          at: new Date().toISOString(),
+          actor: context.userId,
+          evidence: data.evidence ?? null,
+          status: data.status,
+        },
+      },
+    };
+    if (data.status === "rotated" || data.status === "skipped") {
+      patch.rotated_at = new Date().toISOString();
+    }
+    const { error: uErr } = await context.supabase
+      .from("handoff_secret_rotations")
+      .update(patch)
+      .eq("id", data.id);
+    if (uErr) throw uErr;
+    await context.supabase.from("handoff_events").insert({
+      handoff_id: row.handoff_id,
+      kind: `handoff.rotation_marked_${data.status}`,
+      actor_user_id: context.userId,
+      details: {
+        rotation_id: data.id,
+        target: row.target,
+        key_ref: row.key_ref,
+        evidence: data.evidence ?? null,
+      },
+    });
+    return { ok: true as const };
+  });
+
 
