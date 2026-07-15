@@ -1812,7 +1812,10 @@ export type ProvisionBackendResult = {
   storageBuckets: BucketReplicationResult[];
   authConfig: AuthConfigResult;
   cronJobs: CronJobReplicationResult[];
+  requiredExtensions: RequiredExtensionResult[];
+  realtimePublication: RealtimeReplicationResult;
 };
+
 
 /**
  * Full pipeline: create project → wait ready → get keys → replay the prime's
