@@ -695,6 +695,8 @@ function HandoffDetail() {
 
       <ClientPortalInvitesCard handoffId={handoffId} />
 
+      <ObservabilityCard handoffId={handoffId} />
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Event log</CardTitle>
