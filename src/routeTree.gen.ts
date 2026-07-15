@@ -44,6 +44,7 @@ import { Route as SettingsHandoffPoliciesRouteImport } from './routes/settings.h
 import { Route as SettingsGithubAccessRouteImport } from './routes/settings.github-access'
 import { Route as SettingsGiftTokensRouteImport } from './routes/settings.gift-tokens'
 import { Route as SettingsCloneStripeRouteImport } from './routes/settings.clone-stripe'
+import { Route as SettingsClientAccountsRouteImport } from './routes/settings.client-accounts'
 import { Route as SettingsBillingRouteImport } from './routes/settings.billing'
 import { Route as ModulesBuilderRouteImport } from './routes/modules.builder'
 import { Route as ModulesSlugRouteImport } from './routes/modules.$slug'
@@ -279,6 +280,11 @@ const SettingsGiftTokensRoute = SettingsGiftTokensRouteImport.update({
 const SettingsCloneStripeRoute = SettingsCloneStripeRouteImport.update({
   id: '/clone-stripe',
   path: '/clone-stripe',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsClientAccountsRoute = SettingsClientAccountsRouteImport.update({
+  id: '/client-accounts',
+  path: '/client-accounts',
   getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsBillingRoute = SettingsBillingRouteImport.update({
@@ -646,6 +652,7 @@ export interface FileRoutesByFullPath {
   '/modules/$slug': typeof ModulesSlugRoute
   '/modules/builder': typeof ModulesBuilderRoute
   '/settings/billing': typeof SettingsBillingRoute
+  '/settings/client-accounts': typeof SettingsClientAccountsRoute
   '/settings/clone-stripe': typeof SettingsCloneStripeRoute
   '/settings/gift-tokens': typeof SettingsGiftTokensRoute
   '/settings/github-access': typeof SettingsGithubAccessRoute
@@ -741,6 +748,7 @@ export interface FileRoutesByTo {
   '/modules/$slug': typeof ModulesSlugRoute
   '/modules/builder': typeof ModulesBuilderRoute
   '/settings/billing': typeof SettingsBillingRoute
+  '/settings/client-accounts': typeof SettingsClientAccountsRoute
   '/settings/clone-stripe': typeof SettingsCloneStripeRoute
   '/settings/gift-tokens': typeof SettingsGiftTokensRoute
   '/settings/github-access': typeof SettingsGithubAccessRoute
@@ -838,6 +846,7 @@ export interface FileRoutesById {
   '/modules/$slug': typeof ModulesSlugRoute
   '/modules/builder': typeof ModulesBuilderRoute
   '/settings/billing': typeof SettingsBillingRoute
+  '/settings/client-accounts': typeof SettingsClientAccountsRoute
   '/settings/clone-stripe': typeof SettingsCloneStripeRoute
   '/settings/gift-tokens': typeof SettingsGiftTokensRoute
   '/settings/github-access': typeof SettingsGithubAccessRoute
@@ -936,6 +945,7 @@ export interface FileRouteTypes {
     | '/modules/$slug'
     | '/modules/builder'
     | '/settings/billing'
+    | '/settings/client-accounts'
     | '/settings/clone-stripe'
     | '/settings/gift-tokens'
     | '/settings/github-access'
@@ -1031,6 +1041,7 @@ export interface FileRouteTypes {
     | '/modules/$slug'
     | '/modules/builder'
     | '/settings/billing'
+    | '/settings/client-accounts'
     | '/settings/clone-stripe'
     | '/settings/gift-tokens'
     | '/settings/github-access'
@@ -1127,6 +1138,7 @@ export interface FileRouteTypes {
     | '/modules/$slug'
     | '/modules/builder'
     | '/settings/billing'
+    | '/settings/client-accounts'
     | '/settings/clone-stripe'
     | '/settings/gift-tokens'
     | '/settings/github-access'
@@ -1493,6 +1505,13 @@ declare module '@tanstack/react-router' {
       path: '/clone-stripe'
       fullPath: '/settings/clone-stripe'
       preLoaderRoute: typeof SettingsCloneStripeRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/client-accounts': {
+      id: '/settings/client-accounts'
+      path: '/client-accounts'
+      fullPath: '/settings/client-accounts'
+      preLoaderRoute: typeof SettingsClientAccountsRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/settings/billing': {
@@ -1952,6 +1971,7 @@ const ModulesRouteWithChildren =
 
 interface SettingsRouteChildren {
   SettingsBillingRoute: typeof SettingsBillingRoute
+  SettingsClientAccountsRoute: typeof SettingsClientAccountsRoute
   SettingsCloneStripeRoute: typeof SettingsCloneStripeRoute
   SettingsGiftTokensRoute: typeof SettingsGiftTokensRoute
   SettingsGithubAccessRoute: typeof SettingsGithubAccessRoute
@@ -1966,6 +1986,7 @@ interface SettingsRouteChildren {
 
 const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsBillingRoute: SettingsBillingRoute,
+  SettingsClientAccountsRoute: SettingsClientAccountsRoute,
   SettingsCloneStripeRoute: SettingsCloneStripeRoute,
   SettingsGiftTokensRoute: SettingsGiftTokensRoute,
   SettingsGithubAccessRoute: SettingsGithubAccessRoute,
