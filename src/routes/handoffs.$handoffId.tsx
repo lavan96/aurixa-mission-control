@@ -75,10 +75,24 @@ function HandoffDetail() {
         );
         return;
       }
+      // G19 — parity gate on `dry_run_ready`.
+      if (r?.ok === false && r.error === "parity_missing") {
+        toast.error("Blocked — run parity dry-run before advancing to dry_run_ready");
+        return;
+      }
+      if (r?.ok === false && r.error === "parity_stale") {
+        toast.error(`Blocked — parity report is stale (computed ${new Date(r.computed_at).toLocaleString()}). Re-run.`);
+        return;
+      }
+      if (r?.ok === false && r.error === "parity_blocking") {
+        toast.error(`Blocked — ${r.blocking_count} parity issue(s) at ${r.risk_level} risk`);
+        return;
+      }
       if (r?.ok === false) {
         toast.error(r.error ?? "Failed");
         return;
       }
+
       toast.success("State advanced");
 
     },

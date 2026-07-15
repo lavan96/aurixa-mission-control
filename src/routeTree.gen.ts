@@ -52,6 +52,7 @@ import { Route as ModulesSlugRouteImport } from './routes/modules.$slug'
 import { Route as HooksWarmHealthRouteImport } from './routes/hooks.warm-health'
 import { Route as HooksTokenAlertsRouteImport } from './routes/hooks.token-alerts'
 import { Route as HooksRunSchedulesRouteImport } from './routes/hooks.run-schedules'
+import { Route as HooksHandoffParityRefreshRouteImport } from './routes/hooks.handoff-parity-refresh'
 import { Route as HooksGithubRouteImport } from './routes/hooks.github'
 import { Route as HooksFleetDriftRouteImport } from './routes/hooks.fleet-drift'
 import { Route as HooksExpireReservationsRouteImport } from './routes/hooks.expire-reservations'
@@ -323,6 +324,12 @@ const HooksRunSchedulesRoute = HooksRunSchedulesRouteImport.update({
   path: '/hooks/run-schedules',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HooksHandoffParityRefreshRoute =
+  HooksHandoffParityRefreshRouteImport.update({
+    id: '/hooks/handoff-parity-refresh',
+    path: '/hooks/handoff-parity-refresh',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const HooksGithubRoute = HooksGithubRouteImport.update({
   id: '/hooks/github',
   path: '/hooks/github',
@@ -652,6 +659,7 @@ export interface FileRoutesByFullPath {
   '/hooks/expire-reservations': typeof HooksExpireReservationsRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
   '/hooks/github': typeof HooksGithubRoute
+  '/hooks/handoff-parity-refresh': typeof HooksHandoffParityRefreshRoute
   '/hooks/run-schedules': typeof HooksRunSchedulesRoute
   '/hooks/token-alerts': typeof HooksTokenAlertsRoute
   '/hooks/warm-health': typeof HooksWarmHealthRoute
@@ -749,6 +757,7 @@ export interface FileRoutesByTo {
   '/hooks/expire-reservations': typeof HooksExpireReservationsRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
   '/hooks/github': typeof HooksGithubRoute
+  '/hooks/handoff-parity-refresh': typeof HooksHandoffParityRefreshRoute
   '/hooks/run-schedules': typeof HooksRunSchedulesRoute
   '/hooks/token-alerts': typeof HooksTokenAlertsRoute
   '/hooks/warm-health': typeof HooksWarmHealthRoute
@@ -848,6 +857,7 @@ export interface FileRoutesById {
   '/hooks/expire-reservations': typeof HooksExpireReservationsRoute
   '/hooks/fleet-drift': typeof HooksFleetDriftRoute
   '/hooks/github': typeof HooksGithubRoute
+  '/hooks/handoff-parity-refresh': typeof HooksHandoffParityRefreshRoute
   '/hooks/run-schedules': typeof HooksRunSchedulesRoute
   '/hooks/token-alerts': typeof HooksTokenAlertsRoute
   '/hooks/warm-health': typeof HooksWarmHealthRoute
@@ -948,6 +958,7 @@ export interface FileRouteTypes {
     | '/hooks/expire-reservations'
     | '/hooks/fleet-drift'
     | '/hooks/github'
+    | '/hooks/handoff-parity-refresh'
     | '/hooks/run-schedules'
     | '/hooks/token-alerts'
     | '/hooks/warm-health'
@@ -1045,6 +1056,7 @@ export interface FileRouteTypes {
     | '/hooks/expire-reservations'
     | '/hooks/fleet-drift'
     | '/hooks/github'
+    | '/hooks/handoff-parity-refresh'
     | '/hooks/run-schedules'
     | '/hooks/token-alerts'
     | '/hooks/warm-health'
@@ -1143,6 +1155,7 @@ export interface FileRouteTypes {
     | '/hooks/expire-reservations'
     | '/hooks/fleet-drift'
     | '/hooks/github'
+    | '/hooks/handoff-parity-refresh'
     | '/hooks/run-schedules'
     | '/hooks/token-alerts'
     | '/hooks/warm-health'
@@ -1239,6 +1252,7 @@ export interface RootRouteChildren {
   HooksExpireReservationsRoute: typeof HooksExpireReservationsRoute
   HooksFleetDriftRoute: typeof HooksFleetDriftRoute
   HooksGithubRoute: typeof HooksGithubRoute
+  HooksHandoffParityRefreshRoute: typeof HooksHandoffParityRefreshRoute
   HooksRunSchedulesRoute: typeof HooksRunSchedulesRoute
   HooksTokenAlertsRoute: typeof HooksTokenAlertsRoute
   HooksWarmHealthRoute: typeof HooksWarmHealthRoute
@@ -1573,6 +1587,13 @@ declare module '@tanstack/react-router' {
       path: '/hooks/run-schedules'
       fullPath: '/hooks/run-schedules'
       preLoaderRoute: typeof HooksRunSchedulesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hooks/handoff-parity-refresh': {
+      id: '/hooks/handoff-parity-refresh'
+      path: '/hooks/handoff-parity-refresh'
+      fullPath: '/hooks/handoff-parity-refresh'
+      preLoaderRoute: typeof HooksHandoffParityRefreshRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/hooks/github': {
@@ -2096,6 +2117,7 @@ const rootRouteChildren: RootRouteChildren = {
   HooksExpireReservationsRoute: HooksExpireReservationsRoute,
   HooksFleetDriftRoute: HooksFleetDriftRoute,
   HooksGithubRoute: HooksGithubRoute,
+  HooksHandoffParityRefreshRoute: HooksHandoffParityRefreshRoute,
   HooksRunSchedulesRoute: HooksRunSchedulesRoute,
   HooksTokenAlertsRoute: HooksTokenAlertsRoute,
   HooksWarmHealthRoute: HooksWarmHealthRoute,
