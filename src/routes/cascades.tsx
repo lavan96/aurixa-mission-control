@@ -32,6 +32,7 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useServerFn } from "@tanstack/react-start";
+import { useDebouncedCallback } from "@/lib/use-debounced-callback";
 import { runCascade } from "@/server/cascade-engine.functions";
 import { BulkCascadeCard } from "@/components/bulk-cascade-card";
 import { CardRowSkeleton } from "@/components/list-skeletons";
@@ -180,18 +181,20 @@ function CascadesPage() {
 
   // Realtime: when any operator inserts/updates/deletes a cascade event
   // (e.g. another operator approves and the engine flips status to running),
-  // refresh the list so we don't show stale "pending" rows.
+  // refresh the list so we don't show stale "pending" rows. Debounced so a
+  // busy cascade (many row updates in a burst) coalesces into one refetch.
+  const debouncedRefresh = useDebouncedCallback(() => refresh(), 400);
   useEffect(() => {
     const channel = supabase
       .channel("cascades-list")
       .on("postgres_changes", { event: "*", schema: "public", table: "cascade_events" }, () =>
-        refresh(),
+        debouncedRefresh(),
       )
       .subscribe();
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [refresh]);
+  }, [debouncedRefresh]);
 
   // Effective target list based on scope
   const targets = scope === "tagged" && selectedTags.length > 0 ? tagFilteredClones : clones;
