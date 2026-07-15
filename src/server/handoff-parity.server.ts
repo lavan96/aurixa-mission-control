@@ -479,8 +479,13 @@ export async function computeParity(primeRef: string, targetRef: string): Promis
     edge_functions_diff: edgeFns,
     secrets_diff: secrets,
     auth_config_diff: authCfg,
+    required_extensions_diff: requiredExt,
+    realtime_diff: realtime,
     blocking_issues: blocking,
     risk_level: risk,
     summary,
+  };
+}
+
   };
 }
