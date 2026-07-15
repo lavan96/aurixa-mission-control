@@ -1372,6 +1372,88 @@ export type Database = {
           },
         ]
       }
+      clone_health_beacons: {
+        Row: {
+          active_connections: number | null
+          api_p95_ms: number | null
+          clone_id: string
+          created_at: string
+          db_size_bytes: number | null
+          edge_invocations_24h: number | null
+          error_count_24h: number | null
+          handoff_id: string | null
+          id: string
+          message: string | null
+          payload: Json
+          project_ref: string | null
+          project_status: string | null
+          reported_at: string
+          severity: string | null
+          source: string
+          storage_used_bytes: number | null
+        }
+        Insert: {
+          active_connections?: number | null
+          api_p95_ms?: number | null
+          clone_id: string
+          created_at?: string
+          db_size_bytes?: number | null
+          edge_invocations_24h?: number | null
+          error_count_24h?: number | null
+          handoff_id?: string | null
+          id?: string
+          message?: string | null
+          payload?: Json
+          project_ref?: string | null
+          project_status?: string | null
+          reported_at?: string
+          severity?: string | null
+          source: string
+          storage_used_bytes?: number | null
+        }
+        Update: {
+          active_connections?: number | null
+          api_p95_ms?: number | null
+          clone_id?: string
+          created_at?: string
+          db_size_bytes?: number | null
+          edge_invocations_24h?: number | null
+          error_count_24h?: number | null
+          handoff_id?: string | null
+          id?: string
+          message?: string | null
+          payload?: Json
+          project_ref?: string | null
+          project_status?: string | null
+          reported_at?: string
+          severity?: string | null
+          source?: string
+          storage_used_bytes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clone_health_beacons_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clone_health_beacons_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
+          },
+          {
+            foreignKeyName: "clone_health_beacons_handoff_id_fkey"
+            columns: ["handoff_id"]
+            isOneToOne: false
+            referencedRelation: "clone_handoffs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clone_health_snapshots: {
         Row: {
           clone_id: string
@@ -2420,6 +2502,79 @@ export type Database = {
             foreignKeyName: "handoff_invites_handoff_id_fkey"
             columns: ["handoff_id"]
             isOneToOne: false
+            referencedRelation: "clone_handoffs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      handoff_observability_configs: {
+        Row: {
+          clone_id: string
+          created_at: string
+          created_by: string | null
+          handoff_id: string
+          id: string
+          last_error: string | null
+          last_poll_at: string | null
+          last_snapshot: Json
+          last_status: string | null
+          mode: string
+          next_poll_at: string | null
+          notes: string | null
+          poll_interval_seconds: number
+          updated_at: string
+        }
+        Insert: {
+          clone_id: string
+          created_at?: string
+          created_by?: string | null
+          handoff_id: string
+          id?: string
+          last_error?: string | null
+          last_poll_at?: string | null
+          last_snapshot?: Json
+          last_status?: string | null
+          mode?: string
+          next_poll_at?: string | null
+          notes?: string | null
+          poll_interval_seconds?: number
+          updated_at?: string
+        }
+        Update: {
+          clone_id?: string
+          created_at?: string
+          created_by?: string | null
+          handoff_id?: string
+          id?: string
+          last_error?: string | null
+          last_poll_at?: string | null
+          last_snapshot?: Json
+          last_status?: string | null
+          mode?: string
+          next_poll_at?: string | null
+          notes?: string | null
+          poll_interval_seconds?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "handoff_observability_configs_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "handoff_observability_configs_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
+          },
+          {
+            foreignKeyName: "handoff_observability_configs_handoff_id_fkey"
+            columns: ["handoff_id"]
+            isOneToOne: true
             referencedRelation: "clone_handoffs"
             referencedColumns: ["id"]
           },
