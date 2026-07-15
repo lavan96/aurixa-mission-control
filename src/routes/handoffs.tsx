@@ -27,7 +27,19 @@ function stateVariant(state: string): "default" | "secondary" | "destructive" | 
 
 function HandoffsPage() {
   const q = useQuery({ queryKey: ["handoffs"], queryFn: () => listHandoffs() });
+  const cap = useQuery({
+    queryKey: ["handoffs", "prime-org-capacity"],
+    queryFn: () => getPrimeOrgCapacity(),
+    retry: false,
+    staleTime: 60_000,
+  });
   const rows = q.data ?? [];
+  const capData: any = cap.data;
+  const capTone = capData?.hardBlock
+    ? "destructive"
+    : capData?.wouldExceed
+    ? "secondary"
+    : "default";
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
