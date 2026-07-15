@@ -13,9 +13,10 @@ import {
   recordHandoffSnapshot,
   recordSecretRotation,
   requestCostExport,
+  runParityDryRun,
   HANDOFF_STATE_ORDER,
 } from "@/lib/handoffs.functions";
-import { ArrowRight, Camera, KeyRound, FileDown, ScrollText } from "lucide-react";
+import { ArrowRight, Camera, KeyRound, FileDown, ScrollText, ShieldCheck } from "lucide-react";
 
 export const Route = createFileRoute("/handoffs/$handoffId")({
   component: () => (
