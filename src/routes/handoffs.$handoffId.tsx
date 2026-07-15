@@ -6,6 +6,9 @@ import { ProtectedRoute } from "@/components/protected-route";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
   getHandoff,
@@ -16,8 +19,13 @@ import {
   runParityDryRun,
   HANDOFF_STATE_ORDER,
 } from "@/lib/handoffs.functions";
+import {
+  createHandoffInvite,
+  listHandoffInvites,
+  revokeHandoffInvite,
+} from "@/lib/handoff-invites.functions";
 import { verifyCloneRepoGithubAccess, type CloneGithubAccessRow } from "@/lib/clone-github-access.functions";
-import { ArrowRight, Camera, KeyRound, FileDown, ScrollText, ShieldCheck, Github } from "lucide-react";
+import { ArrowRight, Camera, KeyRound, FileDown, ScrollText, ShieldCheck, Github, Link as LinkIcon, Copy, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/handoffs/$handoffId")({
   component: () => (
