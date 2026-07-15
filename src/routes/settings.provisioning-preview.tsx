@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ProtectedRoute } from "@/components/protected-route";
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getBootstrapSqlPreview } from "@/server/role-management.functions";
@@ -25,11 +24,8 @@ type Clone = DbTypes["public"]["Tables"]["clones"]["Row"];
 type CloneBackend = DbTypes["public"]["Views"]["clone_backends_safe"]["Row"];
 
 export const Route = createFileRoute("/settings/provisioning-preview")({
-  component: () => (
-    <ProtectedRoute>
-      <ProvisioningPreviewPage />
-    </ProtectedRoute>
-  ),
+  // Nested under /settings (auth already gated by the parent layout).
+  component: () => <ProvisioningPreviewPage />,
   head: () => ({
     meta: [{ title: "Provisioning Preview — Aurixa Systems Mission Control" }],
   }),

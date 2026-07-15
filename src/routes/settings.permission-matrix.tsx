@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ProtectedRoute } from "@/components/protected-route";
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -394,11 +393,8 @@ function CapCell({
 }
 
 export const Route = createFileRoute("/settings/permission-matrix")({
-  component: () => (
-    <ProtectedRoute>
-      <PermissionMatrixPage />
-    </ProtectedRoute>
-  ),
+  // Nested under /settings (auth already gated by the parent layout).
+  component: () => <PermissionMatrixPage />,
   head: () => ({
     meta: [{ title: "Permission Matrix — Aurixa Systems Mission Control" }],
   }),

@@ -3,14 +3,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ProtectedRoute } from "@/components/protected-route";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,11 +18,8 @@ import {
 } from "@/lib/handoff-terms.functions";
 
 export const Route = createFileRoute("/settings/handoff-terms")({
-  component: () => (
-    <ProtectedRoute>
-      <HandoffTermsPage />
-    </ProtectedRoute>
-  ),
+  // Nested under /settings (auth already gated by the parent layout).
+  component: () => <HandoffTermsPage />,
   head: () => ({ meta: [{ title: "Handoff Terms — Aurixa Systems" }] }),
 });
 
@@ -86,9 +76,8 @@ function HandoffTermsPage() {
       <div>
         <h1 className="text-2xl font-semibold">Handoff terms versions</h1>
         <p className="text-sm text-muted-foreground">
-          Canonical DPA text that clients sign during handoff onboarding. Each
-          version's body is SHA-256 hashed; the active version is served to new
-          invites.
+          Canonical DPA text that clients sign during handoff onboarding. Each version's body is
+          SHA-256 hashed; the active version is served to new invites.
         </p>
       </div>
 
@@ -96,8 +85,8 @@ function HandoffTermsPage() {
         <CardHeader>
           <CardTitle>Draft a new version</CardTitle>
           <CardDescription>
-            Use semver-ish labels (e.g. <code>2026-07</code> or <code>v3.1</code>). The body
-            is stored as Markdown and hashed at save time.
+            Use semver-ish labels (e.g. <code>2026-07</code> or <code>v3.1</code>). The body is
+            stored as Markdown and hashed at save time.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -192,11 +181,7 @@ function HandoffTermsPage() {
                       </Button>
                     )}
                     {v.is_active && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => retire.mutate(v.id)}
-                      >
+                      <Button size="sm" variant="outline" onClick={() => retire.mutate(v.id)}>
                         Retire
                       </Button>
                     )}

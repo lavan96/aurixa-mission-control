@@ -1,7 +1,6 @@
 // @ts-nocheck
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
-import { ProtectedRoute } from "@/components/protected-route";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,11 +9,9 @@ import { Github } from "lucide-react";
 import { auditFleetGithubAccess } from "@/lib/clone-github-access.functions";
 
 export const Route = createFileRoute("/settings/github-access")({
-  component: () => (
-    <ProtectedRoute>
-      <Page />
-    </ProtectedRoute>
-  ),
+  // Nested under the /settings layout, which already gates auth — wrapping in
+  // ProtectedRoute again re-ran the role check and flashed inside the tabs.
+  component: () => <Page />,
   head: () => ({ meta: [{ title: "GitHub App Access — Aurixa Systems" }] }),
 });
 
@@ -32,17 +29,20 @@ function Page() {
     <div className="p-6 space-y-6 max-w-4xl">
       <div>
         <h1 className="text-2xl font-semibold flex items-center gap-2">
-          <Github className="h-5 w-5" /> GitHub App access (G9)
+          <Github className="h-5 w-5" /> GitHub App access
         </h1>
         <p className="text-sm text-muted-foreground">
-          Verify the Aurixa GitHub App still has write access to every clone repository. Run before a cascade or handoff cutover.
+          Verify the Aurixa GitHub App still has write access to every clone repository. Run before
+          a cascade or handoff cutover.
         </p>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Fleet audit</CardTitle>
-          <CardDescription>Iterates every non-archived clone and pings the installation.</CardDescription>
+          <CardDescription>
+            Iterates every non-archived clone and pings the installation.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <Button onClick={() => audit.mutate()} disabled={audit.isPending}>
@@ -53,7 +53,9 @@ function Page() {
               <div>
                 Checked <Badge variant="outline">{r.checked}</Badge> · ok{" "}
                 <Badge variant="outline">{r.ok}</Badge> · failing{" "}
-                <Badge variant={r.failing.length ? "destructive" : "outline"}>{r.failing.length}</Badge>
+                <Badge variant={r.failing.length ? "destructive" : "outline"}>
+                  {r.failing.length}
+                </Badge>
               </div>
               {r.failing.length > 0 && (
                 <ul className="text-xs space-y-1 rounded border p-2 max-h-96 overflow-auto">

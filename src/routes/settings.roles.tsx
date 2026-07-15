@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ProtectedRoute } from "@/components/protected-route";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/lib/auth";
@@ -75,11 +74,8 @@ const ROLE_META: Record<
 const ALL_ROLES: AppRole[] = ["super_admin", "admin", "operator", "user"];
 
 export const Route = createFileRoute("/settings/roles")({
-  component: () => (
-    <ProtectedRoute>
-      <RolesPage />
-    </ProtectedRoute>
-  ),
+  // Nested under /settings (auth already gated by the parent layout).
+  component: () => <RolesPage />,
   head: () => ({
     meta: [{ title: "Role Management — Aurixa Systems Mission Control" }],
   }),
