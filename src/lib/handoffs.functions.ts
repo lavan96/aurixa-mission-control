@@ -154,7 +154,23 @@ export const transitionHandoff = createServerFn({ method: "POST" })
     if (TERMINAL_STATES.has(current.state) && current.state !== data.to_state) {
       return { ok: false as const, error: "terminal_state" };
     }
+    // G14 — block `complete` until every queued rotation is rotated/skipped.
+    if (data.to_state === "complete") {
+      const { data: outstanding } = await context.supabase
+        .from("handoff_secret_rotations")
+        .select("id, target, key_ref, status")
+        .eq("handoff_id", data.id)
+        .not("status", "in", "(rotated,skipped)");
+      if (outstanding && outstanding.length > 0) {
+        return {
+          ok: false as const,
+          error: "rotations_incomplete",
+          outstanding,
+        };
+      }
+    }
     const patch: Record<string, unknown> = { state: data.to_state };
+
     if (data.to_state === "twin_provisioning" || data.to_state === "snapshot_pending") {
       patch.initiated_at = new Date().toISOString();
     }
