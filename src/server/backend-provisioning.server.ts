@@ -2041,6 +2041,21 @@ export async function provisionCloneBackend(
   if (projectRef) {
     await onStatusUpdate?.("provisioning", `Resuming on existing project ${projectRef}...`);
   } else {
+    // G10: preflight org capacity so we don't burn a slot on a doomed create.
+    await onStatusUpdate?.("provisioning", "Checking Supabase org capacity...");
+    const capacity = await checkOrgCapacity();
+    if (capacity.hardBlock) {
+      throw new Error(
+        `Org capacity check failed: ${capacity.reason} ` +
+          `(${capacity.activeProjects}/${capacity.softLimit} active projects on ${capacity.planTier ?? "unknown"} plan).`,
+      );
+    }
+    if (capacity.wouldExceed) {
+      await onStatusUpdate?.(
+        "provisioning",
+        `Warning: soft limit exceeded (${capacity.activeProjects}/${capacity.softLimit}) — proceeding.`,
+      );
+    }
     dbPass = generateSecurePassword();
     await onStatusUpdate?.("provisioning", "Creating Supabase project...");
     const project = await createSupabaseProject({
