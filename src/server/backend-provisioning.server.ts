@@ -1869,6 +1869,12 @@ export type ProvisionBackendInput = {
    * on the clone and surfaced to operators via the clone secrets UI.
    */
   inheritedSecrets?: Record<string, string>;
+  /**
+   * The clone's own frontend origins. Used to rewrite the prime's
+   * [auth] `site_url` + `uri_allow_list` so the new backend accepts
+   * sign-ins from the clone's own hosts, not the prime's (G8).
+   */
+  cloneOrigins?: CloneOrigins;
 };
 
 export type ProvisionBackendResult = {
