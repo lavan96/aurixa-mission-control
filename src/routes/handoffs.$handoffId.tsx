@@ -698,6 +698,8 @@ function HandoffDetail() {
 
       <ObservabilityCard handoffId={handoffId} />
 
+      <BillingSplitCard handoffId={handoffId} />
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Event log</CardTitle>
