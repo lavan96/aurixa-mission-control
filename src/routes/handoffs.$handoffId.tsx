@@ -382,6 +382,61 @@ function HandoffDetail() {
 
         <Card>
           <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="h-4 w-4" /> Auth users replication (G16)
+            </CardTitle>
+            <CardDescription>
+              Copy <code>auth.users</code> from the source project into the
+              client-owned twin. Preserves user id, bcrypt password hash,
+              confirmation timestamps, and metadata so existing users can
+              sign in against the twin without resetting.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <div className="text-muted-foreground">
+              Runs from <code>twin_ready</code>, <code>data_syncing</code>, or
+              <code> cutover_scheduled</code>. Idempotent: existing user ids
+              on the target are skipped.
+            </div>
+            <Button
+              size="sm"
+              onClick={() => authReplicate.mutate()}
+              disabled={authReplicate.isPending}
+            >
+              {authReplicate.isPending ? "Replicating…" : "Replicate auth users"}
+            </Button>
+            {authReplicate.data && (
+              <div className="mt-2 rounded border p-2 text-xs">
+                <div>
+                  scanned <b>{authReplicate.data.scanned}</b> · imported{" "}
+                  <b>{authReplicate.data.imported}</b> · skipped{" "}
+                  <b>{authReplicate.data.skipped}</b> · failed{" "}
+                  <b>{authReplicate.data.failed}</b>
+                  {authReplicate.data.truncated ? " · truncated" : ""}
+                </div>
+                {authReplicate.data.errors?.length > 0 && (
+                  <details className="mt-1">
+                    <summary className="cursor-pointer">
+                      {authReplicate.data.errors.length} error sample(s)
+                    </summary>
+                    <ul className="mt-1 space-y-1">
+                      {authReplicate.data.errors.map((e: any) => (
+                        <li key={e.user_id} className="font-mono">
+                          {e.email ?? e.user_id}: {e.error}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+
+
+        <Card>
+          <CardHeader>
             <CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> Parity + contracts (E2, E7 · G1)</CardTitle>
           </CardHeader>
           <CardContent className="text-sm space-y-2">
