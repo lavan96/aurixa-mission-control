@@ -26,17 +26,32 @@ type JobRow = {
   id: string;
   clone_id: string;
   provider_slug: EdgeProviderSlug;
-  action: "attach" | "apply_posture" | "sync" | "detach";
+  action:
+    | "attach"
+    | "apply_posture"
+    | "sync"
+    | "detach"
+    | "provision_subdomain"
+    | "deprovision_subdomain"
+    | "resync_subdomain";
   payload: {
     externalRef?: string;
     hostname?: string;
     accountRef?: string;
     posturePreset?: string;
     posture?: EdgePosture;
+    // subdomain actions
+    subdomain?: string;
+    fqdn?: string;
+    zoneId?: string;
+    recordType?: "A" | "AAAA" | "CNAME";
+    recordContent?: string;
+    proxied?: boolean;
   };
   attempts: number;
   max_attempts: number;
 };
+
 
 async function claimJobs(limit: number): Promise<JobRow[]> {
   // Atomic claim via RPC-less update: pick queued/retry rows whose next_attempt_at is due.
