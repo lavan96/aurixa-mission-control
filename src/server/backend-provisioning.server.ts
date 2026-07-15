@@ -744,6 +744,150 @@ export async function replicateCronJobs(
   return results;
 }
 
+// ─── G4: Required extensions + realtime publication parity ───────────
+/**
+ * Extensions the prime repo depends on at runtime. Missing any of these
+ * silently breaks cron (pg_cron), webhook fanout / cron http calls (pg_net),
+ * Vault-based cron auth + secret decryption (vault + pgcrypto), and the
+ * GraphQL endpoint used by some public reads (pg_graphql).
+ */
+export const REQUIRED_EXTENSIONS = [
+  "pgcrypto",
+  "pg_net",
+  "pg_cron",
+  "pg_graphql",
+  "vault",
+] as const;
+
+export type RequiredExtensionResult = {
+  name: string;
+  status: "installed" | "already_present" | "failed";
+  error?: string;
+};
+
+/**
+ * Force-install the extension set every clone depends on. Idempotent per
+ * extension; non-fatal per extension so operators can retry from the parity
+ * report.
+ */
+export async function enforceRequiredExtensions(
+  projectRef: string,
+): Promise<RequiredExtensionResult[]> {
+  const results: RequiredExtensionResult[] = [];
+  for (const name of REQUIRED_EXTENSIONS) {
+    try {
+      const rows = (await runSqlOnProject(
+        projectRef,
+        `select 1 as present from pg_extension where extname = '${name}'`,
+      )) as Array<{ present?: number }> | null;
+      const present = Array.isArray(rows) && rows.length > 0;
+      await runSqlOnProject(projectRef, `create extension if not exists ${name};`);
+      results.push({ name, status: present ? "already_present" : "installed" });
+    } catch (err) {
+      results.push({
+        name,
+        status: "failed",
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+  return results;
+}
+
+export type RealtimePublicationTable = { schema: string; table: string };
+
+/**
+ * List the tables currently published on `supabase_realtime`. Realtime
+ * subscriptions only fire for members of this publication, so a clone that
+ * inherits the schema but not membership silently drops every channel.
+ */
+export async function fetchRealtimePublicationTables(
+  projectRef: string,
+): Promise<RealtimePublicationTable[]> {
+  try {
+    const rows = (await runSqlOnProject(
+      projectRef,
+      `select schemaname as schema, tablename as "table"
+         from pg_publication_tables
+        where pubname = 'supabase_realtime'
+        order by schemaname, tablename`,
+    )) as Array<RealtimePublicationTable> | null;
+    return Array.isArray(rows) ? rows : [];
+  } catch {
+    return [];
+  }
+}
+
+export type RealtimeReplicationResult = {
+  status: "replicated" | "partial" | "skipped" | "failed";
+  added: RealtimePublicationTable[];
+  failures: Array<RealtimePublicationTable & { error: string }>;
+  error?: string;
+};
+
+/**
+ * Ensure `supabase_realtime` exists on the clone and add every table prime
+ * publishes. Also sets `replica identity full` so payloads carry the full row.
+ */
+export async function replicateRealtimePublication(
+  cloneRef: string,
+  primeTables: RealtimePublicationTable[],
+): Promise<RealtimeReplicationResult> {
+  if (primeTables.length === 0) {
+    return { status: "skipped", added: [], failures: [] };
+  }
+  try {
+    await runSqlOnProject(
+      cloneRef,
+      `do $$ begin
+         if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+           create publication supabase_realtime;
+         end if;
+       end $$;`,
+    );
+  } catch (err) {
+    return {
+      status: "failed",
+      added: [],
+      failures: [],
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+
+  const q = (s: string) => `"${s.replace(/"/g, '""')}"`;
+  const added: RealtimePublicationTable[] = [];
+  const failures: Array<RealtimePublicationTable & { error: string }> = [];
+  for (const t of primeTables) {
+    const fq = `${q(t.schema)}.${q(t.table)}`;
+    try {
+      await runSqlOnProject(
+        cloneRef,
+        `do $$ begin
+           begin
+             alter table ${fq} replica identity full;
+           exception when others then null; end;
+           begin
+             alter publication supabase_realtime add table ${fq};
+           exception when duplicate_object then null;
+                    when undefined_table then raise;
+           end;
+         end $$;`,
+      );
+      added.push(t);
+    } catch (err) {
+      failures.push({ ...t, error: err instanceof Error ? err.message : String(err) });
+    }
+  }
+  return {
+    status: failures.length === 0 ? "replicated" : added.length > 0 ? "partial" : "failed",
+    added,
+    failures,
+  };
+}
+
+
+
+
 
 
 
