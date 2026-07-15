@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useConfirm } from "@/components/confirm-dialog";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -903,6 +904,7 @@ function RatesTab() {
 // ─── API Keys ────────────────────────────────────────────────────────────────
 
 function KeysTab() {
+  const confirm = useConfirm();
   const listFn = useServerFn(listCloneApiKeys);
   const createFn = useServerFn(createCloneApiKey);
   const revokeFn = useServerFn(revokeCloneApiKey);
@@ -1166,8 +1168,13 @@ function KeysTab() {
                         size="sm"
                         variant="ghost"
                         onClick={async () => {
-                          if (!confirm("Revoke this key? Calls using it will fail immediately."))
-                            return;
+                          const ok = await confirm({
+                            title: "Revoke this key?",
+                            description: "Calls using it will fail immediately.",
+                            confirmText: "Revoke",
+                            destructive: true,
+                          });
+                          if (!ok) return;
                           const r = await revokeFn({ data: { id: k.id } });
                           if (r.ok) {
                             toast.success("Revoked");
@@ -1465,6 +1472,7 @@ function TenantUsageCard({ tenantId }: { tenantId: string }) {
 // ─── Webhooks ────────────────────────────────────────────────────────────────
 
 function WebhooksTab() {
+  const confirm = useConfirm();
   const listFn = useServerFn(listWebhookEndpoints);
   const upsertFn = useServerFn(upsertWebhookEndpoint);
   const deleteFn = useServerFn(deleteWebhookEndpoint);
@@ -1597,7 +1605,12 @@ function WebhooksTab() {
                       size="sm"
                       variant="ghost"
                       onClick={async () => {
-                        if (!confirm("Delete this endpoint?")) return;
+                        const ok = await confirm({
+                          title: "Delete this endpoint?",
+                          confirmText: "Delete",
+                          destructive: true,
+                        });
+                        if (!ok) return;
                         const r = await deleteFn({ data: { id: e.id } });
                         if (r.ok) {
                           toast.success("Deleted");

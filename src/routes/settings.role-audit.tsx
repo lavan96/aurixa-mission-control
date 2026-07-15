@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ProtectedRoute } from "@/components/protected-route";
 import { useEffect, useState, useCallback } from "react";
 import { getRoleAuditLog } from "@/server/role-management.functions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,11 +22,8 @@ import { EmptyState } from "@/components/empty-state";
 type AuditEntry = Awaited<ReturnType<typeof getRoleAuditLog>>["entries"][0];
 
 export const Route = createFileRoute("/settings/role-audit")({
-  component: () => (
-    <ProtectedRoute>
-      <RoleAuditPage />
-    </ProtectedRoute>
-  ),
+  // Nested under /settings (auth already gated by the parent layout).
+  component: () => <RoleAuditPage />,
   head: () => ({
     meta: [{ title: "Role Audit Log — Aurixa Systems Mission Control" }],
   }),

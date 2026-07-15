@@ -3,6 +3,7 @@
 // side-by-side preview of "before" vs "after" using BrandPreviewFrame.
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { useConfirm } from "@/components/confirm-dialog";
 import {
   upsertCloneOverrides,
   clearCloneOverrides,
@@ -185,8 +186,15 @@ export function CloneOverrideEditorDialog({
     }
   };
 
+  const confirm = useConfirm();
   const handleClearAll = async () => {
-    if (!confirm("Clear ALL overrides for this clone?")) return;
+    const ok = await confirm({
+      title: "Clear all overrides for this clone?",
+      description: "Every brand and report-contact override on this clone will be removed.",
+      confirmText: "Clear all",
+      destructive: true,
+    });
+    if (!ok) return;
     setSaving(true);
     const r = await clearFn({ data: { cloneId } });
     setSaving(false);

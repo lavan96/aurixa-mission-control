@@ -8,6 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { createHandoff } from "@/lib/handoffs.functions";
 import { listClientSupabaseAccounts } from "@/lib/client-supabase-accounts.functions";
@@ -78,7 +85,8 @@ function NewHandoffPage() {
       <div>
         <h1 className="text-2xl font-semibold">New Handoff</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Register a handoff intent. Dry-run parity, snapshot, twin provisioning, and cutover run in later steps.
+          Register a handoff intent. Dry-run parity, snapshot, twin provisioning, and cutover run in
+          later steps.
         </p>
       </div>
 
@@ -88,76 +96,96 @@ function NewHandoffPage() {
           <CardDescription>Clone + client organization the backend will move to.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
+          <div className="space-y-1.5">
             <Label>Clone</Label>
-            <select
-              className="w-full border rounded-md h-10 px-3 bg-background"
-              value={cloneId}
-              onChange={(e) => setCloneId(e.target.value)}
-            >
-              <option value="">Select a clone…</option>
-              {(clonesQ.data ?? []).map((c: any) => (
-                <option key={c.id} value={c.id}>{c.name} ({c.slug})</option>
-              ))}
-            </select>
+            <Select value={cloneId} onValueChange={setCloneId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a clone…" />
+              </SelectTrigger>
+              <SelectContent>
+                {(clonesQ.data ?? []).map((c: any) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name} ({c.slug})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <div>
+          <div className="space-y-1.5">
             <Label>Client Supabase account</Label>
-            <select
-              className="w-full border rounded-md h-10 px-3 bg-background"
-              value={clientAccountId}
-              onChange={(e) => setClientAccountId(e.target.value)}
+            <Select
+              value={clientAccountId || "__none__"}
+              onValueChange={(v) => setClientAccountId(v === "__none__" ? "" : v)}
             >
-              <option value="">— none yet —</option>
-              {(accountsQ.data ?? []).map((a: any) => (
-                <option key={a.id} value={a.id}>{a.owner_email} {a.org_slug ? `(${a.org_slug})` : ""}</option>
-              ))}
-            </select>
+              <SelectTrigger>
+                <SelectValue placeholder="— none yet —" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">— none yet —</SelectItem>
+                {(accountsQ.data ?? []).map((a: any) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.owner_email} {a.org_slug ? `(${a.org_slug})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div>
+            <div className="space-y-1.5">
               <Label>Path</Label>
-              <select
-                className="w-full border rounded-md h-10 px-3 bg-background"
-                value={path}
-                onChange={(e) => setPath(e.target.value as any)}
-              >
-                <option value="rebuild_twin">Rebuild twin (default)</option>
-                <option value="enterprise_transfer">Enterprise transfer</option>
-              </select>
+              <Select value={path} onValueChange={(v) => setPath(v as any)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="rebuild_twin">Rebuild twin (default)</SelectItem>
+                  <SelectItem value="enterprise_transfer">Enterprise transfer</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <div>
+            <div className="space-y-1.5">
               <Label>Region policy</Label>
-              <select
-                className="w-full border rounded-md h-10 px-3 bg-background"
-                value={policyId}
-                onChange={(e) => setPolicyId(e.target.value)}
+              <Select
+                value={policyId || "__none__"}
+                onValueChange={(v) => setPolicyId(v === "__none__" ? "" : v)}
               >
-                <option value="">— none —</option>
-                {(policiesQ.data ?? []).map((p: any) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
+                <SelectTrigger>
+                  <SelectValue placeholder="— none —" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— none —</SelectItem>
+                  {(policiesQ.data ?? []).map((p: any) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Target region</Label>
-              <Input value={targetRegion} onChange={(e) => setTargetRegion(e.target.value)} placeholder="e.g. ap-southeast-2" />
+              <Input
+                value={targetRegion}
+                onChange={(e) => setTargetRegion(e.target.value)}
+                placeholder="e.g. ap-southeast-2"
+              />
             </div>
             <div>
               <Label>Target plan tier</Label>
-              <Input value={targetPlan} onChange={(e) => setTargetPlan(e.target.value)} placeholder="pro / team / enterprise" />
+              <Input
+                value={targetPlan}
+                onChange={(e) => setTargetPlan(e.target.value)}
+                placeholder="pro / team / enterprise"
+              />
             </div>
           </div>
           <div>
             <Label>Notes</Label>
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
           </div>
-          <Button
-            onClick={() => create.mutate()}
-            disabled={!cloneId || create.isPending}
-          >
+          <Button onClick={() => create.mutate()} disabled={!cloneId || create.isPending}>
             {create.isPending ? "Creating…" : "Create handoff"}
           </Button>
         </CardContent>

@@ -3,7 +3,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ProtectedRoute } from "@/components/protected-route";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,19 +12,12 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Gift, Sparkles, AlertTriangle } from "lucide-react";
-import {
-  bulkGiftTokens,
-  previewGiftTargets,
-  listGiftCampaigns,
-} from "@/lib/gift-tokens.functions";
+import { bulkGiftTokens, previewGiftTargets, listGiftCampaigns } from "@/lib/gift-tokens.functions";
 import { listPlans, listTenants } from "@/lib/tokens.functions";
 
 export const Route = createFileRoute("/settings/gift-tokens")({
-  component: () => (
-    <ProtectedRoute>
-      <GiftTokensPage />
-    </ProtectedRoute>
-  ),
+  // Nested under /settings (auth already gated by the parent layout).
+  component: () => <GiftTokensPage />,
   head: () => ({ meta: [{ title: "Gift Tokens — Aurixa Systems" }] }),
 });
 
@@ -228,9 +220,7 @@ function GiftTokensPage() {
                     <button
                       key={p.id}
                       onClick={() =>
-                        setPlanIds((ids) =>
-                          on ? ids.filter((i) => i !== p.id) : [...ids, p.id],
-                        )
+                        setPlanIds((ids) => (on ? ids.filter((i) => i !== p.id) : [...ids, p.id]))
                       }
                       className={`flex items-center justify-between rounded border px-3 py-2 text-left text-sm ${
                         on ? "border-primary bg-primary/10" : "border-border"
@@ -302,11 +292,9 @@ function GiftTokensPage() {
                 <div className="text-muted-foreground">
                   Will gift{" "}
                   <span className="font-mono text-foreground">{tokens.toLocaleString()}</span>{" "}
-                  tokens to{" "}
-                  <span className="font-mono text-foreground">{targetCount}</span> tenants ={" "}
-                  <span className="font-mono text-foreground">
-                    {totalToIssue.toLocaleString()}
-                  </span>{" "}
+                  tokens to <span className="font-mono text-foreground">{targetCount}</span> tenants
+                  ={" "}
+                  <span className="font-mono text-foreground">{totalToIssue.toLocaleString()}</span>{" "}
                   tokens total.
                 </div>
               </div>

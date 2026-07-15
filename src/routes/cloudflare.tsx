@@ -148,6 +148,7 @@ function CloudflarePage() {
         <Button
           variant="ghost"
           size="icon"
+          aria-label="Refresh Cloudflare status"
           onClick={() => {
             tokenQ.refetch();
             fleetQ.refetch();
@@ -290,6 +291,7 @@ function CloudflarePage() {
                       <Button
                         variant="ghost"
                         size="icon"
+                        aria-label="Detach Cloudflare configuration"
                         onClick={() => detach.mutate(cfg.clone_id)}
                         disabled={detach.isPending}
                       >

@@ -2,6 +2,7 @@
 // snapshot with diff vs current published version + one-click rollback.
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { useConfirm } from "@/components/confirm-dialog";
 import { listBrandVersions, rollbackBrandProfile } from "@/server/branding-extensions.functions";
 import { Button } from "@/components/ui/button";
 import {
@@ -70,13 +71,16 @@ export function BrandVersionTimelineDialog({
     };
   }, [open, profileId, listFn]);
 
+  const confirm = useConfirm();
   const handleRollback = async (v: Version) => {
-    if (
-      !confirm(
-        `Roll "${profileName}" back to version ${v.version}? This creates a NEW version with the old payload and re-cascades to drifted clones.`,
-      )
-    )
-      return;
+    const ok = await confirm({
+      title: `Roll "${profileName}" back to version ${v.version}?`,
+      description:
+        "This creates a NEW version with the old payload and re-cascades to drifted clones.",
+      confirmText: "Roll back",
+      destructive: true,
+    });
+    if (!ok) return;
     setRollingBack(v.id);
     const r = await rollbackFn({ data: { profileId, versionId: v.id } });
     setRollingBack(null);

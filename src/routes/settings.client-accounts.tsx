@@ -3,8 +3,8 @@
 // revoke the per-client org credentials used by the handoff orchestrator.
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ProtectedRoute } from "@/components/protected-route";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,15 +22,13 @@ import {
 } from "@/lib/client-supabase-accounts.functions";
 
 export const Route = createFileRoute("/settings/client-accounts")({
-  component: () => (
-    <ProtectedRoute>
-      <ClientAccountsPage />
-    </ProtectedRoute>
-  ),
+  // Nested under /settings (auth already gated by the parent layout).
+  component: () => <ClientAccountsPage />,
   head: () => ({ meta: [{ title: "Client Supabase Accounts — Aurixa Systems" }] }),
 });
 
 function ClientAccountsPage() {
+  const confirm = useConfirm();
   const qc = useQueryClient();
   const q = useQuery({
     queryKey: ["client-supabase-accounts"],
@@ -45,8 +43,7 @@ function ClientAccountsPage() {
   const [notes, setNotes] = useState("");
   const [pat, setPat] = useState("");
 
-  const invalidate = () =>
-    qc.invalidateQueries({ queryKey: ["client-supabase-accounts"] });
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["client-supabase-accounts"] });
 
   const create = useMutation({
     mutationFn: () =>
@@ -66,8 +63,13 @@ function ClientAccountsPage() {
       }),
     onSuccess: () => {
       toast.success("Client account captured");
-      setOwnerEmail(""); setOwnerName(""); setOrgSlug("");
-      setPlanTier(""); setRegionAllowed(""); setNotes(""); setPat("");
+      setOwnerEmail("");
+      setOwnerName("");
+      setOrgSlug("");
+      setPlanTier("");
+      setRegionAllowed("");
+      setNotes("");
+      setPat("");
       invalidate();
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed"),
@@ -85,13 +87,19 @@ function ClientAccountsPage() {
 
   const revoke = useMutation({
     mutationFn: (id: string) => revokeClientSupabaseAccount({ data: { id } }),
-    onSuccess: () => { toast.success("Revoked"); invalidate(); },
+    onSuccess: () => {
+      toast.success("Revoked");
+      invalidate();
+    },
   });
 
   const rotate = useMutation({
     mutationFn: ({ id, pat }: { id: string; pat: string }) =>
       rotateClientSupabasePat({ data: { id, pat } }),
-    onSuccess: () => { toast.success("PAT rotated — re-verify"); invalidate(); },
+    onSuccess: () => {
+      toast.success("PAT rotated — re-verify");
+      invalidate();
+    },
     onError: (e: any) => toast.error(e?.message ?? "Failed"),
   });
 
@@ -100,8 +108,8 @@ function ClientAccountsPage() {
       <div>
         <h1 className="text-2xl font-semibold">Client Supabase Accounts</h1>
         <p className="text-sm text-muted-foreground">
-          Captured client-org credentials used by the handoff orchestrator. PATs are
-          encrypted at rest and never returned to the browser after capture.
+          Captured client-org credentials used by the handoff orchestrator. PATs are encrypted at
+          rest and never returned to the browser after capture.
         </p>
       </div>
 
@@ -117,7 +125,11 @@ function ClientAccountsPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Owner email *</Label>
-              <Input value={ownerEmail} onChange={(e) => setOwnerEmail(e.target.value)} placeholder="ceo@client.com" />
+              <Input
+                value={ownerEmail}
+                onChange={(e) => setOwnerEmail(e.target.value)}
+                placeholder="ceo@client.com"
+              />
             </div>
             <div>
               <Label>Owner name</Label>
@@ -125,19 +137,36 @@ function ClientAccountsPage() {
             </div>
             <div>
               <Label>Org slug or ID</Label>
-              <Input value={orgSlug} onChange={(e) => setOrgSlug(e.target.value)} placeholder="acme-corp" />
+              <Input
+                value={orgSlug}
+                onChange={(e) => setOrgSlug(e.target.value)}
+                placeholder="acme-corp"
+              />
             </div>
             <div>
               <Label>Plan tier (optional — auto-filled on verify)</Label>
-              <Input value={planTier} onChange={(e) => setPlanTier(e.target.value)} placeholder="pro / team / enterprise" />
+              <Input
+                value={planTier}
+                onChange={(e) => setPlanTier(e.target.value)}
+                placeholder="pro / team / enterprise"
+              />
             </div>
             <div className="col-span-2">
               <Label>Allowed regions (comma-separated)</Label>
-              <Input value={regionAllowed} onChange={(e) => setRegionAllowed(e.target.value)} placeholder="us-east-1, ap-southeast-2" />
+              <Input
+                value={regionAllowed}
+                onChange={(e) => setRegionAllowed(e.target.value)}
+                placeholder="us-east-1, ap-southeast-2"
+              />
             </div>
             <div className="col-span-2">
               <Label>Personal Access Token (owner scope)</Label>
-              <Input type="password" value={pat} onChange={(e) => setPat(e.target.value)} placeholder="sbp_..." />
+              <Input
+                type="password"
+                value={pat}
+                onChange={(e) => setPat(e.target.value)}
+                placeholder="sbp_..."
+              />
             </div>
             <div className="col-span-2">
               <Label>Notes</Label>
@@ -200,8 +229,14 @@ function ClientAccountsPage() {
                     <Button
                       size="sm"
                       variant="destructive"
-                      onClick={() => {
-                        if (confirm("Revoke this client account? It can't be used for handoffs after this.")) revoke.mutate(a.id);
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: "Revoke this client account?",
+                          description: "It can't be used for handoffs after this.",
+                          confirmText: "Revoke",
+                          destructive: true,
+                        });
+                        if (ok) revoke.mutate(a.id);
                       }}
                     >
                       Revoke
@@ -247,11 +282,22 @@ function RotateInline({
       <Button
         size="sm"
         disabled={val.length < 20}
-        onClick={() => { onRotate(val); setVal(""); setOpen(false); }}
+        onClick={() => {
+          onRotate(val);
+          setVal("");
+          setOpen(false);
+        }}
       >
         Save
       </Button>
-      <Button size="sm" variant="ghost" onClick={() => { setOpen(false); setVal(""); }}>
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={() => {
+          setOpen(false);
+          setVal("");
+        }}
+      >
         Cancel
       </Button>
     </div>

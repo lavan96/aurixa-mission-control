@@ -7,14 +7,9 @@ import { RouteError } from "@/components/route-error";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState, useMemo } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -26,7 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Shield, RefreshCw, ExternalLink } from "lucide-react";
+import { Shield, RefreshCw, ExternalLink, AlertTriangle } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
 import { toast } from "sonner";
 import { useUserRoles } from "@/lib/use-user-roles";
 import {
@@ -54,10 +50,7 @@ const getFleetEdge = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const s = context.supabase as any;
-    const { data: clones } = await s
-      .from("clones")
-      .select("id, name")
-      .order("name");
+    const { data: clones } = await s.from("clones").select("id, name").order("name");
     const { data: configs } = await s
       .from("clone_edge_config")
       .select(
@@ -137,8 +130,7 @@ function toneFor(status: string | null | undefined) {
   if (status === "active") return "text-success border-success/40";
   if (status === "error") return "text-destructive border-destructive/40";
   if (status === "waitlisted") return "text-warning border-warning/40";
-  if (status === "attaching" || status === "syncing")
-    return "text-info border-info/40";
+  if (status === "attaching" || status === "syncing") return "text-info border-info/40";
   return "text-muted-foreground";
 }
 
@@ -150,10 +142,6 @@ function FleetEdge() {
   const listPresets = useServerFn(listEdgePresets);
   const listProviders = useServerFn(listEdgeProviders);
 
-  const [rows, setRows] = useState<FleetRow[]>([]);
-  const [presets, setPresets] = useState<any[]>([]);
-  const [providers, setProviders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -163,26 +151,27 @@ function FleetEdge() {
 
   const rowKey = (r: FleetRow) => `${r.clone_id}::${r.provider_slug ?? "none"}`;
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const [f, p, pr] = await Promise.all([
-        fetchFleet(),
-        listPresets(),
-        listProviders(),
-      ]);
-      setRows(f.rows ?? []);
-      setPresets(p.presets ?? []);
-      setProviders(pr.providers ?? []);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // useQuery gives us caching + a real error path — the old hand-rolled load()
+  // had try/finally with no catch, so a fetch failure surfaced as "No matches".
+  const query = useQuery({
+    queryKey: ["fleet-edge"],
+    queryFn: async () => {
+      const [f, p, pr] = await Promise.all([fetchFleet(), listPresets(), listProviders()]);
+      return {
+        rows: (f.rows ?? []) as FleetRow[],
+        presets: p.presets ?? [],
+        providers: pr.providers ?? [],
+      };
+    },
+  });
 
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const rows = query.data?.rows ?? [];
+  const presets = query.data?.presets ?? [];
+  const providers = query.data?.providers ?? [];
+  const loading = query.isPending;
+  const load = () => {
+    void query.refetch();
+  };
 
   const filtered = useMemo(() => {
     return rows.filter((r) => {
@@ -323,23 +312,22 @@ function FleetEdge() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
-            fleet
-          </p>
-          <h1 className="mt-1 flex items-center gap-2 text-3xl font-semibold tracking-tight">
-            <Shield className="h-6 w-6 text-info" /> Edge security
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Fleet-wide view of edge/CDN providers attached to every clone.
-          </p>
-        </div>
-        <Button variant="outline" onClick={load} disabled={loading}>
-          <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          Refresh
-        </Button>
-      </header>
+      <PageHeader
+        eyebrow="fleet"
+        icon={<Shield className="h-7 w-7 text-info" />}
+        title="Edge security"
+        description="Fleet-wide view of edge/CDN providers attached to every clone."
+        actions={
+          <Button
+            variant="outline"
+            onClick={() => void query.refetch()}
+            disabled={query.isFetching}
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${query.isFetching ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+        }
+      />
 
       <div className="grid gap-3 md:grid-cols-5">
         <StatTile label="Clones" value={stats.uniqueClones} />
@@ -439,123 +427,139 @@ function FleetEdge() {
                     </td>
                   </tr>
                 )}
-                {!loading && filtered.length === 0 && (
+                {!loading && query.error && (
                   <tr>
-                    <td colSpan={isAdmin ? 8 : 7} className="p-6 text-center text-muted-foreground">
-                      No matches
-                    </td>
-                  </tr>
-                )}
-                {filtered.map((r, i) => {
-                  const canSelect = !!r.provider_slug && r.status !== "waitlisted";
-                  return (
-                  <tr
-                    key={`${r.clone_id}-${r.provider_slug ?? "none"}-${i}`}
-                    className="border-t border-border/50"
-                  >
-                    {isAdmin && (
-                      <td className="px-3 py-2">
-                        {canSelect && (
-                          <Checkbox
-                            checked={selected.has(rowKey(r))}
-                            onCheckedChange={() => toggleRow(r)}
-                            aria-label={`Select ${r.clone_name}`}
-                          />
-                        )}
-                      </td>
-                    )}
-                    <td className="px-3 py-2">
-                      <Link
-                        to="/clones/$cloneId"
-                        params={{ cloneId: r.clone_id }}
-                        className="font-mono hover:text-primary"
-                      >
-                        {r.clone_name}
-                      </Link>
-                      {r.failed_jobs > 0 && (
-                        <Badge variant="outline" className="ml-2 text-[10px] text-destructive">
-                          {r.failed_jobs} failed
-                        </Badge>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 font-mono text-xs">
-                      {r.provider_slug ?? (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 font-mono text-xs">
-                      {r.hostname ?? <span className="text-muted-foreground">—</span>}
-                    </td>
-                    <td className="px-3 py-2">
-                      {r.status ? (
-                        <Badge
-                          variant="outline"
-                          className={`font-mono text-[10px] ${toneFor(r.status)}`}
-                        >
-                          {r.status}
-                        </Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">not attached</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      {r.provider_slug && isAdmin ? (
-                        <Select
-                          value={r.posture_preset ?? ""}
-                          onValueChange={(v) => changePreset(r, v)}
-                          disabled={busy !== null || r.status === "waitlisted"}
-                        >
-                          <SelectTrigger className="h-7 w-[140px] text-xs">
-                            <SelectValue placeholder="—" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {presets.map((p) => (
-                              <SelectItem key={p.slug} value={p.slug}>
-                                {p.display_name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <span className="font-mono text-xs">
-                          {r.posture_preset ?? "—"}
+                    <td colSpan={isAdmin ? 8 : 7} className="p-6 text-center">
+                      <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
+                        <AlertTriangle className="h-6 w-6 text-destructive" />
+                        <span>
+                          {query.error instanceof Error
+                            ? query.error.message
+                            : "Couldn't load the edge fleet."}
                         </span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 font-mono text-[11px] text-muted-foreground">
-                      {r.last_synced_at ? formatDistanceToNow(r.last_synced_at) : "—"}
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <div className="inline-flex items-center gap-1">
-                        {r.provider_slug && isAdmin && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={busy !== null || r.status === "waitlisted"}
-                            onClick={() => sync(r)}
-                            className="h-7 px-2"
-                          >
-                            <RefreshCw
-                              className={`h-3.5 w-3.5 ${
-                                busy === `sync:${r.clone_id}:${r.provider_slug}`
-                                  ? "animate-spin"
-                                  : ""
-                              }`}
-                            />
-                          </Button>
-                        )}
-                        <Link
-                          to="/clones/$cloneId"
-                          params={{ cloneId: r.clone_id }}
-                          className="inline-flex h-7 items-center rounded-md px-2 text-muted-foreground hover:text-foreground"
-                        >
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </Link>
+                        <Button size="sm" variant="outline" onClick={() => void query.refetch()}>
+                          <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Retry
+                        </Button>
                       </div>
                     </td>
                   </tr>
-                  );
-                })}
+                )}
+                {!loading && !query.error && filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={isAdmin ? 8 : 7} className="p-6 text-center text-muted-foreground">
+                      {rows.length === 0
+                        ? "No edge configuration found across the fleet."
+                        : "No clones match this filter."}
+                    </td>
+                  </tr>
+                )}
+                {!query.error &&
+                  filtered.map((r, i) => {
+                    const canSelect = !!r.provider_slug && r.status !== "waitlisted";
+                    return (
+                      <tr
+                        key={`${r.clone_id}-${r.provider_slug ?? "none"}-${i}`}
+                        className="border-t border-border/50"
+                      >
+                        {isAdmin && (
+                          <td className="px-3 py-2">
+                            {canSelect && (
+                              <Checkbox
+                                checked={selected.has(rowKey(r))}
+                                onCheckedChange={() => toggleRow(r)}
+                                aria-label={`Select ${r.clone_name}`}
+                              />
+                            )}
+                          </td>
+                        )}
+                        <td className="px-3 py-2">
+                          <Link
+                            to="/clones/$cloneId"
+                            params={{ cloneId: r.clone_id }}
+                            className="font-mono hover:text-primary"
+                          >
+                            {r.clone_name}
+                          </Link>
+                          {r.failed_jobs > 0 && (
+                            <Badge variant="outline" className="ml-2 text-[10px] text-destructive">
+                              {r.failed_jobs} failed
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 font-mono text-xs">
+                          {r.provider_slug ?? <span className="text-muted-foreground">—</span>}
+                        </td>
+                        <td className="px-3 py-2 font-mono text-xs">
+                          {r.hostname ?? <span className="text-muted-foreground">—</span>}
+                        </td>
+                        <td className="px-3 py-2">
+                          {r.status ? (
+                            <Badge
+                              variant="outline"
+                              className={`font-mono text-[10px] ${toneFor(r.status)}`}
+                            >
+                              {r.status}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">not attached</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          {r.provider_slug && isAdmin ? (
+                            <Select
+                              value={r.posture_preset ?? ""}
+                              onValueChange={(v) => changePreset(r, v)}
+                              disabled={busy !== null || r.status === "waitlisted"}
+                            >
+                              <SelectTrigger className="h-7 w-[140px] text-xs">
+                                <SelectValue placeholder="—" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {presets.map((p) => (
+                                  <SelectItem key={p.slug} value={p.slug}>
+                                    {p.display_name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <span className="font-mono text-xs">{r.posture_preset ?? "—"}</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 font-mono text-[11px] text-muted-foreground">
+                          {r.last_synced_at ? formatDistanceToNow(r.last_synced_at) : "—"}
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          <div className="inline-flex items-center gap-1">
+                            {r.provider_slug && isAdmin && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                disabled={busy !== null || r.status === "waitlisted"}
+                                onClick={() => sync(r)}
+                                className="h-7 px-2"
+                              >
+                                <RefreshCw
+                                  className={`h-3.5 w-3.5 ${
+                                    busy === `sync:${r.clone_id}:${r.provider_slug}`
+                                      ? "animate-spin"
+                                      : ""
+                                  }`}
+                                />
+                              </Button>
+                            )}
+                            <Link
+                              to="/clones/$cloneId"
+                              params={{ cloneId: r.clone_id }}
+                              className="inline-flex h-7 items-center rounded-md px-2 text-muted-foreground hover:text-foreground"
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </Link>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>
@@ -565,15 +569,7 @@ function FleetEdge() {
   );
 }
 
-function StatTile({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: number;
-  tone?: string;
-}) {
+function StatTile({ label, value, tone }: { label: string; value: number; tone?: string }) {
   return (
     <Card>
       <CardContent className="p-4">

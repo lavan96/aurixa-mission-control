@@ -15,9 +15,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Receipt, Puzzle, UserCog, Wrench, FileText } from "lucide-react";
+import {
+  Receipt,
+  Puzzle,
+  UserCog,
+  Wrench,
+  FileText,
+  Users,
+  AlertTriangle,
+  RefreshCw,
+} from "lucide-react";
 import { listPricingCatalog } from "@/lib/pricing-catalog.functions";
 import { createStripeCheckout } from "@/lib/stripe.functions";
+import { EmptyState } from "@/components/empty-state";
 
 const SearchSchema = z.object({ tenant: z.string().uuid().optional() });
 
@@ -48,10 +58,16 @@ function CatalogPage() {
   const { tenant } = Route.useSearch();
   const fetchCatalog = useServerFn(listPricingCatalog);
   const checkoutFn = useServerFn(createStripeCheckout);
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["pricing-catalog"],
     queryFn: () => fetchCatalog(),
   });
+  const isEmpty =
+    !!data &&
+    (data.roles?.length ?? 0) === 0 &&
+    (data.addons?.length ?? 0) === 0 &&
+    (data.setups?.length ?? 0) === 0 &&
+    (data.reports?.length ?? 0) === 0;
 
   async function buySetup(setupId: string, stripePriceId: string | null) {
     if (!tenant) {
@@ -92,7 +108,7 @@ function CatalogPage() {
         <div className="flex gap-2">
           <Button asChild variant="outline" size="sm">
             <Link to="/billing/seats">
-              <ArrowLeft className="h-4 w-4 mr-2" />
+              <Users className="h-4 w-4 mr-2" />
               Seats
             </Link>
           </Button>
@@ -104,7 +120,28 @@ function CatalogPage() {
 
       {isLoading && <p className="text-muted-foreground">Loading catalog…</p>}
 
-      {data && (
+      {isError && (
+        <EmptyState
+          icon={<AlertTriangle />}
+          title="Couldn't load the catalog"
+          description={error instanceof Error ? error.message : "Something went wrong."}
+          action={
+            <Button variant="outline" onClick={() => void refetch()}>
+              <RefreshCw className="mr-1.5 h-4 w-4" /> Retry
+            </Button>
+          }
+        />
+      )}
+
+      {isEmpty && (
+        <EmptyState
+          icon={<Receipt />}
+          title="No pricing configured yet"
+          description="Seat roles, add-ons, setup packages, and report costs will appear here once configured."
+        />
+      )}
+
+      {data && !isEmpty && (
         <>
           {/* Seat Roles */}
           <section className="space-y-4">

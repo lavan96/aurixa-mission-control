@@ -7,7 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { listHandoffs } from "@/lib/handoffs.functions";
 import { getPrimeOrgCapacity } from "@/lib/org-capacity.functions";
-import { ArrowRightLeft, Plus, Gauge } from "lucide-react";
+import { ArrowRightLeft, Plus, Gauge, AlertTriangle, RefreshCw } from "lucide-react";
+import { EmptyState } from "@/components/empty-state";
+import { CardRowSkeleton } from "@/components/list-skeletons";
 
 export const Route = createFileRoute("/handoffs")({
   component: () => (
@@ -38,8 +40,8 @@ function HandoffsPage() {
   const capTone = capData?.hardBlock
     ? "destructive"
     : capData?.wouldExceed
-    ? "secondary"
-    : "default";
+      ? "secondary"
+      : "default";
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -66,8 +68,8 @@ function HandoffsPage() {
                 <Gauge className="h-4 w-4" /> Prime Supabase org capacity (G10)
               </CardTitle>
               <CardDescription>
-                Preflight check that runs before every new project create. Handoff twin
-                builds also run this against the client's PAT.
+                Preflight check that runs before every new project create. Handoff twin builds also
+                run this against the client's PAT.
               </CardDescription>
             </div>
             {capData && (
@@ -96,26 +98,39 @@ function HandoffsPage() {
                 </p>
               )}
               {!capData.reason && (
-                <p className="text-muted-foreground">
-                  Headroom OK — provisioning may proceed.
-                </p>
+                <p className="text-muted-foreground">Headroom OK — provisioning may proceed.</p>
               )}
             </>
           )}
         </CardContent>
       </Card>
 
-      {q.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
+      {q.isLoading && (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <CardRowSkeleton />
+          <CardRowSkeleton />
+        </div>
+      )}
 
-      {!q.isLoading && rows.length === 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>No handoffs yet</CardTitle>
-            <CardDescription>
-              Start a handoff to migrate a clone backend into the client's own Supabase organization.
-            </CardDescription>
-          </CardHeader>
-        </Card>
+      {!q.isLoading && q.isError && (
+        <EmptyState
+          icon={<AlertTriangle />}
+          title="Couldn't load handoffs"
+          description={q.error instanceof Error ? q.error.message : "Something went wrong."}
+          action={
+            <Button variant="outline" onClick={() => void q.refetch()}>
+              <RefreshCw className="mr-1.5 h-4 w-4" /> Retry
+            </Button>
+          }
+        />
+      )}
+
+      {!q.isLoading && !q.isError && rows.length === 0 && (
+        <EmptyState
+          icon={<ArrowRightLeft />}
+          title="No handoffs yet"
+          description="Start a handoff to migrate a clone backend into the client's own Supabase organization."
+        />
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -124,11 +139,10 @@ function HandoffsPage() {
             <CardHeader>
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <CardTitle className="text-base">
-                    {h.clones?.name ?? h.clone_id}
-                  </CardTitle>
+                  <CardTitle className="text-base">{h.clones?.name ?? h.clone_id}</CardTitle>
                   <CardDescription>
-                    Path: {h.path} · Region: {h.target_region ?? "—"} · Plan: {h.target_plan_tier ?? "—"}
+                    Path: {h.path} · Region: {h.target_region ?? "—"} · Plan:{" "}
+                    {h.target_plan_tier ?? "—"}
                   </CardDescription>
                 </div>
                 <Badge variant={stateVariant(h.state)}>{h.state}</Badge>
@@ -136,7 +150,11 @@ function HandoffsPage() {
             </CardHeader>
             <CardContent className="flex justify-between text-sm text-muted-foreground">
               <span>Created {new Date(h.created_at).toLocaleString()}</span>
-              <Link to="/handoffs/$handoffId" params={{ handoffId: h.id }} className="text-primary hover:underline">
+              <Link
+                to="/handoffs/$handoffId"
+                params={{ handoffId: h.id }}
+                className="text-primary hover:underline"
+              >
                 Open →
               </Link>
             </CardContent>

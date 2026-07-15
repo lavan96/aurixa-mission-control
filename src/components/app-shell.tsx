@@ -2,35 +2,8 @@ import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { createContext, useContext, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
-import {
-  LayoutDashboard,
-  GitFork,
-  Boxes,
-  Waves,
-  Bot,
-  Shield,
-  Settings,
-  LogOut,
-  Radio,
-  ScrollText,
-  CalendarClock,
-  Sparkles,
-  Activity,
-  TreePine,
-  Menu,
-  Palette,
-  BarChart3,
-  Newspaper,
-  Receipt,
-  ShieldCheck,
-  Target,
-  Search,
-  AlertTriangle,
-  Users,
-  ShoppingCart,
-  UserPlus,
-  ArrowRightLeft,
-} from "lucide-react";
+import { LogOut, Radio, Menu, Search } from "lucide-react";
+import { NAV_SECTIONS } from "@/lib/nav";
 import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { CommandPalette } from "@/components/command-palette";
@@ -45,35 +18,6 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-
-const NAV = [
-  { to: "/dashboard", label: "Fleet", icon: LayoutDashboard },
-  { to: "/leads", label: "Leads", icon: UserPlus },
-  { to: "/health", label: "Health", icon: Activity },
-  { to: "/clones/new", label: "New Clone", icon: GitFork },
-  { to: "/modules", label: "Modules", icon: Boxes },
-  { to: "/cascades", label: "Cascades", icon: Waves },
-  { to: "/schedules", label: "Schedules", icon: CalendarClock },
-  { to: "/drift", label: "Drift", icon: Sparkles },
-  { to: "/branding", label: "Branding", icon: Palette },
-  { to: "/fleet-manager", label: "AI Manager", icon: Bot },
-  { to: "/audit-log", label: "Audit Log", icon: ScrollText },
-  { to: "/route-errors", label: "Route Errors", icon: AlertTriangle },
-  { to: "/cloudflare", label: "Cloudflare", icon: Shield },
-  { to: "/fleet/edge", label: "Edge Security", icon: Shield },
-  { to: "/security-partners", label: "Security Partners", icon: ShieldCheck },
-  { to: "/approvals", label: "Approvals", icon: ShieldCheck },
-  { to: "/metrics", label: "Metrics", icon: BarChart3 },
-  { to: "/slo", label: "SLO", icon: Target },
-  { to: "/digests", label: "Digests", icon: Newspaper },
-  { to: "/report-jobs", label: "Report Jobs", icon: Receipt },
-  { to: "/billing/seats", label: "Seats", icon: Users },
-  { to: "/billing/purchases", label: "Purchases", icon: ShoppingCart },
-  { to: "/billing/catalog", label: "Pricing Catalog", icon: Receipt },
-  { to: "/handoffs", label: "Handoffs", icon: ArrowRightLeft },
-  { to: "/yggdrasil", label: "Yggdrasil", icon: TreePine },
-  { to: "/settings", label: "Settings", icon: Settings },
-] as const;
 
 const AppShellContext = createContext(false);
 
@@ -90,27 +34,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  const navLinks = NAV.map((item) => {
-    const active = loc.pathname.startsWith(item.to);
-    const Icon = item.icon;
-    return (
-      <Link
-        key={item.to}
-        to={item.to}
-        onClick={() => setMobileOpen(false)}
-        className={cn(
-          "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-          active
-            ? "bg-sidebar-accent text-foreground"
-            : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground",
-        )}
-      >
-        <Icon className={cn("h-4 w-4", active && "text-primary")} />
-        <span>{item.label}</span>
-        {active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />}
-      </Link>
-    );
-  });
+  const navLinks = NAV_SECTIONS.map((section) => (
+    <div key={section.heading} className="space-y-0.5">
+      <p className="px-3 pb-1 pt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground/60 first:pt-0">
+        {section.heading}
+      </p>
+      {section.items.map((item) => {
+        const to = item.to as string;
+        const active = loc.pathname === to || loc.pathname.startsWith(to + "/");
+        const Icon = item.icon;
+        return (
+          <Link
+            key={to}
+            to={item.to}
+            onClick={() => setMobileOpen(false)}
+            className={cn(
+              "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+              active
+                ? "bg-sidebar-accent text-foreground"
+                : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground",
+            )}
+          >
+            <Icon className={cn("h-4 w-4", active && "text-primary")} />
+            <span>{item.label}</span>
+            {active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />}
+          </Link>
+        );
+      })}
+    </div>
+  ));
 
   return (
     <AppShellContext.Provider value={true}>

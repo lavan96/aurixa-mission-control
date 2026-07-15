@@ -10,25 +10,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-
-const MAP: Record<string, { to: string; label: string }> = {
-  d: { to: "/dashboard", label: "Fleet" },
-  m: { to: "/modules", label: "Modules" },
-  c: { to: "/cascades", label: "Cascades" },
-  b: { to: "/branding", label: "Branding" },
-  s: { to: "/schedules", label: "Schedules" },
-  h: { to: "/health", label: "Health" },
-  a: { to: "/audit-log", label: "Audit log" },
-  n: { to: "/notifications", label: "Notifications" },
-  e: { to: "/cloudflare", label: "Cloudflare" },
-  l: { to: "/slo", label: "SLO" },
-  q: { to: "/approvals", label: "Approvals queue" },
-  i: { to: "/metrics", label: "Metrics" },
-  y: { to: "/yggdrasil", label: "Yggdrasil" },
-  g: { to: "/digests", label: "Digests" },
-  f: { to: "/fleet-manager", label: "AI Manager" },
-  r: { to: "/drift", label: "Drift" },
-};
+import { NAV_SHORTCUTS } from "@/lib/nav";
 
 export function KeyboardShortcuts() {
   const nav = useNavigate();
@@ -57,12 +39,12 @@ export function KeyboardShortcuts() {
         return;
       }
       if (armed.current) {
-        const target = MAP[e.key.toLowerCase()];
+        const target = NAV_SHORTCUTS[e.key.toLowerCase()];
         window.clearTimeout(armed.current);
         armed.current = null;
         if (target) {
           e.preventDefault();
-          nav({ to: target.to as never });
+          nav({ to: target.to });
           toast(target.label, { description: `g${e.key}`, duration: 1200 });
         }
       }
@@ -99,7 +81,7 @@ export function KeyboardShortcuts() {
               Navigate (press g, then…)
             </h3>
             <ul className="grid grid-cols-2 gap-1 text-sm">
-              {Object.entries(MAP).map(([k, v]) => (
+              {Object.entries(NAV_SHORTCUTS).map(([k, v]) => (
                 <Row key={k} keys={["g", k]} label={v.label} />
               ))}
             </ul>

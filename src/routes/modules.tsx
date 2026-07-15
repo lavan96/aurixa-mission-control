@@ -41,6 +41,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { useConfirm } from "@/components/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -1602,6 +1603,7 @@ function PublishToLibraryButton({ moduleIds }: { moduleIds: string[] }) {
 // ─── Module Library Panel (with admin approval workflow) ──────────
 
 function ModuleLibraryPanel() {
+  const confirm = useConfirm();
   const { user } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [entries, setEntries] = useState<Array<Record<string, unknown>>>([]);
@@ -1765,7 +1767,14 @@ function ModuleLibraryPanel() {
               size="sm"
               variant="destructive"
               onClick={async () => {
-                if (!confirm(`Permanently delete ${selected.size} library entries?`)) return;
+                if (
+                  !(await confirm({
+                    title: `Permanently delete ${selected.size} library entries?`,
+                    confirmText: "Delete",
+                    destructive: true,
+                  }))
+                )
+                  return;
                 const { bulkDeleteLibraryEntries } = await import("@/server/bulk-ops.functions");
                 const r = await bulkDeleteLibraryEntries({ data: { ids: Array.from(selected) } });
                 if (r.ok) {

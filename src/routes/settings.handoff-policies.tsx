@@ -2,7 +2,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ProtectedRoute } from "@/components/protected-route";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,11 +16,8 @@ import {
 } from "@/lib/handoff-policies.functions";
 
 export const Route = createFileRoute("/settings/handoff-policies")({
-  component: () => (
-    <ProtectedRoute>
-      <HandoffPoliciesPage />
-    </ProtectedRoute>
-  ),
+  // Nested under /settings (auth already gated by the parent layout).
+  component: () => <HandoffPoliciesPage />,
   head: () => ({ meta: [{ title: "Handoff Policies — Aurixa Systems" }] }),
 });
 
@@ -40,15 +36,25 @@ function HandoffPoliciesPage() {
       upsertHandoffPolicy({
         data: {
           name,
-          allowed_regions: regions.split(",").map((s) => s.trim()).filter(Boolean),
-          allowed_plans: plans.split(",").map((s) => s.trim()).filter(Boolean),
+          allowed_regions: regions
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean),
+          allowed_plans: plans
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean),
           min_plan: minPlan || null,
           notes: notes || null,
         },
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["handoff-policies"] });
-      setName(""); setRegions(""); setPlans(""); setMinPlan(""); setNotes("");
+      setName("");
+      setRegions("");
+      setPlans("");
+      setMinPlan("");
+      setNotes("");
       toast.success("Policy saved");
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed"),
@@ -77,20 +83,36 @@ function HandoffPoliciesPage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Name</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="APAC premium" />
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="APAC premium"
+              />
             </div>
             <div>
               <Label>Minimum plan</Label>
-              <Input value={minPlan} onChange={(e) => setMinPlan(e.target.value)} placeholder="pro" />
+              <Input
+                value={minPlan}
+                onChange={(e) => setMinPlan(e.target.value)}
+                placeholder="pro"
+              />
             </div>
           </div>
           <div>
             <Label>Allowed regions</Label>
-            <Input value={regions} onChange={(e) => setRegions(e.target.value)} placeholder="ap-southeast-2, ap-northeast-1" />
+            <Input
+              value={regions}
+              onChange={(e) => setRegions(e.target.value)}
+              placeholder="ap-southeast-2, ap-northeast-1"
+            />
           </div>
           <div>
             <Label>Allowed plans</Label>
-            <Input value={plans} onChange={(e) => setPlans(e.target.value)} placeholder="pro, team, enterprise" />
+            <Input
+              value={plans}
+              onChange={(e) => setPlans(e.target.value)}
+              placeholder="pro, team, enterprise"
+            />
           </div>
           <div>
             <Label>Notes</Label>
@@ -115,18 +137,26 @@ function HandoffPoliciesPage() {
                   <Badge variant={p.is_active ? "default" : "secondary"}>
                     {p.is_active ? "Active" : "Inactive"}
                   </Badge>
-                  <Button size="sm" variant="destructive" onClick={() => del.mutate(p.id)}>Delete</Button>
+                  <Button size="sm" variant="destructive" onClick={() => del.mutate(p.id)}>
+                    Delete
+                  </Button>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="text-sm space-y-1">
-              <div><strong>Regions:</strong> {p.allowed_regions.join(", ") || "—"}</div>
-              <div><strong>Plans:</strong> {p.allowed_plans.join(", ") || "—"}</div>
+              <div>
+                <strong>Regions:</strong> {p.allowed_regions.join(", ") || "—"}
+              </div>
+              <div>
+                <strong>Plans:</strong> {p.allowed_plans.join(", ") || "—"}
+              </div>
               {p.notes && <div className="text-muted-foreground">{p.notes}</div>}
             </CardContent>
           </Card>
         ))}
-        {(q.data ?? []).length === 0 && <p className="text-sm text-muted-foreground">No policies yet.</p>}
+        {(q.data ?? []).length === 0 && (
+          <p className="text-sm text-muted-foreground">No policies yet.</p>
+        )}
       </div>
     </div>
   );

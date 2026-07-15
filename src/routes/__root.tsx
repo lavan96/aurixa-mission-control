@@ -9,6 +9,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { RealtimeNotifications } from "@/lib/realtime-notifications";
 import { BrowserPushNotifications } from "@/lib/browser-notifications";
 import { NotificationPreferencesSync } from "@/components/notification-preferences-sync";
+import { ConfirmProvider } from "@/components/confirm-dialog";
 import { registerServiceWorker } from "@/lib/push-subscription";
 
 function NotFoundComponent() {
@@ -72,7 +73,7 @@ export const Route = createRootRoute({
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700&display=swap",
       },
     ],
   }),
@@ -86,6 +87,14 @@ function RootShell({ children }: { children: React.ReactNode }) {
     <html lang="en" className="dark">
       <head>
         <HeadContent />
+        {/* Pre-hydration theme bootstrap: apply the stored theme before first
+            paint so light-mode users don't flash the default dark shell. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var t=localStorage.getItem('aurixa.theme');var d=document.documentElement;if(t==='light'){d.classList.add('light');d.classList.remove('dark');}else{d.classList.add('dark');d.classList.remove('light');}}catch(e){}})();",
+          }}
+        />
       </head>
       <body>
         {children}
@@ -113,11 +122,13 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <TooltipProvider delayDuration={150}>
-          <NotificationPreferencesSync />
-          <RealtimeNotifications />
-          <BrowserPushNotifications />
-          <Outlet />
-          <Toaster />
+          <ConfirmProvider>
+            <NotificationPreferencesSync />
+            <RealtimeNotifications />
+            <BrowserPushNotifications />
+            <Outlet />
+            <Toaster />
+          </ConfirmProvider>
         </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>

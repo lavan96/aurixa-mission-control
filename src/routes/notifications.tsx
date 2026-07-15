@@ -4,6 +4,7 @@ import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { ProtectedRoute } from "@/components/protected-route";
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { useConfirm } from "@/components/confirm-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -194,6 +195,7 @@ function NotificationsPage() {
   const push = useBrowserPushSettings();
   const { prefs } = useNotificationPreferences();
 
+  const confirm = useConfirm();
   const [items, setItems] = useState<Notification[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -371,7 +373,15 @@ function NotificationsPage() {
             variant="outline"
             size="sm"
             onClick={async () => {
-              if (!confirm("Delete all read notifications older than 30 days?")) return;
+              if (
+                !(await confirm({
+                  title: "Delete old read notifications?",
+                  description: "Removes all read notifications older than 30 days.",
+                  confirmText: "Delete",
+                  destructive: true,
+                }))
+              )
+                return;
               const { purgeReadNotifications } = await import("@/server/bulk-ops.functions");
               const r = await purgeReadNotifications({ data: { olderThanDays: 30 } });
               if (r.ok) {

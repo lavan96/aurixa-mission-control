@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { useClones, useModules, useCascadeEvents } from "@/lib/queries";
 import { formatDistanceToNow } from "@/lib/format";
+import { NAV_ITEMS } from "@/lib/nav";
 
 type Action = {
   id: string;
@@ -131,83 +132,6 @@ export function CommandPalette() {
         ),
       keywords: "cascade notify drift",
     },
-    {
-      id: "drift",
-      label: "Run drift scan",
-      hint: "Fleet-wide drift suggestions",
-      icon: <Sparkles className="h-4 w-4" />,
-      onSelect: () => run(() => navigate({ to: "/drift" })),
-      keywords: "ai suggestions drift scan",
-    },
-    {
-      id: "schedules",
-      label: "Manage schedules",
-      hint: "Recurring cascades",
-      icon: <CalendarClock className="h-4 w-4" />,
-      onSelect: () => run(() => navigate({ to: "/schedules" })),
-      keywords: "cron recurring",
-    },
-    {
-      id: "audit",
-      label: "Audit log",
-      hint: "Operator activity",
-      icon: <ScrollText className="h-4 w-4" />,
-      onSelect: () => run(() => navigate({ to: "/audit-log" })),
-      keywords: "activity history log",
-    },
-    {
-      id: "fleet-manager",
-      label: "AI fleet manager",
-      icon: <Bot className="h-4 w-4" />,
-      onSelect: () => run(() => navigate({ to: "/fleet-manager" })),
-    },
-    {
-      id: "yggdrasil",
-      label: "Yggdrasil tree",
-      hint: "Visual fleet hierarchy",
-      icon: <TreePine className="h-4 w-4" />,
-      onSelect: () => run(() => navigate({ to: "/yggdrasil" })),
-      keywords: "tree visualization graph",
-    },
-    {
-      id: "notifications",
-      label: "Notifications",
-      icon: <Bell className="h-4 w-4" />,
-      onSelect: () => run(() => navigate({ to: "/notifications" })),
-    },
-    {
-      id: "leads",
-      label: "Waitlist leads",
-      hint: "Leads captured from the website",
-      icon: <UserPlus className="h-4 w-4" />,
-      onSelect: () => run(() => navigate({ to: "/leads" })),
-      keywords: "lead capture waitlist crm contacts",
-    },
-    {
-      id: "cloudflare",
-      label: "Cloudflare",
-      icon: <Shield className="h-4 w-4" />,
-      onSelect: () => run(() => navigate({ to: "/cloudflare" })),
-    },
-    {
-      id: "health",
-      label: "Fleet health",
-      icon: <Zap className="h-4 w-4" />,
-      onSelect: () => run(() => navigate({ to: "/health" })),
-      keywords: "health uptime status",
-    },
-    {
-      id: "settings",
-      label: "Settings",
-      icon: <Settings className="h-4 w-4" />,
-      onSelect: () => run(() => navigate({ to: "/settings" })),
-    },
-    {
-      id: "dashboard",
-      label: "Fleet overview",
-      icon: <LayoutDashboard className="h-4 w-4" />,
-      onSelect: () => run(() => navigate({ to: "/dashboard" })),
-    },
   ];
 
   return (
@@ -228,6 +152,23 @@ export function CommandPalette() {
               )}
             </CommandItem>
           ))}
+        </CommandGroup>
+
+        <CommandSeparator />
+        <CommandGroup heading="Navigate">
+          {NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            return (
+              <CommandItem
+                key={item.to}
+                value={`go ${item.label} ${item.keywords ?? ""}`}
+                onSelect={() => run(() => navigate({ to: item.to }))}
+              >
+                <Icon className="h-4 w-4 text-muted-foreground" />
+                <span>{item.label}</span>
+              </CommandItem>
+            );
+          })}
         </CommandGroup>
 
         {/* Quick tag-scoped cascade */}

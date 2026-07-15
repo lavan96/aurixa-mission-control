@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
+import { useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import type { Database } from "@/integrations/supabase/types";
@@ -10,65 +11,92 @@ export type CascadeEvent = Database["public"]["Tables"]["cascade_events"]["Row"]
 export type CascadeResult = Database["public"]["Tables"]["cascade_results"]["Row"];
 export type PrimeConfig = Database["public"]["Tables"]["prime_config"]["Row"];
 
+// These hooks are backed by TanStack Query (caching, dedup, retry, shared
+// invalidation, real error surfacing) but intentionally keep the original
+// `{ data, loading, refresh }` return shape so every existing call site keeps
+// working unchanged. A new `error` field is exposed so screens can adopt error
+// UI incrementally. `loading` reflects the first load only (isPending); manual
+// `refresh()` now revalidates in the background without blanking the screen.
+
+function errorMessage(error: unknown): string | null {
+  if (!error) return null;
+  return error instanceof Error ? error.message : String(error);
+}
+
 export function useClones() {
-  const [data, setData] = useState<Clone[]>([]);
-  const [loading, setLoading] = useState(true);
+  const query = useQuery({
+    queryKey: ["clones"],
+    queryFn: async (): Promise<Clone[]> => {
+      const { data, error } = await supabase
+        .from("clones")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
+  const { refetch } = query;
   const refresh = useCallback(async () => {
-    setLoading(true);
-    const { data } = await supabase
-      .from("clones")
-      .select("*")
-      .order("created_at", { ascending: false });
-    setData(data ?? []);
-    setLoading(false);
-  }, []);
+    await refetch();
+  }, [refetch]);
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  return { data, loading, refresh };
+  return {
+    data: query.data ?? [],
+    loading: query.isPending,
+    error: errorMessage(query.error),
+    refresh,
+  };
 }
 
 export function useModules() {
-  const [data, setData] = useState<Module[]>([]);
-  const [loading, setLoading] = useState(true);
+  const query = useQuery({
+    queryKey: ["modules"],
+    queryFn: async (): Promise<Module[]> => {
+      const { data, error } = await supabase.from("modules").select("*").order("name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
+  const { refetch } = query;
   const refresh = useCallback(async () => {
-    setLoading(true);
-    const { data } = await supabase.from("modules").select("*").order("name");
-    setData(data ?? []);
-    setLoading(false);
-  }, []);
+    await refetch();
+  }, [refetch]);
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  return { data, loading, refresh };
+  return {
+    data: query.data ?? [],
+    loading: query.isPending,
+    error: errorMessage(query.error),
+    refresh,
+  };
 }
 
 export function useCascadeEvents(limit = 25) {
-  const [data, setData] = useState<CascadeEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const query = useQuery({
+    queryKey: ["cascade_events", limit],
+    queryFn: async (): Promise<CascadeEvent[]> => {
+      const { data, error } = await supabase
+        .from("cascade_events")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
+  const { refetch } = query;
   const refresh = useCallback(async () => {
-    setLoading(true);
-    const { data } = await supabase
-      .from("cascade_events")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(limit);
-    setData(data ?? []);
-    setLoading(false);
-  }, [limit]);
+    await refetch();
+  }, [refetch]);
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  return { data, loading, refresh };
+  return {
+    data: query.data ?? [],
+    loading: query.isPending,
+    error: errorMessage(query.error),
+    refresh,
+  };
 }
 
 export type CloneModuleRow = {
@@ -79,71 +107,74 @@ export type CloneModuleRow = {
 };
 
 export function useFleetModules() {
-  const [byClone, setByClone] = useState<Record<string, CloneModuleRow[]>>({});
-  const [loading, setLoading] = useState(true);
+  const query = useQuery({
+    queryKey: ["fleet_modules"],
+    queryFn: async (): Promise<Record<string, CloneModuleRow[]>> => {
+      const { data, error } = await supabase
+        .from("clone_modules")
+        .select("clone_id, module_id, modules(name, slug)");
+      if (error) throw error;
+      const map: Record<string, CloneModuleRow[]> = {};
+      for (const row of (data ?? []) as Array<{
+        clone_id: string;
+        module_id: string;
+        modules: { name: string; slug: string } | null;
+      }>) {
+        if (!row.modules) continue;
+        (map[row.clone_id] ??= []).push({
+          clone_id: row.clone_id,
+          module_id: row.module_id,
+          module_name: row.modules.name,
+          module_slug: row.modules.slug,
+        });
+      }
+      return map;
+    },
+  });
 
+  const { refetch } = query;
   const refresh = useCallback(async () => {
-    setLoading(true);
-    const { data } = await supabase
-      .from("clone_modules")
-      .select("clone_id, module_id, modules(name, slug)");
-    const map: Record<string, CloneModuleRow[]> = {};
-    for (const row of (data ?? []) as Array<{
-      clone_id: string;
-      module_id: string;
-      modules: { name: string; slug: string } | null;
-    }>) {
-      if (!row.modules) continue;
-      const entry: CloneModuleRow = {
-        clone_id: row.clone_id,
-        module_id: row.module_id,
-        module_name: row.modules.name,
-        module_slug: row.modules.slug,
-      };
-      (map[row.clone_id] ??= []).push(entry);
-    }
-    setByClone(map);
-    setLoading(false);
-  }, []);
+    await refetch();
+  }, [refetch]);
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  return { byClone, loading, refresh };
+  return {
+    byClone: query.data ?? {},
+    loading: query.isPending,
+    error: errorMessage(query.error),
+    refresh,
+  };
 }
 
 export function usePrimeConfig() {
   const { session, loading: authLoading } = useAuth();
-  const [data, setData] = useState<PrimeConfig | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
+  // RLS on prime_config requires `is_operator(auth.uid())`, so a pre-auth fetch
+  // silently returns null. Gate on the session and key by user id so the query
+  // re-runs when the user signs in (previously handled by a manual effect).
+  const query = useQuery({
+    queryKey: ["prime_config", session?.user?.id ?? null],
+    enabled: !authLoading && !!session,
+    queryFn: async (): Promise<PrimeConfig | null> => {
+      const { data, error } = await supabase
+        .from("prime_config")
+        .select("*")
+        .limit(1)
+        .maybeSingle();
+      if (error) {
+        console.error("usePrimeConfig load failed:", error);
+        throw error;
+      }
+      return data ?? null;
+    },
+  });
+
+  const { refetch } = query;
   const refresh = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    const { data, error } = await supabase.from("prime_config").select("*").limit(1).maybeSingle();
-    if (error) {
-      console.error("usePrimeConfig load failed:", error);
-      setError(error.message);
-    }
-    setData(data ?? null);
-    setLoading(false);
-  }, []);
+    await refetch();
+  }, [refetch]);
 
-  // Re-fetch whenever the auth session changes (e.g. just signed in) — the
-  // RLS policy on prime_config requires `is_operator(auth.uid())`, so a
-  // pre-auth fetch silently returns null. Without this, the form stays empty
-  // even after the user signs in.
-  useEffect(() => {
-    if (authLoading) return;
-    if (!session) {
-      setData(null);
-      setLoading(false);
-      return;
-    }
-    void refresh();
-  }, [refresh, session, authLoading]);
+  const loading = authLoading || (!!session && query.isPending);
+  const data = session ? (query.data ?? null) : null;
 
-  return { data, loading, error, refresh };
+  return { data, loading, error: errorMessage(query.error), refresh };
 }
