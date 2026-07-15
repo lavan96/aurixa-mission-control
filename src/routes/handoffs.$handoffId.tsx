@@ -6,6 +6,9 @@ import { ProtectedRoute } from "@/components/protected-route";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
   getHandoff,
@@ -16,8 +19,13 @@ import {
   runParityDryRun,
   HANDOFF_STATE_ORDER,
 } from "@/lib/handoffs.functions";
+import {
+  createHandoffInvite,
+  listHandoffInvites,
+  revokeHandoffInvite,
+} from "@/lib/handoff-invites.functions";
 import { verifyCloneRepoGithubAccess, type CloneGithubAccessRow } from "@/lib/clone-github-access.functions";
-import { ArrowRight, Camera, KeyRound, FileDown, ScrollText, ShieldCheck, Github } from "lucide-react";
+import { ArrowRight, Camera, KeyRound, FileDown, ScrollText, ShieldCheck, Github, Link as LinkIcon, Copy, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/handoffs/$handoffId")({
   component: () => (
@@ -293,6 +301,8 @@ function HandoffDetail() {
       </div>
 
 
+      <ClientPortalInvitesCard handoffId={handoffId} />
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Event log</CardTitle>
@@ -310,5 +320,194 @@ function HandoffDetail() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// G11 — Client onboarding portal invites (mint / list / revoke).
+function ClientPortalInvitesCard({ handoffId }: { handoffId: string }) {
+  const qc = useQueryClient();
+  const [ttlHours, setTtlHours] = useState(72);
+  const [termsVersion, setTermsVersion] = useState("v1.0");
+  const [termsBody, setTermsBody] = useState(
+    "Aurixa Systems Data Processing Addendum — client-owned Supabase handoff.\n\n" +
+      "By signing below, you authorise Aurixa Systems to use the personal access " +
+      "token you provide to create a new Supabase project inside your organisation, " +
+      "replicate schema/storage/edge configuration from your Aurixa clone, migrate " +
+      "your data into that project, and rotate secrets so the clone routes to the " +
+      "new backend. You may revoke the token from your Supabase dashboard once the " +
+      "handoff completes.",
+  );
+  const [regions, setRegions] = useState("");
+  const [plans, setPlans] = useState("");
+  const [freshToken, setFreshToken] = useState<string | null>(null);
+  const [freshLink, setFreshLink] = useState<string | null>(null);
+
+  const invites = useQuery({
+    queryKey: ["handoff", handoffId, "invites"],
+    queryFn: () => listHandoffInvites({ data: { handoff_id: handoffId } }),
+    refetchInterval: 30000,
+  });
+
+  const mint = useMutation({
+    mutationFn: () =>
+      createHandoffInvite({
+        data: {
+          handoff_id: handoffId,
+          ttl_hours: ttlHours,
+          terms_version: termsVersion,
+          terms_body: termsBody,
+          region_allowlist: regions
+            .split(",")
+            .map((r) => r.trim())
+            .filter(Boolean),
+          plan_allowlist: plans
+            .split(",")
+            .map((p) => p.trim())
+            .filter(Boolean),
+        },
+      }),
+    onSuccess: (r: any) => {
+      qc.invalidateQueries({ queryKey: ["handoff", handoffId, "invites"] });
+      qc.invalidateQueries({ queryKey: ["handoff", handoffId] });
+      setFreshToken(r.token);
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      setFreshLink(`${origin}/clients/handoff/${r.token}`);
+      toast.success("Invite minted — copy the link now, it won't be shown again.");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to mint invite"),
+  });
+
+  const revoke = useMutation({
+    mutationFn: (id: string) => revokeHandoffInvite({ data: { id, reason: "manual_revoke" } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["handoff", handoffId, "invites"] });
+      toast.success("Invite revoked");
+    },
+  });
+
+  const copy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Copied");
+    } catch {
+      toast.error("Copy failed");
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <LinkIcon className="h-4 w-4" /> Client onboarding portal (G11)
+        </CardTitle>
+        <CardDescription>
+          Mint a single-use link for the client to submit their Supabase org
+          details, personal access token, and DPA signature — no Mission Control
+          account needed.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4 text-sm">
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="space-y-1">
+            <Label>Terms version</Label>
+            <Input value={termsVersion} onChange={(e) => setTermsVersion(e.target.value)} />
+          </div>
+          <div className="space-y-1">
+            <Label>Link TTL (hours)</Label>
+            <Input
+              type="number"
+              min={1}
+              max={720}
+              value={ttlHours}
+              onChange={(e) => setTtlHours(Math.max(1, Number(e.target.value) || 72))}
+            />
+          </div>
+          <div className="space-y-1 md:col-span-2">
+            <Label>Terms body</Label>
+            <Textarea
+              rows={6}
+              value={termsBody}
+              onChange={(e) => setTermsBody(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>Allowed regions (comma-separated, optional)</Label>
+            <Input
+              value={regions}
+              onChange={(e) => setRegions(e.target.value)}
+              placeholder="ap-southeast-2, us-east-1"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>Allowed plans (comma-separated, optional)</Label>
+            <Input
+              value={plans}
+              onChange={(e) => setPlans(e.target.value)}
+              placeholder="pro, team"
+            />
+          </div>
+        </div>
+        <Button size="sm" onClick={() => mint.mutate()} disabled={mint.isPending}>
+          {mint.isPending ? "Minting…" : "Mint invite link"}
+        </Button>
+
+        {freshLink && (
+          <div className="rounded border border-primary/40 bg-primary/5 p-3 text-xs space-y-2">
+            <div className="font-medium">Copy this link now — it will not be shown again.</div>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 break-all text-[11px]">{freshLink}</code>
+              <Button size="sm" variant="outline" onClick={() => copy(freshLink)}>
+                <Copy className="h-3 w-3" />
+              </Button>
+            </div>
+            <div className="text-muted-foreground">Token prefix: {freshToken?.slice(0, 14)}…</div>
+          </div>
+        )}
+
+        <div className="space-y-1">
+          <div className="text-xs font-medium text-muted-foreground">Invite history</div>
+          <ul className="space-y-1">
+            {(invites.data?.invites ?? []).map((inv: any) => {
+              const status = inv.revoked_at
+                ? "revoked"
+                : inv.consumed_at
+                  ? "consumed"
+                  : new Date(inv.expires_at).getTime() < Date.now()
+                    ? "expired"
+                    : "active";
+              return (
+                <li key={inv.id} className="flex items-center justify-between border-b py-1 text-xs">
+                  <div className="space-y-0.5">
+                    <div>
+                      <code>{inv.token_prefix}…</code> · terms {inv.terms_version}
+                    </div>
+                    <div className="text-muted-foreground">
+                      expires {new Date(inv.expires_at).toLocaleString()}
+                      {inv.consumed_at ? ` · consumed ${new Date(inv.consumed_at).toLocaleString()}` : ""}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={status === "active" ? "outline" : "secondary"}>{status}</Badge>
+                    {status === "active" && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => revoke.mutate(inv.id)}
+                        disabled={revoke.isPending}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+            {(invites.data?.invites ?? []).length === 0 && (
+              <li className="text-muted-foreground">No invites minted yet.</li>
+            )}
+          </ul>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
