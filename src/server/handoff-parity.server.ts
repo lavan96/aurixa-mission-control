@@ -28,9 +28,13 @@ import {
   listProjectEdgeFunctionSlugs,
   listProjectSecretNames,
   getProjectAuthConfig,
+  fetchRealtimePublicationTables,
+  REQUIRED_EXTENSIONS,
   type StorageBucketConfig,
   type PrimeCronJob,
+  type RealtimePublicationTable,
 } from "./backend-provisioning.server";
+
 
 type Row = Record<string, unknown>;
 
@@ -92,7 +96,7 @@ const EXTENSIONS_SQL = `
 // ── Fetch snapshots ───────────────────────────────────────────────────
 
 async function snapshotProject(ref: string) {
-  const [t, r, p, f, e, buckets, cron, edgeFns, secretNames, authCfg] = await Promise.all([
+  const [t, r, p, f, e, buckets, cron, edgeFns, secretNames, authCfg, realtimeTables] = await Promise.all([
     runSqlOnProject(ref, TABLES_SQL).then(rows),
     runSqlOnProject(ref, RLS_SQL).then(rows),
     runSqlOnProject(ref, POLICIES_SQL).then(rows),
@@ -103,7 +107,9 @@ async function snapshotProject(ref: string) {
     listProjectEdgeFunctionSlugs(ref),
     listProjectSecretNames(ref),
     getProjectAuthConfig(ref),
+    fetchRealtimePublicationTables(ref).catch(() => [] as RealtimePublicationTable[]),
   ]);
+
 
   const columnsByTable = new Map<string, Map<string, Row>>();
   for (const row of t) {
@@ -137,6 +143,10 @@ async function snapshotProject(ref: string) {
   const edgeFnSet = new Set<string>(edgeFns);
   const secretSet = new Set<string>(secretNames);
 
+  const realtimeSet = new Set<string>(
+    (realtimeTables ?? []).map((t) => `${t.schema}.${t.table}`),
+  );
+
   return {
     columnsByTable,
     rlsByTable,
@@ -147,9 +157,11 @@ async function snapshotProject(ref: string) {
     cronByName,
     edgeFnSet,
     secretSet,
+    realtimeSet,
     authCfg: authCfg ?? {},
   };
 }
+
 
 type Snapshot = Awaited<ReturnType<typeof snapshotProject>>;
 
@@ -364,6 +376,26 @@ function diffAuthConfig(prime: Snapshot, target: Snapshot) {
   return { drift };
 }
 
+// G4 — required extensions must be enabled on the target.
+function diffRequiredExtensions(target: Snapshot) {
+  const missing = REQUIRED_EXTENSIONS.filter((n) => !target.extensions.has(n));
+  return { required: [...REQUIRED_EXTENSIONS], missing_in_target: missing };
+}
+
+// G4 — realtime publication membership parity.
+function diffRealtime(prime: Snapshot, target: Snapshot) {
+  const missing: string[] = [];
+  const extra: string[] = [];
+  for (const q of prime.realtimeSet) if (!target.realtimeSet.has(q)) missing.push(q);
+  for (const q of target.realtimeSet) if (!prime.realtimeSet.has(q)) extra.push(q);
+  return {
+    prime_count: prime.realtimeSet.size,
+    target_count: target.realtimeSet.size,
+    missing_in_target: missing.sort(),
+    extra_in_target: extra.sort(),
+  };
+}
+
 // ── Public entry ──────────────────────────────────────────────────────
 
 export type ParityResult = {
@@ -378,6 +410,8 @@ export type ParityResult = {
   edge_functions_diff: ReturnType<typeof diffEdgeFunctions>;
   secrets_diff: ReturnType<typeof diffSecrets>;
   auth_config_diff: ReturnType<typeof diffAuthConfig>;
+  required_extensions_diff: ReturnType<typeof diffRequiredExtensions>;
+  realtime_diff: ReturnType<typeof diffRealtime>;
   blocking_issues: string[];
   risk_level: "low" | "medium" | "high" | "blocking";
   summary: string;
@@ -395,6 +429,8 @@ export async function computeParity(primeRef: string, targetRef: string): Promis
   const edgeFns = diffEdgeFunctions(prime, target);
   const secrets = diffSecrets(prime, target);
   const authCfg = diffAuthConfig(prime, target);
+  const requiredExt = diffRequiredExtensions(target);
+  const realtime = diffRealtime(prime, target);
 
   const blocking: string[] = [];
   if (tables.missing_in_target.length) blocking.push(`missing_tables:${tables.missing_in_target.length}`);
@@ -406,6 +442,9 @@ export async function computeParity(primeRef: string, targetRef: string): Promis
   if (buckets.missing_in_target.length) blocking.push(`missing_buckets:${buckets.missing_in_target.length}`);
   if (secrets.missing_in_target.length) blocking.push(`missing_secrets:${secrets.missing_in_target.length}`);
   if (edgeFns.missing_in_target.length) blocking.push(`missing_edge_functions:${edgeFns.missing_in_target.length}`);
+  if (requiredExt.missing_in_target.length) blocking.push(`missing_required_extensions:${requiredExt.missing_in_target.length}`);
+  if (realtime.missing_in_target.length) blocking.push(`missing_realtime_tables:${realtime.missing_in_target.length}`);
+
 
   let risk: ParityResult["risk_level"] = "low";
   if (
@@ -440,6 +479,8 @@ export async function computeParity(primeRef: string, targetRef: string): Promis
     edge_functions_diff: edgeFns,
     secrets_diff: secrets,
     auth_config_diff: authCfg,
+    required_extensions_diff: requiredExt,
+    realtime_diff: realtime,
     blocking_issues: blocking,
     risk_level: risk,
     summary,
