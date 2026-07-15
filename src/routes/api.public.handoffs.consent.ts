@@ -229,19 +229,123 @@ export const Route = createFileRoute("/api/public/handoffs/consent")({
           .eq("id", handoff.id);
         if (hUpErr) return json({ ok: false, error: hUpErr.message }, 500);
 
-        // Record the signed DPA/contract.
+        // Record the signed DPA/contract (G13 — signed handoff record).
         const forwardedFor = request.headers.get("x-forwarded-for");
         const clientIp = forwardedFor ? forwardedFor.split(",")[0]?.trim() : null;
         const userAgent = request.headers.get("user-agent");
-        await supabaseAdmin.from("handoff_contracts").insert({
+
+        // Resolve canonical terms version row (if the invite's version matches
+        // a registered one). Non-blocking — legacy invites still work.
+        const { data: termsRow } = await supabaseAdmin
+          .from("handoff_terms_versions")
+          .select("id, version, terms_hash")
+          .eq("version", data.terms_version)
+          .maybeSingle();
+
+        // Snapshot manifest: every handoff_snapshot for this handoff, captured
+        // at signing time so the contract is anchored to a concrete artifact set.
+        const { data: snapshotRows } = await supabaseAdmin
+          .from("handoff_snapshots")
+          .select("id, kind, status, sha256, size_bytes, storage_path, retention_expires_at, created_at")
+          .eq("handoff_id", handoff.id)
+          .order("created_at", { ascending: true });
+        const snapshotManifest = (snapshotRows ?? []).map((s) => ({
+          id: s.id,
+          kind: s.kind,
+          status: s.status,
+          sha256: s.sha256,
+          size_bytes: s.size_bytes,
+          storage_path: s.storage_path,
+          retention_expires_at: s.retention_expires_at,
+          created_at: s.created_at,
+        }));
+
+        // Signature bundle: canonical JSON hashed to anchor the whole record.
+        const bundle = {
           handoff_id: handoff.id,
-          version: data.terms_version,
+          clone_id: handoff.clone_id,
+          terms_version: data.terms_version,
           terms_hash: invite.terms_hash,
           signed_by_name: data.signed_by_name,
           signed_by_email: data.owner_email,
           signed_at: nowIso,
           ip_address: clientIp,
           user_agent: userAgent,
+          org_id: data.org_id,
+          org_slug: data.org_slug ?? null,
+          target_region: data.target_region,
+          target_plan_tier: data.target_plan_tier,
+          snapshot_manifest: snapshotManifest,
+        };
+        const bundleJson = JSON.stringify(bundle);
+        const signatureBundleSha256 = createHash("sha256")
+          .update(bundleJson, "utf8")
+          .digest("hex");
+
+        // Build a human-readable signed document (markdown) and upload it
+        // to the private handoff-contracts bucket.
+        const doc = [
+          `# Aurixa Handoff Data Processing Agreement`,
+          ``,
+          `**Handoff ID:** ${handoff.id}`,
+          `**Clone:** ${handoff.clone_id}`,
+          `**Terms version:** ${data.terms_version}`,
+          `**Terms SHA-256:** \`${invite.terms_hash}\``,
+          ``,
+          `## Signatory`,
+          `- Name: ${data.signed_by_name}`,
+          `- Email: ${data.owner_email}`,
+          `- Signed at: ${nowIso}`,
+          `- IP: ${clientIp ?? "unknown"}`,
+          `- User agent: ${userAgent ?? "unknown"}`,
+          ``,
+          `## Target Supabase organization`,
+          `- org_id: ${data.org_id}`,
+          `- org_slug: ${data.org_slug ?? "—"}`,
+          `- region: ${data.target_region}`,
+          `- plan tier: ${data.target_plan_tier}`,
+          ``,
+          `## Snapshot manifest at signing`,
+          snapshotManifest.length === 0
+            ? "_No snapshots recorded at signing time._"
+            : snapshotManifest
+                .map(
+                  (s) =>
+                    `- \`${s.kind}\` · ${s.id} · status=${s.status} · sha256=\`${s.sha256 ?? "n/a"}\``,
+                )
+                .join("\n"),
+          ``,
+          `## Signature bundle SHA-256`,
+          `\`${signatureBundleSha256}\``,
+          ``,
+          `---`,
+          `This document is the canonical signed record for the above handoff. Any`,
+          `modification invalidates the signature bundle hash above.`,
+          ``,
+        ].join("\n");
+
+        const docPath = `${handoff.id}/${signatureBundleSha256}.md`;
+        const uploadRes = await supabaseAdmin.storage
+          .from("handoff-contracts")
+          .upload(docPath, new Blob([doc], { type: "text/markdown" }), {
+            contentType: "text/markdown; charset=utf-8",
+            upsert: false,
+          });
+        const documentStoragePath = uploadRes.error ? null : docPath;
+
+        await supabaseAdmin.from("handoff_contracts").insert({
+          handoff_id: handoff.id,
+          version: data.terms_version,
+          terms_version_id: termsRow?.id ?? null,
+          terms_hash: invite.terms_hash,
+          signed_by_name: data.signed_by_name,
+          signed_by_email: data.owner_email,
+          signed_at: nowIso,
+          ip_address: clientIp,
+          user_agent: userAgent,
+          snapshot_manifest: snapshotManifest,
+          signature_bundle_sha256: signatureBundleSha256,
+          document_storage_path: documentStoragePath,
         });
 
         // Consume the invite (single-use).
