@@ -415,7 +415,7 @@ async function replicateBucketObjects(
     if (r.ok) {
       copied++;
       bytes += r.bytes;
-    } else if (r.skipped) {
+    } else if ("skipped" in r && r.skipped) {
       skipped++;
     } else {
       failed++;
