@@ -2626,6 +2626,71 @@ export type Database = {
           },
         ]
       }
+      handoff_storage_replications: {
+        Row: {
+          bucket_id: string
+          bytes_copied: number
+          completed_at: string | null
+          created_at: string
+          cursor_offset: number
+          cursor_prefix: string | null
+          handoff_id: string
+          id: string
+          last_error: string | null
+          last_run_at: string | null
+          objects_copied: number
+          objects_failed: number
+          objects_scanned: number
+          objects_skipped: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          bucket_id: string
+          bytes_copied?: number
+          completed_at?: string | null
+          created_at?: string
+          cursor_offset?: number
+          cursor_prefix?: string | null
+          handoff_id: string
+          id?: string
+          last_error?: string | null
+          last_run_at?: string | null
+          objects_copied?: number
+          objects_failed?: number
+          objects_scanned?: number
+          objects_skipped?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          bucket_id?: string
+          bytes_copied?: number
+          completed_at?: string | null
+          created_at?: string
+          cursor_offset?: number
+          cursor_prefix?: string | null
+          handoff_id?: string
+          id?: string
+          last_error?: string | null
+          last_run_at?: string | null
+          objects_copied?: number
+          objects_failed?: number
+          objects_scanned?: number
+          objects_skipped?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "handoff_storage_replications_handoff_id_fkey"
+            columns: ["handoff_id"]
+            isOneToOne: false
+            referencedRelation: "clone_handoffs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       handoff_terms_versions: {
         Row: {
           body_md: string
