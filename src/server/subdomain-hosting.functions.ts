@@ -14,6 +14,7 @@ import crypto from "crypto";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireAdmin } from "@/integrations/supabase/role-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { cloudflareApi, CloudflareError } from "@/server/cloudflare/client";
 
 const admin = supabaseAdmin as any;
 
