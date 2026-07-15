@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { useConfirm } from "@/components/confirm-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,9 +70,15 @@ export function CascadeTemplatesCard({
       n.has(id) ? n.delete(id) : n.add(id);
       return n;
     });
+  const confirm = useConfirm();
   const bulkDelete = async () => {
     if (selected.size === 0) return;
-    if (!confirm(`Delete ${selected.size} template(s)?`)) return;
+    const ok = await confirm({
+      title: `Delete ${selected.size} template(s)?`,
+      confirmText: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     const { error } = await supabase
       .from("cascade_templates")
       .delete()

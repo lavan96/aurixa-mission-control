@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { useConfirm } from "@/components/confirm-dialog";
 import { useServerFn } from "@tanstack/react-start";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -172,8 +173,15 @@ export function CloneEdgeCard({ cloneId }: { cloneId: string }) {
     }
   };
 
+  const confirm = useConfirm();
   const remove = async (providerSlug: string) => {
-    if (!confirm(`Detach ${providerSlug}? This will remove the edge configuration.`)) return;
+    const ok = await confirm({
+      title: `Detach ${providerSlug}?`,
+      description: "This will remove the edge configuration.",
+      confirmText: "Detach",
+      destructive: true,
+    });
+    if (!ok) return;
     setBusy(`detach:${providerSlug}`);
     try {
       await detach({

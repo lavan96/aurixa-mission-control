@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useConfirm } from "@/components/confirm-dialog";
 import { ProtectedRoute } from "@/components/protected-route";
 import { RouteError } from "@/components/route-error";
 import { useServerFn } from "@tanstack/react-start";
@@ -176,6 +177,7 @@ const STATUS_BADGE: Record<string, string> = {
 // ─── Page ─────────────────────────────────────────────────────────────
 
 function BrandingPage() {
+  const confirm = useConfirm();
   const listProfilesFn = useServerFn(listBrandProfiles);
   const listAssignmentsFn = useServerFn(listBrandAssignments);
   const listHistoryFn = useServerFn(listBrandHistory);
@@ -292,7 +294,12 @@ function BrandingPage() {
   };
 
   const handleDeleteSchedule = async (s: BrandSchedule) => {
-    if (!confirm(`Delete schedule "${s.name}"?`)) return;
+    const ok = await confirm({
+      title: `Delete schedule "${s.name}"?`,
+      confirmText: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     const r = await deleteScheduleFn({ data: { id: s.id } });
     if (r.ok) {
       toast.success("Schedule deleted");
@@ -332,7 +339,13 @@ function BrandingPage() {
   };
 
   const handleDelete = async (p: BrandProfile) => {
-    if (!confirm(`Delete brand profile "${p.name}"? Assignments will be lost.`)) return;
+    const ok = await confirm({
+      title: `Delete brand profile "${p.name}"?`,
+      description: "Assignments to this profile will be lost.",
+      confirmText: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     const r = await deleteFn({ data: { profileId: p.id } });
     if (r.ok) {
       toast.success("Profile deleted");

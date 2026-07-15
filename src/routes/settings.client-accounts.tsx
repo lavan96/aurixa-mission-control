@@ -3,6 +3,7 @@
 // revoke the per-client org credentials used by the handoff orchestrator.
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ export const Route = createFileRoute("/settings/client-accounts")({
 });
 
 function ClientAccountsPage() {
+  const confirm = useConfirm();
   const qc = useQueryClient();
   const q = useQuery({
     queryKey: ["client-supabase-accounts"],
@@ -227,13 +229,14 @@ function ClientAccountsPage() {
                     <Button
                       size="sm"
                       variant="destructive"
-                      onClick={() => {
-                        if (
-                          confirm(
-                            "Revoke this client account? It can't be used for handoffs after this.",
-                          )
-                        )
-                          revoke.mutate(a.id);
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: "Revoke this client account?",
+                          description: "It can't be used for handoffs after this.",
+                          confirmText: "Revoke",
+                          destructive: true,
+                        });
+                        if (ok) revoke.mutate(a.id);
                       }}
                     >
                       Revoke

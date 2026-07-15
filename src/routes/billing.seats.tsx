@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { CardRowSkeleton } from "@/components/list-skeletons";
+import { useConfirm } from "@/components/confirm-dialog";
 import {
   listSeatPlans,
   listSeatEntitlements,
@@ -58,6 +59,7 @@ function money(cents: number, ccy = "USD") {
 }
 
 function SeatsPage() {
+  const confirm = useConfirm();
   const qc = useQueryClient();
   const plansFn = useServerFn(listSeatPlans);
   const entsFn = useServerFn(listSeatEntitlements);
@@ -130,12 +132,13 @@ function SeatsPage() {
   };
 
   const revokeDevice = async (deviceId: string) => {
-    if (
-      !confirm(
-        "Revoke this device? The next sign-in from it will be blocked or require re-registration.",
-      )
-    )
-      return;
+    const ok = await confirm({
+      title: "Revoke this device?",
+      description: "The next sign-in from it will be blocked or require re-registration.",
+      confirmText: "Revoke",
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       const r = await revokeDeviceFn({ data: { deviceId, reason: "manual_mc_revoke" } });
       if (!r.ok) throw new Error(r.error);

@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/protected-route";
 import { useEffect, useState, useCallback } from "react";
+import { useConfirm } from "@/components/confirm-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,6 +54,7 @@ type Sched = {
 };
 
 function SchedulesPage() {
+  const confirm = useConfirm();
   const [list, setList] = useState<Sched[]>([]);
   const [loading, setLoading] = useState(true);
   const create = useServerFn(createSchedule);
@@ -195,7 +197,14 @@ function SchedulesPage() {
           size="sm"
           variant="destructive"
           onClick={async () => {
-            if (!confirm(`Delete ${selected.size} schedule(s)?`)) return;
+            if (
+              !(await confirm({
+                title: `Delete ${selected.size} schedule(s)?`,
+                confirmText: "Delete",
+                destructive: true,
+              }))
+            )
+              return;
             const r = await bulkDeleteFn({ data: { ids: Array.from(selected) } });
             if (r.ok) {
               toast.success(`Deleted ${r.count}`);
@@ -283,7 +292,14 @@ function SchedulesPage() {
                       size="icon"
                       variant="ghost"
                       onClick={async () => {
-                        if (!confirm("Delete this schedule?")) return;
+                        if (
+                          !(await confirm({
+                            title: "Delete this schedule?",
+                            confirmText: "Delete",
+                            destructive: true,
+                          }))
+                        )
+                          return;
                         const res = await del({ data: { id: s.id } });
                         if (!res.ok) toast.error(res.error);
                         else {
