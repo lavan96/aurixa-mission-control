@@ -270,6 +270,28 @@ function HandoffDetail() {
     },
   });
 
+  const fulfillExport = useMutation({
+    mutationFn: (export_id: string) => fulfillCostExportFn({ data: { export_id } }),
+    onSuccess: (r: any) => {
+      qc.invalidateQueries({ queryKey: ["handoff", handoffId] });
+      if (r?.ok) toast.success(`Export ready — ${r.rows} rows, ${r.total_tokens.toLocaleString()} tokens`);
+      else toast.error(`Fulfill failed: ${r?.error ?? "unknown"}`);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Fulfill failed"),
+  });
+
+  const downloadExport = useMutation({
+    mutationFn: (export_id: string) => signCostExportUrl({ data: { export_id } }),
+    onSuccess: (r: any) => {
+      if (r?.ok && r.url) {
+        window.open(r.url, "_blank", "noopener,noreferrer");
+      } else {
+        toast.error(`Download failed: ${r?.error ?? "unknown"}`);
+      }
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Download failed"),
+  });
+
   const parity = useMutation({
     mutationFn: () => runParityDryRun({ data: { handoff_id: handoffId } }),
     onSuccess: (r: any) => {
