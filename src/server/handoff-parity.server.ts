@@ -129,7 +129,7 @@ const TRIGGERS_SQL = `
 // ── Fetch snapshots ───────────────────────────────────────────────────
 
 async function snapshotProject(ref: string) {
-  const [t, r, p, f, e, buckets, cron, edgeFns, secretNames, authCfg, realtimeTables] = await Promise.all([
+  const [t, r, p, f, e, buckets, cron, edgeFns, secretNames, authCfg, realtimeTables, gr, en, tr] = await Promise.all([
     runSqlOnProject(ref, TABLES_SQL).then(rows),
     runSqlOnProject(ref, RLS_SQL).then(rows),
     runSqlOnProject(ref, POLICIES_SQL).then(rows),
@@ -141,6 +141,9 @@ async function snapshotProject(ref: string) {
     listProjectSecretNames(ref),
     getProjectAuthConfig(ref),
     fetchRealtimePublicationTables(ref).catch(() => [] as RealtimePublicationTable[]),
+    runSqlOnProject(ref, GRANTS_SQL).then(rows).catch(() => [] as Row[]),
+    runSqlOnProject(ref, ENUMS_SQL).then(rows).catch(() => [] as Row[]),
+    runSqlOnProject(ref, TRIGGERS_SQL).then(rows).catch(() => [] as Row[]),
   ]);
 
 
@@ -180,6 +183,34 @@ async function snapshotProject(ref: string) {
     (realtimeTables ?? []).map((t) => `${t.schema}.${t.table}`),
   );
 
+  // G5 — grants: Map<table, Map<role, Set<privilege>>>
+  const grantsByTable = new Map<string, Map<string, Set<string>>>();
+  for (const row of gr) {
+    const tbl = String(row.table_name);
+    const role = String(row.grantee);
+    const priv = String(row.privilege_type);
+    if (!grantsByTable.has(tbl)) grantsByTable.set(tbl, new Map());
+    const roleMap = grantsByTable.get(tbl)!;
+    if (!roleMap.has(role)) roleMap.set(role, new Set());
+    roleMap.get(role)!.add(priv);
+  }
+
+  // G5 — enums: Map<typeName, ordered labels>
+  const enumsByName = new Map<string, string[]>();
+  for (const row of en) {
+    const name = String(row.name);
+    if (!enumsByName.has(name)) enumsByName.set(name, []);
+    enumsByName.get(name)!.push(String(row.label));
+  }
+
+  // G5 — triggers keyed by "table.trigger.event" for stable comparison.
+  const triggerKeys = new Set<string>();
+  for (const row of tr) {
+    triggerKeys.add(
+      `${row.table_name}.${row.trigger_name}.${row.action_timing}.${row.event_manipulation}`,
+    );
+  }
+
   return {
     columnsByTable,
     rlsByTable,
@@ -191,6 +222,9 @@ async function snapshotProject(ref: string) {
     edgeFnSet,
     secretSet,
     realtimeSet,
+    grantsByTable,
+    enumsByName,
+    triggerKeys,
     authCfg: authCfg ?? {},
   };
 }
