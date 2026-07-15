@@ -24,7 +24,17 @@ import {
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Users, ArrowLeft, ShieldCheck, Smartphone, X } from "lucide-react";
+import {
+  Users,
+  ArrowLeft,
+  ShieldCheck,
+  Smartphone,
+  X,
+  AlertTriangle,
+  RefreshCw,
+} from "lucide-react";
+import { EmptyState } from "@/components/empty-state";
+import { CardRowSkeleton } from "@/components/list-skeletons";
 import {
   listSeatPlans,
   listSeatEntitlements,
@@ -188,6 +198,44 @@ function SeatsPage() {
               </SelectContent>
             </Select>
           </div>
+
+          {plansQ.isPending && (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <CardRowSkeleton />
+              <CardRowSkeleton />
+              <CardRowSkeleton />
+              <CardRowSkeleton />
+            </div>
+          )}
+
+          {!plansQ.isPending && plansQ.isError && (
+            <EmptyState
+              icon={<AlertTriangle />}
+              title="Couldn't load plans"
+              description={
+                plansQ.error instanceof Error ? plansQ.error.message : "Something went wrong."
+              }
+              action={
+                <Button variant="outline" onClick={() => void plansQ.refetch()}>
+                  <RefreshCw className="mr-1.5 h-4 w-4" /> Retry
+                </Button>
+              }
+            />
+          )}
+
+          {!plansQ.isPending && !plansQ.isError && filtered.length === 0 && (
+            <EmptyState
+              icon={<Users />}
+              title={
+                plans.length === 0 ? "No seat plans configured" : "No plans match your filters"
+              }
+              description={
+                plans.length === 0
+                  ? "Seat plans will appear here once they're set up."
+                  : "Try clearing the search or filters to see more plans."
+              }
+            />
+          )}
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
             {filtered.map((p) => {

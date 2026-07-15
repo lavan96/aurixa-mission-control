@@ -380,7 +380,7 @@ function TopupBody() {
               </p>
               <p className="text-sm">
                 <span className="font-medium">{priceRange(p)}</span>
-                <span className="text-muted-foreground"> AUD · ex GST</span>
+                <span className="text-muted-foreground"> {p.currency} · ex GST</span>
               </p>
               {p.metadata?.best_for && (
                 <p className="text-xs text-muted-foreground">{p.metadata.best_for}</p>
