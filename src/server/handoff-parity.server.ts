@@ -96,7 +96,7 @@ const EXTENSIONS_SQL = `
 // ── Fetch snapshots ───────────────────────────────────────────────────
 
 async function snapshotProject(ref: string) {
-  const [t, r, p, f, e, buckets, cron, edgeFns, secretNames, authCfg] = await Promise.all([
+  const [t, r, p, f, e, buckets, cron, edgeFns, secretNames, authCfg, realtimeTables] = await Promise.all([
     runSqlOnProject(ref, TABLES_SQL).then(rows),
     runSqlOnProject(ref, RLS_SQL).then(rows),
     runSqlOnProject(ref, POLICIES_SQL).then(rows),
@@ -107,7 +107,9 @@ async function snapshotProject(ref: string) {
     listProjectEdgeFunctionSlugs(ref),
     listProjectSecretNames(ref),
     getProjectAuthConfig(ref),
+    fetchRealtimePublicationTables(ref).catch(() => [] as RealtimePublicationTable[]),
   ]);
+
 
   const columnsByTable = new Map<string, Map<string, Row>>();
   for (const row of t) {
