@@ -244,6 +244,10 @@ export type BucketReplicationResult = {
   id: string;
   status: "created" | "exists" | "failed";
   error?: string;
+  objects_copied?: number;
+  objects_failed?: number;
+  objects_skipped?: number;
+  bytes_copied?: number;
 };
 
 export async function createStorageBucket(
@@ -264,17 +268,168 @@ export async function createStorageBucket(
   });
   if (res.ok) return { id: bucket.id, status: "created" };
   const text = await res.text();
-  // Treat "already exists" as a success — this endpoint is idempotent by intent.
   if (res.status === 409 || /already exists|duplicate/i.test(text)) {
     return { id: bucket.id, status: "exists" };
   }
   return { id: bucket.id, status: "failed", error: `${res.status} — ${text}` };
 }
 
+// ─── G2: Seed-asset replication ──────────────────────────────────────
+// Bucket *configuration* replication creates empty buckets on the clone. But
+// prime buckets like `brand-assets` (default logos, favicons, email header
+// images) and `security-reports` (baseline templates, disclosure PDFs) ship
+// with seed contents that the app expects to exist. Without those objects,
+// the clone renders broken images and the security portal 404s on templates.
+// This block walks each prime bucket via the Storage REST API and re-uploads
+// every object to the target using service-role keys on both ends. Per-bucket
+// caps keep a misconfigured prime from ballooning provisioning cost; per-
+// object failures are non-fatal and surfaced on the result row.
+
+type StorageObjectEntry = {
+  name: string;
+  id: string | null; // null => folder
+  metadata: { size?: number; mimetype?: string } | null;
+};
+
+const SEED_ASSET_LIMITS = {
+  maxObjectsPerBucket: 500,
+  maxBytesPerObject: 25 * 1024 * 1024,
+  maxTotalBytesPerBucket: 512 * 1024 * 1024,
+};
+
+function encodeStoragePath(path: string): string {
+  return path.split("/").map(encodeURIComponent).join("/");
+}
+
+async function listBucketFolder(
+  projectUrl: string,
+  serviceKey: string,
+  bucketId: string,
+  prefix: string,
+): Promise<StorageObjectEntry[]> {
+  const out: StorageObjectEntry[] = [];
+  const pageSize = 100;
+  let offset = 0;
+  for (let page = 0; page < 50; page++) {
+    const res = await fetch(`${projectUrl}/storage/v1/object/list/${bucketId}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${serviceKey}`,
+        apikey: serviceKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        prefix,
+        limit: pageSize,
+        offset,
+        sortBy: { column: "name", order: "asc" },
+      }),
+    });
+    if (!res.ok) {
+      throw new Error(`list ${bucketId}/${prefix}: ${res.status} — ${await res.text()}`);
+    }
+    const rows = (await res.json()) as StorageObjectEntry[];
+    out.push(...rows);
+    if (rows.length < pageSize) break;
+    offset += pageSize;
+  }
+  return out;
+}
+
+async function walkBucket(
+  projectUrl: string,
+  serviceKey: string,
+  bucketId: string,
+): Promise<string[]> {
+  const files: string[] = [];
+  const queue: string[] = [""];
+  while (queue.length > 0 && files.length < SEED_ASSET_LIMITS.maxObjectsPerBucket) {
+    const prefix = queue.shift()!;
+    const rows = await listBucketFolder(projectUrl, serviceKey, bucketId, prefix);
+    for (const row of rows) {
+      const path = prefix ? `${prefix}/${row.name}` : row.name;
+      if (row.id === null) {
+        queue.push(path);
+      } else {
+        files.push(path);
+        if (files.length >= SEED_ASSET_LIMITS.maxObjectsPerBucket) break;
+      }
+    }
+  }
+  return files;
+}
+
+async function copyBucketObject(
+  sourceUrl: string,
+  sourceKey: string,
+  targetUrl: string,
+  targetKey: string,
+  bucketId: string,
+  path: string,
+): Promise<{ ok: true; bytes: number } | { ok: false; error: string; skipped?: boolean }> {
+  const dl = await fetch(
+    `${sourceUrl}/storage/v1/object/${bucketId}/${encodeStoragePath(path)}`,
+    { headers: { Authorization: `Bearer ${sourceKey}`, apikey: sourceKey } },
+  );
+  if (!dl.ok) return { ok: false, error: `download ${dl.status}` };
+  const contentType = dl.headers.get("content-type") ?? "application/octet-stream";
+  const buf = await dl.arrayBuffer();
+  if (buf.byteLength > SEED_ASSET_LIMITS.maxBytesPerObject) {
+    return { ok: false, error: "object exceeds per-object cap", skipped: true };
+  }
+  const up = await fetch(
+    `${targetUrl}/storage/v1/object/${bucketId}/${encodeStoragePath(path)}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${targetKey}`,
+        apikey: targetKey,
+        "Content-Type": contentType,
+        "x-upsert": "true",
+      },
+      body: buf,
+    },
+  );
+  if (!up.ok) return { ok: false, error: `upload ${up.status} — ${await up.text()}` };
+  return { ok: true, bytes: buf.byteLength };
+}
+
+async function replicateBucketObjects(
+  sourceUrl: string,
+  sourceKey: string,
+  targetUrl: string,
+  targetKey: string,
+  bucketId: string,
+): Promise<{ copied: number; failed: number; skipped: number; bytes: number }> {
+  const files = await walkBucket(sourceUrl, sourceKey, bucketId);
+  let copied = 0;
+  let failed = 0;
+  let skipped = 0;
+  let bytes = 0;
+  for (const path of files) {
+    if (bytes >= SEED_ASSET_LIMITS.maxTotalBytesPerBucket) {
+      skipped++;
+      continue;
+    }
+    const r = await copyBucketObject(sourceUrl, sourceKey, targetUrl, targetKey, bucketId, path);
+    if (r.ok) {
+      copied++;
+      bytes += r.bytes;
+    } else if (r.skipped) {
+      skipped++;
+    } else {
+      failed++;
+    }
+  }
+  return { copied, failed, skipped, bytes };
+}
+
 /**
- * Copy every bucket configuration from the prime to the target clone.
- * Bucket contents (`storage.objects` rows and blobs) are intentionally NOT
- * replicated — a clone starts empty; only structure travels.
+ * Copy every bucket configuration from the prime to the target clone, and
+ * seed each bucket with its prime contents (G2). Object copy is best-effort:
+ * if service-role keys can't be retrieved for either side, config replication
+ * still runs and object counts are omitted so operators know to retry seed-
+ * asset copy manually.
  */
 export async function replicateStorageBuckets(
   primeRef: string,
@@ -282,14 +437,53 @@ export async function replicateStorageBuckets(
 ): Promise<BucketReplicationResult[]> {
   const primeBuckets = await listProjectStorageBuckets(primeRef);
   const results: BucketReplicationResult[] = [];
+
+  let primeService: string | null = null;
+  let targetService: string | null = null;
+  try {
+    primeService = selectProjectKeys(await getProjectApiKeys(primeRef)).serviceRoleKey;
+    targetService = selectProjectKeys(await getProjectApiKeys(targetRef)).serviceRoleKey;
+  } catch {
+    // Object copy will be skipped for every bucket; config replication still runs.
+  }
+  const primeUrl = getProjectUrl(primeRef);
+  const targetUrl = getProjectUrl(targetRef);
+
   for (const bucket of primeBuckets) {
+    let configResult: BucketReplicationResult;
     try {
-      results.push(await createStorageBucket(targetRef, bucket));
+      configResult = await createStorageBucket(targetRef, bucket);
     } catch (err) {
-      results.push({
+      configResult = {
         id: bucket.id,
         status: "failed",
         error: err instanceof Error ? err.message : String(err),
+      };
+    }
+    if (configResult.status === "failed" || !primeService || !targetService) {
+      results.push(configResult);
+      continue;
+    }
+    try {
+      const counts = await replicateBucketObjects(
+        primeUrl,
+        primeService,
+        targetUrl,
+        targetService,
+        bucket.id,
+      );
+      results.push({
+        ...configResult,
+        objects_copied: counts.copied,
+        objects_failed: counts.failed,
+        objects_skipped: counts.skipped,
+        bytes_copied: counts.bytes,
+      });
+    } catch (err) {
+      results.push({
+        ...configResult,
+        objects_failed: -1,
+        error: `seed-asset copy failed: ${err instanceof Error ? err.message : String(err)}`,
       });
     }
   }
