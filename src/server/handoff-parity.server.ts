@@ -463,6 +463,75 @@ function diffRealtime(prime: Snapshot, target: Snapshot) {
   };
 }
 
+// ── G5 surfaces ───────────────────────────────────────────────────────
+
+// G5 — GRANT parity. Without GRANTs to anon/authenticated/service_role, RLS
+// alone leaves public tables unreachable via PostgREST. Blocking when a table
+// on the target is missing every one of the roles the prime had granted.
+function diffGrants(prime: Snapshot, target: Snapshot) {
+  const drift: Array<{
+    table: string;
+    role: string;
+    missing_privileges: string[];
+    extra_privileges: string[];
+  }> = [];
+  const missing_grantees: Array<{ table: string; role: string }> = [];
+
+  for (const [tbl, primeRoles] of prime.grantsByTable) {
+    const targetRoles = target.grantsByTable.get(tbl) ?? new Map<string, Set<string>>();
+    for (const [role, primePrivs] of primeRoles) {
+      const targetPrivs = targetRoles.get(role);
+      if (!targetPrivs || targetPrivs.size === 0) {
+        missing_grantees.push({ table: tbl, role });
+        continue;
+      }
+      const missing = [...primePrivs].filter((p) => !targetPrivs.has(p));
+      const extra = [...targetPrivs].filter((p) => !primePrivs.has(p));
+      if (missing.length || extra.length) {
+        drift.push({
+          table: tbl,
+          role,
+          missing_privileges: missing.sort(),
+          extra_privileges: extra.sort(),
+        });
+      }
+    }
+  }
+  return { drift, missing_grantees };
+}
+
+// G5 — Enum type parity: any enum used by a shared column must exist on the
+// target with the same label set (order matters for ordinal comparisons).
+function diffEnums(prime: Snapshot, target: Snapshot) {
+  const missing: string[] = [];
+  const labelDrift: Array<{ name: string; prime: string[]; target: string[] }> = [];
+  for (const [name, primeLabels] of prime.enumsByName) {
+    const targetLabels = target.enumsByName.get(name);
+    if (!targetLabels) {
+      missing.push(name);
+      continue;
+    }
+    if (JSON.stringify(primeLabels) !== JSON.stringify(targetLabels)) {
+      labelDrift.push({ name, prime: primeLabels, target: targetLabels });
+    }
+  }
+  return { missing_in_target: missing.sort(), label_drift: labelDrift };
+}
+
+// G5 — Trigger parity on public tables.
+function diffTriggers(prime: Snapshot, target: Snapshot) {
+  const missing: string[] = [];
+  const extra: string[] = [];
+  for (const k of prime.triggerKeys) if (!target.triggerKeys.has(k)) missing.push(k);
+  for (const k of target.triggerKeys) if (!prime.triggerKeys.has(k)) extra.push(k);
+  return {
+    prime_count: prime.triggerKeys.size,
+    target_count: target.triggerKeys.size,
+    missing_in_target: missing.sort(),
+    extra_in_target: extra.sort(),
+  };
+}
+
 // ── Public entry ──────────────────────────────────────────────────────
 
 export type ParityResult = {
