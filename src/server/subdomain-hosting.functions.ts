@@ -299,7 +299,7 @@ export const verifyCloudflareSetup = createServerFn({ method: "POST" })
     }
 
     try {
-      const records = await cloudflareApi.listDnsRecords(cfg.cloudflare_zone_id, { per_page: 1 });
+      const records = await cloudflareApi.listDnsRecords(cfg.cloudflare_zone_id);
       steps.dnsEdit.ok = true;
       steps.dnsEdit.detail = `DNS API reachable (${Array.isArray(records) ? records.length : 0} record(s) sampled)`;
     } catch (e) {
