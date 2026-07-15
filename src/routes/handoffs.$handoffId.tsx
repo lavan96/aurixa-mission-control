@@ -1238,3 +1238,177 @@ function BillingSplitCard({ handoffId }: { handoffId: string }) {
     </Card>
   );
 }
+
+// G23 — Outbound audit shipper. After cutover we no longer own the client
+// backend, so we cannot query audit_log directly. This card provisions a
+// signed one-way feed: SQL + pg_cron installed inside the client project
+// batches new audit_log rows and POSTs them to our ingest endpoint under an
+// HMAC seeded here. Operators can toggle, rotate the secret, copy the
+// installer SQL for the client to run, and inspect what has been shipped.
+function AuditShipperCard({ handoffId }: { handoffId: string }) {
+  const qc = useQueryClient();
+  const q = useQuery({
+    queryKey: ["handoff", handoffId, "audit-shipper"],
+    queryFn: () => getAuditShipper({ data: { handoff_id: handoffId } }),
+    refetchInterval: 30000,
+  });
+
+  const save = useMutation({
+    mutationFn: (v: { enabled?: boolean; endpoint_url?: string }) =>
+      upsertAuditShipper({ data: { handoff_id: handoffId, ...v } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["handoff", handoffId, "audit-shipper"] });
+      qc.invalidateQueries({ queryKey: ["handoff", handoffId] });
+      toast.success("Audit shipper saved");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Save failed"),
+  });
+
+  const rotate = useMutation({
+    mutationFn: () => rotateAuditSecret({ data: { handoff_id: handoffId } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["handoff", handoffId, "audit-shipper"] });
+      toast.success("Secret rotated — re-run installer on client backend");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Rotate failed"),
+  });
+
+  const installer = useMutation({
+    mutationFn: () => getAuditInstallerSQL({ data: { handoff_id: handoffId } }),
+    onSuccess: (r: any) => {
+      if (r?.ok === false) return toast.error(r.error ?? "Failed");
+      navigator.clipboard.writeText(r.sql).then(
+        () => toast.success("Installer SQL copied to clipboard"),
+        () => toast.info("SQL generated below"),
+      );
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed"),
+  });
+
+  const data = q.data as any;
+  const cfg = data?.config ?? null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Activity className="h-4 w-4" /> Audit log continuity (G23)
+        </CardTitle>
+        <CardDescription>
+          One-way audit feed from the client-owned backend into Mission Control.
+          Signed with a per-handoff HMAC; installer SQL runs inside the client
+          project and drains <code>public.audit_log</code> every minute via
+          pg_cron + pg_net.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        {!cfg && (
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => save.mutate({ enabled: false })}>
+              Provision shipper
+            </Button>
+            <span className="text-muted-foreground text-xs">
+              Creates the config row and mints the HMAC secret. Enable after installer runs on client.
+            </span>
+          </div>
+        )}
+
+        {cfg && (
+          <>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <span className="text-muted-foreground">Status: </span>
+                <Badge variant={cfg.enabled ? "default" : "outline"}>
+                  {cfg.enabled ? "enabled" : "disabled"}
+                </Badge>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Total shipped: </span>
+                <b>{Number(cfg.total_shipped ?? 0).toLocaleString()}</b>
+                {data?.total_events != null && (
+                  <span className="text-muted-foreground"> · {data.total_events} in inbox</span>
+                )}
+              </div>
+              <div className="col-span-2 truncate">
+                <span className="text-muted-foreground">Endpoint: </span>
+                <code>{cfg.endpoint_url}</code>
+              </div>
+              {cfg.last_shipped_at && (
+                <div className="col-span-2">
+                  <span className="text-muted-foreground">Last shipment: </span>
+                  {new Date(cfg.last_shipped_at).toLocaleString()}
+                </div>
+              )}
+              {cfg.last_error && (
+                <div className="col-span-2 text-destructive">
+                  Last error: {cfg.last_error}
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                variant={cfg.enabled ? "outline" : "default"}
+                onClick={() => save.mutate({ enabled: !cfg.enabled })}
+                disabled={save.isPending}
+              >
+                {cfg.enabled ? "Disable" : "Enable"}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => installer.mutate()}
+                disabled={installer.isPending}
+              >
+                <Copy className="h-3 w-3 mr-1" /> Copy installer SQL
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  if (confirm("Rotate HMAC secret? Client must re-run installer.")) rotate.mutate();
+                }}
+                disabled={rotate.isPending}
+              >
+                <KeyRound className="h-3 w-3 mr-1" /> Rotate secret
+              </Button>
+            </div>
+
+            {installer.data && (installer.data as any)?.ok && (
+              <details className="border rounded p-2">
+                <summary className="cursor-pointer text-xs">Installer SQL preview</summary>
+                <pre className="mt-2 text-[10px] whitespace-pre-wrap max-h-64 overflow-auto">
+                  {(installer.data as any).sql}
+                </pre>
+              </details>
+            )}
+
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">
+                Recent shipped events ({data?.events?.length ?? 0} of {data?.total_events ?? 0})
+              </div>
+              <ul className="text-xs space-y-1 max-h-56 overflow-auto border rounded p-2">
+                {(data?.events ?? []).map((e: any) => (
+                  <li key={e.id} className="flex justify-between gap-2 border-b py-1 last:border-b-0">
+                    <span className="truncate">
+                      <b>{e.action ?? "—"}</b>{" "}
+                      <span className="text-muted-foreground">{e.source_table}</span>{" "}
+                      {e.actor && <span className="text-muted-foreground">by {e.actor}</span>}
+                    </span>
+                    <span className="text-muted-foreground shrink-0">
+                      {new Date(e.received_at).toLocaleString()}
+                    </span>
+                  </li>
+                ))}
+                {(!data?.events || data.events.length === 0) && (
+                  <li className="text-muted-foreground">No events shipped yet.</li>
+                )}
+              </ul>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
