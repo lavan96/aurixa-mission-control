@@ -25,7 +25,8 @@ import {
   revokeHandoffInvite,
 } from "@/lib/handoff-invites.functions";
 import { verifyCloneRepoGithubAccess, type CloneGithubAccessRow } from "@/lib/clone-github-access.functions";
-import { ArrowRight, Camera, KeyRound, FileDown, ScrollText, ShieldCheck, Github, Link as LinkIcon, Copy, Trash2 } from "lucide-react";
+import { getHandoffContractDocumentUrl } from "@/lib/handoff-terms.functions";
+import { ArrowRight, Camera, KeyRound, FileDown, ScrollText, ShieldCheck, Github, Link as LinkIcon, Copy, Trash2, FileText } from "lucide-react";
 
 export const Route = createFileRoute("/handoffs/$handoffId")({
   component: () => (
@@ -269,6 +270,52 @@ function HandoffDetail() {
               </div>
             ) : (
               <div className="text-xs text-muted-foreground">No consent on file yet.</div>
+            )}
+            {d.contracts.length > 0 && (
+              <div className="space-y-1 pt-2 border-t">
+                <div className="text-xs font-medium">Signed records (G13)</div>
+                {d.contracts.map((c: any) => (
+                  <div key={c.id} className="rounded border p-2 text-xs space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium">v{c.version}</span>
+                      <span className="text-muted-foreground">
+                        {c.signed_at ? new Date(c.signed_at).toLocaleString() : "—"}
+                      </span>
+                    </div>
+                    <div className="text-muted-foreground">{c.signed_by_name} · {c.signed_by_email}</div>
+                    {c.signature_bundle_sha256 && (
+                      <div className="font-mono break-all text-[10px]">
+                        bundle: {c.signature_bundle_sha256}
+                      </div>
+                    )}
+                    <div className="text-muted-foreground">
+                      Snapshots at signing:{" "}
+                      <Badge variant="outline">
+                        {Array.isArray(c.snapshot_manifest) ? c.snapshot_manifest.length : 0}
+                      </Badge>
+                    </div>
+                    {c.document_storage_path && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={async () => {
+                          try {
+                            const res = await getHandoffContractDocumentUrl({
+                              data: { contract_id: c.id, expires_in: 300 },
+                            });
+                            if (res?.ok && res.url) window.open(res.url, "_blank");
+                            else toast.error("No document attached");
+                          } catch (e: any) {
+                            toast.error(e?.message ?? "Failed");
+                          }
+                        }}
+                      >
+                        <FileText className="h-3 w-3 mr-1" /> Download signed doc
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
             )}
           </CardContent>
         </Card>

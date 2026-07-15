@@ -40,6 +40,7 @@ import { Route as SettingsRoleAuditRouteImport } from './routes/settings.role-au
 import { Route as SettingsProvisioningPreviewRouteImport } from './routes/settings.provisioning-preview'
 import { Route as SettingsPermissionMatrixRouteImport } from './routes/settings.permission-matrix'
 import { Route as SettingsNotificationsRouteImport } from './routes/settings.notifications'
+import { Route as SettingsHandoffTermsRouteImport } from './routes/settings.handoff-terms'
 import { Route as SettingsHandoffPoliciesRouteImport } from './routes/settings.handoff-policies'
 import { Route as SettingsGithubAccessRouteImport } from './routes/settings.github-access'
 import { Route as SettingsGiftTokensRouteImport } from './routes/settings.gift-tokens'
@@ -260,6 +261,11 @@ const SettingsPermissionMatrixRoute =
 const SettingsNotificationsRoute = SettingsNotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsHandoffTermsRoute = SettingsHandoffTermsRouteImport.update({
+  id: '/handoff-terms',
+  path: '/handoff-terms',
   getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsHandoffPoliciesRoute = SettingsHandoffPoliciesRouteImport.update({
@@ -657,6 +663,7 @@ export interface FileRoutesByFullPath {
   '/settings/gift-tokens': typeof SettingsGiftTokensRoute
   '/settings/github-access': typeof SettingsGithubAccessRoute
   '/settings/handoff-policies': typeof SettingsHandoffPoliciesRoute
+  '/settings/handoff-terms': typeof SettingsHandoffTermsRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/permission-matrix': typeof SettingsPermissionMatrixRoute
   '/settings/provisioning-preview': typeof SettingsProvisioningPreviewRoute
@@ -753,6 +760,7 @@ export interface FileRoutesByTo {
   '/settings/gift-tokens': typeof SettingsGiftTokensRoute
   '/settings/github-access': typeof SettingsGithubAccessRoute
   '/settings/handoff-policies': typeof SettingsHandoffPoliciesRoute
+  '/settings/handoff-terms': typeof SettingsHandoffTermsRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/permission-matrix': typeof SettingsPermissionMatrixRoute
   '/settings/provisioning-preview': typeof SettingsProvisioningPreviewRoute
@@ -851,6 +859,7 @@ export interface FileRoutesById {
   '/settings/gift-tokens': typeof SettingsGiftTokensRoute
   '/settings/github-access': typeof SettingsGithubAccessRoute
   '/settings/handoff-policies': typeof SettingsHandoffPoliciesRoute
+  '/settings/handoff-terms': typeof SettingsHandoffTermsRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/permission-matrix': typeof SettingsPermissionMatrixRoute
   '/settings/provisioning-preview': typeof SettingsProvisioningPreviewRoute
@@ -950,6 +959,7 @@ export interface FileRouteTypes {
     | '/settings/gift-tokens'
     | '/settings/github-access'
     | '/settings/handoff-policies'
+    | '/settings/handoff-terms'
     | '/settings/notifications'
     | '/settings/permission-matrix'
     | '/settings/provisioning-preview'
@@ -1046,6 +1056,7 @@ export interface FileRouteTypes {
     | '/settings/gift-tokens'
     | '/settings/github-access'
     | '/settings/handoff-policies'
+    | '/settings/handoff-terms'
     | '/settings/notifications'
     | '/settings/permission-matrix'
     | '/settings/provisioning-preview'
@@ -1143,6 +1154,7 @@ export interface FileRouteTypes {
     | '/settings/gift-tokens'
     | '/settings/github-access'
     | '/settings/handoff-policies'
+    | '/settings/handoff-terms'
     | '/settings/notifications'
     | '/settings/permission-matrix'
     | '/settings/provisioning-preview'
@@ -1477,6 +1489,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/settings/notifications'
       preLoaderRoute: typeof SettingsNotificationsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/handoff-terms': {
+      id: '/settings/handoff-terms'
+      path: '/handoff-terms'
+      fullPath: '/settings/handoff-terms'
+      preLoaderRoute: typeof SettingsHandoffTermsRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/settings/handoff-policies': {
@@ -1976,6 +1995,7 @@ interface SettingsRouteChildren {
   SettingsGiftTokensRoute: typeof SettingsGiftTokensRoute
   SettingsGithubAccessRoute: typeof SettingsGithubAccessRoute
   SettingsHandoffPoliciesRoute: typeof SettingsHandoffPoliciesRoute
+  SettingsHandoffTermsRoute: typeof SettingsHandoffTermsRoute
   SettingsNotificationsRoute: typeof SettingsNotificationsRoute
   SettingsPermissionMatrixRoute: typeof SettingsPermissionMatrixRoute
   SettingsProvisioningPreviewRoute: typeof SettingsProvisioningPreviewRoute
@@ -1991,6 +2011,7 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsGiftTokensRoute: SettingsGiftTokensRoute,
   SettingsGithubAccessRoute: SettingsGithubAccessRoute,
   SettingsHandoffPoliciesRoute: SettingsHandoffPoliciesRoute,
+  SettingsHandoffTermsRoute: SettingsHandoffTermsRoute,
   SettingsNotificationsRoute: SettingsNotificationsRoute,
   SettingsPermissionMatrixRoute: SettingsPermissionMatrixRoute,
   SettingsProvisioningPreviewRoute: SettingsProvisioningPreviewRoute,
