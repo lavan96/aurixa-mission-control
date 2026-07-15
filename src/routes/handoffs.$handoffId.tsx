@@ -458,6 +458,69 @@ function HandoffDetail() {
           </CardContent>
         </Card>
 
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileDown className="h-4 w-4" /> Storage objects replication (G17)
+            </CardTitle>
+            <CardDescription>
+              Bulk-copy every object in every storage bucket from the source
+              project into the client-owned twin. Idempotent (objects already
+              on target are skipped) and resumable — re-invoke until every
+              bucket reports <code>complete</code>. Paced by a per-invocation
+              budget of ~400 objects / 400&nbsp;MB / 45&nbsp;s.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <Button
+              size="sm"
+              onClick={() => storageReplicate.mutate()}
+              disabled={storageReplicate.isPending}
+            >
+              {storageReplicate.isPending ? "Replicating…" : "Run storage replication"}
+            </Button>
+            {(d.storage_replications?.length ?? 0) > 0 && (
+              <div className="mt-2 rounded border p-2 text-xs">
+                <table className="w-full text-left">
+                  <thead className="text-muted-foreground">
+                    <tr>
+                      <th className="pr-2">bucket</th>
+                      <th className="pr-2">status</th>
+                      <th className="pr-2">copied</th>
+                      <th className="pr-2">skipped</th>
+                      <th className="pr-2">failed</th>
+                      <th className="pr-2">bytes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {d.storage_replications.map((r: any) => (
+                      <tr key={r.bucket_id} className="border-t">
+                        <td className="pr-2 font-mono">{r.bucket_id}</td>
+                        <td className="pr-2">
+                          <Badge variant={r.status === "complete" ? "default" : r.status === "failed" ? "destructive" : "secondary"}>
+                            {r.status}
+                          </Badge>
+                        </td>
+                        <td className="pr-2">{r.objects_copied}</td>
+                        <td className="pr-2">{r.objects_skipped}</td>
+                        <td className="pr-2">{r.objects_failed}</td>
+                        <td className="pr-2">{(Number(r.bytes_copied ?? 0) / 1024 / 1024).toFixed(1)} MB</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {storageReplicate.data?.incomplete && (
+              <div className="text-xs text-muted-foreground">
+                Budget exhausted ({storageReplicate.data.budget_exhausted}) — re-run to continue.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+
+
 
 
         <Card>
