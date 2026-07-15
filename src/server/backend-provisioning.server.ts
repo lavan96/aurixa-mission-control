@@ -1875,8 +1875,30 @@ export async function provisionCloneBackend(
     );
   }
 
+  // Step 4b (G4): guarantee required extensions are enabled before anything
+  // downstream (edge fns, cron, webhook fanout, vault-backed cron auth) tries
+  // to use them. Non-fatal per extension — surfaced in the parity report.
+  let requiredExtensions: RequiredExtensionResult[] = [];
+  try {
+    await onStatusUpdate?.("migrating", "Enforcing required Postgres extensions...");
+    requiredExtensions = await enforceRequiredExtensions(projectRef);
+    const failedExt = requiredExtensions.filter((r) => r.status === "failed");
+    if (failedExt.length > 0) {
+      await onStatusUpdate?.(
+        "migrating",
+        `${failedExt.length}/${requiredExtensions.length} extension(s) failed to install — ${failedExt.map((e) => e.name).join(", ")}`,
+      );
+    }
+  } catch (err) {
+    await onStatusUpdate?.(
+      "migrating",
+      `Required-extension enforcement skipped: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+
   // Step 5: Deploy the prime's edge functions (non-fatal per function)
   const edgeFunctions = await deployEdgeFunctions(projectRef, snapshot.functions, onStatusUpdate);
+
 
   // Step 5b: Replicate storage bucket configuration from the prime. Migrations
   // already replayed the row-level policies on `storage.objects`, but those
