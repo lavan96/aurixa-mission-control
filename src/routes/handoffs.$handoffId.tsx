@@ -16,7 +16,8 @@ import {
   runParityDryRun,
   HANDOFF_STATE_ORDER,
 } from "@/lib/handoffs.functions";
-import { ArrowRight, Camera, KeyRound, FileDown, ScrollText, ShieldCheck } from "lucide-react";
+import { verifyCloneRepoGithubAccess, type CloneGithubAccessRow } from "@/lib/clone-github-access.functions";
+import { ArrowRight, Camera, KeyRound, FileDown, ScrollText, ShieldCheck, Github } from "lucide-react";
 
 export const Route = createFileRoute("/handoffs/$handoffId")({
   component: () => (
@@ -108,6 +109,21 @@ function HandoffDetail() {
     onError: (e: any) => toast.error(e?.message ?? "Parity run failed"),
   });
 
+  // G9 — verify the Aurixa GitHub App still has access to the clone repo.
+  const [gh, setGh] = useState<CloneGithubAccessRow | null>(null);
+  const ghCheck = useMutation({
+    mutationFn: () => {
+      const cloneId = q.data?.handoff?.clone_id as string | undefined;
+      if (!cloneId) throw new Error("Clone id not loaded yet");
+      return verifyCloneRepoGithubAccess({ data: { cloneId } });
+    },
+    onSuccess: (r) => {
+      setGh(r);
+      if (r.ok) toast.success("GitHub App has access to the clone repo.");
+      else toast.warning(r.message ?? "GitHub App access check failed.");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "GitHub check failed"),
+  });
 
   if (q.isLoading) return <div className="p-6">Loading…</div>;
   const d = q.data;
@@ -249,7 +265,33 @@ function HandoffDetail() {
           </CardContent>
         </Card>
 
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2"><Github className="h-4 w-4" /> GitHub App access (G9)</CardTitle>
+            <CardDescription>Confirm the Aurixa App can still reach {h.clones?.github_owner ?? "the clone"}/{h.clones?.github_repo ?? "repo"}.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <Button size="sm" variant="outline" onClick={() => ghCheck.mutate()} disabled={ghCheck.isPending}>
+              {ghCheck.isPending ? "Checking…" : "Verify installation access"}
+            </Button>
+            {gh && (
+              <div className="rounded border p-2 text-xs space-y-1">
+                <div className="flex items-center justify-between">
+                  <span>{gh.github_owner}/{gh.github_repo}</span>
+                  <Badge variant={gh.ok ? "outline" : "destructive"}>{gh.ok ? "ok" : "blocked"}</Badge>
+                </div>
+                <div className="text-muted-foreground">
+                  Selection: {gh.repository_selection ?? "—"} · repo: {gh.repo_accessible == null ? "—" : gh.repo_accessible ? "reachable" : "unreachable"} · contents:write: {gh.contents_write == null ? "—" : gh.contents_write ? "yes" : "no"}
+                </div>
+                {gh.message && <div>{gh.message}</div>}
+                {gh.hint && <div className="text-muted-foreground">Hint: {gh.hint}</div>}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
       </div>
+
 
       <Card>
         <CardHeader>
