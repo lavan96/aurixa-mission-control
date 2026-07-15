@@ -41,6 +41,7 @@ import { Route as SettingsProvisioningPreviewRouteImport } from './routes/settin
 import { Route as SettingsPermissionMatrixRouteImport } from './routes/settings.permission-matrix'
 import { Route as SettingsNotificationsRouteImport } from './routes/settings.notifications'
 import { Route as SettingsHandoffPoliciesRouteImport } from './routes/settings.handoff-policies'
+import { Route as SettingsGithubAccessRouteImport } from './routes/settings.github-access'
 import { Route as SettingsGiftTokensRouteImport } from './routes/settings.gift-tokens'
 import { Route as SettingsCloneStripeRouteImport } from './routes/settings.clone-stripe'
 import { Route as SettingsBillingRouteImport } from './routes/settings.billing'
@@ -261,6 +262,11 @@ const SettingsNotificationsRoute = SettingsNotificationsRouteImport.update({
 const SettingsHandoffPoliciesRoute = SettingsHandoffPoliciesRouteImport.update({
   id: '/handoff-policies',
   path: '/handoff-policies',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsGithubAccessRoute = SettingsGithubAccessRouteImport.update({
+  id: '/github-access',
+  path: '/github-access',
   getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsGiftTokensRoute = SettingsGiftTokensRouteImport.update({
@@ -629,6 +635,7 @@ export interface FileRoutesByFullPath {
   '/settings/billing': typeof SettingsBillingRoute
   '/settings/clone-stripe': typeof SettingsCloneStripeRoute
   '/settings/gift-tokens': typeof SettingsGiftTokensRoute
+  '/settings/github-access': typeof SettingsGithubAccessRoute
   '/settings/handoff-policies': typeof SettingsHandoffPoliciesRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/permission-matrix': typeof SettingsPermissionMatrixRoute
@@ -721,6 +728,7 @@ export interface FileRoutesByTo {
   '/settings/billing': typeof SettingsBillingRoute
   '/settings/clone-stripe': typeof SettingsCloneStripeRoute
   '/settings/gift-tokens': typeof SettingsGiftTokensRoute
+  '/settings/github-access': typeof SettingsGithubAccessRoute
   '/settings/handoff-policies': typeof SettingsHandoffPoliciesRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/permission-matrix': typeof SettingsPermissionMatrixRoute
@@ -815,6 +823,7 @@ export interface FileRoutesById {
   '/settings/billing': typeof SettingsBillingRoute
   '/settings/clone-stripe': typeof SettingsCloneStripeRoute
   '/settings/gift-tokens': typeof SettingsGiftTokensRoute
+  '/settings/github-access': typeof SettingsGithubAccessRoute
   '/settings/handoff-policies': typeof SettingsHandoffPoliciesRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/permission-matrix': typeof SettingsPermissionMatrixRoute
@@ -910,6 +919,7 @@ export interface FileRouteTypes {
     | '/settings/billing'
     | '/settings/clone-stripe'
     | '/settings/gift-tokens'
+    | '/settings/github-access'
     | '/settings/handoff-policies'
     | '/settings/notifications'
     | '/settings/permission-matrix'
@@ -1002,6 +1012,7 @@ export interface FileRouteTypes {
     | '/settings/billing'
     | '/settings/clone-stripe'
     | '/settings/gift-tokens'
+    | '/settings/github-access'
     | '/settings/handoff-policies'
     | '/settings/notifications'
     | '/settings/permission-matrix'
@@ -1095,6 +1106,7 @@ export interface FileRouteTypes {
     | '/settings/billing'
     | '/settings/clone-stripe'
     | '/settings/gift-tokens'
+    | '/settings/github-access'
     | '/settings/handoff-policies'
     | '/settings/notifications'
     | '/settings/permission-matrix'
@@ -1433,6 +1445,13 @@ declare module '@tanstack/react-router' {
       path: '/handoff-policies'
       fullPath: '/settings/handoff-policies'
       preLoaderRoute: typeof SettingsHandoffPoliciesRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/github-access': {
+      id: '/settings/github-access'
+      path: '/github-access'
+      fullPath: '/settings/github-access'
+      preLoaderRoute: typeof SettingsGithubAccessRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/settings/gift-tokens': {
@@ -1894,6 +1913,7 @@ interface SettingsRouteChildren {
   SettingsBillingRoute: typeof SettingsBillingRoute
   SettingsCloneStripeRoute: typeof SettingsCloneStripeRoute
   SettingsGiftTokensRoute: typeof SettingsGiftTokensRoute
+  SettingsGithubAccessRoute: typeof SettingsGithubAccessRoute
   SettingsHandoffPoliciesRoute: typeof SettingsHandoffPoliciesRoute
   SettingsNotificationsRoute: typeof SettingsNotificationsRoute
   SettingsPermissionMatrixRoute: typeof SettingsPermissionMatrixRoute
@@ -1907,6 +1927,7 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsBillingRoute: SettingsBillingRoute,
   SettingsCloneStripeRoute: SettingsCloneStripeRoute,
   SettingsGiftTokensRoute: SettingsGiftTokensRoute,
+  SettingsGithubAccessRoute: SettingsGithubAccessRoute,
   SettingsHandoffPoliciesRoute: SettingsHandoffPoliciesRoute,
   SettingsNotificationsRoute: SettingsNotificationsRoute,
   SettingsPermissionMatrixRoute: SettingsPermissionMatrixRoute,
