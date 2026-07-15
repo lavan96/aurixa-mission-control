@@ -68,6 +68,28 @@ async function runBackendProvisioning(
       .eq("clone_id", input.cloneId)
       .maybeSingle();
 
+    // G8: Collect the clone's own frontend origins so applyAuthConfig can
+    // whitelist them on the new backend instead of copying prime's URLs.
+    const { data: cloneRow } = await supabase
+      .from("clones")
+      .select("slug, deploy_url, lovable_project_url")
+      .eq("id", input.cloneId)
+      .maybeSingle();
+    const { data: cfRow } = await supabase
+      .from("cloudflare_clone_config")
+      .select("zone_name")
+      .eq("clone_id", input.cloneId)
+      .maybeSingle();
+    const cloneOrigins = {
+      siteUrl: cloneRow?.deploy_url ?? cloneRow?.lovable_project_url ?? null,
+      additionalRedirectUrls: [
+        cloneRow?.deploy_url ?? null,
+        cloneRow?.lovable_project_url ?? null,
+        cfRow?.zone_name ? `https://${cfRow.zone_name}` : null,
+        cloneRow?.slug ? `https://${cloneRow.slug}.aurixasystems.com.au` : null,
+      ],
+    };
+
     // Resolve which secret names are safe to forward from the prime env into
     // this clone (empty shells cause 500s at first function invocation).
     const { data: forwardRows } = await supabase
@@ -89,6 +111,7 @@ async function runBackendProvisioning(
         snapshot,
         existingProjectRef: existingRow?.supabase_project_ref ?? null,
         inheritedSecrets,
+        cloneOrigins,
       },
       updateStatus,
     );
