@@ -2282,6 +2282,82 @@ export type Database = {
         }
         Relationships: []
       }
+      handoff_billing_splits: {
+        Row: {
+          aurixa_products_kept: Json
+          aurixa_stripe_customer_id: string | null
+          aurixa_stripe_subscription_id: string | null
+          client_billed_directly: boolean
+          client_supabase_org_id: string | null
+          client_supabase_plan: string | null
+          clone_id: string
+          created_at: string
+          created_by: string | null
+          decoupled_at: string | null
+          disclosed_to_client_at: string | null
+          handoff_id: string
+          id: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          aurixa_products_kept?: Json
+          aurixa_stripe_customer_id?: string | null
+          aurixa_stripe_subscription_id?: string | null
+          client_billed_directly?: boolean
+          client_supabase_org_id?: string | null
+          client_supabase_plan?: string | null
+          clone_id: string
+          created_at?: string
+          created_by?: string | null
+          decoupled_at?: string | null
+          disclosed_to_client_at?: string | null
+          handoff_id: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          aurixa_products_kept?: Json
+          aurixa_stripe_customer_id?: string | null
+          aurixa_stripe_subscription_id?: string | null
+          client_billed_directly?: boolean
+          client_supabase_org_id?: string | null
+          client_supabase_plan?: string | null
+          clone_id?: string
+          created_at?: string
+          created_by?: string | null
+          decoupled_at?: string | null
+          disclosed_to_client_at?: string | null
+          handoff_id?: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "handoff_billing_splits_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "handoff_billing_splits_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
+          },
+          {
+            foreignKeyName: "handoff_billing_splits_handoff_id_fkey"
+            columns: ["handoff_id"]
+            isOneToOne: true
+            referencedRelation: "clone_handoffs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       handoff_contracts: {
         Row: {
           created_at: string
