@@ -2018,7 +2018,7 @@ export async function provisionCloneBackend(
   let authConfigResult: AuthConfigResult = { status: "skipped", reason: "not attempted" };
   try {
     await onStatusUpdate?.("migrating", "Replicating auth policy from prime config.toml...");
-    authConfigResult = await applyAuthConfig(projectRef, snapshot.authConfig);
+    authConfigResult = await applyAuthConfig(projectRef, snapshot.authConfig, input.cloneOrigins ?? null);
     if (authConfigResult.status === "failed") {
       await onStatusUpdate?.(
         "migrating",
