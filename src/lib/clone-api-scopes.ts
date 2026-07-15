@@ -5,7 +5,7 @@
  */
 export type CloneApiScope = {
   value: string;
-  group: "tokens" | "seats" | "devices" | "pricing" | "billing" | "webhooks" | "edge";
+  group: "tokens" | "seats" | "devices" | "pricing" | "billing" | "webhooks" | "edge" | "health";
   label: string;
   description: string;
   default?: boolean;
@@ -67,6 +67,14 @@ export const CLONE_API_SCOPES: CloneApiScope[] = [
     group: "edge",
     label: "Edge — read status",
     description: "Read-only access to this clone's edge/CDN provider status, posture, and last sync.",
+    default: false,
+  },
+  {
+    value: "health:beacon",
+    group: "health",
+    label: "Health — emit beacon",
+    description:
+      "Post-handoff observability: clone-owned backend pings Mission Control with project status, DB size, connections, and severity.",
     default: false,
   },
 ];
