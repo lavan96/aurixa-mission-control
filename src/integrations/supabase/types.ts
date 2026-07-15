@@ -2203,43 +2203,55 @@ export type Database = {
       handoff_contracts: {
         Row: {
           created_at: string
+          document_storage_path: string | null
           handoff_id: string
           id: string
           ip_address: string | null
           metadata: Json
           pdf_storage_path: string | null
+          signature_bundle_sha256: string | null
           signed_at: string | null
           signed_by_email: string | null
           signed_by_name: string | null
+          snapshot_manifest: Json
           terms_hash: string
+          terms_version_id: string | null
           user_agent: string | null
           version: string
         }
         Insert: {
           created_at?: string
+          document_storage_path?: string | null
           handoff_id: string
           id?: string
           ip_address?: string | null
           metadata?: Json
           pdf_storage_path?: string | null
+          signature_bundle_sha256?: string | null
           signed_at?: string | null
           signed_by_email?: string | null
           signed_by_name?: string | null
+          snapshot_manifest?: Json
           terms_hash: string
+          terms_version_id?: string | null
           user_agent?: string | null
           version: string
         }
         Update: {
           created_at?: string
+          document_storage_path?: string | null
           handoff_id?: string
           id?: string
           ip_address?: string | null
           metadata?: Json
           pdf_storage_path?: string | null
+          signature_bundle_sha256?: string | null
           signed_at?: string | null
           signed_by_email?: string | null
           signed_by_name?: string | null
+          snapshot_manifest?: Json
           terms_hash?: string
+          terms_version_id?: string | null
           user_agent?: string | null
           version?: string
         }
@@ -2249,6 +2261,13 @@ export type Database = {
             columns: ["handoff_id"]
             isOneToOne: false
             referencedRelation: "clone_handoffs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "handoff_contracts_terms_version_id_fkey"
+            columns: ["terms_version_id"]
+            isOneToOne: false
+            referencedRelation: "handoff_terms_versions"
             referencedColumns: ["id"]
           },
         ]
@@ -2606,6 +2625,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      handoff_terms_versions: {
+        Row: {
+          body_md: string
+          created_at: string
+          created_by: string | null
+          effective_at: string | null
+          id: string
+          is_active: boolean
+          metadata: Json
+          retired_at: string | null
+          terms_hash: string
+          title: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          body_md: string
+          created_at?: string
+          created_by?: string | null
+          effective_at?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          retired_at?: string | null
+          terms_hash: string
+          title: string
+          updated_at?: string
+          version: string
+        }
+        Update: {
+          body_md?: string
+          created_at?: string
+          created_by?: string | null
+          effective_at?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          retired_at?: string | null
+          terms_hash?: string
+          title?: string
+          updated_at?: string
+          version?: string
+        }
+        Relationships: []
       }
       module_cascade_jobs: {
         Row: {
