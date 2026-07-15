@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { listHandoffs } from "@/lib/handoffs.functions";
-import { ArrowRightLeft, Plus } from "lucide-react";
+import { getPrimeOrgCapacity } from "@/lib/org-capacity.functions";
+import { ArrowRightLeft, Plus, Gauge } from "lucide-react";
 
 export const Route = createFileRoute("/handoffs")({
   component: () => (
