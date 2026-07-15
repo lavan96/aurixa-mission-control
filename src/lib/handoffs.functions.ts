@@ -347,4 +347,113 @@ export const requestCostExport = createServerFn({ method: "POST" })
     return { ok: true as const, id: row.id };
   });
 
+// G1 — Compute a schema/policies/functions/extensions parity report between
+// prime backend and the clone's target backend. On success writes a row to
+// handoff_parity_reports; when no blocking issues are found, auto-advances
+// the handoff to `dry_run_ready`.
+export const runParityDryRun = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((input) => z.object({ handoff_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: handoff, error: hErr } = await context.supabase
+      .from("clone_handoffs")
+      .select("id, state, clone_id, backend_id")
+      .eq("id", data.handoff_id)
+      .maybeSingle();
+    if (hErr) throw hErr;
+    if (!handoff) return { ok: false as const, error: "not_found" };
+
+    // Resolve target project ref via clone_backends.
+    let backendQuery = context.supabase
+      .from("clone_backends")
+      .select("supabase_project_ref, status")
+      .eq("clone_id", handoff.clone_id)
+      .not("supabase_project_ref", "is", null)
+      .not("status", "in", "(failed,deleted,destroyed)")
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (handoff.backend_id) {
+      backendQuery = context.supabase
+        .from("clone_backends")
+        .select("supabase_project_ref, status")
+        .eq("id", handoff.backend_id)
+        .limit(1);
+    }
+    const { data: backend, error: bErr } = await backendQuery.maybeSingle();
+    if (bErr) throw bErr;
+    if (!backend?.supabase_project_ref) {
+      return { ok: false as const, error: "no_target_backend" };
+    }
+
+    // Compute parity (server-only module — imported inside the handler so it
+    // never leaks into the client bundle).
+    const { computeParity, getPrimeProjectRef } = await import(
+      "@/server/handoff-parity.server"
+    );
+    const primeRef = getPrimeProjectRef();
+    const parity = await computeParity(primeRef, backend.supabase_project_ref);
+
+    const { data: row, error: insErr } = await context.supabase
+      .from("handoff_parity_reports")
+      .insert({
+        handoff_id: data.handoff_id,
+        prime_ref: parity.prime_ref,
+        target_ref: parity.target_ref,
+        risk_level: parity.risk_level,
+        tables_diff: parity.tables_diff,
+        policies_diff: parity.policies_diff,
+        functions_diff: parity.functions_diff,
+        buckets_diff: {},
+        cron_diff: {},
+        edge_functions_diff: {},
+        secrets_diff: {},
+        auth_diff: {},
+        extensions_diff: parity.extensions_diff,
+        blocking_issues: parity.blocking_issues,
+        summary: parity.summary,
+      })
+      .select("id")
+      .single();
+    if (insErr) throw insErr;
+
+    await context.supabase.from("handoff_events").insert({
+      handoff_id: data.handoff_id,
+      kind: "handoff.parity_computed",
+      actor_user_id: context.userId,
+      details: {
+        parity_id: row.id,
+        risk_level: parity.risk_level,
+        blocking_count: parity.blocking_issues.length,
+        summary: parity.summary,
+      },
+    });
+
+    // Auto-advance draft → dry_run_ready when clean.
+    let advanced = false;
+    if (handoff.state === "draft" && parity.blocking_issues.length === 0) {
+      const { error: updErr } = await context.supabase
+        .from("clone_handoffs")
+        .update({ state: "dry_run_ready" })
+        .eq("id", data.handoff_id);
+      if (!updErr) {
+        advanced = true;
+        await context.supabase.from("handoff_events").insert({
+          handoff_id: data.handoff_id,
+          kind: "handoff.transitioned",
+          actor_user_id: context.userId,
+          details: { from: "draft", to: "dry_run_ready", note: "auto: parity clean" },
+        });
+      }
+    }
+
+    return {
+      ok: true as const,
+      parity_id: row.id,
+      risk_level: parity.risk_level,
+      blocking_issues: parity.blocking_issues,
+      advanced,
+    };
+  });
+
 export const HANDOFF_STATE_ORDER = STATE_ORDER;
+
