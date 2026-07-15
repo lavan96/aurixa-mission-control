@@ -762,6 +762,8 @@ function HandoffDetail() {
 
       <BillingSplitCard handoffId={handoffId} />
 
+      <AuditShipperCard handoffId={handoffId} />
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Event log</CardTitle>
