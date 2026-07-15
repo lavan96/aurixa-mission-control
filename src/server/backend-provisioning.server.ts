@@ -1672,13 +1672,21 @@ export async function provisionCloneBackend(
   let storageBuckets: BucketReplicationResult[] = [];
   try {
     const primeRef = getPrimeProjectRef();
-    await onStatusUpdate?.("migrating", "Replicating storage buckets from prime...");
+    await onStatusUpdate?.("migrating", "Replicating storage buckets + seed assets from prime...");
     storageBuckets = await replicateStorageBuckets(primeRef, projectRef);
     const failed = storageBuckets.filter((b) => b.status === "failed");
+    const totalObjects = storageBuckets.reduce((n, b) => n + (b.objects_copied ?? 0), 0);
+    const totalBytes = storageBuckets.reduce((n, b) => n + (b.bytes_copied ?? 0), 0);
+    const objectFailures = storageBuckets.reduce((n, b) => n + Math.max(0, b.objects_failed ?? 0), 0);
     if (failed.length > 0) {
       await onStatusUpdate?.(
         "migrating",
-        `${failed.length}/${storageBuckets.length} bucket(s) failed to replicate — operators can retry`,
+        `${failed.length}/${storageBuckets.length} bucket(s) failed — ${totalObjects} seed object(s) copied (${Math.round(totalBytes / 1024)} KB), ${objectFailures} object failure(s)`,
+      );
+    } else if (totalObjects > 0) {
+      await onStatusUpdate?.(
+        "migrating",
+        `Copied ${totalObjects} seed object(s) across ${storageBuckets.length} bucket(s) (${Math.round(totalBytes / 1024)} KB${objectFailures ? `, ${objectFailures} failure(s)` : ""})`,
       );
     }
   } catch (err) {
