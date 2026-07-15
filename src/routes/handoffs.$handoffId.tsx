@@ -92,6 +92,23 @@ function HandoffDetail() {
     },
   });
 
+  const parity = useMutation({
+    mutationFn: () => runParityDryRun({ data: { handoff_id: handoffId } }),
+    onSuccess: (r: any) => {
+      qc.invalidateQueries({ queryKey: ["handoff", handoffId] });
+      if (r?.ok === false) {
+        toast.error(`Parity failed: ${r.error}`);
+        return;
+      }
+      const blockers = r?.blocking_issues?.length ?? 0;
+      if (blockers === 0)
+        toast.success(`Parity clean · risk=${r.risk_level}${r.advanced ? " · advanced to dry_run_ready" : ""}`);
+      else toast.warning(`Parity risk=${r.risk_level} · ${blockers} blocking issue(s)`);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Parity run failed"),
+  });
+
+
   if (q.isLoading) return <div className="p-6">Loading…</div>;
   const d = q.data;
   if (!d?.handoff) return <div className="p-6">Not found</div>;
