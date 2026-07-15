@@ -44,7 +44,8 @@ import {
   pollObservabilityNow,
   OBSERVABILITY_MODES,
 } from "@/lib/handoff-observability.functions";
-import { ArrowRight, Camera, KeyRound, FileDown, ScrollText, ShieldCheck, Github, Link as LinkIcon, Copy, Trash2, FileText, Users, Radio } from "lucide-react";
+import { upsertBillingSplit, getBillingSplit } from "@/lib/handoff-billing.functions";
+import { ArrowRight, Camera, KeyRound, FileDown, ScrollText, ShieldCheck, Github, Link as LinkIcon, Copy, Trash2, FileText, Users, Radio, Receipt } from "lucide-react";
 
 export const Route = createFileRoute("/handoffs/$handoffId")({
   component: () => (
@@ -697,6 +698,8 @@ function HandoffDetail() {
 
       <ObservabilityCard handoffId={handoffId} />
 
+      <BillingSplitCard handoffId={handoffId} />
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Event log</CardTitle>
@@ -1032,6 +1035,141 @@ function ObservabilityCard({ handoffId }: { handoffId: string }) {
             {beacons.length === 0 && <li className="text-muted-foreground text-xs">No beacons yet.</li>}
           </ul>
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// G21 — Billing split card. Records which invoices stay with Aurixa
+// (seats/tokens/AI) vs the client's own Supabase infra bill after handoff.
+function BillingSplitCard({ handoffId }: { handoffId: string }) {
+  const qc = useQueryClient();
+  const q = useQuery({
+    queryKey: ["handoff-billing-split", handoffId],
+    queryFn: () => getBillingSplit({ data: { handoff_id: handoffId } }),
+  });
+  const s: any = (q.data as any)?.split ?? null;
+
+  const [customer, setCustomer] = useState<string>(s?.aurixa_stripe_customer_id ?? "");
+  const [subscription, setSubscription] = useState<string>(s?.aurixa_stripe_subscription_id ?? "");
+  const [productsCsv, setProductsCsv] = useState<string>(
+    Array.isArray(s?.aurixa_products_kept) ? s.aurixa_products_kept.join(", ") : "seats, tokens, ai",
+  );
+  const [clientOrg, setClientOrg] = useState<string>(s?.client_supabase_org_id ?? "");
+  const [clientPlan, setClientPlan] = useState<string>(s?.client_supabase_plan ?? "");
+  const [billedDirectly, setBilledDirectly] = useState<boolean>(!!s?.client_billed_directly);
+  const [notes, setNotes] = useState<string>(s?.notes ?? "");
+  const [markDisclosed, setMarkDisclosed] = useState(false);
+  const [markDecoupled, setMarkDecoupled] = useState(false);
+
+  const save = useMutation({
+    mutationFn: () =>
+      upsertBillingSplit({
+        data: {
+          handoff_id: handoffId,
+          aurixa_stripe_customer_id: customer || null,
+          aurixa_stripe_subscription_id: subscription || null,
+          aurixa_products_kept: productsCsv
+            .split(",")
+            .map((v) => v.trim())
+            .filter(Boolean),
+          client_supabase_org_id: clientOrg || null,
+          client_supabase_plan: clientPlan || null,
+          client_billed_directly: billedDirectly,
+          disclosed_to_client: markDisclosed,
+          decoupled: markDecoupled,
+          notes: notes || null,
+        },
+      }),
+    onSuccess: (r: any) => {
+      qc.invalidateQueries({ queryKey: ["handoff-billing-split", handoffId] });
+      qc.invalidateQueries({ queryKey: ["handoff", handoffId] });
+      setMarkDisclosed(false);
+      setMarkDecoupled(false);
+      if (r?.ok === false) toast.error(r.error ?? "Failed");
+      else toast.success(r.updated ? "Billing split updated" : "Billing split recorded");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed"),
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Receipt className="h-4 w-4" /> Billing split (G21)
+        </CardTitle>
+        <CardDescription>
+          After handoff Supabase bills the client directly for their project. Record which
+          Aurixa invoices (seats, tokens, AI) stay with us, and disclose the split to the client.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4 text-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <Label>Aurixa Stripe customer</Label>
+            <Input value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="cus_…" />
+          </div>
+          <div>
+            <Label>Aurixa Stripe subscription</Label>
+            <Input value={subscription} onChange={(e) => setSubscription(e.target.value)} placeholder="sub_…" />
+          </div>
+          <div className="md:col-span-2">
+            <Label>Aurixa products kept (comma-separated)</Label>
+            <Input value={productsCsv} onChange={(e) => setProductsCsv(e.target.value)} placeholder="seats, tokens, ai, addons" />
+          </div>
+          <div>
+            <Label>Client Supabase org id</Label>
+            <Input value={clientOrg} onChange={(e) => setClientOrg(e.target.value)} placeholder="org_…" />
+          </div>
+          <div>
+            <Label>Client Supabase plan</Label>
+            <Input value={clientPlan} onChange={(e) => setClientPlan(e.target.value)} placeholder="pro / team / enterprise" />
+          </div>
+        </div>
+
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={billedDirectly}
+            onChange={(e) => setBilledDirectly(e.target.checked)}
+          />
+          Client is now billed directly by Supabase for infra
+        </label>
+
+        <div>
+          <Label>Notes</Label>
+          <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)}
+            placeholder="e.g. client accepted plan uplift on 2026-06-01; Stripe endpoint re-pointed on 2026-06-02." />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4">
+          <label className="flex items-center gap-2 text-xs">
+            <input type="checkbox" checked={markDisclosed} onChange={(e) => setMarkDisclosed(e.target.checked)} />
+            Stamp "disclosed to client" (now)
+          </label>
+          <label className="flex items-center gap-2 text-xs">
+            <input type="checkbox" checked={markDecoupled} onChange={(e) => setMarkDecoupled(e.target.checked)} />
+            Stamp "decoupled" (now)
+          </label>
+          <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
+            Save
+          </Button>
+        </div>
+
+        {s && (
+          <div className="text-xs text-muted-foreground border rounded p-2 space-y-1">
+            {s.disclosed_to_client_at && (
+              <div>Disclosed to client: {new Date(s.disclosed_to_client_at).toLocaleString()}</div>
+            )}
+            {s.decoupled_at && <div>Decoupled: {new Date(s.decoupled_at).toLocaleString()}</div>}
+            {s.client_billed_directly && (
+              <div className="text-amber-500">
+                ⚠ Supabase infra bill is separate from Aurixa's Stripe invoices — pricing UI will surface this
+                disclosure to the client.
+              </div>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
