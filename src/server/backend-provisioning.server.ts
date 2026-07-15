@@ -236,6 +236,73 @@ export async function listProjectStorageBuckets(
 }
 
 /**
+ * List deployed Edge Function slugs on a project. Used by the handoff
+ * parity engine (G3) to detect functions that live on prime but haven't
+ * been deployed to the target yet. Returns [] on failure so parity can
+ * still compute the rest of the diff.
+ */
+export async function listProjectEdgeFunctionSlugs(projectRef: string): Promise<string[]> {
+  try {
+    const res = await fetch(`${MGMT_API}/projects/${projectRef}/functions`, {
+      headers: headers(),
+    });
+    if (!res.ok) return [];
+    const raw = (await res.json()) as unknown;
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .map((r) => {
+        const o = r as Record<string, unknown>;
+        return typeof o.slug === "string" ? o.slug : typeof o.name === "string" ? (o.name as string) : "";
+      })
+      .filter((s) => s.length > 0)
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * List secret NAMES only on a project. Never returns values. Used by G3
+ * parity to flag secret keys the target is missing.
+ */
+export async function listProjectSecretNames(projectRef: string): Promise<string[]> {
+  try {
+    const res = await fetch(`${MGMT_API}/projects/${projectRef}/secrets`, {
+      headers: headers(),
+    });
+    if (!res.ok) return [];
+    const raw = (await res.json()) as unknown;
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .map((r) => {
+        const o = r as Record<string, unknown>;
+        return typeof o.name === "string" ? o.name : "";
+      })
+      .filter((s) => s.length > 0)
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Fetch the [auth] config block for a project. G3 parity diffs a
+ * whitelisted subset (site_url, uri_allow_list, JWT expiry, signup
+ * toggles, password policy) — never OAuth provider secrets.
+ */
+export async function getProjectAuthConfig(projectRef: string): Promise<Record<string, unknown> | null> {
+  try {
+    const res = await fetch(`${MGMT_API}/projects/${projectRef}/config/auth`, {
+      headers: headers(),
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Create a bucket on the target project with the same visibility, size cap,
  * and mime allowlist as the source. Idempotent: a bucket that already exists
  * (409) is treated as success so retries and re-runs are safe.
