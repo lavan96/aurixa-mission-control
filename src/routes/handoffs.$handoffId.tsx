@@ -59,9 +59,20 @@ function HandoffDetail() {
   const advance = useMutation({
     mutationFn: (to: string) =>
       transitionHandoff({ data: { id: handoffId, to_state: to as any } }),
-    onSuccess: () => {
+    onSuccess: (r: any) => {
       qc.invalidateQueries({ queryKey: ["handoff", handoffId] });
+      if (r?.ok === false && r.error === "rotations_incomplete") {
+        toast.error(
+          `Blocked — ${r.outstanding?.length ?? 0} rotation(s) not rotated/skipped`,
+        );
+        return;
+      }
+      if (r?.ok === false) {
+        toast.error(r.error ?? "Failed");
+        return;
+      }
       toast.success("State advanced");
+
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed"),
   });
