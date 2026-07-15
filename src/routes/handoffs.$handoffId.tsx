@@ -20,8 +20,10 @@ import {
   markSecretRotation,
   requestCostExport,
   runParityDryRun,
+  runCutoverOrchestrator,
   HANDOFF_STATE_ORDER,
 } from "@/lib/handoffs.functions";
+
 
 import {
   createHandoffInvite,
@@ -131,6 +133,32 @@ function HandoffDetail() {
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed"),
   });
+
+  // G15 — cutover orchestrator: drives cutover_in_progress → complete or
+  // rolled_back/failed by walking rotations in canonical order.
+  const orchestrate = useMutation({
+    mutationFn: () => runCutoverOrchestrator({ data: { handoff_id: handoffId } }),
+    onSuccess: (r: any) => {
+      qc.invalidateQueries({ queryKey: ["handoff", handoffId] });
+      if (r?.ok === false) {
+        if (r.error === "rotation_failed") {
+          toast.error(`Cutover aborted → ${r.transitioned_to}`);
+        } else if (r.error === "wrong_state") {
+          toast.error(`Cannot orchestrate from state: ${r.state}`);
+        } else {
+          toast.error(r.error ?? "Orchestrator failed");
+        }
+        return;
+      }
+      if (r?.complete) toast.success(`Cutover complete · ${r.results?.length ?? 0} rotation(s)`);
+      else if (r?.halted === "awaiting_evidence")
+        toast.info(`Halted at ${r.target} · supply evidence and re-run`);
+      else if (r?.halted === "outstanding")
+        toast.info(`Halted · ${r.outstanding?.length ?? 0} rotation(s) still open`);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Orchestrator failed"),
+  });
+
 
 
   const exportCost = useMutation({
@@ -255,10 +283,20 @@ function HandoffDetail() {
               <Button size="sm" onClick={() => planRotations.mutate()} disabled={planRotations.isPending}>
                 {planRotations.isPending ? "Planning…" : "Plan default rotation set"}
               </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => orchestrate.mutate()}
+                disabled={orchestrate.isPending}
+                title="G15 — walk rotations in canonical order and drive the state machine"
+              >
+                {orchestrate.isPending ? "Orchestrating…" : "Run cutover orchestrator (G15)"}
+              </Button>
               {(["clone_repo", "cloudflare", "stripe_endpoint", "github_webhook", "edge_function_env"] as const).map((t) => (
                 <Button key={t} size="sm" variant="outline" onClick={() => rotate.mutate(t)}>+ {t}</Button>
               ))}
             </div>
+
             <ul className="space-y-2">
               {d.rotations.map((r: any) => {
                 const evidence = (r.metadata as any)?.manual_ack?.evidence
