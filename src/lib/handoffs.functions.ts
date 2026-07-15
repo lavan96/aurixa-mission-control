@@ -842,5 +842,176 @@ export const runCutoverOrchestrator = createServerFn({ method: "POST" })
     return { ok: true as const, complete: true, results };
   });
 
+// ---------------------------------------------------------------------------
+// G16 — Auth users replication (twin_ready / data_syncing).
+//
+// Copies `auth.users` (id, email, phone, bcrypt password hash, confirmation
+// timestamps, user/app metadata) from the clone's current dedicated
+// Supabase project into the client-owned twin. Runs server-side; the
+// heavy lifting lives in `@/server/handoff-auth-replication.server`.
+//
+// Idempotent by user id — repeated runs skip users that already exist on
+// the target. Emits `handoff.auth_replicated` on success and
+// `handoff.auth_replication_failed` when any row could not be imported.
+// ---------------------------------------------------------------------------
+
+export const replicateHandoffAuthUsers = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((input) => z.object({ handoff_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: handoff, error: hErr } = await context.supabase
+      .from("clone_handoffs")
+      .select("id, state, clone_id, backend_id, client_account_id")
+      .eq("id", data.handoff_id)
+      .maybeSingle();
+    if (hErr) throw hErr;
+    if (!handoff) return { ok: false as const, error: "not_found" };
+
+    const ENTRY = new Set(["twin_ready", "data_syncing", "cutover_scheduled"]);
+    if (!ENTRY.has(handoff.state)) {
+      return { ok: false as const, error: "wrong_state", state: handoff.state };
+    }
+    if (!handoff.client_account_id) {
+      return { ok: false as const, error: "no_client_account" };
+    }
+
+    // Resolve source project ref — the clone's currently-owned dedicated backend.
+    let sourceQuery = context.supabase
+      .from("clone_backends")
+      .select("supabase_project_ref, status")
+      .eq("clone_id", handoff.clone_id)
+      .not("supabase_project_ref", "is", null)
+      .not("status", "in", "(failed,deleted,destroyed)")
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (handoff.backend_id) {
+      sourceQuery = context.supabase
+        .from("clone_backends")
+        .select("supabase_project_ref, status")
+        .eq("id", handoff.backend_id)
+        .limit(1);
+    }
+    const { data: source, error: sErr } = await sourceQuery.maybeSingle();
+    if (sErr) throw sErr;
+    if (!source?.supabase_project_ref) {
+      return { ok: false as const, error: "no_source_backend" };
+    }
+
+    // Resolve target project ref — most recent parity report pins it, else
+    // fall back to `clone_handoffs.metadata.target_project_ref`.
+    const { data: parity } = await context.supabase
+      .from("handoff_parity_reports")
+      .select("target_ref")
+      .eq("handoff_id", data.handoff_id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const { data: handoffMeta } = await context.supabase
+      .from("clone_handoffs")
+      .select("metadata")
+      .eq("id", data.handoff_id)
+      .maybeSingle();
+    const targetRef =
+      parity?.target_ref ??
+      (handoffMeta?.metadata as any)?.target_project_ref ??
+      null;
+    if (!targetRef) {
+      return { ok: false as const, error: "no_target_ref_pinned" };
+    }
+
+    // Decrypt client PAT.
+    const { data: acct, error: aErr } = await context.supabase
+      .from("client_supabase_accounts")
+      .select("id, pat_ciphertext, status")
+      .eq("id", handoff.client_account_id)
+      .maybeSingle();
+    if (aErr) throw aErr;
+    if (!acct?.pat_ciphertext) return { ok: false as const, error: "no_client_pat" };
+    if (acct.status === "revoked")
+      return { ok: false as const, error: "client_pat_revoked" };
+    const { decryptSecret } = await import("@/server/crypto.server");
+    const targetPat = decryptSecret(String(acct.pat_ciphertext));
+
+    const { replicateAuthUsers } = await import(
+      "@/server/handoff-auth-replication.server"
+    );
+
+    let outcome;
+    try {
+      outcome = await replicateAuthUsers({
+        sourceRef: source.supabase_project_ref,
+        targetRef,
+        targetPat,
+      });
+    } catch (e: any) {
+      await context.supabase.from("handoff_events").insert({
+        handoff_id: data.handoff_id,
+        kind: "handoff.auth_replication_failed",
+        actor_user_id: context.userId,
+        details: { error: String(e?.message ?? e) },
+      });
+      return { ok: false as const, error: "replication_crashed", detail: String(e?.message ?? e) };
+    }
+
+    await context.supabase.from("handoff_events").insert({
+      handoff_id: data.handoff_id,
+      kind: outcome.ok
+        ? "handoff.auth_replicated"
+        : "handoff.auth_replication_partial",
+      actor_user_id: context.userId,
+      details: {
+        source_ref: source.supabase_project_ref,
+        target_ref: targetRef,
+        scanned: outcome.scanned,
+        imported: outcome.imported,
+        skipped: outcome.skipped,
+        failed: outcome.failed,
+        truncated: outcome.truncated,
+        error_samples: outcome.errors.slice(0, 5),
+      },
+    });
+
+    // Advance twin_ready → data_syncing when at least one user landed and
+    // nothing failed. Operators handle partial runs manually.
+    let advanced = false;
+    if (
+      handoff.state === "twin_ready" &&
+      outcome.ok &&
+      (outcome.imported > 0 || outcome.skipped > 0)
+    ) {
+      const { error: updErr } = await context.supabase
+        .from("clone_handoffs")
+        .update({ state: "data_syncing" })
+        .eq("id", data.handoff_id);
+      if (!updErr) {
+        advanced = true;
+        await context.supabase.from("handoff_events").insert({
+          handoff_id: data.handoff_id,
+          kind: "handoff.transitioned",
+          actor_user_id: context.userId,
+          details: {
+            from: "twin_ready",
+            to: "data_syncing",
+            note: "auto: auth users replicated",
+          },
+        });
+      }
+    }
+
+    return {
+      ok: outcome.ok,
+      advanced,
+      source_ref: source.supabase_project_ref,
+      target_ref: targetRef,
+      scanned: outcome.scanned,
+      imported: outcome.imported,
+      skipped: outcome.skipped,
+      failed: outcome.failed,
+      truncated: outcome.truncated,
+      errors: outcome.errors,
+    };
+  });
+
+
 
 
