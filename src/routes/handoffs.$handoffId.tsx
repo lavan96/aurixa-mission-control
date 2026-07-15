@@ -301,6 +301,8 @@ function HandoffDetail() {
       </div>
 
 
+      <ClientPortalInvitesCard handoffId={handoffId} />
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Event log</CardTitle>
