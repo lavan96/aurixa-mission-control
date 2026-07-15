@@ -327,6 +327,27 @@ function NewClone() {
         }
       }
 
+      // Enqueue subdomain provisioning (dormant until CF is configured).
+      if (subdomainEnabled) {
+        const desired = (subdomainSlug.trim() || slug)
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, "-")
+          .replace(/^-+|-+$/g, "")
+          .slice(0, 63);
+        if (desired) {
+          try {
+            const r = await requestSubdomainFn({ data: { cloneId: result.cloneId, slug: desired } });
+            toast.info(
+              r.status === "queued"
+                ? `Subdomain queued — ${r.fqdn}`
+                : `Subdomain reserved (${r.fqdn}) — will provision once Cloudflare is configured`,
+            );
+          } catch (e) {
+            toast.error(`Subdomain request failed: ${e instanceof Error ? e.message : "unknown"}`);
+          }
+        }
+      }
+
       setBusy(false);
       nav({ to: "/clones/$cloneId", params: { cloneId: result.cloneId } });
     } catch (e) {
