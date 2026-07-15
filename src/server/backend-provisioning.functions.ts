@@ -547,3 +547,148 @@ export const upsertPrimeSecretForward = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
+// ─── G6: Incremental module-add against a live isolated backend ─────
+//
+// Applies newly-enabled modules' SQL to an already-provisioned clone project
+// without re-running the full provisioning pipeline. Idempotent via
+// `aurixa.module_installations`, transactional per module, and dependency-
+// aware — already-installed modules on the same clone are folded into the
+// input set so dependency chains resolve correctly even when only a subset
+// is being added this call.
+export const addModulesToBackend = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((input: { cloneId: string; moduleIds: string[] }) => {
+    if (!input?.cloneId?.trim()) throw new Error("cloneId is required");
+    if (!Array.isArray(input?.moduleIds) || input.moduleIds.length === 0) {
+      throw new Error("moduleIds must be a non-empty array");
+    }
+    return input;
+  })
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+
+    const { data: backend } = await supabase
+      .from("clone_backends")
+      .select("supabase_project_ref, status")
+      .eq("clone_id", data.cloneId)
+      .maybeSingle();
+
+    if (!backend?.supabase_project_ref) {
+      return { ok: false as const, error: "Clone backend not provisioned yet" };
+    }
+    if (backend.status !== "ready") {
+      return {
+        ok: false as const,
+        error: `Backend is not ready (status: ${backend.status}); wait for provisioning to finish before adding modules`,
+      };
+    }
+
+    // Fold already-installed modules into the input so dependency ordering
+    // resolves against the true installed set. The ledger inside
+    // applyModuleMigrations short-circuits them as "skipped".
+    const { data: installedRows } = await supabase
+      .from("clone_modules")
+      .select("module_id")
+      .eq("clone_id", data.cloneId);
+    const installedIds = new Set(
+      (installedRows ?? []).map((r) => r.module_id).filter(Boolean) as string[],
+    );
+    const requested = new Set(data.moduleIds);
+    const combined = Array.from(new Set([...installedIds, ...requested]));
+
+    const { data: mods, error: modsErr } = await supabase
+      .from("modules")
+      .select("id, name, clone_migration_sql, apply_on_install, dependencies")
+      .in("id", combined);
+    if (modsErr) return { ok: false as const, error: modsErr.message };
+
+    const inputs = (mods ?? []).map((m) => ({
+      id: m.id,
+      name: m.name,
+      sql: m.clone_migration_sql ?? "",
+      dependencies: (m.dependencies ?? []) as string[],
+      applyOnInstall: m.apply_on_install !== false,
+    }));
+
+    const { applyModuleMigrations } = await import("./backend-provisioning.server");
+    // Reflect progress on the clone_backends row while migrations run.
+    await supabase
+      .from("clone_backends")
+      .update({ status: "migrating" as const, status_detail: "Adding modules..." })
+      .eq("clone_id", data.cloneId);
+
+    const results = await applyModuleMigrations(
+      backend.supabase_project_ref,
+      inputs,
+      async (_status, detail) => {
+        await supabase
+          .from("clone_backends")
+          .update({ status_detail: detail })
+          .eq("clone_id", data.cloneId);
+      },
+    );
+
+    // Restore ready status regardless of individual module outcomes — the
+    // backend itself is still healthy; failures are reported per-module.
+    const failed = results.filter((r) => !r.ok);
+    const succeededRequested = results.filter(
+      (r) => r.ok && requested.has(r.id) && !r.skipped,
+    );
+    await supabase
+      .from("clone_backends")
+      .update({
+        status: "ready" as const,
+        status_detail:
+          failed.length > 0
+            ? `Module add finished with ${failed.length} failure(s)`
+            : "Backend is ready — modules added",
+      })
+      .eq("clone_id", data.cloneId);
+
+    // Record clone_modules rows for newly-installed modules so future adds
+    // and the provisioning drain see them as installed.
+    if (succeededRequested.length > 0) {
+      await supabase.from("clone_modules").upsert(
+        succeededRequested.map((r) => ({
+          clone_id: data.cloneId,
+          module_id: r.id,
+          enabled_by: userId,
+        })),
+        { onConflict: "clone_id,module_id" },
+      );
+    }
+
+    await supabase.from("audit_log").insert({
+      action: "clone_backend.modules_added",
+      entity_type: "clone",
+      entity_id: data.cloneId,
+      actor_user_id: userId,
+      metadata: {
+        project_ref: backend.supabase_project_ref,
+        requested_module_ids: [...requested],
+        results,
+      },
+    });
+
+    await supabase.from("notifications").insert({
+      kind: "clone_created" as const,
+      severity: failed.length > 0 ? ("warning" as const) : ("success" as const),
+      title: `Modules added to backend`,
+      body:
+        failed.length > 0
+          ? `Added ${succeededRequested.length} module(s) with ${failed.length} failure(s) — review the clone page.`
+          : `Added ${succeededRequested.length} module(s) to the clone backend.`,
+      clone_id: data.cloneId,
+      url: `/clones/${data.cloneId}`,
+      metadata: { module_migrations: results },
+    });
+
+    return {
+      ok: true as const,
+      results,
+      installed: succeededRequested.map((r) => r.id),
+      failed: failed.map((r) => ({ id: r.id, name: r.name, error: r.error })),
+    };
+  });
+
+
