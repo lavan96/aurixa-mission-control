@@ -50,6 +50,7 @@ import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "@/lib/format";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
+import { useConfirm } from "@/components/confirm-dialog";
 import { runCascade, cancelCascade } from "@/server/cascade-engine.functions";
 import { CascadeLineagePanel } from "@/components/cascade-lineage-panel";
 import { InlineDiffSummary } from "@/components/inline-diff-summary";
@@ -81,6 +82,7 @@ function CascadeDetailPage() {
   const { eventId } = Route.useParams();
   const router = useRouter();
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [event, setEvent] = useState<CascadeEvent | null>(null);
   const [results, setResults] = useState<ResultWithClone[]>([]);
   const [prime, setPrime] = useState<PrimeConfig | null>(null);
@@ -442,7 +444,13 @@ function CascadeDetailPage() {
               className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
               disabled={cancelling}
               onClick={async () => {
-                if (!confirm("Cancel this cascade? Queued clones will be skipped.")) return;
+                const ok = await confirm({
+                  title: "Cancel this cascade?",
+                  description: "Queued clones will be skipped.",
+                  confirmText: "Cancel cascade",
+                  destructive: true,
+                });
+                if (!ok) return;
                 setCancelling(true);
                 try {
                   const r = await cancelCascadeFn({ data: { cascadeEventId: eventId } });

@@ -20,6 +20,8 @@ import {
   CalendarClock,
   Tag,
   Download,
+  AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
 import { exportRowsAsCSV } from "@/lib/csv";
 import { SavedViewsBar } from "@/components/saved-views-bar";
@@ -67,7 +69,7 @@ export const Route = createFileRoute("/cascades")({
 type Mode = (typeof MODE_VALUES)[number];
 
 function CascadesPage() {
-  const { data: events, loading: eventsLoading, refresh } = useCascadeEvents();
+  const { data: events, loading: eventsLoading, error: eventsError, refresh } = useCascadeEvents();
   const { data: clones } = useClones();
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/cascades" });
@@ -527,6 +529,17 @@ function CascadesPage() {
             <CardRowSkeleton />
             <CardRowSkeleton />
           </div>
+        ) : eventsError ? (
+          <EmptyState
+            icon={<AlertTriangle />}
+            title="Couldn't load cascades"
+            description={eventsError}
+            action={
+              <Button variant="outline" onClick={() => void refresh()}>
+                <RefreshCw className="mr-1.5 h-4 w-4" /> Retry
+              </Button>
+            }
+          />
         ) : visibleEvents.length === 0 ? (
           <EmptyState
             icon={<Waves />}
