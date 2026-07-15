@@ -58,6 +58,53 @@ function HandoffsPage() {
         </Button>
       </div>
 
+      <Card>
+        <CardHeader>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Gauge className="h-4 w-4" /> Prime Supabase org capacity (G10)
+              </CardTitle>
+              <CardDescription>
+                Preflight check that runs before every new project create. Handoff twin
+                builds also run this against the client's PAT.
+              </CardDescription>
+            </div>
+            {capData && (
+              <Badge variant={capTone as any}>
+                {capData.activeProjects}/{capData.softLimit} projects
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="text-sm space-y-1">
+          {cap.isLoading && <p className="text-muted-foreground">Checking…</p>}
+          {cap.error && (
+            <p className="text-destructive">
+              Capacity check failed: {String((cap.error as Error).message)}
+            </p>
+          )}
+          {capData && (
+            <>
+              <p>
+                Org: <span className="font-mono">{capData.orgName ?? capData.orgId}</span> · Plan:{" "}
+                <span className="font-mono">{capData.planTier ?? "unknown"}</span>
+              </p>
+              {capData.reason && (
+                <p className={capData.hardBlock ? "text-destructive" : "text-amber-500"}>
+                  {capData.reason}
+                </p>
+              )}
+              {!capData.reason && (
+                <p className="text-muted-foreground">
+                  Headroom OK — provisioning may proceed.
+                </p>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
       {q.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
 
       {!q.isLoading && rows.length === 0 && (
