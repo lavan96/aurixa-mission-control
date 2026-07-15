@@ -16,9 +16,11 @@
  *      — pg_cron jobs (name + schedule + active)
  *      — Edge function slugs
  *      — Secret key names (names only — values never read)
- *      — Auth config (whitelisted subset: site_url, uri_allow_list,
- *                     jwt_exp, disable_signup, minimum password length,
- *                     mailer_autoconfirm)
+ *      — Auth config (whitelisted subset)
+ *   G4 — Required extensions enforced + `supabase_realtime` publication parity
+ *   G5 — Table GRANTs (privileges) per role
+ *      — Enum types and their label sets
+ *      — Triggers on `public` tables (name + table + timing + event)
  */
 
 import {
@@ -93,10 +95,41 @@ const EXTENSIONS_SQL = `
    order by name
 `;
 
+// G5 — Table privileges (GRANTs) for the roles the Data API cares about.
+// Without these, RLS alone leaves tables unreachable via PostgREST.
+const GRANTS_SQL = `
+  select table_name, grantee, privilege_type
+    from information_schema.table_privileges
+   where table_schema = 'public'
+     and grantee in ('anon', 'authenticated', 'service_role')
+   order by table_name, grantee, privilege_type
+`;
+
+// G5 — Enum types and their labels in public.
+const ENUMS_SQL = `
+  select t.typname as name, e.enumlabel as label, e.enumsortorder as ord
+    from pg_type t
+    join pg_namespace n on n.oid = t.typnamespace
+    join pg_enum e on e.enumtypid = t.oid
+   where n.nspname = 'public'
+   order by t.typname, e.enumsortorder
+`;
+
+// G5 — Triggers on public tables (skip internal RI/constraint triggers).
+const TRIGGERS_SQL = `
+  select event_object_table as table_name,
+         trigger_name,
+         action_timing,
+         event_manipulation
+    from information_schema.triggers
+   where trigger_schema = 'public'
+   order by table_name, trigger_name, event_manipulation
+`;
+
 // ── Fetch snapshots ───────────────────────────────────────────────────
 
 async function snapshotProject(ref: string) {
-  const [t, r, p, f, e, buckets, cron, edgeFns, secretNames, authCfg, realtimeTables] = await Promise.all([
+  const [t, r, p, f, e, buckets, cron, edgeFns, secretNames, authCfg, realtimeTables, gr, en, tr] = await Promise.all([
     runSqlOnProject(ref, TABLES_SQL).then(rows),
     runSqlOnProject(ref, RLS_SQL).then(rows),
     runSqlOnProject(ref, POLICIES_SQL).then(rows),
@@ -108,6 +141,9 @@ async function snapshotProject(ref: string) {
     listProjectSecretNames(ref),
     getProjectAuthConfig(ref),
     fetchRealtimePublicationTables(ref).catch(() => [] as RealtimePublicationTable[]),
+    runSqlOnProject(ref, GRANTS_SQL).then(rows).catch(() => [] as Row[]),
+    runSqlOnProject(ref, ENUMS_SQL).then(rows).catch(() => [] as Row[]),
+    runSqlOnProject(ref, TRIGGERS_SQL).then(rows).catch(() => [] as Row[]),
   ]);
 
 
@@ -147,6 +183,34 @@ async function snapshotProject(ref: string) {
     (realtimeTables ?? []).map((t) => `${t.schema}.${t.table}`),
   );
 
+  // G5 — grants: Map<table, Map<role, Set<privilege>>>
+  const grantsByTable = new Map<string, Map<string, Set<string>>>();
+  for (const row of gr) {
+    const tbl = String(row.table_name);
+    const role = String(row.grantee);
+    const priv = String(row.privilege_type);
+    if (!grantsByTable.has(tbl)) grantsByTable.set(tbl, new Map());
+    const roleMap = grantsByTable.get(tbl)!;
+    if (!roleMap.has(role)) roleMap.set(role, new Set());
+    roleMap.get(role)!.add(priv);
+  }
+
+  // G5 — enums: Map<typeName, ordered labels>
+  const enumsByName = new Map<string, string[]>();
+  for (const row of en) {
+    const name = String(row.name);
+    if (!enumsByName.has(name)) enumsByName.set(name, []);
+    enumsByName.get(name)!.push(String(row.label));
+  }
+
+  // G5 — triggers keyed by "table.trigger.event" for stable comparison.
+  const triggerKeys = new Set<string>();
+  for (const row of tr) {
+    triggerKeys.add(
+      `${row.table_name}.${row.trigger_name}.${row.action_timing}.${row.event_manipulation}`,
+    );
+  }
+
   return {
     columnsByTable,
     rlsByTable,
@@ -158,6 +222,9 @@ async function snapshotProject(ref: string) {
     edgeFnSet,
     secretSet,
     realtimeSet,
+    grantsByTable,
+    enumsByName,
+    triggerKeys,
     authCfg: authCfg ?? {},
   };
 }
@@ -396,6 +463,75 @@ function diffRealtime(prime: Snapshot, target: Snapshot) {
   };
 }
 
+// ── G5 surfaces ───────────────────────────────────────────────────────
+
+// G5 — GRANT parity. Without GRANTs to anon/authenticated/service_role, RLS
+// alone leaves public tables unreachable via PostgREST. Blocking when a table
+// on the target is missing every one of the roles the prime had granted.
+function diffGrants(prime: Snapshot, target: Snapshot) {
+  const drift: Array<{
+    table: string;
+    role: string;
+    missing_privileges: string[];
+    extra_privileges: string[];
+  }> = [];
+  const missing_grantees: Array<{ table: string; role: string }> = [];
+
+  for (const [tbl, primeRoles] of prime.grantsByTable) {
+    const targetRoles = target.grantsByTable.get(tbl) ?? new Map<string, Set<string>>();
+    for (const [role, primePrivs] of primeRoles) {
+      const targetPrivs = targetRoles.get(role);
+      if (!targetPrivs || targetPrivs.size === 0) {
+        missing_grantees.push({ table: tbl, role });
+        continue;
+      }
+      const missing = [...primePrivs].filter((p) => !targetPrivs.has(p));
+      const extra = [...targetPrivs].filter((p) => !primePrivs.has(p));
+      if (missing.length || extra.length) {
+        drift.push({
+          table: tbl,
+          role,
+          missing_privileges: missing.sort(),
+          extra_privileges: extra.sort(),
+        });
+      }
+    }
+  }
+  return { drift, missing_grantees };
+}
+
+// G5 — Enum type parity: any enum used by a shared column must exist on the
+// target with the same label set (order matters for ordinal comparisons).
+function diffEnums(prime: Snapshot, target: Snapshot) {
+  const missing: string[] = [];
+  const labelDrift: Array<{ name: string; prime: string[]; target: string[] }> = [];
+  for (const [name, primeLabels] of prime.enumsByName) {
+    const targetLabels = target.enumsByName.get(name);
+    if (!targetLabels) {
+      missing.push(name);
+      continue;
+    }
+    if (JSON.stringify(primeLabels) !== JSON.stringify(targetLabels)) {
+      labelDrift.push({ name, prime: primeLabels, target: targetLabels });
+    }
+  }
+  return { missing_in_target: missing.sort(), label_drift: labelDrift };
+}
+
+// G5 — Trigger parity on public tables.
+function diffTriggers(prime: Snapshot, target: Snapshot) {
+  const missing: string[] = [];
+  const extra: string[] = [];
+  for (const k of prime.triggerKeys) if (!target.triggerKeys.has(k)) missing.push(k);
+  for (const k of target.triggerKeys) if (!prime.triggerKeys.has(k)) extra.push(k);
+  return {
+    prime_count: prime.triggerKeys.size,
+    target_count: target.triggerKeys.size,
+    missing_in_target: missing.sort(),
+    extra_in_target: extra.sort(),
+  };
+}
+
 // ── Public entry ──────────────────────────────────────────────────────
 
 export type ParityResult = {
@@ -412,6 +548,9 @@ export type ParityResult = {
   auth_config_diff: ReturnType<typeof diffAuthConfig>;
   required_extensions_diff: ReturnType<typeof diffRequiredExtensions>;
   realtime_diff: ReturnType<typeof diffRealtime>;
+  grants_diff: ReturnType<typeof diffGrants>;
+  enums_diff: ReturnType<typeof diffEnums>;
+  triggers_diff: ReturnType<typeof diffTriggers>;
   blocking_issues: string[];
   risk_level: "low" | "medium" | "high" | "blocking";
   summary: string;
@@ -431,6 +570,9 @@ export async function computeParity(primeRef: string, targetRef: string): Promis
   const authCfg = diffAuthConfig(prime, target);
   const requiredExt = diffRequiredExtensions(target);
   const realtime = diffRealtime(prime, target);
+  const grants = diffGrants(prime, target);
+  const enums = diffEnums(prime, target);
+  const triggers = diffTriggers(prime, target);
 
   const blocking: string[] = [];
   if (tables.missing_in_target.length) blocking.push(`missing_tables:${tables.missing_in_target.length}`);
@@ -444,6 +586,12 @@ export async function computeParity(primeRef: string, targetRef: string): Promis
   if (edgeFns.missing_in_target.length) blocking.push(`missing_edge_functions:${edgeFns.missing_in_target.length}`);
   if (requiredExt.missing_in_target.length) blocking.push(`missing_required_extensions:${requiredExt.missing_in_target.length}`);
   if (realtime.missing_in_target.length) blocking.push(`missing_realtime_tables:${realtime.missing_in_target.length}`);
+  // G5 blockers — GRANT gaps break PostgREST reachability; enum drift breaks
+  // shared-column inserts; missing triggers break cascade/audit invariants.
+  if (grants.missing_grantees.length) blocking.push(`missing_grantees:${grants.missing_grantees.length}`);
+  if (enums.missing_in_target.length) blocking.push(`missing_enums:${enums.missing_in_target.length}`);
+  if (enums.label_drift.length) blocking.push(`enum_label_drift:${enums.label_drift.length}`);
+  if (triggers.missing_in_target.length) blocking.push(`missing_triggers:${triggers.missing_in_target.length}`);
 
 
   let risk: ParityResult["risk_level"] = "low";
@@ -453,7 +601,9 @@ export async function computeParity(primeRef: string, targetRef: string): Promis
     buckets.config_drift.length ||
     cron.missing_in_target.length ||
     cron.schedule_drift.length ||
-    authCfg.drift.length
+    authCfg.drift.length ||
+    grants.drift.length ||
+    triggers.extra_in_target.length
   ) {
     risk = "medium";
   }
@@ -463,9 +613,11 @@ export async function computeParity(primeRef: string, targetRef: string): Promis
   const summary =
     `prime=${tables.prime_count} tables / ${prime.functionSigs.size} fns / ` +
     `${buckets.prime_count} buckets / ${cron.prime_count} cron / ${edgeFns.prime_count} edge-fns / ` +
-    `${secrets.prime_count} secrets · target=${tables.target_count} tables / ${target.functionSigs.size} fns / ` +
+    `${secrets.prime_count} secrets / ${prime.enumsByName.size} enums / ${triggers.prime_count} triggers · ` +
+    `target=${tables.target_count} tables / ${target.functionSigs.size} fns / ` +
     `${buckets.target_count} buckets / ${cron.target_count} cron / ${edgeFns.target_count} edge-fns / ` +
-    `${secrets.target_count} secrets · blocking=${blocking.length}`;
+    `${secrets.target_count} secrets / ${target.enumsByName.size} enums / ${triggers.target_count} triggers · ` +
+    `blocking=${blocking.length}`;
 
   return {
     prime_ref: primeRef,
@@ -481,6 +633,9 @@ export async function computeParity(primeRef: string, targetRef: string): Promis
     auth_config_diff: authCfg,
     required_extensions_diff: requiredExt,
     realtime_diff: realtime,
+    grants_diff: grants,
+    enums_diff: enums,
+    triggers_diff: triggers,
     blocking_issues: blocking,
     risk_level: risk,
     summary,
