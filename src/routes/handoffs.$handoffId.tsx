@@ -134,6 +134,32 @@ function HandoffDetail() {
     onError: (e: any) => toast.error(e?.message ?? "Failed"),
   });
 
+  // G15 — cutover orchestrator: drives cutover_in_progress → complete or
+  // rolled_back/failed by walking rotations in canonical order.
+  const orchestrate = useMutation({
+    mutationFn: () => runCutoverOrchestrator({ data: { handoff_id: handoffId } }),
+    onSuccess: (r: any) => {
+      qc.invalidateQueries({ queryKey: ["handoff", handoffId] });
+      if (r?.ok === false) {
+        if (r.error === "rotation_failed") {
+          toast.error(`Cutover aborted → ${r.transitioned_to}`);
+        } else if (r.error === "wrong_state") {
+          toast.error(`Cannot orchestrate from state: ${r.state}`);
+        } else {
+          toast.error(r.error ?? "Orchestrator failed");
+        }
+        return;
+      }
+      if (r?.complete) toast.success(`Cutover complete · ${r.results?.length ?? 0} rotation(s)`);
+      else if (r?.halted === "awaiting_evidence")
+        toast.info(`Halted at ${r.target} · supply evidence and re-run`);
+      else if (r?.halted === "outstanding")
+        toast.info(`Halted · ${r.outstanding?.length ?? 0} rotation(s) still open`);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Orchestrator failed"),
+  });
+
+
 
   const exportCost = useMutation({
     mutationFn: () => {
