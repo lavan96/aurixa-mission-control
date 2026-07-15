@@ -24,21 +24,20 @@ import {
   runParityDryRun,
   runCutoverOrchestrator,
   rollbackHandoffCutover,
-
   replicateHandoffAuthUsers,
   replicateHandoffStorageObjects,
-
   HANDOFF_STATE_ORDER,
 } from "@/lib/handoffs.functions";
-
-
 
 import {
   createHandoffInvite,
   listHandoffInvites,
   revokeHandoffInvite,
 } from "@/lib/handoff-invites.functions";
-import { verifyCloneRepoGithubAccess, type CloneGithubAccessRow } from "@/lib/clone-github-access.functions";
+import {
+  verifyCloneRepoGithubAccess,
+  type CloneGithubAccessRow,
+} from "@/lib/clone-github-access.functions";
 import { getHandoffContractDocumentUrl } from "@/lib/handoff-terms.functions";
 import {
   upsertObservabilityConfig,
@@ -53,7 +52,24 @@ import {
   rotateAuditSecret,
   getAuditInstallerSQL,
 } from "@/lib/handoff-audit.functions";
-import { ArrowRight, Camera, KeyRound, FileDown, ScrollText, ShieldCheck, Github, Link as LinkIcon, Copy, Trash2, FileText, Users, Radio, Receipt, Activity } from "lucide-react";
+import {
+  ArrowRight,
+  Camera,
+  KeyRound,
+  FileDown,
+  ScrollText,
+  ShieldCheck,
+  Github,
+  Link as LinkIcon,
+  Copy,
+  Trash2,
+  FileText,
+  Users,
+  Radio,
+  Receipt,
+  Activity,
+} from "lucide-react";
+import { useConfirm } from "@/components/confirm-dialog";
 
 export const Route = createFileRoute("/handoffs/$handoffId")({
   component: () => (
@@ -65,6 +81,7 @@ export const Route = createFileRoute("/handoffs/$handoffId")({
 });
 
 function HandoffDetail() {
+  const confirm = useConfirm();
   const { handoffId } = Route.useParams();
   const qc = useQueryClient();
   const q = useQuery({
@@ -80,14 +97,11 @@ function HandoffDetail() {
   };
 
   const advance = useMutation({
-    mutationFn: (to: string) =>
-      transitionHandoff({ data: { id: handoffId, to_state: to as any } }),
+    mutationFn: (to: string) => transitionHandoff({ data: { id: handoffId, to_state: to as any } }),
     onSuccess: (r: any) => {
       qc.invalidateQueries({ queryKey: ["handoff", handoffId] });
       if (r?.ok === false && r.error === "rotations_incomplete") {
-        toast.error(
-          `Blocked — ${r.outstanding?.length ?? 0} rotation(s) not rotated/skipped`,
-        );
+        toast.error(`Blocked — ${r.outstanding?.length ?? 0} rotation(s) not rotated/skipped`);
         return;
       }
       // G19 — parity gate on `dry_run_ready`.
@@ -96,7 +110,9 @@ function HandoffDetail() {
         return;
       }
       if (r?.ok === false && r.error === "parity_stale") {
-        toast.error(`Blocked — parity report is stale (computed ${new Date(r.computed_at).toLocaleString()}). Re-run.`);
+        toast.error(
+          `Blocked — parity report is stale (computed ${new Date(r.computed_at).toLocaleString()}). Re-run.`,
+        );
         return;
       }
       if (r?.ok === false && r.error === "parity_blocking") {
@@ -109,7 +125,6 @@ function HandoffDetail() {
       }
 
       toast.success("State advanced");
-
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed"),
   });
@@ -214,7 +229,6 @@ function HandoffDetail() {
     onError: (e: any) => toast.error(e?.message ?? "Rollback failed"),
   });
 
-
   // G16 — auth users replication (twin_ready / data_syncing).
   const authReplicate = useMutation({
     mutationFn: () => replicateHandoffAuthUsers({ data: { handoff_id: handoffId } }),
@@ -249,15 +263,6 @@ function HandoffDetail() {
     onError: (e: any) => toast.error(e?.message ?? "Storage replication failed"),
   });
 
-
-
-
-
-
-
-
-
-
   const exportCost = useMutation({
     mutationFn: () => {
       const now = new Date();
@@ -280,7 +285,8 @@ function HandoffDetail() {
     mutationFn: (export_id: string) => fulfillCostExportFn({ data: { export_id } }),
     onSuccess: (r: any) => {
       qc.invalidateQueries({ queryKey: ["handoff", handoffId] });
-      if (r?.ok) toast.success(`Export ready — ${r.rows} rows, ${r.total_tokens.toLocaleString()} tokens`);
+      if (r?.ok)
+        toast.success(`Export ready — ${r.rows} rows, ${r.total_tokens.toLocaleString()} tokens`);
       else toast.error(`Fulfill failed: ${r?.error ?? "unknown"}`);
     },
     onError: (e: any) => toast.error(e?.message ?? "Fulfill failed"),
@@ -308,7 +314,9 @@ function HandoffDetail() {
       }
       const blockers = r?.blocking_issues?.length ?? 0;
       if (blockers === 0)
-        toast.success(`Parity clean · risk=${r.risk_level}${r.advanced ? " · advanced to dry_run_ready" : ""}`);
+        toast.success(
+          `Parity clean · risk=${r.risk_level}${r.advanced ? " · advanced to dry_run_ready" : ""}`,
+        );
       else toast.warning(`Parity risk=${r.risk_level} · ${blockers} blocking issue(s)`);
     },
     onError: (e: any) => toast.error(e?.message ?? "Parity run failed"),
@@ -359,15 +367,21 @@ function HandoffDetail() {
               Advance → {next} <ArrowRight className="ml-1 h-3 w-3" />
             </Button>
           )}
-          <Button size="sm" variant="outline" onClick={() => advance.mutate("canceled")}>Cancel</Button>
-          <Button size="sm" variant="destructive" onClick={() => advance.mutate("rolled_back")}>Roll back</Button>
+          <Button size="sm" variant="outline" onClick={() => advance.mutate("canceled")}>
+            Cancel
+          </Button>
+          <Button size="sm" variant="destructive" onClick={() => advance.mutate("rolled_back")}>
+            Roll back
+          </Button>
         </CardContent>
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2"><Camera className="h-4 w-4" /> Snapshots (E4)</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Camera className="h-4 w-4" /> Snapshots (E4)
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <div className="flex flex-wrap gap-2">
@@ -391,15 +405,21 @@ function HandoffDetail() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2"><KeyRound className="h-4 w-4" /> Secret rotations (E5 · G14)</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              <KeyRound className="h-4 w-4" /> Secret rotations (E5 · G14)
+            </CardTitle>
             <CardDescription>
-              Plan and execute the cutover rotation set. `complete` is blocked
-              until every row is <em>rotated</em> or <em>skipped</em>.
+              Plan and execute the cutover rotation set. `complete` is blocked until every row is{" "}
+              <em>rotated</em> or <em>skipped</em>.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" onClick={() => planRotations.mutate()} disabled={planRotations.isPending}>
+              <Button
+                size="sm"
+                onClick={() => planRotations.mutate()}
+                disabled={planRotations.isPending}
+              >
                 {planRotations.isPending ? "Planning…" : "Plan default rotation set"}
               </Button>
               <Button
@@ -414,8 +434,14 @@ function HandoffDetail() {
               <Button
                 size="sm"
                 variant="destructive"
-                onClick={() => {
-                  if (confirm("Roll back this cutover? Reverses landed rotations and requests snapshot restore.")) rollback.mutate();
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: "Roll back this cutover?",
+                    description: "Reverses landed rotations and requests a snapshot restore.",
+                    confirmText: "Roll back",
+                    destructive: true,
+                  });
+                  if (ok) rollback.mutate();
                 }}
                 disabled={rollback.isPending}
                 title="G18 — reverse landed rotations and flag the pinned snapshot for restore"
@@ -423,45 +449,94 @@ function HandoffDetail() {
                 {rollback.isPending ? "Rolling back…" : "Roll back cutover (G18)"}
               </Button>
 
-              {(["clone_repo", "cloudflare", "stripe_endpoint", "github_webhook", "edge_function_env"] as const).map((t) => (
-                <Button key={t} size="sm" variant="outline" onClick={() => rotate.mutate(t)}>+ {t}</Button>
+              {(
+                [
+                  "clone_repo",
+                  "cloudflare",
+                  "stripe_endpoint",
+                  "github_webhook",
+                  "edge_function_env",
+                ] as const
+              ).map((t) => (
+                <Button key={t} size="sm" variant="outline" onClick={() => rotate.mutate(t)}>
+                  + {t}
+                </Button>
               ))}
             </div>
 
             <ul className="space-y-2">
               {d.rotations.map((r: any) => {
-                const evidence = (r.metadata as any)?.manual_ack?.evidence
-                  ?? (r.metadata as any)?.last_execution?.rotated_via
-                  ?? (r.metadata as any)?.hint;
+                const evidence =
+                  (r.metadata as any)?.manual_ack?.evidence ??
+                  (r.metadata as any)?.last_execution?.rotated_via ??
+                  (r.metadata as any)?.hint;
                 return (
                   <li key={r.id} className="rounded border p-2 space-y-1">
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0">
-                        <div className="font-mono text-xs truncate">{r.target} · {r.key_ref}</div>
-                        {evidence && <div className="text-xs text-muted-foreground truncate">{evidence}</div>}
+                        <div className="font-mono text-xs truncate">
+                          {r.target} · {r.key_ref}
+                        </div>
+                        {evidence && (
+                          <div className="text-xs text-muted-foreground truncate">{evidence}</div>
+                        )}
                         {r.error && <div className="text-xs text-destructive">{r.error}</div>}
                       </div>
-                      <Badge variant={r.status === "rotated" ? "outline" : r.status === "failed" ? "destructive" : "secondary"}>
+                      <Badge
+                        variant={
+                          r.status === "rotated"
+                            ? "outline"
+                            : r.status === "failed"
+                              ? "destructive"
+                              : "secondary"
+                        }
+                      >
                         {r.status}
                       </Badge>
                     </div>
                     {r.status !== "rotated" && r.status !== "skipped" && (
                       <div className="flex flex-wrap gap-1">
-                        <Button size="sm" variant="outline" onClick={() => runRotation.mutate(r.id)} disabled={runRotation.isPending}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => runRotation.mutate(r.id)}
+                          disabled={runRotation.isPending}
+                        >
                           Execute
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => {
-                          const ev = window.prompt("Evidence (URL or note) for rotated:");
-                          if (ev) ackRotation.mutate({ id: r.id, status: "rotated", evidence: ev });
-                        }}>Mark rotated</Button>
-                        <Button size="sm" variant="ghost" onClick={() => {
-                          const ev = window.prompt("Reason to skip:");
-                          if (ev) ackRotation.mutate({ id: r.id, status: "skipped", evidence: ev });
-                        }}>Skip</Button>
-                        <Button size="sm" variant="ghost" onClick={() => {
-                          const ev = window.prompt("Failure note:");
-                          if (ev) ackRotation.mutate({ id: r.id, status: "failed", evidence: ev });
-                        }}>Mark failed</Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            const ev = window.prompt("Evidence (URL or note) for rotated:");
+                            if (ev)
+                              ackRotation.mutate({ id: r.id, status: "rotated", evidence: ev });
+                          }}
+                        >
+                          Mark rotated
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            const ev = window.prompt("Reason to skip:");
+                            if (ev)
+                              ackRotation.mutate({ id: r.id, status: "skipped", evidence: ev });
+                          }}
+                        >
+                          Skip
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            const ev = window.prompt("Failure note:");
+                            if (ev)
+                              ackRotation.mutate({ id: r.id, status: "failed", evidence: ev });
+                          }}
+                        >
+                          Mark failed
+                        </Button>
                       </div>
                     )}
                   </li>
@@ -472,23 +547,27 @@ function HandoffDetail() {
           </CardContent>
         </Card>
 
-
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2"><FileDown className="h-4 w-4" /> Cost exports (E8 · G22)</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileDown className="h-4 w-4" /> Cost exports (E8 · G22)
+            </CardTitle>
             <CardDescription>
-              Request a period export, then fulfill it to generate a CSV of
-              report jobs, ledger entries, and seat entitlements. Ready
-              exports produce a short-lived signed download link.
+              Request a period export, then fulfill it to generate a CSV of report jobs, ledger
+              entries, and seat entitlements. Ready exports produce a short-lived signed download
+              link.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <Button size="sm" variant="outline" onClick={() => exportCost.mutate()}>Request 90d export</Button>
+            <Button size="sm" variant="outline" onClick={() => exportCost.mutate()}>
+              Request 90d export
+            </Button>
             <ul className="mt-2 space-y-1">
               {d.cost_exports.map((e: any) => (
                 <li key={e.id} className="flex items-center justify-between gap-2 border-b py-1">
                   <span className="flex-1">
-                    {new Date(e.period_start).toLocaleDateString()} → {new Date(e.period_end).toLocaleDateString()}
+                    {new Date(e.period_start).toLocaleDateString()} →{" "}
+                    {new Date(e.period_end).toLocaleDateString()}
                     {e.rows_included != null && (
                       <span className="ml-2 text-xs text-muted-foreground">
                         {e.rows_included} rows · {(e.total_tokens ?? 0).toLocaleString()} tokens
@@ -529,17 +608,16 @@ function HandoffDetail() {
               <Users className="h-4 w-4" /> Auth users replication (G16)
             </CardTitle>
             <CardDescription>
-              Copy <code>auth.users</code> from the source project into the
-              client-owned twin. Preserves user id, bcrypt password hash,
-              confirmation timestamps, and metadata so existing users can
-              sign in against the twin without resetting.
+              Copy <code>auth.users</code> from the source project into the client-owned twin.
+              Preserves user id, bcrypt password hash, confirmation timestamps, and metadata so
+              existing users can sign in against the twin without resetting.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <div className="text-muted-foreground">
               Runs from <code>twin_ready</code>, <code>data_syncing</code>, or
-              <code> cutover_scheduled</code>. Idempotent: existing user ids
-              on the target are skipped.
+              <code> cutover_scheduled</code>. Idempotent: existing user ids on the target are
+              skipped.
             </div>
             <Button
               size="sm"
@@ -552,9 +630,8 @@ function HandoffDetail() {
               <div className="mt-2 rounded border p-2 text-xs">
                 <div>
                   scanned <b>{authReplicate.data.scanned}</b> · imported{" "}
-                  <b>{authReplicate.data.imported}</b> · skipped{" "}
-                  <b>{authReplicate.data.skipped}</b> · failed{" "}
-                  <b>{authReplicate.data.failed}</b>
+                  <b>{authReplicate.data.imported}</b> · skipped <b>{authReplicate.data.skipped}</b>{" "}
+                  · failed <b>{authReplicate.data.failed}</b>
                   {authReplicate.data.truncated ? " · truncated" : ""}
                 </div>
                 {authReplicate.data.errors?.length > 0 && (
@@ -582,10 +659,9 @@ function HandoffDetail() {
               <FileDown className="h-4 w-4" /> Storage objects replication (G17)
             </CardTitle>
             <CardDescription>
-              Bulk-copy every object in every storage bucket from the source
-              project into the client-owned twin. Idempotent (objects already
-              on target are skipped) and resumable — re-invoke until every
-              bucket reports <code>complete</code>. Paced by a per-invocation
+              Bulk-copy every object in every storage bucket from the source project into the
+              client-owned twin. Idempotent (objects already on target are skipped) and resumable —
+              re-invoke until every bucket reports <code>complete</code>. Paced by a per-invocation
               budget of ~400 objects / 400&nbsp;MB / 45&nbsp;s.
             </CardDescription>
           </CardHeader>
@@ -615,14 +691,24 @@ function HandoffDetail() {
                       <tr key={r.bucket_id} className="border-t">
                         <td className="pr-2 font-mono">{r.bucket_id}</td>
                         <td className="pr-2">
-                          <Badge variant={r.status === "complete" ? "default" : r.status === "failed" ? "destructive" : "secondary"}>
+                          <Badge
+                            variant={
+                              r.status === "complete"
+                                ? "default"
+                                : r.status === "failed"
+                                  ? "destructive"
+                                  : "secondary"
+                            }
+                          >
                             {r.status}
                           </Badge>
                         </td>
                         <td className="pr-2">{r.objects_copied}</td>
                         <td className="pr-2">{r.objects_skipped}</td>
                         <td className="pr-2">{r.objects_failed}</td>
-                        <td className="pr-2">{(Number(r.bytes_copied ?? 0) / 1024 / 1024).toFixed(1)} MB</td>
+                        <td className="pr-2">
+                          {(Number(r.bytes_copied ?? 0) / 1024 / 1024).toFixed(1)} MB
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -637,23 +723,30 @@ function HandoffDetail() {
           </CardContent>
         </Card>
 
-
-
-
-
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> Parity + contracts (E2, E7 · G1)</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4" /> Parity + contracts (E2, E7 · G1)
+            </CardTitle>
           </CardHeader>
           <CardContent className="text-sm space-y-2">
-            <Button size="sm" variant="outline" onClick={() => parity.mutate()} disabled={parity.isPending}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => parity.mutate()}
+              disabled={parity.isPending}
+            >
               {parity.isPending ? "Running…" : "Run parity dry-run"}
             </Button>
             {d.parity_reports[0] && (
               <div className="rounded border p-2 text-xs space-y-1">
                 <div className="flex items-center justify-between">
                   <span>Latest report</span>
-                  <Badge variant={d.parity_reports[0].risk_level === "blocking" ? "destructive" : "outline"}>
+                  <Badge
+                    variant={
+                      d.parity_reports[0].risk_level === "blocking" ? "destructive" : "outline"
+                    }
+                  >
                     {d.parity_reports[0].risk_level}
                   </Badge>
                 </div>
@@ -667,14 +760,19 @@ function HandoffDetail() {
                     </ul>
                   )}
                 <div className="text-muted-foreground">
-                  {new Date(d.parity_reports[0].generated_at).toLocaleString()} · target={d.parity_reports[0].target_ref}
+                  {new Date(d.parity_reports[0].generated_at).toLocaleString()} · target=
+                  {d.parity_reports[0].target_ref}
                 </div>
               </div>
             )}
-            <div>Reports: <Badge variant="outline">{d.parity_reports.length}</Badge> · Signed contracts: <Badge variant="outline">{d.contracts.length}</Badge></div>
+            <div>
+              Reports: <Badge variant="outline">{d.parity_reports.length}</Badge> · Signed
+              contracts: <Badge variant="outline">{d.contracts.length}</Badge>
+            </div>
             {h.consent_signed_at ? (
               <div className="text-xs text-muted-foreground">
-                Consent v{h.consent_terms_version} signed {new Date(h.consent_signed_at).toLocaleString()}
+                Consent v{h.consent_terms_version} signed{" "}
+                {new Date(h.consent_signed_at).toLocaleString()}
               </div>
             ) : (
               <div className="text-xs text-muted-foreground">No consent on file yet.</div>
@@ -690,7 +788,9 @@ function HandoffDetail() {
                         {c.signed_at ? new Date(c.signed_at).toLocaleString() : "—"}
                       </span>
                     </div>
-                    <div className="text-muted-foreground">{c.signed_by_name} · {c.signed_by_email}</div>
+                    <div className="text-muted-foreground">
+                      {c.signed_by_name} · {c.signed_by_email}
+                    </div>
                     {c.signature_bundle_sha256 && (
                       <div className="font-mono break-all text-[10px]">
                         bundle: {c.signature_bundle_sha256}
@@ -730,21 +830,42 @@ function HandoffDetail() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2"><Github className="h-4 w-4" /> GitHub App access (G9)</CardTitle>
-            <CardDescription>Confirm the Aurixa App can still reach {h.clones?.github_owner ?? "the clone"}/{h.clones?.github_repo ?? "repo"}.</CardDescription>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Github className="h-4 w-4" /> GitHub App access (G9)
+            </CardTitle>
+            <CardDescription>
+              Confirm the Aurixa App can still reach {h.clones?.github_owner ?? "the clone"}/
+              {h.clones?.github_repo ?? "repo"}.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <Button size="sm" variant="outline" onClick={() => ghCheck.mutate()} disabled={ghCheck.isPending}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => ghCheck.mutate()}
+              disabled={ghCheck.isPending}
+            >
               {ghCheck.isPending ? "Checking…" : "Verify installation access"}
             </Button>
             {gh && (
               <div className="rounded border p-2 text-xs space-y-1">
                 <div className="flex items-center justify-between">
-                  <span>{gh.github_owner}/{gh.github_repo}</span>
-                  <Badge variant={gh.ok ? "outline" : "destructive"}>{gh.ok ? "ok" : "blocked"}</Badge>
+                  <span>
+                    {gh.github_owner}/{gh.github_repo}
+                  </span>
+                  <Badge variant={gh.ok ? "outline" : "destructive"}>
+                    {gh.ok ? "ok" : "blocked"}
+                  </Badge>
                 </div>
                 <div className="text-muted-foreground">
-                  Selection: {gh.repository_selection ?? "—"} · repo: {gh.repo_accessible == null ? "—" : gh.repo_accessible ? "reachable" : "unreachable"} · contents:write: {gh.contents_write == null ? "—" : gh.contents_write ? "yes" : "no"}
+                  Selection: {gh.repository_selection ?? "—"} · repo:{" "}
+                  {gh.repo_accessible == null
+                    ? "—"
+                    : gh.repo_accessible
+                      ? "reachable"
+                      : "unreachable"}{" "}
+                  · contents:write:{" "}
+                  {gh.contents_write == null ? "—" : gh.contents_write ? "yes" : "no"}
                 </div>
                 {gh.message && <div>{gh.message}</div>}
                 {gh.hint && <div className="text-muted-foreground">Hint: {gh.hint}</div>}
@@ -752,9 +873,7 @@ function HandoffDetail() {
             )}
           </CardContent>
         </Card>
-
       </div>
-
 
       <ClientPortalInvitesCard handoffId={handoffId} />
 
@@ -772,8 +891,12 @@ function HandoffDetail() {
           <ul className="text-sm space-y-1 max-h-96 overflow-auto">
             {d.events.map((e: any) => (
               <li key={e.id} className="border-b py-1 flex justify-between">
-                <span><strong>{e.kind}</strong> {e.details && JSON.stringify(e.details)}</span>
-                <span className="text-muted-foreground">{new Date(e.created_at).toLocaleString()}</span>
+                <span>
+                  <strong>{e.kind}</strong> {e.details && JSON.stringify(e.details)}
+                </span>
+                <span className="text-muted-foreground">
+                  {new Date(e.created_at).toLocaleString()}
+                </span>
               </li>
             ))}
             {d.events.length === 0 && <li className="text-muted-foreground">no events</li>}
@@ -862,9 +985,8 @@ function ClientPortalInvitesCard({ handoffId }: { handoffId: string }) {
           <LinkIcon className="h-4 w-4" /> Client onboarding portal (G11)
         </CardTitle>
         <CardDescription>
-          Mint a single-use link for the client to submit their Supabase org
-          details, personal access token, and DPA signature — no Mission Control
-          account needed.
+          Mint a single-use link for the client to submit their Supabase org details, personal
+          access token, and DPA signature — no Mission Control account needed.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
@@ -885,11 +1007,7 @@ function ClientPortalInvitesCard({ handoffId }: { handoffId: string }) {
           </div>
           <div className="space-y-1 md:col-span-2">
             <Label>Terms body</Label>
-            <Textarea
-              rows={6}
-              value={termsBody}
-              onChange={(e) => setTermsBody(e.target.value)}
-            />
+            <Textarea rows={6} value={termsBody} onChange={(e) => setTermsBody(e.target.value)} />
           </div>
           <div className="space-y-1">
             <Label>Allowed regions (comma-separated, optional)</Label>
@@ -937,14 +1055,19 @@ function ClientPortalInvitesCard({ handoffId }: { handoffId: string }) {
                     ? "expired"
                     : "active";
               return (
-                <li key={inv.id} className="flex items-center justify-between border-b py-1 text-xs">
+                <li
+                  key={inv.id}
+                  className="flex items-center justify-between border-b py-1 text-xs"
+                >
                   <div className="space-y-0.5">
                     <div>
                       <code>{inv.token_prefix}…</code> · terms {inv.terms_version}
                     </div>
                     <div className="text-muted-foreground">
                       expires {new Date(inv.expires_at).toLocaleString()}
-                      {inv.consumed_at ? ` · consumed ${new Date(inv.consumed_at).toLocaleString()}` : ""}
+                      {inv.consumed_at
+                        ? ` · consumed ${new Date(inv.consumed_at).toLocaleString()}`
+                        : ""}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -1010,7 +1133,8 @@ function ObservabilityCard({ handoffId }: { handoffId: string }) {
     mutationFn: () => pollObservabilityNow({ data: { handoff_id: handoffId } }),
     onSuccess: (r: any) => {
       qc.invalidateQueries({ queryKey: ["handoff-observability", handoffId] });
-      if (r?.ok === false) toast.error(`Poll failed: ${r.error}${r.detail ? ` — ${r.detail}` : ""}`);
+      if (r?.ok === false)
+        toast.error(`Poll failed: ${r.error}${r.detail ? ` — ${r.detail}` : ""}`);
       else toast.success(`Beacon captured · ${r.status}`);
     },
     onError: (e: any) => toast.error(e?.message ?? "Poll failed"),
@@ -1036,7 +1160,9 @@ function ObservabilityCard({ handoffId }: { handoffId: string }) {
               onChange={(e) => setMode(e.target.value)}
             >
               {OBSERVABILITY_MODES.map((m) => (
-                <option key={m} value={m}>{m}</option>
+                <option key={m} value={m}>
+                  {m}
+                </option>
               ))}
             </select>
           </div>
@@ -1056,7 +1182,12 @@ function ObservabilityCard({ handoffId }: { handoffId: string }) {
               Save
             </Button>
             {mode === "pat_polling" && (
-              <Button size="sm" variant="outline" onClick={() => pollNow.mutate()} disabled={pollNow.isPending}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => pollNow.mutate()}
+                disabled={pollNow.isPending}
+              >
                 Poll now
               </Button>
             )}
@@ -1064,17 +1195,27 @@ function ObservabilityCard({ handoffId }: { handoffId: string }) {
         </div>
         <div>
           <Label>Notes</Label>
-          <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional — e.g. shared-role SQL grant status, escalation contacts." />
+          <Textarea
+            rows={2}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Optional — e.g. shared-role SQL grant status, escalation contacts."
+          />
         </div>
 
         {cfg && (
           <div className="text-xs text-muted-foreground border rounded p-2">
-            <div><strong>Current:</strong> {cfg.mode}
-              {cfg.last_poll_at ? ` · last polled ${new Date(cfg.last_poll_at).toLocaleString()}` : " · never polled"}
+            <div>
+              <strong>Current:</strong> {cfg.mode}
+              {cfg.last_poll_at
+                ? ` · last polled ${new Date(cfg.last_poll_at).toLocaleString()}`
+                : " · never polled"}
               {cfg.last_status ? ` · status=${cfg.last_status}` : ""}
               {cfg.next_poll_at ? ` · next ${new Date(cfg.next_poll_at).toLocaleString()}` : ""}
             </div>
-            {cfg.last_error && <div className="text-red-500 mt-1">Last error: {cfg.last_error}</div>}
+            {cfg.last_error && (
+              <div className="text-red-500 mt-1">Last error: {cfg.last_error}</div>
+            )}
           </div>
         )}
 
@@ -1082,21 +1223,38 @@ function ObservabilityCard({ handoffId }: { handoffId: string }) {
           <div className="font-medium mb-1">Recent beacons</div>
           <ul className="space-y-1 max-h-64 overflow-auto">
             {beacons.map((b) => (
-              <li key={b.id} className="border-b py-1 flex items-center justify-between gap-2 text-xs">
+              <li
+                key={b.id}
+                className="border-b py-1 flex items-center justify-between gap-2 text-xs"
+              >
                 <div className="flex items-center gap-2">
-                  <Badge variant={b.severity === "ok" ? "outline" : b.severity === "warn" ? "secondary" : "destructive"}>
+                  <Badge
+                    variant={
+                      b.severity === "ok"
+                        ? "outline"
+                        : b.severity === "warn"
+                          ? "secondary"
+                          : "destructive"
+                    }
+                  >
                     {b.severity}
                   </Badge>
                   <span className="text-muted-foreground">{b.source}</span>
                   <span>{b.project_status ?? "—"}</span>
                   {b.active_connections != null && <span>· conns {b.active_connections}</span>}
-                  {b.db_size_bytes != null && <span>· db {(b.db_size_bytes / 1024 / 1024).toFixed(1)} MB</span>}
+                  {b.db_size_bytes != null && (
+                    <span>· db {(b.db_size_bytes / 1024 / 1024).toFixed(1)} MB</span>
+                  )}
                   {b.message && <span className="text-muted-foreground">· {b.message}</span>}
                 </div>
-                <span className="text-muted-foreground">{new Date(b.reported_at).toLocaleString()}</span>
+                <span className="text-muted-foreground">
+                  {new Date(b.reported_at).toLocaleString()}
+                </span>
               </li>
             ))}
-            {beacons.length === 0 && <li className="text-muted-foreground text-xs">No beacons yet.</li>}
+            {beacons.length === 0 && (
+              <li className="text-muted-foreground text-xs">No beacons yet.</li>
+            )}
           </ul>
         </div>
       </CardContent>
@@ -1117,7 +1275,9 @@ function BillingSplitCard({ handoffId }: { handoffId: string }) {
   const [customer, setCustomer] = useState<string>(s?.aurixa_stripe_customer_id ?? "");
   const [subscription, setSubscription] = useState<string>(s?.aurixa_stripe_subscription_id ?? "");
   const [productsCsv, setProductsCsv] = useState<string>(
-    Array.isArray(s?.aurixa_products_kept) ? s.aurixa_products_kept.join(", ") : "seats, tokens, ai",
+    Array.isArray(s?.aurixa_products_kept)
+      ? s.aurixa_products_kept.join(", ")
+      : "seats, tokens, ai",
   );
   const [clientOrg, setClientOrg] = useState<string>(s?.client_supabase_org_id ?? "");
   const [clientPlan, setClientPlan] = useState<string>(s?.client_supabase_plan ?? "");
@@ -1163,31 +1323,51 @@ function BillingSplitCard({ handoffId }: { handoffId: string }) {
           <Receipt className="h-4 w-4" /> Billing split (G21)
         </CardTitle>
         <CardDescription>
-          After handoff Supabase bills the client directly for their project. Record which
-          Aurixa invoices (seats, tokens, AI) stay with us, and disclose the split to the client.
+          After handoff Supabase bills the client directly for their project. Record which Aurixa
+          invoices (seats, tokens, AI) stay with us, and disclose the split to the client.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <Label>Aurixa Stripe customer</Label>
-            <Input value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="cus_…" />
+            <Input
+              value={customer}
+              onChange={(e) => setCustomer(e.target.value)}
+              placeholder="cus_…"
+            />
           </div>
           <div>
             <Label>Aurixa Stripe subscription</Label>
-            <Input value={subscription} onChange={(e) => setSubscription(e.target.value)} placeholder="sub_…" />
+            <Input
+              value={subscription}
+              onChange={(e) => setSubscription(e.target.value)}
+              placeholder="sub_…"
+            />
           </div>
           <div className="md:col-span-2">
             <Label>Aurixa products kept (comma-separated)</Label>
-            <Input value={productsCsv} onChange={(e) => setProductsCsv(e.target.value)} placeholder="seats, tokens, ai, addons" />
+            <Input
+              value={productsCsv}
+              onChange={(e) => setProductsCsv(e.target.value)}
+              placeholder="seats, tokens, ai, addons"
+            />
           </div>
           <div>
             <Label>Client Supabase org id</Label>
-            <Input value={clientOrg} onChange={(e) => setClientOrg(e.target.value)} placeholder="org_…" />
+            <Input
+              value={clientOrg}
+              onChange={(e) => setClientOrg(e.target.value)}
+              placeholder="org_…"
+            />
           </div>
           <div>
             <Label>Client Supabase plan</Label>
-            <Input value={clientPlan} onChange={(e) => setClientPlan(e.target.value)} placeholder="pro / team / enterprise" />
+            <Input
+              value={clientPlan}
+              onChange={(e) => setClientPlan(e.target.value)}
+              placeholder="pro / team / enterprise"
+            />
           </div>
         </div>
 
@@ -1202,17 +1382,29 @@ function BillingSplitCard({ handoffId }: { handoffId: string }) {
 
         <div>
           <Label>Notes</Label>
-          <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)}
-            placeholder="e.g. client accepted plan uplift on 2026-06-01; Stripe endpoint re-pointed on 2026-06-02." />
+          <Textarea
+            rows={2}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="e.g. client accepted plan uplift on 2026-06-01; Stripe endpoint re-pointed on 2026-06-02."
+          />
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
           <label className="flex items-center gap-2 text-xs">
-            <input type="checkbox" checked={markDisclosed} onChange={(e) => setMarkDisclosed(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={markDisclosed}
+              onChange={(e) => setMarkDisclosed(e.target.checked)}
+            />
             Stamp "disclosed to client" (now)
           </label>
           <label className="flex items-center gap-2 text-xs">
-            <input type="checkbox" checked={markDecoupled} onChange={(e) => setMarkDecoupled(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={markDecoupled}
+              onChange={(e) => setMarkDecoupled(e.target.checked)}
+            />
             Stamp "decoupled" (now)
           </label>
           <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
@@ -1228,8 +1420,8 @@ function BillingSplitCard({ handoffId }: { handoffId: string }) {
             {s.decoupled_at && <div>Decoupled: {new Date(s.decoupled_at).toLocaleString()}</div>}
             {s.client_billed_directly && (
               <div className="text-amber-500">
-                ⚠ Supabase infra bill is separate from Aurixa's Stripe invoices — pricing UI will surface this
-                disclosure to the client.
+                ⚠ Supabase infra bill is separate from Aurixa's Stripe invoices — pricing UI will
+                surface this disclosure to the client.
               </div>
             )}
           </div>
@@ -1295,10 +1487,9 @@ function AuditShipperCard({ handoffId }: { handoffId: string }) {
           <Activity className="h-4 w-4" /> Audit log continuity (G23)
         </CardTitle>
         <CardDescription>
-          One-way audit feed from the client-owned backend into Mission Control.
-          Signed with a per-handoff HMAC; installer SQL runs inside the client
-          project and drains <code>public.audit_log</code> every minute via
-          pg_cron + pg_net.
+          One-way audit feed from the client-owned backend into Mission Control. Signed with a
+          per-handoff HMAC; installer SQL runs inside the client project and drains{" "}
+          <code>public.audit_log</code> every minute via pg_cron + pg_net.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
@@ -1308,7 +1499,8 @@ function AuditShipperCard({ handoffId }: { handoffId: string }) {
               Provision shipper
             </Button>
             <span className="text-muted-foreground text-xs">
-              Creates the config row and mints the HMAC secret. Enable after installer runs on client.
+              Creates the config row and mints the HMAC secret. Enable after installer runs on
+              client.
             </span>
           </div>
         )}
@@ -1340,9 +1532,7 @@ function AuditShipperCard({ handoffId }: { handoffId: string }) {
                 </div>
               )}
               {cfg.last_error && (
-                <div className="col-span-2 text-destructive">
-                  Last error: {cfg.last_error}
-                </div>
+                <div className="col-span-2 text-destructive">Last error: {cfg.last_error}</div>
               )}
             </div>
 
@@ -1366,8 +1556,14 @@ function AuditShipperCard({ handoffId }: { handoffId: string }) {
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => {
-                  if (confirm("Rotate HMAC secret? Client must re-run installer.")) rotate.mutate();
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: "Rotate HMAC secret?",
+                    description: "The client must re-run the installer after rotation.",
+                    confirmText: "Rotate secret",
+                    destructive: true,
+                  });
+                  if (ok) rotate.mutate();
                 }}
                 disabled={rotate.isPending}
               >
@@ -1390,7 +1586,10 @@ function AuditShipperCard({ handoffId }: { handoffId: string }) {
               </div>
               <ul className="text-xs space-y-1 max-h-56 overflow-auto border rounded p-2">
                 {(data?.events ?? []).map((e: any) => (
-                  <li key={e.id} className="flex justify-between gap-2 border-b py-1 last:border-b-0">
+                  <li
+                    key={e.id}
+                    className="flex justify-between gap-2 border-b py-1 last:border-b-0"
+                  >
                     <span className="truncate">
                       <b>{e.action ?? "—"}</b>{" "}
                       <span className="text-muted-foreground">{e.source_table}</span>{" "}
