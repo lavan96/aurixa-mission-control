@@ -376,6 +376,26 @@ function diffAuthConfig(prime: Snapshot, target: Snapshot) {
   return { drift };
 }
 
+// G4 — required extensions must be enabled on the target.
+function diffRequiredExtensions(target: Snapshot) {
+  const missing = REQUIRED_EXTENSIONS.filter((n) => !target.extensions.has(n));
+  return { required: [...REQUIRED_EXTENSIONS], missing_in_target: missing };
+}
+
+// G4 — realtime publication membership parity.
+function diffRealtime(prime: Snapshot, target: Snapshot) {
+  const missing: string[] = [];
+  const extra: string[] = [];
+  for (const q of prime.realtimeSet) if (!target.realtimeSet.has(q)) missing.push(q);
+  for (const q of target.realtimeSet) if (!prime.realtimeSet.has(q)) extra.push(q);
+  return {
+    prime_count: prime.realtimeSet.size,
+    target_count: target.realtimeSet.size,
+    missing_in_target: missing.sort(),
+    extra_in_target: extra.sort(),
+  };
+}
+
 // ── Public entry ──────────────────────────────────────────────────────
 
 export type ParityResult = {
