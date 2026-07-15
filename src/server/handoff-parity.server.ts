@@ -16,9 +16,11 @@
  *      — pg_cron jobs (name + schedule + active)
  *      — Edge function slugs
  *      — Secret key names (names only — values never read)
- *      — Auth config (whitelisted subset: site_url, uri_allow_list,
- *                     jwt_exp, disable_signup, minimum password length,
- *                     mailer_autoconfirm)
+ *      — Auth config (whitelisted subset)
+ *   G4 — Required extensions enforced + `supabase_realtime` publication parity
+ *   G5 — Table GRANTs (privileges) per role
+ *      — Enum types and their label sets
+ *      — Triggers on `public` tables (name + table + timing + event)
  */
 
 import {
