@@ -23,19 +23,19 @@ export const getClientOrgCapacity = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: acct, error } = await context.supabase
       .from("client_supabase_accounts")
-      .select("id, org_id, org_slug, pat_ciphertext, pat_nonce")
+      .select("id, org_id, org_slug, pat_ciphertext")
       .eq("id", data.client_account_id)
       .maybeSingle();
     if (error) throw error;
     if (!acct) throw new Error("Client Supabase account not found");
     if (!acct.pat_ciphertext) throw new Error("Client account has no PAT captured yet");
 
-    const { decryptSecret } = await import("@/server/credentials.server");
-    const pat = await decryptSecret(acct.pat_ciphertext, acct.pat_nonce);
+    const { decryptSecret } = await import("@/server/crypto.server");
+    const pat = decryptSecret(String(acct.pat_ciphertext));
     const { checkOrgCapacity } = await import("@/server/backend-provisioning.server");
     return checkOrgCapacity({
       token: pat,
-      orgId: acct.org_id ?? acct.org_slug,
+      orgId: acct.org_id ?? acct.org_slug ?? undefined,
     });
   });
 
