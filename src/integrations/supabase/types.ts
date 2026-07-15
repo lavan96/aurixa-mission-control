@@ -2338,6 +2338,74 @@ export type Database = {
           },
         ]
       }
+      handoff_invites: {
+        Row: {
+          consumed_at: string | null
+          consumed_ip: string | null
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          handoff_id: string
+          id: string
+          plan_allowlist: string[]
+          region_allowlist: string[]
+          revoked_at: string | null
+          revoked_reason: string | null
+          terms_body: string | null
+          terms_hash: string
+          terms_version: string
+          token_hash: string
+          token_prefix: string
+          updated_at: string
+        }
+        Insert: {
+          consumed_at?: string | null
+          consumed_ip?: string | null
+          created_at?: string
+          created_by?: string | null
+          expires_at: string
+          handoff_id: string
+          id?: string
+          plan_allowlist?: string[]
+          region_allowlist?: string[]
+          revoked_at?: string | null
+          revoked_reason?: string | null
+          terms_body?: string | null
+          terms_hash: string
+          terms_version: string
+          token_hash: string
+          token_prefix: string
+          updated_at?: string
+        }
+        Update: {
+          consumed_at?: string | null
+          consumed_ip?: string | null
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          handoff_id?: string
+          id?: string
+          plan_allowlist?: string[]
+          region_allowlist?: string[]
+          revoked_at?: string | null
+          revoked_reason?: string | null
+          terms_body?: string | null
+          terms_hash?: string
+          terms_version?: string
+          token_hash?: string
+          token_prefix?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "handoff_invites_handoff_id_fkey"
+            columns: ["handoff_id"]
+            isOneToOne: false
+            referencedRelation: "clone_handoffs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       handoff_parity_reports: {
         Row: {
           auth_diff: Json
