@@ -548,6 +548,9 @@ export type ParityResult = {
   auth_config_diff: ReturnType<typeof diffAuthConfig>;
   required_extensions_diff: ReturnType<typeof diffRequiredExtensions>;
   realtime_diff: ReturnType<typeof diffRealtime>;
+  grants_diff: ReturnType<typeof diffGrants>;
+  enums_diff: ReturnType<typeof diffEnums>;
+  triggers_diff: ReturnType<typeof diffTriggers>;
   blocking_issues: string[];
   risk_level: "low" | "medium" | "high" | "blocking";
   summary: string;
@@ -567,6 +570,9 @@ export async function computeParity(primeRef: string, targetRef: string): Promis
   const authCfg = diffAuthConfig(prime, target);
   const requiredExt = diffRequiredExtensions(target);
   const realtime = diffRealtime(prime, target);
+  const grants = diffGrants(prime, target);
+  const enums = diffEnums(prime, target);
+  const triggers = diffTriggers(prime, target);
 
   const blocking: string[] = [];
   if (tables.missing_in_target.length) blocking.push(`missing_tables:${tables.missing_in_target.length}`);
@@ -580,6 +586,12 @@ export async function computeParity(primeRef: string, targetRef: string): Promis
   if (edgeFns.missing_in_target.length) blocking.push(`missing_edge_functions:${edgeFns.missing_in_target.length}`);
   if (requiredExt.missing_in_target.length) blocking.push(`missing_required_extensions:${requiredExt.missing_in_target.length}`);
   if (realtime.missing_in_target.length) blocking.push(`missing_realtime_tables:${realtime.missing_in_target.length}`);
+  // G5 blockers — GRANT gaps break PostgREST reachability; enum drift breaks
+  // shared-column inserts; missing triggers break cascade/audit invariants.
+  if (grants.missing_grantees.length) blocking.push(`missing_grantees:${grants.missing_grantees.length}`);
+  if (enums.missing_in_target.length) blocking.push(`missing_enums:${enums.missing_in_target.length}`);
+  if (enums.label_drift.length) blocking.push(`enum_label_drift:${enums.label_drift.length}`);
+  if (triggers.missing_in_target.length) blocking.push(`missing_triggers:${triggers.missing_in_target.length}`);
 
 
   let risk: ParityResult["risk_level"] = "low";
@@ -589,7 +601,9 @@ export async function computeParity(primeRef: string, targetRef: string): Promis
     buckets.config_drift.length ||
     cron.missing_in_target.length ||
     cron.schedule_drift.length ||
-    authCfg.drift.length
+    authCfg.drift.length ||
+    grants.drift.length ||
+    triggers.extra_in_target.length
   ) {
     risk = "medium";
   }
@@ -599,9 +613,11 @@ export async function computeParity(primeRef: string, targetRef: string): Promis
   const summary =
     `prime=${tables.prime_count} tables / ${prime.functionSigs.size} fns / ` +
     `${buckets.prime_count} buckets / ${cron.prime_count} cron / ${edgeFns.prime_count} edge-fns / ` +
-    `${secrets.prime_count} secrets · target=${tables.target_count} tables / ${target.functionSigs.size} fns / ` +
+    `${secrets.prime_count} secrets / ${prime.enumsByName.size} enums / ${triggers.prime_count} triggers · ` +
+    `target=${tables.target_count} tables / ${target.functionSigs.size} fns / ` +
     `${buckets.target_count} buckets / ${cron.target_count} cron / ${edgeFns.target_count} edge-fns / ` +
-    `${secrets.target_count} secrets · blocking=${blocking.length}`;
+    `${secrets.target_count} secrets / ${target.enumsByName.size} enums / ${triggers.target_count} triggers · ` +
+    `blocking=${blocking.length}`;
 
   return {
     prime_ref: primeRef,
@@ -617,6 +633,9 @@ export async function computeParity(primeRef: string, targetRef: string): Promis
     auth_config_diff: authCfg,
     required_extensions_diff: requiredExt,
     realtime_diff: realtime,
+    grants_diff: grants,
+    enums_diff: enums,
+    triggers_diff: triggers,
     blocking_issues: blocking,
     risk_level: risk,
     summary,
