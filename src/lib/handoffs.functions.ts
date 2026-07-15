@@ -176,6 +176,41 @@ export const transitionHandoff = createServerFn({ method: "POST" })
         };
       }
     }
+    // G19 — block `dry_run_ready` unless a recent parity report has no
+    // blocking issues. This is the last line of defence in case the parity
+    // engine hasn't been re-run since the target project drifted.
+    if (data.to_state === "dry_run_ready") {
+      const { data: parity } = await context.supabase
+        .from("handoff_parity_reports")
+        .select("id, blocking_issues, computed_at, risk_level")
+        .eq("handoff_id", data.id)
+        .order("computed_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!parity) {
+        return { ok: false as const, error: "parity_missing" };
+      }
+      const ageMs = Date.now() - new Date(parity.computed_at).getTime();
+      if (ageMs > 24 * 60 * 60 * 1000) {
+        return {
+          ok: false as const,
+          error: "parity_stale",
+          parity_id: parity.id,
+          computed_at: parity.computed_at,
+        };
+      }
+      const blocking = (parity.blocking_issues as any[]) ?? [];
+      if (blocking.length > 0) {
+        return {
+          ok: false as const,
+          error: "parity_blocking",
+          parity_id: parity.id,
+          blocking_count: blocking.length,
+          risk_level: parity.risk_level,
+        };
+      }
+    }
+
     const patch: Record<string, unknown> = { state: data.to_state };
 
     if (data.to_state === "twin_provisioning" || data.to_state === "snapshot_pending") {
