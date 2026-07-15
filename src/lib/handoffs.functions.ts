@@ -1256,6 +1256,195 @@ export const replicateHandoffStorageObjects = createServerFn({ method: "POST" })
     };
   });
 
+// ---------------------------------------------------------------------------
+// G18 — Cutover rollback executor.
+//
+// Reverses a failed cutover: iterates rotations whose status is `rotated`
+// in reverse-priority order and calls `rollbackRotation` on each. Marks
+// each row `rolled_back` (or `rollback_manual_required` when the
+// pre-cutover value wasn't pinned). If the handoff has a
+// `rollback_snapshot_id`, we stamp `restore_requested_at` on that
+// snapshot so the snapshot executor picks up the PITR restore. Emits
+// `handoff.rollback_started`, per-rotation `handoff.rotation_rollback_*`
+// events, and a final `handoff.rollback_executed` event with a summary.
+//
+// Entry states: `rolled_back` (auto-set by the orchestrator when a
+// rotation fails) or `failed` (manual operator recovery). Idempotent —
+// rotations already flagged `rolled_back` / `rollback_manual_required`
+// are skipped.
+// ---------------------------------------------------------------------------
+
+const ROTATION_PRIORITY_G18: Record<string, number> = {
+  stripe_endpoint: 10,
+  github_webhook: 20,
+  cloudflare: 30,
+  clone_repo: 40,
+  edge_function_env: 50,
+  webhook_consumer: 60,
+  other: 70,
+};
+
+export const rollbackHandoffCutover = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((input) => z.object({ handoff_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: handoff, error: hErr } = await context.supabase
+      .from("clone_handoffs")
+      .select("id, state, rollback_snapshot_id")
+      .eq("id", data.handoff_id)
+      .maybeSingle();
+    if (hErr) throw hErr;
+    if (!handoff) return { ok: false as const, error: "not_found" };
+
+    const ENTRY = new Set(["rolled_back", "failed", "cutover_in_progress"]);
+    if (!ENTRY.has(handoff.state)) {
+      return { ok: false as const, error: "wrong_state", state: handoff.state };
+    }
+
+    await context.supabase.from("handoff_events").insert({
+      handoff_id: data.handoff_id,
+      kind: "handoff.rollback_started",
+      actor_user_id: context.userId,
+      details: {
+        from: handoff.state,
+        rollback_snapshot_id: handoff.rollback_snapshot_id ?? null,
+      },
+    });
+
+    // Walk rotations in REVERSE priority order — undo the last thing we did
+    // first so downstream systems see a consistent unwind.
+    const { data: rows, error: rErr } = await context.supabase
+      .from("handoff_secret_rotations")
+      .select("*")
+      .eq("handoff_id", data.handoff_id);
+    if (rErr) throw rErr;
+    const eligible = (rows ?? [])
+      .filter((r: any) => r.status === "rotated")
+      .sort(
+        (a: any, b: any) =>
+          (ROTATION_PRIORITY_G18[b.target] ?? 99) - (ROTATION_PRIORITY_G18[a.target] ?? 99),
+      );
+
+    const { rollbackRotation } = await import("@/server/handoff-rotations.server");
+    const results: Array<{
+      id: string;
+      target: string;
+      key_ref: string;
+      status: string;
+      error?: string | null;
+    }> = [];
+    let failed = 0;
+    let manual = 0;
+    let rolledBack = 0;
+
+    for (const row of eligible) {
+      const outcome = await rollbackRotation(row);
+      const nextStatus =
+        outcome.status === "rolled_back"
+          ? "rolled_back"
+          : outcome.status === "manual_required"
+            ? "rollback_manual_required"
+            : "rollback_failed";
+      const patch: Record<string, unknown> = {
+        status: nextStatus,
+        error: outcome.error ?? null,
+        metadata: {
+          ...(row.metadata ?? {}),
+          last_rollback: {
+            at: new Date().toISOString(),
+            actor: context.userId,
+            via: "orchestrator",
+            ...outcome.audit,
+          },
+        },
+      };
+      await context.supabase.from("handoff_secret_rotations").update(patch).eq("id", row.id);
+      await context.supabase.from("handoff_events").insert({
+        handoff_id: data.handoff_id,
+        kind: `handoff.rotation_rollback_${outcome.status}`,
+        actor_user_id: context.userId,
+        details: {
+          rotation_id: row.id,
+          target: row.target,
+          key_ref: row.key_ref,
+          error: outcome.error ?? null,
+        },
+      });
+      results.push({
+        id: row.id,
+        target: row.target,
+        key_ref: row.key_ref,
+        status: nextStatus,
+        error: outcome.error ?? null,
+      });
+      if (outcome.status === "rolled_back") rolledBack += 1;
+      else if (outcome.status === "manual_required") manual += 1;
+      else failed += 1;
+    }
+
+    // Flag the pinned snapshot as restore-requested so the snapshot executor
+    // (or an operator) can act. We use a metadata patch so we don't require a
+    // schema migration.
+    let snapshotFlagged = false;
+    if (handoff.rollback_snapshot_id) {
+      const { data: snap } = await context.supabase
+        .from("handoff_snapshots")
+        .select("id, metadata")
+        .eq("id", handoff.rollback_snapshot_id)
+        .maybeSingle();
+      if (snap) {
+        await context.supabase
+          .from("handoff_snapshots")
+          .update({
+            metadata: {
+              ...((snap.metadata as any) ?? {}),
+              restore_requested_at: new Date().toISOString(),
+              restore_requested_by: context.userId,
+              restore_reason: "cutover_rollback",
+            },
+          })
+          .eq("id", handoff.rollback_snapshot_id);
+        snapshotFlagged = true;
+      }
+    }
+
+    // Land handoff state. If any rotation failed to roll back we stay
+    // `failed` so an admin can intervene; otherwise settle on `rolled_back`.
+    const finalState = failed > 0 ? "failed" : "rolled_back";
+    await context.supabase
+      .from("clone_handoffs")
+      .update({
+        state: finalState,
+        completed_at: new Date().toISOString(),
+      })
+      .eq("id", data.handoff_id);
+
+    await context.supabase.from("handoff_events").insert({
+      handoff_id: data.handoff_id,
+      kind: "handoff.rollback_executed",
+      actor_user_id: context.userId,
+      details: {
+        final_state: finalState,
+        rotations_rolled_back: rolledBack,
+        rotations_manual_required: manual,
+        rotations_failed: failed,
+        snapshot_restore_requested: snapshotFlagged,
+        snapshot_id: handoff.rollback_snapshot_id ?? null,
+      },
+    });
+
+    return {
+      ok: failed === 0,
+      final_state: finalState,
+      rolled_back: rolledBack,
+      manual_required: manual,
+      failed,
+      snapshot_restore_requested: snapshotFlagged,
+      results,
+    };
+  });
+
+
 
 
 
