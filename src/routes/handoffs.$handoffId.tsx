@@ -360,6 +360,18 @@ function HandoffDetail() {
               >
                 {orchestrate.isPending ? "Orchestrating…" : "Run cutover orchestrator (G15)"}
               </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => {
+                  if (confirm("Roll back this cutover? Reverses landed rotations and requests snapshot restore.")) rollback.mutate();
+                }}
+                disabled={rollback.isPending}
+                title="G18 — reverse landed rotations and flag the pinned snapshot for restore"
+              >
+                {rollback.isPending ? "Rolling back…" : "Roll back cutover (G18)"}
+              </Button>
+
               {(["clone_repo", "cloudflare", "stripe_endpoint", "github_webhook", "edge_function_env"] as const).map((t) => (
                 <Button key={t} size="sm" variant="outline" onClick={() => rotate.mutate(t)}>+ {t}</Button>
               ))}
