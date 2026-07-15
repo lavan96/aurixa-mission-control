@@ -210,11 +210,35 @@ function HandoffDetail() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2"><ScrollText className="h-4 w-4" /> Parity + contracts (E2, E7)</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> Parity + contracts (E2, E7 · G1)</CardTitle>
           </CardHeader>
           <CardContent className="text-sm space-y-2">
-            <div>Parity reports: <Badge variant="outline">{d.parity_reports.length}</Badge></div>
-            <div>Signed contracts: <Badge variant="outline">{d.contracts.length}</Badge></div>
+            <Button size="sm" variant="outline" onClick={() => parity.mutate()} disabled={parity.isPending}>
+              {parity.isPending ? "Running…" : "Run parity dry-run"}
+            </Button>
+            {d.parity_reports[0] && (
+              <div className="rounded border p-2 text-xs space-y-1">
+                <div className="flex items-center justify-between">
+                  <span>Latest report</span>
+                  <Badge variant={d.parity_reports[0].risk_level === "blocking" ? "destructive" : "outline"}>
+                    {d.parity_reports[0].risk_level}
+                  </Badge>
+                </div>
+                <div className="text-muted-foreground">{d.parity_reports[0].summary}</div>
+                {Array.isArray(d.parity_reports[0].blocking_issues) &&
+                  d.parity_reports[0].blocking_issues.length > 0 && (
+                    <ul className="list-disc pl-4">
+                      {d.parity_reports[0].blocking_issues.map((b: string) => (
+                        <li key={b}>{b}</li>
+                      ))}
+                    </ul>
+                  )}
+                <div className="text-muted-foreground">
+                  {new Date(d.parity_reports[0].generated_at).toLocaleString()} · target={d.parity_reports[0].target_ref}
+                </div>
+              </div>
+            )}
+            <div>Reports: <Badge variant="outline">{d.parity_reports.length}</Badge> · Signed contracts: <Badge variant="outline">{d.contracts.length}</Badge></div>
             {h.consent_signed_at ? (
               <div className="text-xs text-muted-foreground">
                 Consent v{h.consent_terms_version} signed {new Date(h.consent_signed_at).toLocaleString()}
@@ -224,6 +248,7 @@ function HandoffDetail() {
             )}
           </CardContent>
         </Card>
+
       </div>
 
       <Card>
