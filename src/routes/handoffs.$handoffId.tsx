@@ -905,3 +905,134 @@ function ClientPortalInvitesCard({ handoffId }: { handoffId: string }) {
     </Card>
   );
 }
+
+// G20 — Post-handoff observability card.
+function ObservabilityCard({ handoffId }: { handoffId: string }) {
+  const qc = useQueryClient();
+  const q = useQuery({
+    queryKey: ["handoff-observability", handoffId],
+    queryFn: () => getObservabilityStatus({ data: { handoff_id: handoffId, beacon_limit: 8 } }),
+    refetchInterval: 30000,
+  });
+  const cfg = (q.data as any)?.config ?? null;
+  const beacons = ((q.data as any)?.beacons ?? []) as any[];
+
+  const [mode, setMode] = useState<string>(cfg?.mode ?? "health_beacons");
+  const [pollSec, setPollSec] = useState<number>(cfg?.poll_interval_seconds ?? 900);
+  const [notes, setNotes] = useState<string>(cfg?.notes ?? "");
+
+  const save = useMutation({
+    mutationFn: () =>
+      upsertObservabilityConfig({
+        data: {
+          handoff_id: handoffId,
+          mode: mode as any,
+          poll_interval_seconds: pollSec,
+          notes: notes || null,
+        },
+      }),
+    onSuccess: (r: any) => {
+      qc.invalidateQueries({ queryKey: ["handoff-observability", handoffId] });
+      if (r?.ok === false) toast.error(r.error ?? "Failed");
+      else toast.success(r.updated ? "Observability updated" : "Observability configured");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed"),
+  });
+
+  const pollNow = useMutation({
+    mutationFn: () => pollObservabilityNow({ data: { handoff_id: handoffId } }),
+    onSuccess: (r: any) => {
+      qc.invalidateQueries({ queryKey: ["handoff-observability", handoffId] });
+      if (r?.ok === false) toast.error(`Poll failed: ${r.error}${r.detail ? ` — ${r.detail}` : ""}`);
+      else toast.success(`Beacon captured · ${r.status}`);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Poll failed"),
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Radio className="h-4 w-4" /> Post-handoff observability (G20)
+        </CardTitle>
+        <CardDescription>
+          Choose how Mission Control stays informed after the client owns their backend.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4 text-sm">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div>
+            <Label>Mode</Label>
+            <select
+              className="mt-1 w-full rounded border bg-background px-2 py-1 text-sm"
+              value={mode}
+              onChange={(e) => setMode(e.target.value)}
+            >
+              {OBSERVABILITY_MODES.map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label>Poll interval (seconds)</Label>
+            <Input
+              type="number"
+              min={60}
+              max={86400}
+              value={pollSec}
+              onChange={(e) => setPollSec(parseInt(e.target.value || "900", 10))}
+              disabled={mode !== "pat_polling"}
+            />
+          </div>
+          <div className="flex items-end gap-2">
+            <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
+              Save
+            </Button>
+            {mode === "pat_polling" && (
+              <Button size="sm" variant="outline" onClick={() => pollNow.mutate()} disabled={pollNow.isPending}>
+                Poll now
+              </Button>
+            )}
+          </div>
+        </div>
+        <div>
+          <Label>Notes</Label>
+          <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional — e.g. shared-role SQL grant status, escalation contacts." />
+        </div>
+
+        {cfg && (
+          <div className="text-xs text-muted-foreground border rounded p-2">
+            <div><strong>Current:</strong> {cfg.mode}
+              {cfg.last_poll_at ? ` · last polled ${new Date(cfg.last_poll_at).toLocaleString()}` : " · never polled"}
+              {cfg.last_status ? ` · status=${cfg.last_status}` : ""}
+              {cfg.next_poll_at ? ` · next ${new Date(cfg.next_poll_at).toLocaleString()}` : ""}
+            </div>
+            {cfg.last_error && <div className="text-red-500 mt-1">Last error: {cfg.last_error}</div>}
+          </div>
+        )}
+
+        <div>
+          <div className="font-medium mb-1">Recent beacons</div>
+          <ul className="space-y-1 max-h-64 overflow-auto">
+            {beacons.map((b) => (
+              <li key={b.id} className="border-b py-1 flex items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <Badge variant={b.severity === "ok" ? "outline" : b.severity === "warn" ? "secondary" : "destructive"}>
+                    {b.severity}
+                  </Badge>
+                  <span className="text-muted-foreground">{b.source}</span>
+                  <span>{b.project_status ?? "—"}</span>
+                  {b.active_connections != null && <span>· conns {b.active_connections}</span>}
+                  {b.db_size_bytes != null && <span>· db {(b.db_size_bytes / 1024 / 1024).toFixed(1)} MB</span>}
+                  {b.message && <span className="text-muted-foreground">· {b.message}</span>}
+                </div>
+                <span className="text-muted-foreground">{new Date(b.reported_at).toLocaleString()}</span>
+              </li>
+            ))}
+            {beacons.length === 0 && <li className="text-muted-foreground text-xs">No beacons yet.</li>}
+          </ul>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
