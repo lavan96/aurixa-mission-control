@@ -109,6 +109,18 @@ function HandoffDetail() {
     onError: (e: any) => toast.error(e?.message ?? "Parity run failed"),
   });
 
+  // G9 — verify the Aurixa GitHub App still has access to the clone repo.
+  const [gh, setGh] = useState<CloneGithubAccessRow | null>(null);
+  const ghCheck = useMutation({
+    mutationFn: () =>
+      verifyCloneRepoGithubAccess({ data: { cloneId: d?.handoff?.clone_id as string } }),
+    onSuccess: (r) => {
+      setGh(r);
+      if (r.ok) toast.success("GitHub App has access to the clone repo.");
+      else toast.warning(r.message ?? "GitHub App access check failed.");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "GitHub check failed"),
+  });
 
   if (q.isLoading) return <div className="p-6">Loading…</div>;
   const d = q.data;
