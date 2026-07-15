@@ -128,16 +128,19 @@ export const checkGithubAppPreflight = createServerFn({ method: "POST" })
       id: number;
       account?: { login?: string; type?: string };
       permissions?: Record<string, string>;
+      repository_selection?: "all" | "selected";
     };
     const installationId = install.id;
+    const perms = install.permissions ?? {};
+    const contentsWritePermission = perms.contents === "write" || perms.contents === "admin";
+    const workflowsPermission = perms.workflows === "write" || perms.workflows === "admin";
+    const repositorySelection = install.repository_selection ?? null;
 
-    // Optional: verify template repo is reachable + flagged as a template.
-    let templateAccessible: boolean | null = null;
-    let templateRepoIsTemplate: boolean | null = null;
-    if (data.method === "template" && data.templateOwner && data.templateRepo) {
+    // Mint installation token once — reused for template + target repo checks.
+    let installToken: string | null = null;
+    const mintToken = async (): Promise<string | null> => {
+      if (installToken) return installToken;
       try {
-        // Mint an installation token to read the repo (App JWT can't read
-        // repo content directly, only installation metadata).
         const tokRes = await fetch(
           `https://api.github.com/app/installations/${installationId}/access_tokens`,
           {
@@ -150,37 +153,79 @@ export const checkGithubAppPreflight = createServerFn({ method: "POST" })
             },
           },
         );
-        if (tokRes.ok) {
-          const { token } = (await tokRes.json()) as { token: string };
-          const repoRes = await fetch(
-            `https://api.github.com/repos/${encodeURIComponent(
-              data.templateOwner,
-            )}/${encodeURIComponent(data.templateRepo)}`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                Accept: "application/vnd.github+json",
-                "User-Agent": "aurixa-mission-control",
-              },
-            },
-          );
-          templateAccessible = repoRes.ok;
-          if (repoRes.ok) {
-            const repo = (await repoRes.json()) as { is_template?: boolean };
-            templateRepoIsTemplate = Boolean(repo.is_template);
-          }
-        } else {
-          templateAccessible = false;
-        }
+        if (!tokRes.ok) return null;
+        const j = (await tokRes.json()) as { token: string };
+        installToken = j.token;
+        return installToken;
       } catch {
+        return null;
+      }
+    };
+
+    const getRepo = async (o: string, r: string) => {
+      const token = await mintToken();
+      if (!token) return null;
+      const res = await fetch(
+        `https://api.github.com/repos/${encodeURIComponent(o)}/${encodeURIComponent(r)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/vnd.github+json",
+            "User-Agent": "aurixa-mission-control",
+          },
+        },
+      );
+      return { ok: res.ok, status: res.status, body: res.ok ? await res.json() : null };
+    };
+
+    // Optional: verify template repo is reachable + flagged as a template.
+    let templateAccessible: boolean | null = null;
+    let templateRepoIsTemplate: boolean | null = null;
+    if (data.method === "template" && data.templateOwner && data.templateRepo) {
+      const r = await getRepo(data.templateOwner, data.templateRepo);
+      if (r === null) {
         templateAccessible = false;
+      } else {
+        templateAccessible = r.ok;
+        if (r.ok) templateRepoIsTemplate = Boolean((r.body as { is_template?: boolean })?.is_template);
       }
     }
 
-    const ok =
-      data.method === "template"
-        ? templateAccessible !== false && templateRepoIsTemplate !== false
-        : true;
+    // G9 — verify target repo (already-created clone repo) is reachable.
+    let targetRepoAccessible: boolean | null = null;
+    if (data.targetRepo) {
+      const r = await getRepo(owner, data.targetRepo);
+      targetRepoAccessible = r === null ? false : r.ok;
+    }
+
+    const templateOk = data.method === "template"
+      ? templateAccessible !== false && templateRepoIsTemplate !== false
+      : true;
+    const targetRepoOk = data.targetRepo ? targetRepoAccessible === true : true;
+    const permsOk = contentsWritePermission !== false;
+    const ok = templateOk && targetRepoOk && permsOk;
+
+    let message: string | undefined;
+    let hint: string | undefined;
+    if (ok) {
+      message = `App installed on ${accountType?.toLowerCase()} "${owner}" (installation #${installationId}${
+        repositorySelection ? `, selection=${repositorySelection}` : ""
+      }).`;
+    } else if (!permsOk) {
+      message = "GitHub App installation is missing 'contents: write' permission.";
+      hint = "Update the App's repository permissions and re-authorize the installation.";
+    } else if (targetRepoAccessible === false) {
+      message = `App cannot access "${owner}/${data.targetRepo}".`;
+      hint = repositorySelection === "selected"
+        ? "Grant the Aurixa App access to this specific repository in the installation settings."
+        : "Verify the repo exists and the App installation has not been suspended.";
+    } else if (templateAccessible === false) {
+      message = "App installed, but the template repo is not accessible to this installation.";
+      hint = "Open the Aurixa App installation on the target org and grant it access to the template repo.";
+    } else if (templateRepoIsTemplate === false) {
+      message = "Repo exists, but it is not marked as a GitHub template. Enable 'Template repository' in its Settings.";
+      hint = "In the template repo, Settings → General → check 'Template repository'.";
+    }
 
     return {
       ok,
@@ -191,18 +236,12 @@ export const checkGithubAppPreflight = createServerFn({ method: "POST" })
       targetOwner: owner,
       templateAccessible,
       templateRepoIsTemplate,
-      message: ok
-        ? `App installed on ${accountType?.toLowerCase()} "${owner}" (installation #${installationId}).`
-        : templateAccessible === false
-          ? "App installed, but the template repo is not accessible to this installation."
-          : templateRepoIsTemplate === false
-            ? "Repo exists, but it is not marked as a GitHub template. Enable 'Template repository' in its Settings."
-            : undefined,
-      hint:
-        templateAccessible === false
-          ? "Open the Aurixa App installation on the target org and grant it access to the template repo."
-          : templateRepoIsTemplate === false
-            ? "In the template repo, Settings → General → check 'Template repository'."
-            : undefined,
+      repositorySelection,
+      targetRepo: data.targetRepo ?? null,
+      targetRepoAccessible,
+      contentsWritePermission,
+      workflowsPermission,
+      message,
+      hint,
     };
   });
