@@ -94,6 +94,7 @@ import { Route as ApiPublicLeadsCaptureRouteImport } from './routes/api.public.l
 import { Route as ApiPublicEdgeStatusRouteImport } from './routes/api.public.edge.status'
 import { Route as ApiPublicClonesRotateKeyRouteImport } from './routes/api.public.clones.rotate-key'
 import { Route as ApiPublicBillingHandoffRouteImport } from './routes/api.public.billing.handoff'
+import { Route as ApiPublicStripeWebhookCloneIdRouteImport } from './routes/api.public.stripe.webhook.$cloneId'
 import { Route as ApiPublicSeatsDevicesReleaseRouteImport } from './routes/api.public.seats.devices.release'
 import { Route as ApiPublicSeatsDevicesRegisterRouteImport } from './routes/api.public.seats.devices.register'
 import { Route as ApiPublicSeatsDevicesListRouteImport } from './routes/api.public.seats.devices.list'
@@ -534,6 +535,12 @@ const ApiPublicBillingHandoffRoute = ApiPublicBillingHandoffRouteImport.update({
   path: '/api/public/billing/handoff',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicStripeWebhookCloneIdRoute =
+  ApiPublicStripeWebhookCloneIdRouteImport.update({
+    id: '/$cloneId',
+    path: '/$cloneId',
+    getParentRoute: () => ApiPublicStripeWebhookRoute,
+  } as any)
 const ApiPublicSeatsDevicesReleaseRoute =
   ApiPublicSeatsDevicesReleaseRouteImport.update({
     id: '/api/public/seats/devices/release',
@@ -639,7 +646,7 @@ export interface FileRoutesByFullPath {
   '/api/public/storefront/handoff': typeof ApiPublicStorefrontHandoffRoute
   '/api/public/storefront/identity': typeof ApiPublicStorefrontIdentityRoute
   '/api/public/storefront/session': typeof ApiPublicStorefrontSessionRoute
-  '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRoute
+  '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRouteWithChildren
   '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
   '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
   '/api/public/tokens/commit': typeof ApiPublicTokensCommitRoute
@@ -649,6 +656,7 @@ export interface FileRoutesByFullPath {
   '/api/public/seats/devices/list': typeof ApiPublicSeatsDevicesListRoute
   '/api/public/seats/devices/register': typeof ApiPublicSeatsDevicesRegisterRoute
   '/api/public/seats/devices/release': typeof ApiPublicSeatsDevicesReleaseRoute
+  '/api/public/stripe/webhook/$cloneId': typeof ApiPublicStripeWebhookCloneIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -729,7 +737,7 @@ export interface FileRoutesByTo {
   '/api/public/storefront/handoff': typeof ApiPublicStorefrontHandoffRoute
   '/api/public/storefront/identity': typeof ApiPublicStorefrontIdentityRoute
   '/api/public/storefront/session': typeof ApiPublicStorefrontSessionRoute
-  '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRoute
+  '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRouteWithChildren
   '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
   '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
   '/api/public/tokens/commit': typeof ApiPublicTokensCommitRoute
@@ -739,6 +747,7 @@ export interface FileRoutesByTo {
   '/api/public/seats/devices/list': typeof ApiPublicSeatsDevicesListRoute
   '/api/public/seats/devices/register': typeof ApiPublicSeatsDevicesRegisterRoute
   '/api/public/seats/devices/release': typeof ApiPublicSeatsDevicesReleaseRoute
+  '/api/public/stripe/webhook/$cloneId': typeof ApiPublicStripeWebhookCloneIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -821,7 +830,7 @@ export interface FileRoutesById {
   '/api/public/storefront/handoff': typeof ApiPublicStorefrontHandoffRoute
   '/api/public/storefront/identity': typeof ApiPublicStorefrontIdentityRoute
   '/api/public/storefront/session': typeof ApiPublicStorefrontSessionRoute
-  '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRoute
+  '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRouteWithChildren
   '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
   '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
   '/api/public/tokens/commit': typeof ApiPublicTokensCommitRoute
@@ -831,6 +840,7 @@ export interface FileRoutesById {
   '/api/public/seats/devices/list': typeof ApiPublicSeatsDevicesListRoute
   '/api/public/seats/devices/register': typeof ApiPublicSeatsDevicesRegisterRoute
   '/api/public/seats/devices/release': typeof ApiPublicSeatsDevicesReleaseRoute
+  '/api/public/stripe/webhook/$cloneId': typeof ApiPublicStripeWebhookCloneIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -924,6 +934,7 @@ export interface FileRouteTypes {
     | '/api/public/seats/devices/list'
     | '/api/public/seats/devices/register'
     | '/api/public/seats/devices/release'
+    | '/api/public/stripe/webhook/$cloneId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -1014,6 +1025,7 @@ export interface FileRouteTypes {
     | '/api/public/seats/devices/list'
     | '/api/public/seats/devices/register'
     | '/api/public/seats/devices/release'
+    | '/api/public/stripe/webhook/$cloneId'
   id:
     | '__root__'
     | '/'
@@ -1105,6 +1117,7 @@ export interface FileRouteTypes {
     | '/api/public/seats/devices/list'
     | '/api/public/seats/devices/register'
     | '/api/public/seats/devices/release'
+    | '/api/public/stripe/webhook/$cloneId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1172,7 +1185,7 @@ export interface RootRouteChildren {
   ApiPublicStorefrontHandoffRoute: typeof ApiPublicStorefrontHandoffRoute
   ApiPublicStorefrontIdentityRoute: typeof ApiPublicStorefrontIdentityRoute
   ApiPublicStorefrontSessionRoute: typeof ApiPublicStorefrontSessionRoute
-  ApiPublicStripeWebhookRoute: typeof ApiPublicStripeWebhookRoute
+  ApiPublicStripeWebhookRoute: typeof ApiPublicStripeWebhookRouteWithChildren
   ApiPublicTokensBalanceRoute: typeof ApiPublicTokensBalanceRoute
   ApiPublicTokensCancelRoute: typeof ApiPublicTokensCancelRoute
   ApiPublicTokensCommitRoute: typeof ApiPublicTokensCommitRoute
@@ -1781,6 +1794,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicBillingHandoffRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/stripe/webhook/$cloneId': {
+      id: '/api/public/stripe/webhook/$cloneId'
+      path: '/$cloneId'
+      fullPath: '/api/public/stripe/webhook/$cloneId'
+      preLoaderRoute: typeof ApiPublicStripeWebhookCloneIdRouteImport
+      parentRoute: typeof ApiPublicStripeWebhookRoute
+    }
     '/api/public/seats/devices/release': {
       id: '/api/public/seats/devices/release'
       path: '/api/public/seats/devices/release'
@@ -1891,6 +1911,20 @@ const ClonesCloneIdRouteWithChildren = ClonesCloneIdRoute._addFileChildren(
   ClonesCloneIdRouteChildren,
 )
 
+interface ApiPublicStripeWebhookRouteChildren {
+  ApiPublicStripeWebhookCloneIdRoute: typeof ApiPublicStripeWebhookCloneIdRoute
+}
+
+const ApiPublicStripeWebhookRouteChildren: ApiPublicStripeWebhookRouteChildren =
+  {
+    ApiPublicStripeWebhookCloneIdRoute: ApiPublicStripeWebhookCloneIdRoute,
+  }
+
+const ApiPublicStripeWebhookRouteWithChildren =
+  ApiPublicStripeWebhookRoute._addFileChildren(
+    ApiPublicStripeWebhookRouteChildren,
+  )
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApprovalsRoute: ApprovalsRoute,
@@ -1956,7 +1990,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicStorefrontHandoffRoute: ApiPublicStorefrontHandoffRoute,
   ApiPublicStorefrontIdentityRoute: ApiPublicStorefrontIdentityRoute,
   ApiPublicStorefrontSessionRoute: ApiPublicStorefrontSessionRoute,
-  ApiPublicStripeWebhookRoute: ApiPublicStripeWebhookRoute,
+  ApiPublicStripeWebhookRoute: ApiPublicStripeWebhookRouteWithChildren,
   ApiPublicTokensBalanceRoute: ApiPublicTokensBalanceRoute,
   ApiPublicTokensCancelRoute: ApiPublicTokensCancelRoute,
   ApiPublicTokensCommitRoute: ApiPublicTokensCommitRoute,
