@@ -2043,7 +2043,10 @@ export async function provisionCloneBackend(
     storageBuckets,
     authConfig: authConfigResult,
     cronJobs,
+    requiredExtensions,
+    realtimePublication,
   };
+
 }
 
 
