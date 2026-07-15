@@ -112,8 +112,11 @@ function HandoffDetail() {
   // G9 — verify the Aurixa GitHub App still has access to the clone repo.
   const [gh, setGh] = useState<CloneGithubAccessRow | null>(null);
   const ghCheck = useMutation({
-    mutationFn: () =>
-      verifyCloneRepoGithubAccess({ data: { cloneId: d?.handoff?.clone_id as string } }),
+    mutationFn: () => {
+      const cloneId = q.data?.handoff?.clone_id as string | undefined;
+      if (!cloneId) throw new Error("Clone id not loaded yet");
+      return verifyCloneRepoGithubAccess({ data: { cloneId } });
+    },
     onSuccess: (r) => {
       setGh(r);
       if (r.ok) toast.success("GitHub App has access to the clone repo.");
