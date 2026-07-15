@@ -69,6 +69,14 @@ export const CLONE_API_SCOPES: CloneApiScope[] = [
     description: "Read-only access to this clone's edge/CDN provider status, posture, and last sync.",
     default: false,
   },
+  {
+    value: "health:beacon",
+    group: "health",
+    label: "Health — emit beacon",
+    description:
+      "Post-handoff observability: clone-owned backend pings Mission Control with project status, DB size, connections, and severity.",
+    default: false,
+  },
 ];
 
 export const DEFAULT_SCOPES = CLONE_API_SCOPES.filter((s) => s.default).map((s) => s.value);
