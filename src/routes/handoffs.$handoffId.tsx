@@ -179,6 +179,29 @@ function HandoffDetail() {
     onError: (e: any) => toast.error(e?.message ?? "Auth replication failed"),
   });
 
+  // G17 — storage objects replication (data_syncing).
+  const storageReplicate = useMutation({
+    mutationFn: () => replicateHandoffStorageObjects({ data: { handoff_id: handoffId } }),
+    onSuccess: (r: any) => {
+      qc.invalidateQueries({ queryKey: ["handoff", handoffId] });
+      if (r?.ok === false) {
+        toast.error(`Storage replication failed: ${r.error}${r.detail ? ` — ${r.detail}` : ""}`);
+        return;
+      }
+      const totCopied = (r.buckets ?? []).reduce((n: number, b: any) => n + b.objects_copied, 0);
+      const totBytes = (r.buckets ?? []).reduce((n: number, b: any) => n + b.bytes_copied, 0);
+      const msg = `Storage · ${r.buckets?.length ?? 0} buckets · copied ${totCopied} · ${(totBytes / 1024 / 1024).toFixed(1)} MB${r.incomplete ? ` · incomplete (${r.budget_exhausted})` : " · complete"}${r.advanced ? " · advanced" : ""}`;
+      if (r.incomplete) toast.info(msg);
+      else toast.success(msg);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Storage replication failed"),
+  });
+
+
+
+
+
+
 
 
 
