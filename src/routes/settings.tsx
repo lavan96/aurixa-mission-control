@@ -1,7 +1,22 @@
 import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/protected-route";
 import { cn } from "@/lib/utils";
-import { Cog, BellRing, Shield, Eye, ScrollText, Grid3x3, Wallet, Gift, ArrowRightLeft } from "lucide-react";
+import {
+  Cog,
+  BellRing,
+  Shield,
+  Eye,
+  ScrollText,
+  Grid3x3,
+  Wallet,
+  Gift,
+  ArrowRightLeft,
+  Globe,
+  Users,
+  Github,
+  FileText,
+  CreditCard,
+} from "lucide-react";
 
 export const Route = createFileRoute("/settings")({
   component: () => (
@@ -17,11 +32,21 @@ const TABS = [
   { to: "/settings/notifications", label: "Notifications", icon: BellRing, exact: false },
   { to: "/settings/roles", label: "Roles", icon: Shield, exact: false },
   { to: "/settings/role-audit", label: "Role Audit", icon: ScrollText, exact: false },
-  { to: "/settings/billing", label: "Billing", icon: Wallet, exact: false },
-  { to: "/settings/gift-tokens", label: "Gift Tokens", icon: Gift, exact: false },
-  { to: "/settings/handoff-policies", label: "Handoff Policies", icon: ArrowRightLeft, exact: false },
-  { to: "/settings/provisioning-preview", label: "Provisioning", icon: Eye, exact: false },
   { to: "/settings/permission-matrix", label: "Matrix", icon: Grid3x3, exact: false },
+  { to: "/settings/billing", label: "Billing", icon: Wallet, exact: false },
+  { to: "/settings/clone-stripe", label: "Clone Stripe", icon: CreditCard, exact: false },
+  { to: "/settings/gift-tokens", label: "Gift Tokens", icon: Gift, exact: false },
+  {
+    to: "/settings/handoff-policies",
+    label: "Handoff Policies",
+    icon: ArrowRightLeft,
+    exact: false,
+  },
+  { to: "/settings/handoff-terms", label: "Handoff Terms", icon: FileText, exact: false },
+  { to: "/settings/provisioning-preview", label: "Provisioning", icon: Eye, exact: false },
+  { to: "/settings/domains", label: "Domains", icon: Globe, exact: false },
+  { to: "/settings/github-access", label: "GitHub Access", icon: Github, exact: false },
+  { to: "/settings/client-accounts", label: "Client Accounts", icon: Users, exact: false },
 ] as const;
 
 function SettingsLayout() {
@@ -44,7 +69,7 @@ function SettingsLayout() {
               key={t.to}
               to={t.to}
               className={cn(
-                "flex flex-1 items-center justify-center gap-2 rounded px-3 py-2 font-mono text-[11px] uppercase tracking-wider transition-colors",
+                "flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded px-3 py-2 font-mono text-[11px] uppercase tracking-wider transition-colors",
                 active
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground",

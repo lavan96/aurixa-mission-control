@@ -141,6 +141,24 @@
   --muted-foreground: oklch(0.45 0.015 250);
   --accent: oklch(0.7 0.2 145);
   --accent-foreground: oklch(0.18 0.02 250);
+
+  /* Status — darkened for legible contrast on light surfaces (the dark-mode
+     neon values wash out on white; these are consumed as text + at /15 tint). */
+  --success: oklch(0.58 0.15 150);
+  --success-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.55 0.13 65);
+  --warning-foreground: oklch(0.99 0 0);
+  --destructive: oklch(0.55 0.22 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --info: oklch(0.52 0.16 245);
+  --info-foreground: oklch(0.99 0 0);
+
+  --chart-1: oklch(0.55 0.18 220);
+  --chart-2: oklch(0.58 0.15 150);
+  --chart-3: oklch(0.6 0.14 65);
+  --chart-4: oklch(0.55 0.22 25);
+  --chart-5: oklch(0.55 0.18 290);
+
   --border: oklch(0 0 0 / 10%);
   --input: oklch(0 0 0 / 14%);
   --ring: oklch(0.55 0.18 220 / 60%);
@@ -264,5 +282,26 @@
   }
   to {
     background-position: -200% 0;
+  }
+}
+
+/* Respect users who ask for less motion: stop the ambient/decorative loops
+   and land elements in their resting state. Functional transitions stay. */
+@media (prefers-reduced-motion: reduce) {
+  .aurora,
+  .marquee-track {
+    animation: none !important;
+  }
+  .reveal-up {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .shimmer-text {
+    animation: none !important;
+    background: none;
+    -webkit-background-clip: initial;
+    background-clip: initial;
+    color: var(--color-foreground);
   }
 }
