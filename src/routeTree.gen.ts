@@ -42,6 +42,7 @@ import { Route as SettingsPermissionMatrixRouteImport } from './routes/settings.
 import { Route as SettingsNotificationsRouteImport } from './routes/settings.notifications'
 import { Route as SettingsHandoffPoliciesRouteImport } from './routes/settings.handoff-policies'
 import { Route as SettingsGiftTokensRouteImport } from './routes/settings.gift-tokens'
+import { Route as SettingsCloneStripeRouteImport } from './routes/settings.clone-stripe'
 import { Route as SettingsBillingRouteImport } from './routes/settings.billing'
 import { Route as ModulesBuilderRouteImport } from './routes/modules.builder'
 import { Route as ModulesSlugRouteImport } from './routes/modules.$slug'
@@ -94,6 +95,7 @@ import { Route as ApiPublicLeadsCaptureRouteImport } from './routes/api.public.l
 import { Route as ApiPublicEdgeStatusRouteImport } from './routes/api.public.edge.status'
 import { Route as ApiPublicClonesRotateKeyRouteImport } from './routes/api.public.clones.rotate-key'
 import { Route as ApiPublicBillingHandoffRouteImport } from './routes/api.public.billing.handoff'
+import { Route as ApiPublicStripeWebhookCloneIdRouteImport } from './routes/api.public.stripe.webhook.$cloneId'
 import { Route as ApiPublicSeatsDevicesReleaseRouteImport } from './routes/api.public.seats.devices.release'
 import { Route as ApiPublicSeatsDevicesRegisterRouteImport } from './routes/api.public.seats.devices.register'
 import { Route as ApiPublicSeatsDevicesListRouteImport } from './routes/api.public.seats.devices.list'
@@ -264,6 +266,11 @@ const SettingsHandoffPoliciesRoute = SettingsHandoffPoliciesRouteImport.update({
 const SettingsGiftTokensRoute = SettingsGiftTokensRouteImport.update({
   id: '/gift-tokens',
   path: '/gift-tokens',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsCloneStripeRoute = SettingsCloneStripeRouteImport.update({
+  id: '/clone-stripe',
+  path: '/clone-stripe',
   getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsBillingRoute = SettingsBillingRouteImport.update({
@@ -534,6 +541,12 @@ const ApiPublicBillingHandoffRoute = ApiPublicBillingHandoffRouteImport.update({
   path: '/api/public/billing/handoff',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicStripeWebhookCloneIdRoute =
+  ApiPublicStripeWebhookCloneIdRouteImport.update({
+    id: '/$cloneId',
+    path: '/$cloneId',
+    getParentRoute: () => ApiPublicStripeWebhookRoute,
+  } as any)
 const ApiPublicSeatsDevicesReleaseRoute =
   ApiPublicSeatsDevicesReleaseRouteImport.update({
     id: '/api/public/seats/devices/release',
@@ -614,6 +627,7 @@ export interface FileRoutesByFullPath {
   '/modules/$slug': typeof ModulesSlugRoute
   '/modules/builder': typeof ModulesBuilderRoute
   '/settings/billing': typeof SettingsBillingRoute
+  '/settings/clone-stripe': typeof SettingsCloneStripeRoute
   '/settings/gift-tokens': typeof SettingsGiftTokensRoute
   '/settings/handoff-policies': typeof SettingsHandoffPoliciesRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
@@ -639,7 +653,7 @@ export interface FileRoutesByFullPath {
   '/api/public/storefront/handoff': typeof ApiPublicStorefrontHandoffRoute
   '/api/public/storefront/identity': typeof ApiPublicStorefrontIdentityRoute
   '/api/public/storefront/session': typeof ApiPublicStorefrontSessionRoute
-  '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRoute
+  '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRouteWithChildren
   '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
   '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
   '/api/public/tokens/commit': typeof ApiPublicTokensCommitRoute
@@ -649,6 +663,7 @@ export interface FileRoutesByFullPath {
   '/api/public/seats/devices/list': typeof ApiPublicSeatsDevicesListRoute
   '/api/public/seats/devices/register': typeof ApiPublicSeatsDevicesRegisterRoute
   '/api/public/seats/devices/release': typeof ApiPublicSeatsDevicesReleaseRoute
+  '/api/public/stripe/webhook/$cloneId': typeof ApiPublicStripeWebhookCloneIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -704,6 +719,7 @@ export interface FileRoutesByTo {
   '/modules/$slug': typeof ModulesSlugRoute
   '/modules/builder': typeof ModulesBuilderRoute
   '/settings/billing': typeof SettingsBillingRoute
+  '/settings/clone-stripe': typeof SettingsCloneStripeRoute
   '/settings/gift-tokens': typeof SettingsGiftTokensRoute
   '/settings/handoff-policies': typeof SettingsHandoffPoliciesRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
@@ -729,7 +745,7 @@ export interface FileRoutesByTo {
   '/api/public/storefront/handoff': typeof ApiPublicStorefrontHandoffRoute
   '/api/public/storefront/identity': typeof ApiPublicStorefrontIdentityRoute
   '/api/public/storefront/session': typeof ApiPublicStorefrontSessionRoute
-  '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRoute
+  '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRouteWithChildren
   '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
   '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
   '/api/public/tokens/commit': typeof ApiPublicTokensCommitRoute
@@ -739,6 +755,7 @@ export interface FileRoutesByTo {
   '/api/public/seats/devices/list': typeof ApiPublicSeatsDevicesListRoute
   '/api/public/seats/devices/register': typeof ApiPublicSeatsDevicesRegisterRoute
   '/api/public/seats/devices/release': typeof ApiPublicSeatsDevicesReleaseRoute
+  '/api/public/stripe/webhook/$cloneId': typeof ApiPublicStripeWebhookCloneIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -796,6 +813,7 @@ export interface FileRoutesById {
   '/modules/$slug': typeof ModulesSlugRoute
   '/modules/builder': typeof ModulesBuilderRoute
   '/settings/billing': typeof SettingsBillingRoute
+  '/settings/clone-stripe': typeof SettingsCloneStripeRoute
   '/settings/gift-tokens': typeof SettingsGiftTokensRoute
   '/settings/handoff-policies': typeof SettingsHandoffPoliciesRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
@@ -821,7 +839,7 @@ export interface FileRoutesById {
   '/api/public/storefront/handoff': typeof ApiPublicStorefrontHandoffRoute
   '/api/public/storefront/identity': typeof ApiPublicStorefrontIdentityRoute
   '/api/public/storefront/session': typeof ApiPublicStorefrontSessionRoute
-  '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRoute
+  '/api/public/stripe/webhook': typeof ApiPublicStripeWebhookRouteWithChildren
   '/api/public/tokens/balance': typeof ApiPublicTokensBalanceRoute
   '/api/public/tokens/cancel': typeof ApiPublicTokensCancelRoute
   '/api/public/tokens/commit': typeof ApiPublicTokensCommitRoute
@@ -831,6 +849,7 @@ export interface FileRoutesById {
   '/api/public/seats/devices/list': typeof ApiPublicSeatsDevicesListRoute
   '/api/public/seats/devices/register': typeof ApiPublicSeatsDevicesRegisterRoute
   '/api/public/seats/devices/release': typeof ApiPublicSeatsDevicesReleaseRoute
+  '/api/public/stripe/webhook/$cloneId': typeof ApiPublicStripeWebhookCloneIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -889,6 +908,7 @@ export interface FileRouteTypes {
     | '/modules/$slug'
     | '/modules/builder'
     | '/settings/billing'
+    | '/settings/clone-stripe'
     | '/settings/gift-tokens'
     | '/settings/handoff-policies'
     | '/settings/notifications'
@@ -924,6 +944,7 @@ export interface FileRouteTypes {
     | '/api/public/seats/devices/list'
     | '/api/public/seats/devices/register'
     | '/api/public/seats/devices/release'
+    | '/api/public/stripe/webhook/$cloneId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -979,6 +1000,7 @@ export interface FileRouteTypes {
     | '/modules/$slug'
     | '/modules/builder'
     | '/settings/billing'
+    | '/settings/clone-stripe'
     | '/settings/gift-tokens'
     | '/settings/handoff-policies'
     | '/settings/notifications'
@@ -1014,6 +1036,7 @@ export interface FileRouteTypes {
     | '/api/public/seats/devices/list'
     | '/api/public/seats/devices/register'
     | '/api/public/seats/devices/release'
+    | '/api/public/stripe/webhook/$cloneId'
   id:
     | '__root__'
     | '/'
@@ -1070,6 +1093,7 @@ export interface FileRouteTypes {
     | '/modules/$slug'
     | '/modules/builder'
     | '/settings/billing'
+    | '/settings/clone-stripe'
     | '/settings/gift-tokens'
     | '/settings/handoff-policies'
     | '/settings/notifications'
@@ -1105,6 +1129,7 @@ export interface FileRouteTypes {
     | '/api/public/seats/devices/list'
     | '/api/public/seats/devices/register'
     | '/api/public/seats/devices/release'
+    | '/api/public/stripe/webhook/$cloneId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1172,7 +1197,7 @@ export interface RootRouteChildren {
   ApiPublicStorefrontHandoffRoute: typeof ApiPublicStorefrontHandoffRoute
   ApiPublicStorefrontIdentityRoute: typeof ApiPublicStorefrontIdentityRoute
   ApiPublicStorefrontSessionRoute: typeof ApiPublicStorefrontSessionRoute
-  ApiPublicStripeWebhookRoute: typeof ApiPublicStripeWebhookRoute
+  ApiPublicStripeWebhookRoute: typeof ApiPublicStripeWebhookRouteWithChildren
   ApiPublicTokensBalanceRoute: typeof ApiPublicTokensBalanceRoute
   ApiPublicTokensCancelRoute: typeof ApiPublicTokensCancelRoute
   ApiPublicTokensCommitRoute: typeof ApiPublicTokensCommitRoute
@@ -1415,6 +1440,13 @@ declare module '@tanstack/react-router' {
       path: '/gift-tokens'
       fullPath: '/settings/gift-tokens'
       preLoaderRoute: typeof SettingsGiftTokensRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/clone-stripe': {
+      id: '/settings/clone-stripe'
+      path: '/clone-stripe'
+      fullPath: '/settings/clone-stripe'
+      preLoaderRoute: typeof SettingsCloneStripeRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/settings/billing': {
@@ -1781,6 +1813,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicBillingHandoffRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/stripe/webhook/$cloneId': {
+      id: '/api/public/stripe/webhook/$cloneId'
+      path: '/$cloneId'
+      fullPath: '/api/public/stripe/webhook/$cloneId'
+      preLoaderRoute: typeof ApiPublicStripeWebhookCloneIdRouteImport
+      parentRoute: typeof ApiPublicStripeWebhookRoute
+    }
     '/api/public/seats/devices/release': {
       id: '/api/public/seats/devices/release'
       path: '/api/public/seats/devices/release'
@@ -1853,6 +1892,7 @@ const ModulesRouteWithChildren =
 
 interface SettingsRouteChildren {
   SettingsBillingRoute: typeof SettingsBillingRoute
+  SettingsCloneStripeRoute: typeof SettingsCloneStripeRoute
   SettingsGiftTokensRoute: typeof SettingsGiftTokensRoute
   SettingsHandoffPoliciesRoute: typeof SettingsHandoffPoliciesRoute
   SettingsNotificationsRoute: typeof SettingsNotificationsRoute
@@ -1865,6 +1905,7 @@ interface SettingsRouteChildren {
 
 const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsBillingRoute: SettingsBillingRoute,
+  SettingsCloneStripeRoute: SettingsCloneStripeRoute,
   SettingsGiftTokensRoute: SettingsGiftTokensRoute,
   SettingsHandoffPoliciesRoute: SettingsHandoffPoliciesRoute,
   SettingsNotificationsRoute: SettingsNotificationsRoute,
@@ -1890,6 +1931,20 @@ const ClonesCloneIdRouteChildren: ClonesCloneIdRouteChildren = {
 const ClonesCloneIdRouteWithChildren = ClonesCloneIdRoute._addFileChildren(
   ClonesCloneIdRouteChildren,
 )
+
+interface ApiPublicStripeWebhookRouteChildren {
+  ApiPublicStripeWebhookCloneIdRoute: typeof ApiPublicStripeWebhookCloneIdRoute
+}
+
+const ApiPublicStripeWebhookRouteChildren: ApiPublicStripeWebhookRouteChildren =
+  {
+    ApiPublicStripeWebhookCloneIdRoute: ApiPublicStripeWebhookCloneIdRoute,
+  }
+
+const ApiPublicStripeWebhookRouteWithChildren =
+  ApiPublicStripeWebhookRoute._addFileChildren(
+    ApiPublicStripeWebhookRouteChildren,
+  )
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -1956,7 +2011,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicStorefrontHandoffRoute: ApiPublicStorefrontHandoffRoute,
   ApiPublicStorefrontIdentityRoute: ApiPublicStorefrontIdentityRoute,
   ApiPublicStorefrontSessionRoute: ApiPublicStorefrontSessionRoute,
-  ApiPublicStripeWebhookRoute: ApiPublicStripeWebhookRoute,
+  ApiPublicStripeWebhookRoute: ApiPublicStripeWebhookRouteWithChildren,
   ApiPublicTokensBalanceRoute: ApiPublicTokensBalanceRoute,
   ApiPublicTokensCancelRoute: ApiPublicTokensCancelRoute,
   ApiPublicTokensCommitRoute: ApiPublicTokensCommitRoute,
