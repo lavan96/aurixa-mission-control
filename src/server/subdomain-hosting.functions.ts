@@ -14,6 +14,7 @@ import crypto from "crypto";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireAdmin } from "@/integrations/supabase/role-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { cloudflareApi, CloudflareError } from "@/server/cloudflare/client";
 
 const admin = supabaseAdmin as any;
 
@@ -246,4 +247,81 @@ export const listCloneSubdomains = createServerFn({ method: "GET" })
       .not("subdomain", "is", null)
       .order("subdomain", { ascending: true });
     return { rows: data ?? [] };
+  });
+
+// ── Cutover verification ────────────────────────────────────────────────────
+// Runs three live checks against Cloudflare so operators can see exactly
+// which cutover step is complete before hitting "Reconcile pending":
+//   1. token present + valid (verify endpoint)
+//   2. Zone:Read scope (get zone by id)
+//   3. DNS:Edit scope (list DNS records for the zone — read-list is under DNS:Edit)
+// Non-destructive: no writes are performed. Returns per-step status so the
+// UI can render green/red pips instead of one opaque "Live" badge.
+export const verifyCloudflareSetup = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth, requireAdmin])
+  .handler(async () => {
+    const cfg = await loadPlatformConfig();
+    const tokenPresent = Boolean(process.env.CLOUDFLARE_API_TOKEN);
+
+    const steps = {
+      token: { ok: false as boolean, detail: "" as string },
+      zoneRead: { ok: false as boolean, detail: "" as string },
+      dnsEdit: { ok: false as boolean, detail: "" as string },
+    };
+
+    if (!tokenPresent) {
+      steps.token.detail = "CLOUDFLARE_API_TOKEN secret not configured";
+      return { ok: false as const, ready: false, steps, config: cfg };
+    }
+
+    try {
+      const v = await cloudflareApi.verifyToken();
+      steps.token.ok = v.status === "active";
+      steps.token.detail = v.status === "active" ? "Token active" : `Token status: ${v.status}`;
+    } catch (e) {
+      steps.token.detail = e instanceof CloudflareError ? e.message : "Token verification failed";
+      return { ok: false as const, ready: false, steps, config: cfg };
+    }
+
+    if (!cfg?.cloudflare_zone_id) {
+      steps.zoneRead.detail = "Zone ID not set in platform config";
+      steps.dnsEdit.detail = "Zone ID required to test DNS scope";
+      return { ok: false as const, ready: false, steps, config: cfg };
+    }
+
+    try {
+      const zone = await cloudflareApi.getZone(cfg.cloudflare_zone_id);
+      steps.zoneRead.ok = true;
+      steps.zoneRead.detail = `Zone: ${zone.name} (${zone.status})`;
+    } catch (e) {
+      steps.zoneRead.detail = e instanceof CloudflareError ? e.message : "Zone read failed — check Zone:Read scope";
+      return { ok: false as const, ready: false, steps, config: cfg };
+    }
+
+    try {
+      const records = await cloudflareApi.listDnsRecords(cfg.cloudflare_zone_id);
+      steps.dnsEdit.ok = true;
+      steps.dnsEdit.detail = `DNS API reachable (${Array.isArray(records) ? records.length : 0} record(s) sampled)`;
+    } catch (e) {
+      steps.dnsEdit.detail = e instanceof CloudflareError ? e.message : "DNS list failed — check DNS:Edit scope";
+      return { ok: false as const, ready: false, steps, config: cfg };
+    }
+
+    return {
+      ok: true as const,
+      ready: steps.token.ok && steps.zoneRead.ok && steps.dnsEdit.ok,
+      steps,
+      config: cfg,
+    };
+  });
+
+// Count of clones sitting in pending_platform — powers the reconcile CTA.
+export const countPendingSubdomains = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth, requireAdmin])
+  .handler(async () => {
+    const { count } = await admin
+      .from("clones")
+      .select("id", { count: "exact", head: true })
+      .eq("subdomain_status", "pending_platform");
+    return { pending: count ?? 0 };
   });
