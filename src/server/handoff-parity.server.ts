@@ -410,7 +410,12 @@ export type ParityResult = {
   edge_functions_diff: ReturnType<typeof diffEdgeFunctions>;
   secrets_diff: ReturnType<typeof diffSecrets>;
   auth_config_diff: ReturnType<typeof diffAuthConfig>;
+  required_extensions_diff: ReturnType<typeof diffRequiredExtensions>;
+  realtime_diff: ReturnType<typeof diffRealtime>;
   blocking_issues: string[];
+  risk_level: "low" | "medium" | "high" | "blocking";
+  summary: string;
+};
   risk_level: "low" | "medium" | "high" | "blocking";
   summary: string;
 };
