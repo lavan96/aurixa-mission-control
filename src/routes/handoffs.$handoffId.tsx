@@ -283,10 +283,20 @@ function HandoffDetail() {
               <Button size="sm" onClick={() => planRotations.mutate()} disabled={planRotations.isPending}>
                 {planRotations.isPending ? "Planning…" : "Plan default rotation set"}
               </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => orchestrate.mutate()}
+                disabled={orchestrate.isPending}
+                title="G15 — walk rotations in canonical order and drive the state machine"
+              >
+                {orchestrate.isPending ? "Orchestrating…" : "Run cutover orchestrator (G15)"}
+              </Button>
               {(["clone_repo", "cloudflare", "stripe_endpoint", "github_webhook", "edge_function_env"] as const).map((t) => (
                 <Button key={t} size="sm" variant="outline" onClick={() => rotate.mutate(t)}>+ {t}</Button>
               ))}
             </div>
+
             <ul className="space-y-2">
               {d.rotations.map((r: any) => {
                 const evidence = (r.metadata as any)?.manual_ack?.evidence
