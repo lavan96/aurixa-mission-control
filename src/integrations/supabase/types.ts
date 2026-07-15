@@ -1855,6 +1855,9 @@ export type Database = {
           owner_user_id: string | null
           provisioning_method: Database["public"]["Enums"]["provisioning_method"]
           slug: string
+          subdomain: string | null
+          subdomain_fqdn: string | null
+          subdomain_status: string | null
           sync_status: Database["public"]["Enums"]["sync_status"]
           tags: string[] | null
           updated_at: string
@@ -1885,6 +1888,9 @@ export type Database = {
           owner_user_id?: string | null
           provisioning_method: Database["public"]["Enums"]["provisioning_method"]
           slug: string
+          subdomain?: string | null
+          subdomain_fqdn?: string | null
+          subdomain_status?: string | null
           sync_status?: Database["public"]["Enums"]["sync_status"]
           tags?: string[] | null
           updated_at?: string
@@ -1915,6 +1921,9 @@ export type Database = {
           owner_user_id?: string | null
           provisioning_method?: Database["public"]["Enums"]["provisioning_method"]
           slug?: string
+          subdomain?: string | null
+          subdomain_fqdn?: string | null
+          subdomain_status?: string | null
           sync_status?: Database["public"]["Enums"]["sync_status"]
           tags?: string[] | null
           updated_at?: string
@@ -2100,6 +2109,72 @@ export type Database = {
           },
           {
             foreignKeyName: "edge_audit_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
+          },
+        ]
+      }
+      edge_dns_records: {
+        Row: {
+          clone_id: string
+          created_at: string
+          created_by: string | null
+          external_record_id: string
+          id: string
+          managed: boolean
+          provider_slug: string
+          proxied: boolean
+          purpose: string
+          record_content: string
+          record_name: string
+          record_type: string
+          updated_at: string
+          zone_id: string
+        }
+        Insert: {
+          clone_id: string
+          created_at?: string
+          created_by?: string | null
+          external_record_id: string
+          id?: string
+          managed?: boolean
+          provider_slug?: string
+          proxied?: boolean
+          purpose?: string
+          record_content: string
+          record_name: string
+          record_type: string
+          updated_at?: string
+          zone_id: string
+        }
+        Update: {
+          clone_id?: string
+          created_at?: string
+          created_by?: string | null
+          external_record_id?: string
+          id?: string
+          managed?: boolean
+          provider_slug?: string
+          proxied?: boolean
+          purpose?: string
+          record_content?: string
+          record_name?: string
+          record_type?: string
+          updated_at?: string
+          zone_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "edge_dns_records_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "edge_dns_records_clone_id_fkey"
             columns: ["clone_id"]
             isOneToOne: false
             referencedRelation: "clones_missing_isolated_backend"
@@ -3601,6 +3676,63 @@ export type Database = {
             referencedColumns: ["clone_id"]
           },
         ]
+      }
+      platform_hosting_config: {
+        Row: {
+          auto_provision: boolean
+          cloudflare_account_id: string | null
+          cloudflare_zone_id: string | null
+          cloudflare_zone_name: string | null
+          created_at: string
+          id: string
+          primary_domain: string
+          provider_slug: string
+          proxied: boolean
+          reserved_slugs: string[]
+          singleton: boolean
+          subdomain_pattern: string
+          target_type: string
+          target_value: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          auto_provision?: boolean
+          cloudflare_account_id?: string | null
+          cloudflare_zone_id?: string | null
+          cloudflare_zone_name?: string | null
+          created_at?: string
+          id?: string
+          primary_domain?: string
+          provider_slug?: string
+          proxied?: boolean
+          reserved_slugs?: string[]
+          singleton?: boolean
+          subdomain_pattern?: string
+          target_type?: string
+          target_value?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          auto_provision?: boolean
+          cloudflare_account_id?: string | null
+          cloudflare_zone_id?: string | null
+          cloudflare_zone_name?: string | null
+          created_at?: string
+          id?: string
+          primary_domain?: string
+          provider_slug?: string
+          proxied?: boolean
+          reserved_slugs?: string[]
+          singleton?: boolean
+          subdomain_pattern?: string
+          target_type?: string
+          target_value?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
       }
       prime_config: {
         Row: {

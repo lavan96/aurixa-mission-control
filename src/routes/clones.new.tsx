@@ -18,6 +18,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { provisionClone } from "@/server/clone-provisioning.functions";
 import { provisionBackend } from "@/server/backend-provisioning.functions";
 import { enqueueEdgeJob } from "@/server/edge-provisioning.functions";
+import { requestCloneSubdomain } from "@/server/subdomain-hosting.functions";
 import { checkGithubAppPreflight, type GithubPreflightResult } from "@/lib/github-preflight.functions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
@@ -83,6 +84,9 @@ function NewClone() {
   const [edgeProvider, setEdgeProvider] = useState<"cloudflare" | "aws" | "azure">("cloudflare");
   const [edgeHostname, setEdgeHostname] = useState("");
   const [edgePreset, setEdgePreset] = useState("balanced");
+  const [subdomainEnabled, setSubdomainEnabled] = useState(true);
+  const [subdomainSlug, setSubdomainSlug] = useState("");
+  const requestSubdomainFn = useServerFn(requestCloneSubdomain);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [notes, setNotes] = useState("");
   const [billingUserId, setBillingUserId] = useState("");
@@ -320,6 +324,27 @@ function NewClone() {
           );
         } catch (e) {
           toast.error(`Edge enqueue failed: ${e instanceof Error ? e.message : "unknown"}`);
+        }
+      }
+
+      // Enqueue subdomain provisioning (dormant until CF is configured).
+      if (subdomainEnabled) {
+        const desired = (subdomainSlug.trim() || slug)
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, "-")
+          .replace(/^-+|-+$/g, "")
+          .slice(0, 63);
+        if (desired) {
+          try {
+            const r = await requestSubdomainFn({ data: { cloneId: result.cloneId, slug: desired } });
+            toast.info(
+              r.status === "queued"
+                ? `Subdomain queued — ${r.fqdn}`
+                : `Subdomain reserved (${r.fqdn}) — will provision once Cloudflare is configured`,
+            );
+          } catch (e) {
+            toast.error(`Subdomain request failed: ${e instanceof Error ? e.message : "unknown"}`);
+          }
         }
       }
 
@@ -721,6 +746,43 @@ function NewClone() {
                   <option value="strict">Strict</option>
                   <option value="under_attack">Under Attack</option>
                 </select>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Layers className="h-4 w-4 text-info" /> 6b · Subdomain hosting
+          </CardTitle>
+          <CardDescription>
+            Every clone gets an <code className="rounded bg-muted px-1 text-xs">&lt;slug&gt;.aurixasystems.com.au</code>{" "}
+            subdomain via Cloudflare DNS. Dormant if Cloudflare isn't configured yet — the record fans out automatically once{" "}
+            <a href="/settings/domains" className="underline">Settings → Domains</a> is populated.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <label className="flex cursor-pointer items-center gap-3">
+            <Checkbox checked={subdomainEnabled} onCheckedChange={(v) => setSubdomainEnabled(!!v)} />
+            <span className="text-sm">Reserve a subdomain for this clone</span>
+          </label>
+          {subdomainEnabled && (
+            <div className="grid gap-3 rounded-md border border-border p-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Subdomain (leave blank to use the clone slug)</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={subdomainSlug}
+                    onChange={(e) => setSubdomainSlug(e.target.value)}
+                    placeholder={name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "my-clone"}
+                  />
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">.aurixasystems.com.au</span>
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground self-end">
+                Reserved slugs (www, api, admin, …) are blocked. Availability is checked on submit; conflicts surface as an error.
               </div>
             </div>
           )}

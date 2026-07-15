@@ -102,4 +102,34 @@ export const cloudflareApi = {
     }>(`/zones/${zoneId}/analytics/dashboard?since=-${sinceHours * 60}&until=0`).catch(() => ({
       totals: { requests: { all: 0 }, threats: { all: 0 }, bandwidth: { all: 0 } },
     })),
+
+  // ── DNS records (subdomain hosting) ────────────────────────────────────
+  listDnsRecords: (zoneId: string, params?: { name?: string; type?: string }) => {
+    const q = new URLSearchParams({ per_page: "100" });
+    if (params?.name) q.set("name", params.name);
+    if (params?.type) q.set("type", params.type);
+    return cf<Array<{ id: string; name: string; type: string; content: string; proxied: boolean }>>(
+      `/zones/${zoneId}/dns_records?${q.toString()}`,
+    );
+  },
+  createDnsRecord: (
+    zoneId: string,
+    body: { type: "A" | "AAAA" | "CNAME"; name: string; content: string; proxied?: boolean; ttl?: number; comment?: string },
+  ) =>
+    cf<{ id: string; name: string; type: string; content: string; proxied: boolean }>(
+      `/zones/${zoneId}/dns_records`,
+      { method: "POST", body: JSON.stringify({ ttl: 1, proxied: true, ...body }) },
+    ),
+  updateDnsRecord: (
+    zoneId: string,
+    recordId: string,
+    body: Partial<{ type: string; name: string; content: string; proxied: boolean; ttl: number }>,
+  ) =>
+    cf<{ id: string; name: string; type: string; content: string; proxied: boolean }>(
+      `/zones/${zoneId}/dns_records/${recordId}`,
+      { method: "PATCH", body: JSON.stringify(body) },
+    ),
+  deleteDnsRecord: (zoneId: string, recordId: string) =>
+    cf<{ id: string }>(`/zones/${zoneId}/dns_records/${recordId}`, { method: "DELETE" }),
 };
+

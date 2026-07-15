@@ -14,7 +14,9 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { verifyCronAuth } from "@/server/cron-auth.server";
 import { getEdgeProvider } from "@/server/edge";
 import "@/server/edge/index"; // ensure providers register
+import { cloudflareApi } from "@/server/cloudflare/client";
 import type { EdgePosture, EdgeProviderSlug } from "@/server/edge";
+
 
 const admin = supabaseAdmin as any;
 const MAX_JOBS_PER_RUN = 20;
@@ -24,17 +26,32 @@ type JobRow = {
   id: string;
   clone_id: string;
   provider_slug: EdgeProviderSlug;
-  action: "attach" | "apply_posture" | "sync" | "detach";
+  action:
+    | "attach"
+    | "apply_posture"
+    | "sync"
+    | "detach"
+    | "provision_subdomain"
+    | "deprovision_subdomain"
+    | "resync_subdomain";
   payload: {
     externalRef?: string;
     hostname?: string;
     accountRef?: string;
     posturePreset?: string;
     posture?: EdgePosture;
+    // subdomain actions
+    subdomain?: string;
+    fqdn?: string;
+    zoneId?: string;
+    recordType?: "A" | "AAAA" | "CNAME";
+    recordContent?: string;
+    proxied?: boolean;
   };
   attempts: number;
   max_attempts: number;
 };
+
 
 async function claimJobs(limit: number): Promise<JobRow[]> {
   // Atomic claim via RPC-less update: pick queued/retry rows whose next_attempt_at is due.
@@ -174,6 +191,97 @@ async function runJob(job: JobRow): Promise<{ ok: boolean; result?: unknown; err
           .update({ cloudflare_enabled: false, cloudflare_zone_id: null })
           .eq("id", job.clone_id);
       }
+      return { ok: true };
+    }
+
+    // ── Subdomain hosting actions (Cloudflare-only in Phase 1) ───────────
+    if (
+      job.action === "provision_subdomain" ||
+      job.action === "resync_subdomain"
+    ) {
+      if (job.provider_slug !== "cloudflare") throw new Error("subdomain_provider_unsupported");
+      const { subdomain, fqdn, zoneId, recordType, recordContent, proxied } = job.payload;
+      if (!zoneId || !fqdn || !recordType || !recordContent) throw new Error("payload_incomplete");
+      // Idempotent: reuse the tracked record if we already created one.
+      const { data: existing } = await admin
+        .from("edge_dns_records")
+        .select("id, external_record_id, record_content, record_type, proxied")
+        .eq("clone_id", job.clone_id)
+        .eq("purpose", "clone_subdomain")
+        .eq("zone_id", zoneId)
+        .maybeSingle();
+      let recordId: string;
+      if (existing?.external_record_id) {
+        const r = await cloudflareApi.updateDnsRecord(zoneId, existing.external_record_id, {
+          type: recordType,
+          name: fqdn,
+          content: recordContent,
+          proxied: proxied ?? true,
+        });
+        recordId = r.id;
+        await admin
+          .from("edge_dns_records")
+          .update({
+            record_type: recordType,
+            record_name: fqdn,
+            record_content: recordContent,
+            proxied: proxied ?? true,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existing.id);
+      } else {
+        const r = await cloudflareApi.createDnsRecord(zoneId, {
+          type: recordType,
+          name: fqdn,
+          content: recordContent,
+          proxied: proxied ?? true,
+          comment: `aurixa-clone:${job.clone_id}`,
+        });
+        recordId = r.id;
+        await admin.from("edge_dns_records").insert({
+          clone_id: job.clone_id,
+          provider_slug: "cloudflare",
+          zone_id: zoneId,
+          external_record_id: r.id,
+          record_type: recordType,
+          record_name: fqdn,
+          record_content: recordContent,
+          proxied: proxied ?? true,
+          managed: true,
+          purpose: "clone_subdomain",
+        });
+      }
+      await admin
+        .from("clones")
+        .update({
+          subdomain: subdomain,
+          subdomain_fqdn: fqdn,
+          subdomain_status: "active",
+        })
+        .eq("id", job.clone_id);
+      return { ok: true, result: { recordId, fqdn } };
+    }
+
+    if (job.action === "deprovision_subdomain") {
+      if (job.provider_slug !== "cloudflare") throw new Error("subdomain_provider_unsupported");
+      const { data: rows } = await admin
+        .from("edge_dns_records")
+        .select("id, zone_id, external_record_id, managed")
+        .eq("clone_id", job.clone_id)
+        .eq("purpose", "clone_subdomain");
+      for (const r of rows ?? []) {
+        if (!r.managed) continue; // never touch drift/unmanaged records
+        try {
+          await cloudflareApi.deleteDnsRecord(r.zone_id, r.external_record_id);
+        } catch (e) {
+          // Absent-on-Cloudflare is fine; keep going and clean up our row.
+        }
+        await admin.from("edge_dns_records").delete().eq("id", r.id);
+      }
+      await admin
+        .from("clones")
+        .update({ subdomain: null, subdomain_fqdn: null, subdomain_status: "detached" })
+        .eq("id", job.clone_id);
       return { ok: true };
     }
 
