@@ -1978,6 +1978,36 @@ export async function provisionCloneBackend(
     );
   }
 
+  // Step 5e (G4): mirror the prime's realtime publication membership so
+  // channels subscribing to the same tables continue to receive INSERT /
+  // UPDATE / DELETE payloads on the clone. Non-fatal per table.
+  let realtimePublication: RealtimeReplicationResult = {
+    status: "skipped",
+    added: [],
+    failures: [],
+  };
+  try {
+    const primeRef = getPrimeProjectRef();
+    await onStatusUpdate?.("migrating", "Replicating realtime publication from prime...");
+    const primeTables = await fetchRealtimePublicationTables(primeRef);
+    realtimePublication = await replicateRealtimePublication(projectRef, primeTables);
+    if (realtimePublication.status === "partial" || realtimePublication.status === "failed") {
+      await onStatusUpdate?.(
+        "migrating",
+        `Realtime publication ${realtimePublication.status}: ${realtimePublication.added.length}/${primeTables.length} table(s) added, ${realtimePublication.failures.length} failure(s)`,
+      );
+    }
+  } catch (err) {
+    realtimePublication = {
+      status: "failed",
+      added: [],
+      failures: [],
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+
+
+
   await onStatusUpdate?.(
     "migrating",
     `Syncing ${snapshot.secretNames.length} secret(s) — inheriting whitelisted values...`,
