@@ -405,6 +405,33 @@ export const requestCostExport = createServerFn({ method: "POST" })
     return { ok: true as const, id: row.id };
   });
 
+// G22 — Fulfill a pending cost-export row: aggregate report_jobs + ledger +
+// seat entitlements for the period, upload a CSV to handoff-contracts, and
+// flip the row to `ready` with totals.
+export const fulfillCostExportFn = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((input) => z.object({ export_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data }) => {
+    const { fulfillCostExport } = await import("@/server/handoff-cost-exports.server");
+    return fulfillCostExport(data.export_id);
+  });
+
+// G22 — Sign a short-lived download URL for a ready cost export.
+export const signCostExportUrl = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((input) =>
+    z
+      .object({
+        export_id: z.string().uuid(),
+        expires_in: z.number().int().min(60).max(3600).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { signCostExportDownload } = await import("@/server/handoff-cost-exports.server");
+    return signCostExportDownload(data.export_id, data.expires_in ?? 600);
+  });
+
 // G1 — Compute a schema/policies/functions/extensions parity report between
 // prime backend and the clone's target backend. On success writes a row to
 // handoff_parity_reports; when no blocking issues are found, auto-advances

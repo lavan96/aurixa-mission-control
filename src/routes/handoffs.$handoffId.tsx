@@ -19,6 +19,8 @@ import {
   executeSecretRotation,
   markSecretRotation,
   requestCostExport,
+  fulfillCostExportFn,
+  signCostExportUrl,
   runParityDryRun,
   runCutoverOrchestrator,
   rollbackHandoffCutover,
@@ -268,6 +270,28 @@ function HandoffDetail() {
     },
   });
 
+  const fulfillExport = useMutation({
+    mutationFn: (export_id: string) => fulfillCostExportFn({ data: { export_id } }),
+    onSuccess: (r: any) => {
+      qc.invalidateQueries({ queryKey: ["handoff", handoffId] });
+      if (r?.ok) toast.success(`Export ready — ${r.rows} rows, ${r.total_tokens.toLocaleString()} tokens`);
+      else toast.error(`Fulfill failed: ${r?.error ?? "unknown"}`);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Fulfill failed"),
+  });
+
+  const downloadExport = useMutation({
+    mutationFn: (export_id: string) => signCostExportUrl({ data: { export_id } }),
+    onSuccess: (r: any) => {
+      if (r?.ok && r.url) {
+        window.open(r.url, "_blank", "noopener,noreferrer");
+      } else {
+        toast.error(`Download failed: ${r?.error ?? "unknown"}`);
+      }
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Download failed"),
+  });
+
   const parity = useMutation({
     mutationFn: () => runParityDryRun({ data: { handoff_id: handoffId } }),
     onSuccess: (r: any) => {
@@ -445,15 +469,47 @@ function HandoffDetail() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2"><FileDown className="h-4 w-4" /> Cost exports (E8)</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2"><FileDown className="h-4 w-4" /> Cost exports (E8 · G22)</CardTitle>
+            <CardDescription>
+              Request a period export, then fulfill it to generate a CSV of
+              report jobs, ledger entries, and seat entitlements. Ready
+              exports produce a short-lived signed download link.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <Button size="sm" variant="outline" onClick={() => exportCost.mutate()}>Request 90d export</Button>
             <ul className="mt-2 space-y-1">
               {d.cost_exports.map((e: any) => (
-                <li key={e.id} className="flex justify-between border-b py-1">
-                  <span>{new Date(e.period_start).toLocaleDateString()} → {new Date(e.period_end).toLocaleDateString()}</span>
+                <li key={e.id} className="flex items-center justify-between gap-2 border-b py-1">
+                  <span className="flex-1">
+                    {new Date(e.period_start).toLocaleDateString()} → {new Date(e.period_end).toLocaleDateString()}
+                    {e.rows_included != null && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {e.rows_included} rows · {(e.total_tokens ?? 0).toLocaleString()} tokens
+                      </span>
+                    )}
+                  </span>
                   <Badge variant="outline">{e.status}</Badge>
+                  {(e.status === "pending" || e.status === "failed") && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={fulfillExport.isPending}
+                      onClick={() => fulfillExport.mutate(e.id)}
+                    >
+                      Fulfill
+                    </Button>
+                  )}
+                  {e.status === "ready" && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={downloadExport.isPending}
+                      onClick={() => downloadExport.mutate(e.id)}
+                    >
+                      Download
+                    </Button>
+                  )}
                 </li>
               ))}
               {d.cost_exports.length === 0 && <li className="text-muted-foreground">none</li>}
