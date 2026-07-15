@@ -60,6 +60,132 @@ export type ApiKey = {
 // ─── Project Lifecycle ───────────────────────────────────────────────
 
 /**
+ * G10 — Verify the target Supabase org has capacity before we burn a
+ * project slot on `POST /v1/projects`. Free-tier orgs are hard-capped at
+ * 2 active projects; the create call otherwise fails after we've already
+ * generated a db password and updated status, leaving the operator with
+ * a confusing error. This preflight surfaces the exact reason ahead of
+ * time and is reused by the twin provisioner (handoffs) with the
+ * client's PAT + orgId so we don't consume a free slot in their org.
+ */
+
+export type OrgCapacityResult = {
+  orgId: string;
+  orgName: string | null;
+  planTier: string | null;
+  activeProjects: number;
+  softLimit: number;
+  wouldExceed: boolean;
+  hardBlock: boolean;
+  reason: string | null;
+  projects: Array<{ id: string; name: string; status: string; region: string }>;
+};
+
+const DEFAULT_SOFT_LIMITS: Record<string, number> = {
+  free: 2,
+  pro: 30,
+  team: 30,
+  enterprise: 100,
+};
+
+function resolveSoftLimit(planTier: string | null, override?: number | null): number {
+  if (typeof override === "number" && override > 0) return override;
+  const envOverride = Number(process.env.SB_ORG_PROJECT_SOFT_LIMIT || "");
+  if (Number.isFinite(envOverride) && envOverride > 0) return envOverride;
+  const key = (planTier || "").toLowerCase();
+  return DEFAULT_SOFT_LIMITS[key] ?? DEFAULT_SOFT_LIMITS.pro;
+}
+
+export async function checkOrgCapacity(input?: {
+  token?: string;
+  orgId?: string;
+  softLimit?: number | null;
+}): Promise<OrgCapacityResult> {
+  const token = input?.token ?? getMgmtToken();
+  const orgId = input?.orgId ?? getOrgId();
+  const authHeaders = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
+
+  // Fetch org metadata (best-effort — some plans don't expose `plan`).
+  let orgName: string | null = null;
+  let planTier: string | null = null;
+  try {
+    const orgsRes = await fetch(`${MGMT_API}/organizations`, { headers: authHeaders });
+    if (orgsRes.ok) {
+      const list = (await orgsRes.json()) as Array<Record<string, unknown>>;
+      const match = list.find((o) => o.id === orgId || o.slug === orgId);
+      if (match) {
+        orgName = typeof match.name === "string" ? match.name : null;
+        planTier =
+          typeof match.plan === "string"
+            ? match.plan
+            : typeof (match as Record<string, unknown>).tier === "string"
+            ? ((match as Record<string, unknown>).tier as string)
+            : null;
+      }
+    }
+  } catch {
+    // Non-fatal — capacity check falls back to the pro-tier default limit.
+  }
+
+  // List projects visible to this PAT, filter by org.
+  const projRes = await fetch(`${MGMT_API}/projects`, { headers: authHeaders });
+  if (!projRes.ok) {
+    const body = await projRes.text();
+    throw new Error(`Capacity preflight failed to list projects: ${projRes.status} — ${body}`);
+  }
+  const allProjects = (await projRes.json()) as Array<Record<string, unknown>>;
+  const nonTerminal = new Set([
+    "ACTIVE_HEALTHY",
+    "COMING_UP",
+    "INACTIVE",
+    "GOING_DOWN",
+    "INIT_FAILED",
+    "REMOVED",
+    "RESTORING",
+    "UPGRADING",
+    "PAUSING",
+    "RESTORE_FAILED",
+    "PAUSED",
+    "UNKNOWN",
+  ]);
+  const orgProjects = allProjects
+    .filter((p) => p.organization_id === orgId)
+    // Count anything that still occupies a slot; PAUSED counts on the free tier.
+    .filter((p) => typeof p.status !== "string" || nonTerminal.has(p.status as string))
+    .map((p) => ({
+      id: String(p.id ?? p.ref ?? ""),
+      name: String(p.name ?? ""),
+      status: String(p.status ?? "UNKNOWN"),
+      region: String(p.region ?? ""),
+    }));
+
+  const softLimit = resolveSoftLimit(planTier, input?.softLimit);
+  const activeProjects = orgProjects.length;
+  const wouldExceed = activeProjects + 1 > softLimit;
+  const hardBlock = wouldExceed && (planTier ?? "").toLowerCase() === "free";
+  const reason = hardBlock
+    ? `Free-tier orgs are limited to ${softLimit} active projects. Upgrade the org or archive an unused project before provisioning.`
+    : wouldExceed
+    ? `Creating another project would exceed the configured soft limit of ${softLimit}. Set SB_ORG_PROJECT_SOFT_LIMIT to override, or archive an unused project.`
+    : null;
+
+  return {
+    orgId,
+    orgName,
+    planTier,
+    activeProjects,
+    softLimit,
+    wouldExceed,
+    hardBlock,
+    reason,
+    projects: orgProjects,
+  };
+}
+
+/**
  * Create a new Supabase project under the configured organization.
  */
 export async function createSupabaseProject(input: CreateProjectInput): Promise<SupabaseProject> {
@@ -82,6 +208,7 @@ export async function createSupabaseProject(input: CreateProjectInput): Promise<
 
   return res.json();
 }
+
 
 /**
  * Poll project status until it becomes ACTIVE_HEALTHY or times out.
