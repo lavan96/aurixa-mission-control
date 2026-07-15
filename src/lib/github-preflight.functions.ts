@@ -15,6 +15,9 @@ const InputSchema = z.object({
   method: z.enum(["fork", "template", "clone"]).optional(),
   templateOwner: z.string().trim().optional().nullable(),
   templateRepo: z.string().trim().optional().nullable(),
+  // G9: after clone-repo creation, verify the specific repo is reachable
+  // by the installation (either "all" selection or explicitly selected).
+  targetRepo: z.string().trim().optional().nullable(),
 });
 
 export type GithubPreflightResult = {
@@ -26,6 +29,12 @@ export type GithubPreflightResult = {
   targetOwner: string;
   templateAccessible?: boolean | null;
   templateRepoIsTemplate?: boolean | null;
+  // G9 fields
+  repositorySelection?: "all" | "selected" | null;
+  targetRepo?: string | null;
+  targetRepoAccessible?: boolean | null;
+  contentsWritePermission?: boolean | null;
+  workflowsPermission?: boolean | null;
   message?: string;
   hint?: string;
   installUrl?: string;
