@@ -14,7 +14,9 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { verifyCronAuth } from "@/server/cron-auth.server";
 import { getEdgeProvider } from "@/server/edge";
 import "@/server/edge/index"; // ensure providers register
+import { cloudflareApi } from "@/server/cloudflare/client";
 import type { EdgePosture, EdgeProviderSlug } from "@/server/edge";
+
 
 const admin = supabaseAdmin as any;
 const MAX_JOBS_PER_RUN = 20;
