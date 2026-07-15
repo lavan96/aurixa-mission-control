@@ -1683,6 +1683,69 @@ export type Database = {
         }
         Relationships: []
       }
+      clone_stripe_configs: {
+        Row: {
+          activated_at: string | null
+          clone_id: string
+          created_at: string
+          created_by: string | null
+          forward_url: string | null
+          metadata: Json
+          mode: Database["public"]["Enums"]["clone_stripe_mode"]
+          rotated_at: string | null
+          status: Database["public"]["Enums"]["clone_stripe_status"]
+          stripe_account_id: string | null
+          updated_at: string
+          webhook_secret_ciphertext: string | null
+          webhook_secret_last4: string | null
+        }
+        Insert: {
+          activated_at?: string | null
+          clone_id: string
+          created_at?: string
+          created_by?: string | null
+          forward_url?: string | null
+          metadata?: Json
+          mode?: Database["public"]["Enums"]["clone_stripe_mode"]
+          rotated_at?: string | null
+          status?: Database["public"]["Enums"]["clone_stripe_status"]
+          stripe_account_id?: string | null
+          updated_at?: string
+          webhook_secret_ciphertext?: string | null
+          webhook_secret_last4?: string | null
+        }
+        Update: {
+          activated_at?: string | null
+          clone_id?: string
+          created_at?: string
+          created_by?: string | null
+          forward_url?: string | null
+          metadata?: Json
+          mode?: Database["public"]["Enums"]["clone_stripe_mode"]
+          rotated_at?: string | null
+          status?: Database["public"]["Enums"]["clone_stripe_status"]
+          stripe_account_id?: string | null
+          updated_at?: string
+          webhook_secret_ciphertext?: string | null
+          webhook_secret_last4?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clone_stripe_configs_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: true
+            referencedRelation: "clones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clone_stripe_configs_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: true
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
+          },
+        ]
+      }
       clones: {
         Row: {
           billing_stripe_customer_id: string | null
@@ -4274,33 +4337,54 @@ export type Database = {
       }
       stripe_events: {
         Row: {
+          clone_id: string | null
           created_at: string
           error: string | null
           id: string
           payload: Json
           processed_at: string | null
+          stripe_account_id: string | null
           stripe_event_id: string
           type: string
         }
         Insert: {
+          clone_id?: string | null
           created_at?: string
           error?: string | null
           id?: string
           payload: Json
           processed_at?: string | null
+          stripe_account_id?: string | null
           stripe_event_id: string
           type: string
         }
         Update: {
+          clone_id?: string | null
           created_at?: string
           error?: string | null
           id?: string
           payload?: Json
           processed_at?: string | null
+          stripe_account_id?: string | null
           stripe_event_id?: string
           type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "stripe_events_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stripe_events_clone_id_fkey"
+            columns: ["clone_id"]
+            isOneToOne: false
+            referencedRelation: "clones_missing_isolated_backend"
+            referencedColumns: ["clone_id"]
+          },
+        ]
       }
       tenants: {
         Row: {
@@ -5051,6 +5135,8 @@ export type Database = {
         | "ready"
         | "failed"
         | "suspended"
+      clone_stripe_mode: "platform" | "own_account" | "connect"
+      clone_stripe_status: "pending" | "active" | "rotated" | "revoked"
       drift_severity: "low" | "medium" | "high"
       handoff_path: "rebuild_twin" | "enterprise_transfer"
       handoff_state:
@@ -5282,6 +5368,8 @@ export const Constants = {
         "failed",
         "suspended",
       ],
+      clone_stripe_mode: ["platform", "own_account", "connect"],
+      clone_stripe_status: ["pending", "active", "rotated", "revoked"],
       drift_severity: ["low", "medium", "high"],
       handoff_path: ["rebuild_twin", "enterprise_transfer"],
       handoff_state: [
