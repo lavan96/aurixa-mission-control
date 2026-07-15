@@ -74,6 +74,7 @@ import { Route as BillingCatalogRouteImport } from './routes/billing.catalog'
 import { Route as BillingCancelRouteImport } from './routes/billing.cancel'
 import { Route as ApiHealthRouteImport } from './routes/api.health'
 import { Route as ClonesCloneIdSecretsRouteImport } from './routes/clones.$cloneId.secrets'
+import { Route as ClientsHandoffTokenRouteImport } from './routes/clients.handoff.$token'
 import { Route as ApiPublicPurchasesRouteImport } from './routes/api.public.purchases'
 import { Route as ApiPublicTokensReserveRouteImport } from './routes/api.public.tokens.reserve'
 import { Route as ApiPublicTokensPacksRouteImport } from './routes/api.public.tokens.packs'
@@ -431,6 +432,11 @@ const ClonesCloneIdSecretsRoute = ClonesCloneIdSecretsRouteImport.update({
   path: '/secrets',
   getParentRoute: () => ClonesCloneIdRoute,
 } as any)
+const ClientsHandoffTokenRoute = ClientsHandoffTokenRouteImport.update({
+  id: '/clients/handoff/$token',
+  path: '/clients/handoff/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicPurchasesRoute = ApiPublicPurchasesRouteImport.update({
   id: '/api/public/purchases',
   path: '/api/public/purchases',
@@ -651,6 +657,7 @@ export interface FileRoutesByFullPath {
   '/settings/roles': typeof SettingsRolesRoute
   '/settings/': typeof SettingsIndexRoute
   '/api/public/purchases': typeof ApiPublicPurchasesRoute
+  '/clients/handoff/$token': typeof ClientsHandoffTokenRoute
   '/clones/$cloneId/secrets': typeof ClonesCloneIdSecretsRoute
   '/api/public/billing/handoff': typeof ApiPublicBillingHandoffRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
@@ -745,6 +752,7 @@ export interface FileRoutesByTo {
   '/settings/roles': typeof SettingsRolesRoute
   '/settings': typeof SettingsIndexRoute
   '/api/public/purchases': typeof ApiPublicPurchasesRoute
+  '/clients/handoff/$token': typeof ClientsHandoffTokenRoute
   '/clones/$cloneId/secrets': typeof ClonesCloneIdSecretsRoute
   '/api/public/billing/handoff': typeof ApiPublicBillingHandoffRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
@@ -841,6 +849,7 @@ export interface FileRoutesById {
   '/settings/roles': typeof SettingsRolesRoute
   '/settings/': typeof SettingsIndexRoute
   '/api/public/purchases': typeof ApiPublicPurchasesRoute
+  '/clients/handoff/$token': typeof ClientsHandoffTokenRoute
   '/clones/$cloneId/secrets': typeof ClonesCloneIdSecretsRoute
   '/api/public/billing/handoff': typeof ApiPublicBillingHandoffRoute
   '/api/public/clones/rotate-key': typeof ApiPublicClonesRotateKeyRoute
@@ -938,6 +947,7 @@ export interface FileRouteTypes {
     | '/settings/roles'
     | '/settings/'
     | '/api/public/purchases'
+    | '/clients/handoff/$token'
     | '/clones/$cloneId/secrets'
     | '/api/public/billing/handoff'
     | '/api/public/clones/rotate-key'
@@ -1032,6 +1042,7 @@ export interface FileRouteTypes {
     | '/settings/roles'
     | '/settings'
     | '/api/public/purchases'
+    | '/clients/handoff/$token'
     | '/clones/$cloneId/secrets'
     | '/api/public/billing/handoff'
     | '/api/public/clones/rotate-key'
@@ -1127,6 +1138,7 @@ export interface FileRouteTypes {
     | '/settings/roles'
     | '/settings/'
     | '/api/public/purchases'
+    | '/clients/handoff/$token'
     | '/clones/$cloneId/secrets'
     | '/api/public/billing/handoff'
     | '/api/public/clones/rotate-key'
@@ -1207,6 +1219,7 @@ export interface RootRouteChildren {
   HooksTokenAlertsRoute: typeof HooksTokenAlertsRoute
   HooksWarmHealthRoute: typeof HooksWarmHealthRoute
   ApiPublicPurchasesRoute: typeof ApiPublicPurchasesRoute
+  ClientsHandoffTokenRoute: typeof ClientsHandoffTokenRoute
   ApiPublicBillingHandoffRoute: typeof ApiPublicBillingHandoffRoute
   ApiPublicClonesRotateKeyRoute: typeof ApiPublicClonesRotateKeyRoute
   ApiPublicEdgeStatusRoute: typeof ApiPublicEdgeStatusRoute
@@ -1692,6 +1705,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClonesCloneIdSecretsRouteImport
       parentRoute: typeof ClonesCloneIdRoute
     }
+    '/clients/handoff/$token': {
+      id: '/clients/handoff/$token'
+      path: '/clients/handoff/$token'
+      fullPath: '/clients/handoff/$token'
+      preLoaderRoute: typeof ClientsHandoffTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/purchases': {
       id: '/api/public/purchases'
       path: '/api/public/purchases'
@@ -2038,6 +2058,7 @@ const rootRouteChildren: RootRouteChildren = {
   HooksTokenAlertsRoute: HooksTokenAlertsRoute,
   HooksWarmHealthRoute: HooksWarmHealthRoute,
   ApiPublicPurchasesRoute: ApiPublicPurchasesRoute,
+  ClientsHandoffTokenRoute: ClientsHandoffTokenRoute,
   ApiPublicBillingHandoffRoute: ApiPublicBillingHandoffRoute,
   ApiPublicClonesRotateKeyRoute: ApiPublicClonesRotateKeyRoute,
   ApiPublicEdgeStatusRoute: ApiPublicEdgeStatusRoute,
