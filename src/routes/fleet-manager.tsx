@@ -67,7 +67,7 @@ function actionToMode(action: DriftSuggestion["recommended_action"]): CascadeMod
 }
 
 function FleetManager() {
-  const { data: clones, loading: clonesLoading, refresh } = useClones();
+  const { data: clones, loading: clonesLoading, error: clonesError, refresh } = useClones();
   const drift = useMemo(
     () => clones.filter((c) => c.sync_status === "behind" || c.sync_status === "failed"),
     [clones],
@@ -362,6 +362,17 @@ function FleetManager() {
         <CardContent>
           {clonesLoading ? (
             <DriftListSkeleton count={3} />
+          ) : clonesError ? (
+            <EmptyState
+              icon={<AlertTriangle />}
+              title="Couldn't load the fleet"
+              description={clonesError}
+              action={
+                <Button variant="outline" onClick={() => void refresh()}>
+                  <RefreshCw className="mr-1.5 h-4 w-4" /> Retry
+                </Button>
+              }
+            />
           ) : drift.length === 0 ? (
             <EmptyState
               icon={<Activity />}
