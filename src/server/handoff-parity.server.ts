@@ -143,6 +143,10 @@ async function snapshotProject(ref: string) {
   const edgeFnSet = new Set<string>(edgeFns);
   const secretSet = new Set<string>(secretNames);
 
+  const realtimeSet = new Set<string>(
+    (realtimeTables ?? []).map((t) => `${t.schema}.${t.table}`),
+  );
+
   return {
     columnsByTable,
     rlsByTable,
@@ -153,9 +157,11 @@ async function snapshotProject(ref: string) {
     cronByName,
     edgeFnSet,
     secretSet,
+    realtimeSet,
     authCfg: authCfg ?? {},
   };
 }
+
 
 type Snapshot = Awaited<ReturnType<typeof snapshotProject>>;
 
