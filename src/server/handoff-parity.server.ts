@@ -416,9 +416,6 @@ export type ParityResult = {
   risk_level: "low" | "medium" | "high" | "blocking";
   summary: string;
 };
-  risk_level: "low" | "medium" | "high" | "blocking";
-  summary: string;
-};
 
 export async function computeParity(primeRef: string, targetRef: string): Promise<ParityResult> {
   const [prime, target] = await Promise.all([snapshotProject(primeRef), snapshotProject(targetRef)]);
