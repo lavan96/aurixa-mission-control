@@ -49,7 +49,7 @@ export const getHandoff = createServerFn({ method: "POST" })
   .middleware([requireAdmin])
   .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const [handoff, events, snapshots, parity, rotations, contracts, exports_] =
+    const [handoff, events, snapshots, parity, rotations, contracts, exports_, storageReps] =
       await Promise.all([
         context.supabase
           .from("clone_handoffs")
@@ -88,6 +88,11 @@ export const getHandoff = createServerFn({ method: "POST" })
           .select("*")
           .eq("handoff_id", data.id)
           .order("generated_at", { ascending: false }),
+        context.supabase
+          .from("handoff_storage_replications")
+          .select("*")
+          .eq("handoff_id", data.id)
+          .order("bucket_id", { ascending: true }),
       ]);
     if (handoff.error) throw handoff.error;
     return {
@@ -98,8 +103,10 @@ export const getHandoff = createServerFn({ method: "POST" })
       rotations: rotations.data ?? [],
       contracts: contracts.data ?? [],
       cost_exports: exports_.data ?? [],
+      storage_replications: storageReps.data ?? [],
     };
   });
+
 
 export const createHandoff = createServerFn({ method: "POST" })
   .middleware([requireAdmin])
