@@ -21,6 +21,8 @@ import {
   requestCostExport,
   runParityDryRun,
   runCutoverOrchestrator,
+  rollbackHandoffCutover,
+
   replicateHandoffAuthUsers,
   replicateHandoffStorageObjects,
 
