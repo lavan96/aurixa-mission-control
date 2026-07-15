@@ -42,6 +42,7 @@ import { Route as SettingsPermissionMatrixRouteImport } from './routes/settings.
 import { Route as SettingsNotificationsRouteImport } from './routes/settings.notifications'
 import { Route as SettingsHandoffPoliciesRouteImport } from './routes/settings.handoff-policies'
 import { Route as SettingsGiftTokensRouteImport } from './routes/settings.gift-tokens'
+import { Route as SettingsCloneStripeRouteImport } from './routes/settings.clone-stripe'
 import { Route as SettingsBillingRouteImport } from './routes/settings.billing'
 import { Route as ModulesBuilderRouteImport } from './routes/modules.builder'
 import { Route as ModulesSlugRouteImport } from './routes/modules.$slug'
@@ -265,6 +266,11 @@ const SettingsHandoffPoliciesRoute = SettingsHandoffPoliciesRouteImport.update({
 const SettingsGiftTokensRoute = SettingsGiftTokensRouteImport.update({
   id: '/gift-tokens',
   path: '/gift-tokens',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsCloneStripeRoute = SettingsCloneStripeRouteImport.update({
+  id: '/clone-stripe',
+  path: '/clone-stripe',
   getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsBillingRoute = SettingsBillingRouteImport.update({
@@ -621,6 +627,7 @@ export interface FileRoutesByFullPath {
   '/modules/$slug': typeof ModulesSlugRoute
   '/modules/builder': typeof ModulesBuilderRoute
   '/settings/billing': typeof SettingsBillingRoute
+  '/settings/clone-stripe': typeof SettingsCloneStripeRoute
   '/settings/gift-tokens': typeof SettingsGiftTokensRoute
   '/settings/handoff-policies': typeof SettingsHandoffPoliciesRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
@@ -712,6 +719,7 @@ export interface FileRoutesByTo {
   '/modules/$slug': typeof ModulesSlugRoute
   '/modules/builder': typeof ModulesBuilderRoute
   '/settings/billing': typeof SettingsBillingRoute
+  '/settings/clone-stripe': typeof SettingsCloneStripeRoute
   '/settings/gift-tokens': typeof SettingsGiftTokensRoute
   '/settings/handoff-policies': typeof SettingsHandoffPoliciesRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
@@ -805,6 +813,7 @@ export interface FileRoutesById {
   '/modules/$slug': typeof ModulesSlugRoute
   '/modules/builder': typeof ModulesBuilderRoute
   '/settings/billing': typeof SettingsBillingRoute
+  '/settings/clone-stripe': typeof SettingsCloneStripeRoute
   '/settings/gift-tokens': typeof SettingsGiftTokensRoute
   '/settings/handoff-policies': typeof SettingsHandoffPoliciesRoute
   '/settings/notifications': typeof SettingsNotificationsRoute
@@ -899,6 +908,7 @@ export interface FileRouteTypes {
     | '/modules/$slug'
     | '/modules/builder'
     | '/settings/billing'
+    | '/settings/clone-stripe'
     | '/settings/gift-tokens'
     | '/settings/handoff-policies'
     | '/settings/notifications'
@@ -990,6 +1000,7 @@ export interface FileRouteTypes {
     | '/modules/$slug'
     | '/modules/builder'
     | '/settings/billing'
+    | '/settings/clone-stripe'
     | '/settings/gift-tokens'
     | '/settings/handoff-policies'
     | '/settings/notifications'
@@ -1082,6 +1093,7 @@ export interface FileRouteTypes {
     | '/modules/$slug'
     | '/modules/builder'
     | '/settings/billing'
+    | '/settings/clone-stripe'
     | '/settings/gift-tokens'
     | '/settings/handoff-policies'
     | '/settings/notifications'
@@ -1428,6 +1440,13 @@ declare module '@tanstack/react-router' {
       path: '/gift-tokens'
       fullPath: '/settings/gift-tokens'
       preLoaderRoute: typeof SettingsGiftTokensRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/clone-stripe': {
+      id: '/settings/clone-stripe'
+      path: '/clone-stripe'
+      fullPath: '/settings/clone-stripe'
+      preLoaderRoute: typeof SettingsCloneStripeRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/settings/billing': {
@@ -1873,6 +1892,7 @@ const ModulesRouteWithChildren =
 
 interface SettingsRouteChildren {
   SettingsBillingRoute: typeof SettingsBillingRoute
+  SettingsCloneStripeRoute: typeof SettingsCloneStripeRoute
   SettingsGiftTokensRoute: typeof SettingsGiftTokensRoute
   SettingsHandoffPoliciesRoute: typeof SettingsHandoffPoliciesRoute
   SettingsNotificationsRoute: typeof SettingsNotificationsRoute
@@ -1885,6 +1905,7 @@ interface SettingsRouteChildren {
 
 const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsBillingRoute: SettingsBillingRoute,
+  SettingsCloneStripeRoute: SettingsCloneStripeRoute,
   SettingsGiftTokensRoute: SettingsGiftTokensRoute,
   SettingsHandoffPoliciesRoute: SettingsHandoffPoliciesRoute,
   SettingsNotificationsRoute: SettingsNotificationsRoute,
