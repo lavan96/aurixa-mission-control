@@ -88,6 +88,40 @@ function HandoffDetail() {
     },
   });
 
+  // G14 — one-click plan of the default rotation set.
+  const planRotations = useMutation({
+    mutationFn: () => planStandardRotations({ data: { handoff_id: handoffId } }),
+    onSuccess: (r: any) => {
+      qc.invalidateQueries({ queryKey: ["handoff", handoffId] });
+      toast.success(`Planned ${r.inserted ?? 0} rotation(s)`);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Plan failed"),
+  });
+
+  // G14 — execute a single rotation via its executor.
+  const runRotation = useMutation({
+    mutationFn: (id: string) => executeSecretRotation({ data: { id } }),
+    onSuccess: (r: any) => {
+      qc.invalidateQueries({ queryKey: ["handoff", handoffId] });
+      if (r?.ok === false) return toast.error(r.error ?? "Failed");
+      if (r.status === "rotated") toast.success("Rotated");
+      else if (r.status === "in_progress") toast.info("Awaiting external evidence");
+      else toast.error(`Rotation ${r.status}: ${r.error ?? ""}`);
+    },
+  });
+
+  // G14 — manual acknowledge (out-of-band rotate).
+  const ackRotation = useMutation({
+    mutationFn: (v: { id: string; status: "rotated" | "skipped" | "failed"; evidence?: string }) =>
+      markSecretRotation({ data: v }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["handoff", handoffId] });
+      toast.success("Rotation acknowledged");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed"),
+  });
+
+
   const exportCost = useMutation({
     mutationFn: () => {
       const now = new Date();
