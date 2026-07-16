@@ -38,6 +38,7 @@ import {
 import { useClones, useModules, useCascadeEvents } from "@/lib/queries";
 import { formatDistanceToNow } from "@/lib/format";
 import { NAV_ITEMS } from "@/lib/nav";
+import { OPEN_ONBOARDING_EVENT } from "@/components/onboarding-wizard";
 
 type Action = {
   id: string;
@@ -100,6 +101,14 @@ export function CommandPalette() {
       icon: <Plus className="h-4 w-4" />,
       onSelect: () => run(() => navigate({ to: "/clones/new" })),
       keywords: "create provision fork template",
+    },
+    {
+      id: "setup-guide",
+      label: "Setup guide",
+      hint: "Reopen the onboarding tour",
+      icon: <Sparkles className="h-4 w-4" />,
+      onSelect: () => run(() => window.dispatchEvent(new Event(OPEN_ONBOARDING_EVENT))),
+      keywords: "onboarding wizard walkthrough getting started tour help",
     },
     {
       id: "fire-cascade-pr",

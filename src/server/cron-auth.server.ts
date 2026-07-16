@@ -25,7 +25,11 @@ function timingSafeEqualStr(a: string, b: string): boolean {
   return crypto.timingSafeEqual(ab, bb);
 }
 
-export type CronAuthResult = { ok: true } | { ok: false; response: Response };
+// `response` is present on both members (optional on success) so call sites can
+// read `auth.response` after an `if (!auth.ok)` guard without relying on
+// discriminated-union narrowing — which this project's non-strict tsconfig does
+// not perform. On success it is simply absent.
+export type CronAuthResult = { ok: true; response?: undefined } | { ok: false; response: Response };
 
 /**
  * Verify a scheduled-hook request carries the shared cron secret as a Bearer

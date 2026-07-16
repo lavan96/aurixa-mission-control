@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Cascade worker — drains queued cascade_events that were enqueued but never
 // executed synchronously (e.g. provision-time module cascades). Runs every
 // minute via pg_cron with Bearer(cron_secret) auth.

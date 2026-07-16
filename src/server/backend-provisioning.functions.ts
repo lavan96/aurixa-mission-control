@@ -40,7 +40,8 @@ async function runBackendProvisioning(
   };
 
   try {
-    const { resolvePrimeSource, fetchPrimeBackendSnapshot } = await import("./prime-backend.server");
+    const { resolvePrimeSource, fetchPrimeBackendSnapshot } =
+      await import("./prime-backend.server");
     const { getAppOctokit } = await import("./github-app.server");
     const { provisionCloneBackend } = await import("./backend-provisioning.server");
     const { encryptSecret } = await import("./crypto.server");
@@ -167,7 +168,13 @@ async function runBackendProvisioning(
     // Applied in dependency order; each module's SQL is wrapped in a
     // transaction so partial failures don't leave a half-applied schema.
     const moduleIds = input.moduleIds ?? [];
-    let moduleApplyResults: Array<{ id: string; name: string; ok: boolean; skipped?: boolean; error?: string }> = [];
+    let moduleApplyResults: Array<{
+      id: string;
+      name: string;
+      ok: boolean;
+      skipped?: boolean;
+      error?: string;
+    }> = [];
     if (moduleIds.length > 0) {
       const { applyModuleMigrations } = await import("./backend-provisioning.server");
       const { data: mods } = await supabase
@@ -260,7 +267,7 @@ export async function runQueuedBackendProvisioning(input: {
   adminPassword: string;
   moduleIds?: string[];
   actorUserId: string | null;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
+}): Promise<{ ok: true; error?: undefined } | { ok: false; error: string }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   return runBackendProvisioning(supabaseAdmin as any, input.actorUserId ?? "system", {
     cloneId: input.cloneId,
@@ -372,7 +379,6 @@ export const provisionBackend = createServerFn({ method: "POST" })
       );
 
       if (upsertErr) return { ok: false, error: upsertErr.message };
-
 
       return { ok: true, queued: true };
     },
@@ -654,9 +660,7 @@ export const addModulesToBackend = createServerFn({ method: "POST" })
     // Restore ready status regardless of individual module outcomes — the
     // backend itself is still healthy; failures are reported per-module.
     const failed = results.filter((r) => !r.ok);
-    const succeededRequested = results.filter(
-      (r) => r.ok && requested.has(r.id) && !r.skipped,
-    );
+    const succeededRequested = results.filter((r) => r.ok && requested.has(r.id) && !r.skipped);
     await supabase
       .from("clone_backends")
       .update({
@@ -713,5 +717,3 @@ export const addModulesToBackend = createServerFn({ method: "POST" })
       failed: failed.map((r) => ({ id: r.id, name: r.name, error: r.error })),
     };
   });
-
-

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // G7 — per-clone Stripe webhook receiver.
 //
 // External Stripe accounts (isolated / handed-off clones running on their own
@@ -16,6 +15,7 @@
 // once the clone side has a matching /hooks/stripe endpoint of its own.
 import { createFileRoute } from "@tanstack/react-router";
 import type Stripe from "stripe";
+import type { Json } from "@/integrations/supabase/types";
 import { getStripe, getStripeCryptoProvider } from "@/server/stripe.server";
 
 function json(body: unknown, status = 200) {
@@ -60,7 +60,10 @@ export const Route = createFileRoute("/api/public/stripe/webhook/$cloneId")({
         try {
           secret = decryptSecret(config.webhook_secret_ciphertext as string) as string;
         } catch (err) {
-          return json({ error: "webhook_secret_decrypt_failed", detail: (err as Error).message }, 500);
+          return json(
+            { error: "webhook_secret_decrypt_failed", detail: (err as Error).message },
+            500,
+          );
         }
 
         let event: Stripe.Event;
@@ -84,9 +87,9 @@ export const Route = createFileRoute("/api/public/stripe/webhook/$cloneId")({
         const claimRes = await supabaseAdmin.from("stripe_events").insert({
           stripe_event_id: event.id,
           type: event.type,
-          payload: event as unknown as Record<string, unknown>,
+          payload: event as unknown as Json,
           clone_id: cloneId,
-          stripe_account_id: config.stripe_account_id ?? (event.account ?? null),
+          stripe_account_id: config.stripe_account_id ?? event.account ?? null,
         });
         if (claimRes.error) {
           if (claimRes.error.code === "23505") {

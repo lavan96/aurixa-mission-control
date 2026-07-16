@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Edge provisioning worker — drains queued jobs from edge_provisioning_jobs.
 // Called by pg_cron every minute (Bearer auth via verifyCronAuth) and also
 // invoked opportunistically after enqueue for low-latency execution.
@@ -16,7 +15,6 @@ import { getEdgeProvider } from "@/server/edge";
 import "@/server/edge/index"; // ensure providers register
 import { cloudflareApi } from "@/server/cloudflare/client";
 import type { EdgePosture, EdgeProviderSlug } from "@/server/edge";
-
 
 const admin = supabaseAdmin as any;
 const MAX_JOBS_PER_RUN = 20;
@@ -51,7 +49,6 @@ type JobRow = {
   attempts: number;
   max_attempts: number;
 };
-
 
 async function claimJobs(limit: number): Promise<JobRow[]> {
   // Atomic claim via RPC-less update: pick queued/retry rows whose next_attempt_at is due.
@@ -94,20 +91,18 @@ async function runJob(job: JobRow): Promise<{ ok: boolean; result?: unknown; err
         accountRef: job.payload.accountRef,
         posture: job.payload.posture,
       });
-      await admin
-        .from("clone_edge_config")
-        .upsert(
-          {
-            clone_id: job.clone_id,
-            provider_slug: job.provider_slug,
-            external_ref: res.externalRef,
-            hostname: res.hostname ?? null,
-            account_ref: res.accountRef ?? null,
-            status: res.status,
-            last_synced_at: new Date().toISOString(),
-          },
-          { onConflict: "clone_id,provider_slug" },
-        );
+      await admin.from("clone_edge_config").upsert(
+        {
+          clone_id: job.clone_id,
+          provider_slug: job.provider_slug,
+          external_ref: res.externalRef,
+          hostname: res.hostname ?? null,
+          account_ref: res.accountRef ?? null,
+          status: res.status,
+          last_synced_at: new Date().toISOString(),
+        },
+        { onConflict: "clone_id,provider_slug" },
+      );
       // Back-compat: mirror onto the legacy Cloudflare row and clones flag.
       if (job.provider_slug === "cloudflare") {
         await admin.from("cloudflare_clone_config").upsert(
@@ -195,10 +190,7 @@ async function runJob(job: JobRow): Promise<{ ok: boolean; result?: unknown; err
     }
 
     // ── Subdomain hosting actions (Cloudflare-only in Phase 1) ───────────
-    if (
-      job.action === "provision_subdomain" ||
-      job.action === "resync_subdomain"
-    ) {
+    if (job.action === "provision_subdomain" || job.action === "resync_subdomain") {
       if (job.provider_slug !== "cloudflare") throw new Error("subdomain_provider_unsupported");
       const { subdomain, fqdn, zoneId, recordType, recordContent, proxied } = job.payload;
       if (!zoneId || !fqdn || !recordType || !recordContent) throw new Error("payload_incomplete");

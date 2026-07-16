@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Cron/manual hook that mirrors the Airtable "Aurixa Waitlist" base into
 // public.waitlist_leads. Silent — never inserts a lead_captured notification.
 // Auth: Bearer CRON_SECRET (or DRIFT_REFRESH_TOKEN, per verifyCronAuth).

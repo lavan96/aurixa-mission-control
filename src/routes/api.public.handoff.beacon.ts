@@ -1,4 +1,3 @@
-// @ts-nocheck
 // G20 — Inbound health beacon from client-owned backends.
 // Auth: x-clone-api-key with scope `health:beacon`. Payload is stored on
 // `clone_health_beacons`, scoped to the key's clone_id and (best-effort) the
@@ -26,14 +25,24 @@ export const Route = createFileRoute("/api/public/handoff/beacon")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const key = await resolveCloneApiKey(request.headers.get("x-clone-api-key"), ["health:beacon"]);
+        const key = await resolveCloneApiKey(request.headers.get("x-clone-api-key"), [
+          "health:beacon",
+        ]);
         if (!key) return jsonResponse({ ok: false, error: "unauthorized" }, 401);
         if (!key.clone_id) return jsonResponse({ ok: false, error: "key_not_clone_scoped" }, 400);
 
         let body: any;
-        try { body = await request.json(); } catch { return jsonResponse({ ok: false, error: "invalid_json" }, 400); }
+        try {
+          body = await request.json();
+        } catch {
+          return jsonResponse({ ok: false, error: "invalid_json" }, 400);
+        }
         const parsed = beaconSchema.safeParse(body);
-        if (!parsed.success) return jsonResponse({ ok: false, error: "invalid_input", issues: parsed.error.issues }, 400);
+        if (!parsed.success)
+          return jsonResponse(
+            { ok: false, error: "invalid_input", issues: parsed.error.issues },
+            400,
+          );
 
         const admin = supabaseAdmin as any;
         const { data: handoff } = await admin
@@ -66,7 +75,12 @@ export const Route = createFileRoute("/api/public/handoff/beacon")({
           .single();
         if (error) return jsonResponse({ ok: false, error: error.message }, 500);
 
-        return jsonResponse({ ok: true, id: beacon.id, reported_at: beacon.reported_at, handoff_id: handoff?.id ?? null });
+        return jsonResponse({
+          ok: true,
+          id: beacon.id,
+          reported_at: beacon.reported_at,
+          handoff_id: handoff?.id ?? null,
+        });
       },
       OPTIONS: async () =>
         new Response(null, {

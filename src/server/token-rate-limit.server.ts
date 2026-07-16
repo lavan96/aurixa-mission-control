@@ -2,8 +2,12 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const DEFAULT_LIMIT = 60; // per minute per key
 
+// `retry_after_seconds` is present on both members (optional on success) so call
+// sites can read it after an `if (!rl.ok)` guard without relying on
+// discriminated-union narrowing, which this project's non-strict tsconfig does
+// not perform. It is only populated when `ok` is false.
 export type RateLimitResult =
-  | { ok: true; count: number; limit: number }
+  | { ok: true; count: number; limit: number; retry_after_seconds?: undefined }
   | { ok: false; count: number; limit: number; retry_after_seconds: number };
 
 /**

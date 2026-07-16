@@ -2,7 +2,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/protected-route";
 import { RouteError } from "@/components/route-error";
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +17,7 @@ import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { DriftListSkeleton } from "@/components/list-skeletons";
 import { useUrlState } from "@/lib/use-url-state";
+import { useOptimisticMutation } from "@/lib/use-optimistic-mutation";
 
 export const Route = createFileRoute("/drift")({
   errorComponent: RouteError,
@@ -48,15 +48,16 @@ type Row = {
   suggestion: Suggestion;
 };
 
+const DRIFT_KEY = ["drift-suggestions"] as const;
+
 function DriftDashboard() {
   const apply = useServerFn(applyDriftSuggestion);
   const dismiss = useServerFn(dismissDriftSuggestion);
-  const [busy, setBusy] = useState<string | null>(null);
   // Persist the risk filter in the URL so it survives reload and is shareable.
   const [filter, setFilter] = useUrlState<"all" | "low" | "medium" | "high">("risk", "all");
 
   const query = useQuery({
-    queryKey: ["drift-suggestions"],
+    queryKey: DRIFT_KEY,
     queryFn: async (): Promise<Row[]> => {
       const { data, error } = await supabase.from("clones").select("id, name, drift_suggestions");
       if (error) throw error;
@@ -81,21 +82,31 @@ function DriftDashboard() {
 
   const filtered = filter === "all" ? rows : rows.filter((r) => r.suggestion.risk === filter);
 
-  const onApply = async (r: Row) => {
-    setBusy(r.suggestion.id);
-    const res = await apply({ data: { cloneId: r.cloneId, suggestionId: r.suggestion.id } });
-    if (!res.ok) toast.error(res.error);
-    else toast.success(`Applied · cascade ${res.cascade_event_id.slice(0, 8)}`);
-    setBusy(null);
-    void refresh();
-  };
+  // Optimistic: drop the row from the list immediately, roll back + toast on
+  // failure, and reconcile against the server on settle (invalidateOnSettled).
+  const dropRow = (old: Row[], r: Row) =>
+    old.filter((row) => !(row.cloneId === r.cloneId && row.suggestion.id === r.suggestion.id));
 
-  const onDismiss = async (r: Row) => {
-    setBusy(r.suggestion.id);
-    await dismiss({ data: { cloneId: r.cloneId, suggestionId: r.suggestion.id } });
-    setBusy(null);
-    void refresh();
-  };
+  const applyMut = useOptimisticMutation<{ cascade_event_id: string }, Row, Row[]>({
+    mutationFn: async (r) => {
+      const res = await apply({ data: { cloneId: r.cloneId, suggestionId: r.suggestion.id } });
+      if (!res.ok) throw new Error(res.error);
+      return res;
+    },
+    queryKey: DRIFT_KEY,
+    applyOptimistic: dropRow,
+    successMessage: (res) => `Applied · cascade ${res.cascade_event_id.slice(0, 8)}`,
+  });
+
+  const dismissMut = useOptimisticMutation<unknown, Row, Row[]>({
+    mutationFn: (r) => dismiss({ data: { cloneId: r.cloneId, suggestionId: r.suggestion.id } }),
+    queryKey: DRIFT_KEY,
+    applyOptimistic: dropRow,
+  });
+
+  const busy = applyMut.isPending || dismissMut.isPending;
+  const onApply = (r: Row) => applyMut.mutate(r);
+  const onDismiss = (r: Row) => dismissMut.mutate(r);
 
   const groups: Record<string, Row[]> = {};
   for (const r of filtered) (groups[r.suggestion.category] ??= []).push(r);
@@ -205,19 +216,10 @@ function DriftDashboard() {
                     </div>
                   </div>
                   <div className="flex shrink-0 gap-1">
-                    <Button
-                      size="sm"
-                      disabled={busy === r.suggestion.id}
-                      onClick={() => onApply(r)}
-                    >
+                    <Button size="sm" disabled={busy} onClick={() => onApply(r)}>
                       Apply
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={busy === r.suggestion.id}
-                      onClick={() => onDismiss(r)}
-                    >
+                    <Button size="sm" variant="ghost" disabled={busy} onClick={() => onDismiss(r)}>
                       Dismiss
                     </Button>
                   </div>

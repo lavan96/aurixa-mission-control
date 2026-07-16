@@ -51,6 +51,7 @@ import { formatDistanceToNow } from "@/lib/format";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { useConfirm } from "@/components/confirm-dialog";
+import { useDebouncedCallback } from "@/lib/use-debounced-callback";
 import { runCascade, cancelCascade } from "@/server/cascade-engine.functions";
 import { CascadeLineagePanel } from "@/components/cascade-lineage-panel";
 import { InlineDiffSummary } from "@/components/inline-diff-summary";
@@ -114,7 +115,10 @@ function CascadeDetailPage() {
     refresh();
   }, [refresh]);
 
-  // Realtime subscription on cascade_results scoped to this event
+  // Realtime subscription on cascade_results scoped to this event. The results
+  // stream fires rapidly while a cascade runs, so debounce the refetch to
+  // coalesce bursts instead of hammering the DB on every row change.
+  const debouncedRefresh = useDebouncedCallback(() => refresh(), 400);
   useEffect(() => {
     const channel = supabase
       .channel(`cascade-results-${eventId}`)
@@ -126,7 +130,7 @@ function CascadeDetailPage() {
           table: "cascade_results",
           filter: `cascade_event_id=eq.${eventId}`,
         },
-        () => refresh(),
+        () => debouncedRefresh(),
       )
       .on(
         "postgres_changes",

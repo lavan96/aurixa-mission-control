@@ -85,7 +85,7 @@ export function handoffUrl(pricingBase: string, handoffId: string): string {
 export function validateReturnUrl(
   returnUrl: string | null | undefined,
   cloneDeployUrl: string | null | undefined,
-): { ok: true; url: string | null } | { ok: false; error: string } {
+): { ok: true; url: string | null; error?: undefined } | { ok: false; error: string } {
   if (!returnUrl) return { ok: true, url: null };
   let parsed: URL;
   try {
@@ -142,7 +142,9 @@ export async function loadHandoffById(handoffId: string): Promise<HandoffRow | n
 
 export async function createHandoff(
   input: CreateHandoffInput,
-): Promise<{ ok: true; id: string; expiresAt: string } | { ok: false; error: string }> {
+): Promise<
+  { ok: true; id: string; expiresAt: string; error?: undefined } | { ok: false; error: string }
+> {
   const expiresAt = new Date(Date.now() + HANDOFF_TTL_MINUTES * 60_000).toISOString();
   const { data, error } = await adminAny
     .from("billing_handoffs")

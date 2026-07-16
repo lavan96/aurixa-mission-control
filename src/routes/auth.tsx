@@ -1,14 +1,24 @@
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Radio, MailCheck } from "lucide-react";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Radio, MailCheck, Loader2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 type AuthSearch = { redirect?: string; intent?: string; clone?: string; h?: string };
@@ -26,15 +36,35 @@ export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Sign in — Aurixa Systems Mission Control" }] }),
 });
 
+const emailField = z.string().min(1, "Email is required").email("Enter a valid email");
+const credsSchema = z.object({
+  email: emailField,
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+type Creds = z.infer<typeof credsSchema>;
+const recoverySchema = z.object({ email: emailField });
+type RecoveryValues = z.infer<typeof recoverySchema>;
+
 function AuthPage() {
   const { session, signIn, signUp } = useAuth();
   const nav = useNavigate();
   const search = useSearch({ from: "/auth" }) as AuthSearch;
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
-  const isPartnerIntent = search.intent === "partner" || search.redirect?.startsWith("/partner-portal");
+  const [mode, setMode] = useState<"in" | "up">("in");
+  const [view, setView] = useState<"auth" | "recovery">("auth");
+  const [recoverySent, setRecoverySent] = useState<string | null>(null);
+  const isPartnerIntent =
+    search.intent === "partner" || search.redirect?.startsWith("/partner-portal");
+
+  const form = useForm<Creds>({
+    resolver: zodResolver(credsSchema),
+    defaultValues: { email: "", password: "" },
+  });
+  const recoveryForm = useForm<RecoveryValues>({
+    resolver: zodResolver(recoverySchema),
+    defaultValues: { email: "" },
+  });
 
   useEffect(() => {
     if (session) {
@@ -51,27 +81,42 @@ function AuthPage() {
     }
   }, [session, nav, search.redirect, search.intent, search.clone, search.h, isPartnerIntent]);
 
-  const handle = async (mode: "in" | "up") => {
+  const onSubmit = async (values: Creds) => {
     setBusy(true);
     const fn = mode === "in" ? signIn : signUp;
-    const { error } = await fn(email, password);
+    const { error } = await fn(values.email, values.password);
     setBusy(false);
     if (error) {
       toast.error(error.message);
       return;
     }
     if (mode === "up") {
-      // Check if a session was created (email confirmation disabled) or not (confirmation required)
+      // A session means email confirmation is disabled; otherwise prompt to confirm.
       const { data } = await supabase.auth.getSession();
       if (data.session) {
         toast.success("Account created — welcome aboard");
       } else {
-        setPendingEmail(email);
+        setPendingEmail(values.email);
         toast.success("Account created — check your inbox to confirm");
       }
     } else {
       toast.success("Welcome back");
     }
+  };
+
+  const onRecovery = async (values: RecoveryValues) => {
+    setBusy(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
+      redirectTo:
+        typeof window !== "undefined" ? `${window.location.origin}/reset-password` : undefined,
+    });
+    setBusy(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setRecoverySent(values.email);
+    toast.success("Password reset link sent");
   };
 
   const resendConfirmation = async () => {
@@ -103,52 +148,141 @@ function AuthPage() {
                 : "AURIXA SYSTEMS · MISSION CONTROL"}
             </CardTitle>
             <CardDescription>
-              {isPartnerIntent
-                ? "Restricted cybersecurity partner access for approved testing cycles"
-                : "Operator access required"}
+              {view === "recovery"
+                ? "Reset your operator password"
+                : isPartnerIntent
+                  ? "Restricted cybersecurity partner access for approved testing cycles"
+                  : "Operator access required"}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="in">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="in">Sign in</TabsTrigger>
-                <TabsTrigger value="up">Sign up</TabsTrigger>
-              </TabsList>
-              {(["in", "up"] as const).map((mode) => (
-                <TabsContent key={mode} value={mode} className="mt-4 space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor={`email-${mode}`}>Email</Label>
-                    <Input
-                      id={`email-${mode}`}
-                      type="email"
-                      autoComplete="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor={`pw-${mode}`}>Password</Label>
-                    <Input
-                      id={`pw-${mode}`}
-                      type="password"
-                      autoComplete={mode === "in" ? "current-password" : "new-password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
-                  </div>
-                  <Button className="w-full" disabled={busy} onClick={() => handle(mode)}>
-                    {mode === "in" ? "Sign in" : "Create account"}
-                  </Button>
-                  {mode === "up" && (
-                    <p className="text-xs text-muted-foreground">
-                      {isPartnerIntent
-                        ? "Partner access is issued only after Aurixa approves your email and assigns your testing cycles."
-                        : "The first account created becomes the admin operator automatically."}
+            {view === "recovery" ? (
+              recoverySent ? (
+                <Alert className="border-primary/40 bg-primary/5">
+                  <MailCheck className="h-4 w-4 text-primary" />
+                  <AlertTitle className="font-mono text-sm">Check your inbox</AlertTitle>
+                  <AlertDescription className="space-y-3 text-xs text-muted-foreground">
+                    <p>
+                      If an account exists for{" "}
+                      <span className="font-mono text-foreground">{recoverySent}</span>, a
+                      password-reset link is on its way. Follow it to set a new password.
                     </p>
-                  )}
-                </TabsContent>
-              ))}
-            </Tabs>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        setView("auth");
+                        setRecoverySent(null);
+                      }}
+                    >
+                      <ArrowLeft className="mr-1.5 h-3.5 w-3.5" /> Back to sign in
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <Form {...recoveryForm}>
+                  <form onSubmit={recoveryForm.handleSubmit(onRecovery)} className="space-y-4">
+                    <FormField
+                      control={recoveryForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input type="email" autoComplete="email" autoFocus {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="submit" className="w-full" disabled={busy}>
+                      {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      {busy ? "Sending link…" : "Send reset link"}
+                    </Button>
+                    <button
+                      type="button"
+                      className="mx-auto block text-xs text-muted-foreground hover:text-foreground"
+                      onClick={() => setView("auth")}
+                    >
+                      ← Back to sign in
+                    </button>
+                  </form>
+                </Form>
+              )
+            ) : (
+              <>
+                <Tabs value={mode} onValueChange={(v) => setMode(v as "in" | "up")}>
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="in">Sign in</TabsTrigger>
+                    <TabsTrigger value="up">Sign up</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="mt-4 space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input type="email" autoComplete="email" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="flex items-center justify-between">
+                            <FormLabel>Password</FormLabel>
+                            {mode === "in" && (
+                              <button
+                                type="button"
+                                className="text-xs text-muted-foreground hover:text-foreground"
+                                onClick={() => setView("recovery")}
+                              >
+                                Forgot password?
+                              </button>
+                            )}
+                          </div>
+                          <FormControl>
+                            <Input
+                              type="password"
+                              autoComplete={mode === "in" ? "current-password" : "new-password"}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="submit" className="w-full" disabled={busy}>
+                      {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      {busy
+                        ? mode === "in"
+                          ? "Signing in…"
+                          : "Creating account…"
+                        : mode === "in"
+                          ? "Sign in"
+                          : "Create account"}
+                    </Button>
+                    {mode === "up" && (
+                      <p className="text-xs text-muted-foreground">
+                        {isPartnerIntent
+                          ? "Partner access is issued only after Aurixa approves your email and assigns your testing cycles."
+                          : "The first account created becomes the admin operator automatically."}
+                      </p>
+                    )}
+                  </form>
+                </Form>
+              </>
+            )}
 
             {pendingEmail && (
               <Alert className="mt-6 border-primary/40 bg-primary/5">
@@ -158,7 +292,7 @@ function AuthPage() {
                   <p>
                     We sent a confirmation link to{" "}
                     <span className="font-mono text-foreground">{pendingEmail}</span>. Click it to
-                    finish setup, then sign in below.
+                    finish setup, then sign in.
                   </p>
                   <div className="flex gap-2">
                     <Button
