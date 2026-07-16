@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { createFileRoute } from "@tanstack/react-router";
 import { fetchPublicCatalog } from "@/server/public-catalog.server";
 import { storefrontJson, storefrontPreflight } from "@/server/storefront-cors.server";

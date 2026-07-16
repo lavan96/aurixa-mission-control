@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { ensureTenant, jsonResponse, resolveCloneApiKey } from "@/server/clone-api-keys.server";

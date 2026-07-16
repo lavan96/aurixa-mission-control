@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Backend provisioning worker — drains queued clone_backends jobs.
 //
 // This route exists because backend provisioning takes minutes and must
@@ -35,18 +34,15 @@ async function reclaimStalled() {
     .in("status", ["pending", "provisioning", "migrating", "seeding_admin"]);
 }
 
-async function claimOne(): Promise<
-  | null
-  | {
-      clone_id: string;
-      queued_admin_password_enc: string | null;
-      queued_module_ids: string[] | null;
-      admin_email: string | null;
-      region: string | null;
-      enqueued_by: string | null;
-      attempts: number;
-    }
-> {
+async function claimOne(): Promise<null | {
+  clone_id: string;
+  queued_admin_password_enc: string | null;
+  queued_module_ids: string[] | null;
+  admin_email: string | null;
+  region: string | null;
+  enqueued_by: string | null;
+  attempts: number;
+}> {
   const nowIso = new Date().toISOString();
   const { data: candidates } = await admin
     .from("clone_backends")

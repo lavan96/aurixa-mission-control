@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Daily edge drift check — walks every active clone_edge_config, compares
 // live provider state to intended posture, marks drifted rows and emits
 // notifications. Enqueues a `sync` job per config; the drain worker does
@@ -46,10 +45,9 @@ export const Route = createFileRoute("/hooks/edge-drift")({
               { onConflict: "clone_id,provider_slug,action,payload_hash" },
             );
           }
-          return new Response(
-            JSON.stringify({ success: true, scheduled: rows.length }),
-            { headers: { "Content-Type": "application/json" } },
-          );
+          return new Response(JSON.stringify({ success: true, scheduled: rows.length }), {
+            headers: { "Content-Type": "application/json" },
+          });
         } catch (e) {
           const msg = e instanceof Error ? e.message : "drift_failed";
           console.error("edge-drift failed:", msg);

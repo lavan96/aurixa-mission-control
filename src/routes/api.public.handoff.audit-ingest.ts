@@ -1,4 +1,3 @@
-// @ts-nocheck
 // G23 — Public ingest endpoint for shipped audit events from client backends.
 //
 // Auth: HMAC-SHA256 over the raw body using the per-handoff shipper secret.
@@ -45,7 +44,8 @@ export const Route = createFileRoute("/api/public/handoff/audit-ingest")({
           return new Response("bad json", { status: 400 });
         }
         const events = Array.isArray(payload?.events) ? payload.events : [];
-        if (events.length === 0) return new Response(JSON.stringify({ ok: true, inserted: 0 }), { status: 200 });
+        if (events.length === 0)
+          return new Response(JSON.stringify({ ok: true, inserted: 0 }), { status: 200 });
 
         const projectRef: string | null = payload.project_ref ?? null;
         const rows = events.slice(0, 1000).map((e: any) => ({
@@ -61,7 +61,11 @@ export const Route = createFileRoute("/api/public/handoff/audit-ingest")({
 
         const { error: insErr, count } = await supabaseAdmin
           .from("handoff_audit_events")
-          .upsert(rows, { onConflict: "handoff_id,source_event_id", ignoreDuplicates: true, count: "exact" });
+          .upsert(rows, {
+            onConflict: "handoff_id,source_event_id",
+            ignoreDuplicates: true,
+            count: "exact",
+          });
         if (insErr) {
           await supabaseAdmin
             .from("handoff_audit_shippers")
